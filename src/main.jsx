@@ -34,11 +34,14 @@ function App() {
   const [importError, setImportError] = useState('')
   const [conflict, setConflict] = useState(null)
   const [trashOpen, setTrashOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const search = useRef(null)
   const conflictFirst = useRef(null)
   const importInput = useRef(null)
-  const importButton = useRef(null)
-  const trashButton = useRef(null)
+  const menuButton = useRef(null)
+  const menuWrap = useRef(null)
+  const menuFirst = useRef(null)
+  const editorRef = useRef(null)
   const trashFirst = useRef(null)
   const returnFocus = useRef(null)
   const active = data.notes.find(note => note.id === data.activeId) ?? null
@@ -55,14 +58,16 @@ function App() {
     const old = current.current
     commit({ ...old, openIds: old.openIds.includes(id) ? old.openIds : [...old.openIds, id], activeId: id })
     setReading(false)
-    closePalette()
+    if (palette) closePalette()
+    setTimeout(() => editorRef.current?.focus(), 0)
   }
   function createNote(name = 'new note.md', body = '') {
     const old = current.current
     const note = { id: crypto.randomUUID(), name: uniqueName(old.notes, name), body, revision: 0 }
     commit({ ...old, notes: [...old.notes, note], openIds: [...old.openIds, note.id], activeId: note.id })
     setReading(false)
-    closePalette()
+    if (palette) closePalette()
+    setTimeout(() => editorRef.current?.focus(), 0)
   }
   function updateBody(body) {
     const old = current.current
@@ -94,7 +99,7 @@ function App() {
     const note = data.trash.find(entry => entry.note.id === id)?.note
     if (note && window.confirm(`Permanently delete ${note.name}? This cannot be undone.`)) commit(purgeFromTrash(current.current, id))
   }
-  function closeTrash() { setTrashOpen(false); setTimeout(() => trashButton.current?.focus(), 0) }
+  function closeTrash() { setTrashOpen(false); setTimeout(() => menuButton.current?.focus(), 0) }
   async function importFile(file) {
     if (!file) return
     setImportError('')
@@ -115,13 +120,16 @@ function App() {
     } else createNote(conflict.name, conflict.body)
     closeConflict()
   }
-  function closeConflict() { setConflict(null); setTimeout(() => importButton.current?.focus(), 0) }
+  function closeConflict() { setConflict(null); setTimeout(() => menuButton.current?.focus(), 0) }
   async function copyCode(source) {
     try { await navigator.clipboard.writeText(source); setCopyStatus('Copied') }
     catch { setCopyStatus('Could not copy') }
   }
-  function openPalette() { returnFocus.current = document.activeElement; setQuery(''); setSelected(0); setPalette(true) }
-  function closePalette() { setPalette(false); setTimeout(() => returnFocus.current?.focus(), 0) }
+  function openPalette() { returnFocus.current = menuOpen ? menuButton.current : document.activeElement; setQuery(''); setSelected(0); setPalette(true) }
+  function closePalette() { setPalette(false); setTimeout(() => (returnFocus.current?.isConnected ? returnFocus.current : menuButton.current)?.focus(), 0) }
+  function closeMenu(restoreFocus = true) { setMenuOpen(false); if (restoreFocus) setTimeout(() => menuButton.current?.focus(), 0) }
+  function runMenu(action, restoreFocus = true) { setMenuOpen(false); action(); if (restoreFocus) setTimeout(() => menuButton.current?.focus(), 0) }
+  function toggleReading() { setReading(!reading); if (reading) setTimeout(() => editorRef.current?.focus(), 0) }
   function resetDamagedStorage() {
     const failure = saveDocument(storage.current, current.current)
     setError(failure)
@@ -142,12 +150,20 @@ function App() {
   useEffect(() => { if (conflict) conflictFirst.current?.focus() }, [conflict])
   useEffect(() => { if (trashOpen) trashFirst.current?.focus() }, [trashOpen])
   useEffect(() => { if (trashOpen && document.activeElement === document.body) trashFirst.current?.focus() }, [trashOpen, data.trash.length])
+  useEffect(() => { if (menuOpen) menuFirst.current?.focus() }, [menuOpen])
+  useEffect(() => {
+    if (!menuOpen) return
+    const onPointer = event => { if (!menuWrap.current?.contains(event.target)) closeMenu(false) }
+    document.addEventListener('pointerdown', onPointer)
+    return () => document.removeEventListener('pointerdown', onPointer)
+  }, [menuOpen])
   useEffect(() => {
     const onKey = event => {
       if (conflict) { if (event.key === 'Escape') closeConflict(); return }
       if (trashOpen) { if (event.key === 'Escape') closeTrash(); return }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p') { event.preventDefault(); openPalette() }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 't') { event.preventDefault(); createNote() }
+      if (menuOpen && event.key === 'Escape') { closeMenu(); return }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p') { event.preventDefault(); setMenuOpen(false); openPalette() }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 't') { event.preventDefault(); setMenuOpen(false); createNote() }
       if (event.key === 'Escape' && palette) closePalette()
     }
     document.addEventListener('keydown', onKey)
@@ -155,17 +171,48 @@ function App() {
   })
 
   return <main className="app" style={{ '--editor-size': `${prefs.fontSize}px` }}>
-    {prefs.tabsVisible && <nav className="tabs" aria-label="Open notes"><div className="tab-list">{data.openIds.map(id => {
+    <header className="app-header">
+      <div className="main-menu-wrap" ref={menuWrap}>
+        <button ref={menuButton} className="menu-trigger" aria-haspopup="menu" aria-expanded={menuOpen} aria-controls="main-menu" onClick={() => setMenuOpen(value => !value)} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setMenuOpen(true) } }}>☰ <span>Menu</span></button>
+        {menuOpen && <div id="main-menu" className="main-menu" role="menu" aria-label="Main menu" onKeyDown={event => {
+          const items = [...event.currentTarget.querySelectorAll('[role="menuitem"]:not(:disabled)')]
+          const index = items.indexOf(document.activeElement)
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); items[(index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus() }
+          if (event.key === 'Home') { event.preventDefault(); items[0]?.focus() }
+          if (event.key === 'End') { event.preventDefault(); items.at(-1)?.focus() }
+          if (event.key === 'Tab') { event.preventDefault(); closeMenu() }
+          if (event.key === 'Escape') { event.stopPropagation(); closeMenu() }
+        }}>
+          <div className="menu-heading" role="presentation">Notes</div>
+          <button ref={menuFirst} role="menuitem" onClick={() => runMenu(() => createNote(), false)}>New note</button>
+          <button role="menuitem" onClick={() => runMenu(openPalette, false)}>Find note</button>
+          <button role="menuitem" onClick={() => runMenu(() => importInput.current?.click(), false)}>Import .md</button>
+          <button role="menuitem" disabled={!active} onClick={() => runMenu(() => download(active.name, active.body))}>Export .md</button>
+          <button role="menuitem" disabled={!active} onClick={() => runMenu(renameNote)}>Rename note</button>
+          <button role="menuitem" disabled={!active} onClick={() => runMenu(() => closeTab(active.id))}>Close tab</button>
+          <button role="menuitem" disabled={!active} onClick={() => runMenu(deleteNote)}>Move to Trash</button>
+          {data.trash.length > 0 && <button role="menuitem" onClick={() => runMenu(() => restoreNote(data.trash.at(-1).note.id))}>Undo delete</button>}
+          <button role="menuitem" onClick={() => runMenu(() => setTrashOpen(true), false)}>Trash ({data.trash.length})</button>
+          <div className="menu-heading" role="presentation">View</div>
+          <button role="menuitem" disabled={!active} onClick={() => runMenu(toggleReading, !reading)}>{reading ? 'Edit note' : 'Read note'}</button>
+          <button role="menuitem" onClick={() => runMenu(() => updatePrefs({ tabsVisible: !prefs.tabsVisible }))}>{prefs.tabsVisible ? 'Hide tabs' : 'Show tabs'}</button>
+          <button role="menuitem" onClick={() => runMenu(() => updatePrefs({ theme: prefs.theme === 'system' ? 'light' : prefs.theme === 'light' ? 'dark' : 'system' }))}>Theme: {prefs.theme}</button>
+          <button role="menuitem" onClick={() => runMenu(() => updatePrefs({ fontSize: Math.max(14, prefs.fontSize - 1) }))}>Smaller text</button>
+          <button role="menuitem" onClick={() => runMenu(() => updatePrefs({ fontSize: Math.min(24, prefs.fontSize + 1) }))}>Larger text</button>
+        </div>}
+      </div>
+      <span className="app-title">Sloth Note</span>
+      <span className="save-state" role="status" title="Saved in this browser">{error ? 'Not saved' : 'Saved'}</span>
+      <input ref={importInput} type="file" accept=".md,.markdown,text/markdown,text/plain" hidden onChange={event => { importFile(event.target.files?.[0]); event.target.value = '' }} />
+    </header>
+    {prefs.tabsVisible && data.openIds.length > 0 && <nav className="tabs" aria-label="Open notes"><div className="tab-list">{data.openIds.map(id => {
       const note = data.notes.find(item => item.id === id)
-      return note && <div className="tab-item" key={id}><button className={id === data.activeId ? 'tab active' : 'tab'} onClick={() => openNote(id)}>{note.name}</button><button className="close-tab" aria-label={`Close ${note.name} tab`} onClick={() => closeTab(id)}>×</button></div>
-    })}</div><button className="new-note" onClick={() => createNote()} aria-label="New note">+</button></nav>}
+      return note && <button key={id} className={id === data.activeId ? 'tab active' : 'tab'} onClick={() => openNote(id)}>{note.name}</button>
+    })}</div></nav>}
     <section className="editor-shell">
-      <header><span className="vault">Saved in this browser</span><span className="save-state" role="status">{error ? 'Not saved' : 'Saved'}</span></header>
       {error && <div className="save-error" role="alert">Storage failed: {error}. Text stays in memory; export notes before closing.{blocked && <div>{initial.current.raw !== null && <button onClick={() => download('sloth-note-damaged.json', initial.current.raw, 'application/json;charset=utf-8')}>Download stored data</button>}<button onClick={resetDamagedStorage}>Replace storage with current notes</button></div>}</div>}
       {importError && <div className="save-error" role="alert">Import failed: {importError}</div>}
-      <div className="toolbar"><button onClick={() => createNote()}>New note</button><button onClick={openPalette}>Find note</button><button ref={importButton} onClick={() => importInput.current?.click()}>Import .md</button><input ref={importInput} type="file" accept=".md,.markdown,text/markdown,text/plain" hidden onChange={event => { importFile(event.target.files?.[0]); event.target.value = '' }} /><button onClick={() => active && download(active.name, active.body)} disabled={!active}>Export .md</button><button onClick={renameNote} disabled={!active}>Rename</button><button onClick={() => setReading(value => !value)} disabled={!active}>{reading ? 'Edit' : 'Read'}</button><button onClick={() => updatePrefs({ tabsVisible: !prefs.tabsVisible })}>{prefs.tabsVisible ? 'Hide tabs' : 'Show tabs'}</button><button onClick={() => updatePrefs({ theme: prefs.theme === 'system' ? 'light' : prefs.theme === 'light' ? 'dark' : 'system' })}>Theme: {prefs.theme}</button><button onClick={() => updatePrefs({ fontSize: Math.max(14, prefs.fontSize - 1) })} aria-label="Decrease font size">A−</button><button onClick={() => updatePrefs({ fontSize: Math.min(24, prefs.fontSize + 1) })} aria-label="Increase font size">A+</button><button onClick={deleteNote} disabled={!active}>Delete</button>{data.trash.length > 0 && <button onClick={() => restoreNote(data.trash.at(-1).note.id)}>Undo delete</button>}<button ref={trashButton} onClick={() => setTrashOpen(true)}>Trash ({data.trash.length})</button></div>
-      {active ? (reading ? <div className="reading"><Markdown text={active.body} onCopy={copyCode} />{copyStatus && <span role="status">{copyStatus}</span>}</div> : <textarea key={active.id} aria-label="Markdown editor" spellCheck="false" value={active.body} onChange={event => updateBody(event.target.value)} />) : <div className="empty-note">No open note. Find an existing note or create one.</div>}
-      <div className="hint">Ctrl P find note · Ctrl T new note</div>
+      {active ? (reading ? <div className="reading"><Markdown text={active.body} onCopy={copyCode} />{copyStatus && <span role="status">{copyStatus}</span>}</div> : <textarea ref={editorRef} key={active.id} aria-label="Markdown editor" spellCheck="false" value={active.body} onChange={event => updateBody(event.target.value)} />) : <div className="empty-note">No open note. Use Menu to find or create one.</div>}
     </section>
     {palette && <div className="palette-backdrop" onMouseDown={closePalette}><section className="palette" role="dialog" aria-modal="true" aria-label="Find note" onMouseDown={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'Tab') { const focusable = [search.current, ...event.currentTarget.querySelectorAll('button')]; const first = focusable[0], last = focusable.at(-1); if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() } } }}><input ref={search} aria-label="Search notes" value={query} onChange={event => { setQuery(event.target.value); setSelected(0) }} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setSelected(index => Math.min(choices.length - 1, index + 1)) } if (event.key === 'ArrowUp') { event.preventDefault(); setSelected(index => Math.max(0, index - 1)) } if (event.key === 'Enter' && choices[selected]) openNote(choices[selected].id) }} placeholder="Find a note…" /><div className="results">{choices.length ? choices.map((note, index) => <button key={note.id} className={index === selected ? 'selected' : ''} aria-current={index === selected ? 'true' : undefined} onClick={() => openNote(note.id)}>{note.name}</button>) : <p>No notes found</p>}</div><button className="dialog-close" onClick={closePalette}>Close</button></section></div>}
     {conflict && <div className="palette-backdrop"><section className="palette conflict" role="dialog" aria-modal="true" aria-label="Import conflict" onKeyDown={event => { if (event.key === 'Escape') closeConflict(); if (event.key === 'Tab') { const buttons = [...event.currentTarget.querySelectorAll('button')]; if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1).focus() } else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0].focus() } } }}><p>A note named <strong>{conflict.name}</strong> already exists.</p><button ref={conflictFirst} onClick={() => resolveConflict(false)}>Keep both</button><button onClick={() => resolveConflict(true)}>Replace existing note</button><button onClick={closeConflict}>Cancel</button></section></div>}

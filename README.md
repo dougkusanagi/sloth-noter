@@ -6,6 +6,8 @@ Base copiada de `../sloth-note-gpt`, commit `443d23c`, de 24/07/2026. `../sloth-
 
 **Estado atual:** as notas são gravadas no armazenamento deste navegador a cada alteração. O indicador mostra o resultado da gravação. É possível importar e exportar `.md`, renomear notas, fechar abas sem apagar o texto e mover notas para uma lixeira que persiste após recarga. A lixeira permite restaurar ou apagar definitivamente. Ainda não há pasta local conectada nem sincronização. Faça exportações para manter uma cópia fora do navegador.
 
+O **Menu** na header, acima das abas, reúne as ações de notas e aparência. A área de escrita não tem uma barra de botões. No menu, use as setas para navegar e Escape para fechar.
+
 A leitura oferece um subconjunto de Markdown: títulos H1–H3, parágrafos, ênfase simples, links HTTP/HTTPS e `mailto:`, citações, listas e cercas de código. HTML bruto permanece texto. A edição sempre usa o texto original.
 
 Se dados salvos estiverem corrompidos, a aplicação bloqueia novas gravações para não sobrescrevê-los. A mensagem de erro oferece um download dos dados originais e uma ação explícita para substituí-los. Se o armazenamento falhar, o texto continua em memória até a página ser fechada; exporte as notas afetadas.

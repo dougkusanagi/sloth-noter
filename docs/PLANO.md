@@ -80,6 +80,13 @@ Cada entrega registra verificações executadas e pendências. Atualizar README 
 - Verificação: 10 testes unitários; exclusão, recarga e restauração no Chrome. Composição IME via CDP preservou Unicode; substituição de seleção e inserção de quebra de linha atualizaram o texto e o armazenamento. Teclas físicas de Backspace e undo/redo ainda exigem verificação manual.
 - Medição exploratória no Chrome 153 / Windows 10, 30 amostras por caso, medindo `JSON.stringify` mais `localStorage.setItem` em uma chave temporária: 10 kB p95 0,1 ms; 100 kB p95 0,3 ms; 1 MB p95 2,9 ms; 100 notas com 1 kB cada p95 0,3 ms. O build tem 65,07 kB gzip de JS e 1,75 kB gzip de CSS. Esses números não medem a atualização visual, que continua pendente.
 
+## Ajuste da superfície de escrita — 23/09/2026
+
+- A barra de ações e os botões de criar/fechar nas abas saíram do topo da nota. O menu principal agora fica na header, antes das abas, com criação, busca, importação/exportação, leitura, preferências e lixeira.
+- O menu abre com foco no primeiro item, aceita setas, Home, End, Escape e fechamento por clique externo. Criar ou abrir uma nota e voltar da leitura colocam o foco no editor.
+- Verificado no Chrome: abertura/fechamento do menu, navegação por setas, criação, leitura/edição e busca. Em viewports de 360 e 180 pixels CSS não houve rolagem horizontal; 180 pixels CSS apenas aproxima a largura disponível em zoom de 200%, sem substituir teste de zoom real.
+- `npm test`: 10 testes passaram. `npm run build`: 65,42 kB gzip de JavaScript e 1,90 kB gzip de CSS.
+
 ## Alinhamento com o plano herdado
 
 O plano anterior antecipava pasta local, escrita atômica, Worker, CodeMirror/Lezer, remark/rehype, Tailwind Typography e shadcn/ui. Passam a alternativas, não requisitos. H1 obrigatório sai da direção de produto. Persistência, integridade e portabilidade vêm antes de realce, indexação e experiência semelhante ao Obsidian.

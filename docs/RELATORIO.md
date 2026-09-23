@@ -13,6 +13,8 @@ Data: 23/09/2026. Escopo: seleção e cópia da base, inspeção do código e pl
 
 **Nova continuação:** o formato v3 migra v2/v1 e guarda uma lixeira recuperável após recarga. A migração mantém dados legíveis em memória quando a gravação falha. Medições exploratórias e pendências atualizadas estão em [PLANO.md](PLANO.md#continuação-de-23092026).
 
+**Interface:** as ações foram reunidas no menu da header; a nota voltou a ser uma superfície de escrita sem barra de botões. O teste de layout e teclado está registrado em [PLANO.md](PLANO.md#ajuste-da-superfície-de-escrita--23092026).
+
 ## 1. Base escolhida
 
 O destino estava vazio e não havia documentos em `docs`. Foi copiado `../sloth-note-gpt`, exceto `.git`, `node_modules` e `dist`; dependências e build foram gerados localmente. As origens não foram alteradas.
