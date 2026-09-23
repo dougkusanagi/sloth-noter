@@ -56,6 +56,20 @@ Depende da etapa 2; cobre C09/C11/C12 e manutenção.
 
 Após as anteriores: busca textual na nota, tema do sistema e contagem opcional. Prévia avançada e pasta local são decisões separadas, justificadas por demanda e custo.
 
+#### Tauri V2 — etapa posterior, ainda não iniciada
+
+O Tauri V2 fica no roadmap como empacotamento opcional para desktop, depois da estabilização do fluxo web. Ele não substitui importação/exportação nem transforma automaticamente o armazenamento do navegador em uma pasta local.
+
+Antes de iniciar essa etapa, será necessário definir e validar:
+
+- alvo de sistema operacional e estratégia de distribuição/atualização;
+- permissões mínimas do plugin de filesystem e comportamento quando forem revogadas;
+- escrita segura, alterações externas e conflitos entre abas/processos;
+- migração e recuperação sem perda, mantendo o modo web como fallback;
+- testes de build, assinatura e execução offline no ambiente suportado.
+
+Até esses critérios serem definidos, não haverá promessa de sincronização com pasta local. A implementação atual continua deliberadamente independente do Tauri.
+
 ### Entrega de 23/09/2026 — busca textual
 
 - Busca dentro da nota disponível pelo menu e por Ctrl/Cmd+F.
