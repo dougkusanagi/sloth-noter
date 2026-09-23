@@ -1,12 +1,14 @@
 # Sloth Note
 
-Editor Markdown local com abas opcionais, busca de notas e modos de edição e leitura.
+Editor Markdown local com abas opcionais, busca de notas e de texto na nota, e modos de edição e leitura.
 
 Base copiada de `../sloth-note-gpt`, commit `443d23c`, de 24/07/2026. `../sloth-note` foi consultado como referência complementar.
 
 **Estado atual:** as notas são gravadas no armazenamento deste navegador a cada alteração. Falhas de gravação aparecem em um alerta; o estado também é anunciado a tecnologias assistivas. É possível importar e exportar `.md`, renomear notas, fechar abas sem apagar o texto e mover notas para uma lixeira que persiste após recarga. A lixeira permite restaurar ou apagar definitivamente. Ainda não há pasta local conectada nem sincronização. Faça exportações para manter uma cópia fora do navegador.
 
 O ícone ☰, o nome do app e as abas compartilham uma única header. As abas rolam horizontalmente. O menu reúne as ações de notas e aparência; use as setas para navegar e Escape para fechar. Toda a área abaixo da header é clicável para editar, inclusive as margens laterais.
+
+Use Ctrl/Cmd+F ou “Find in note” no menu para localizar texto na nota atual. Enter avança entre ocorrências e Shift+Enter retorna.
 
 A leitura oferece um subconjunto de Markdown: títulos H1–H3, parágrafos, ênfase simples, links HTTP/HTTPS e `mailto:`, citações, listas e cercas de código. HTML bruto permanece texto. A edição sempre usa o texto original.
 
