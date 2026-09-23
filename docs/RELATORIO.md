@@ -15,6 +15,8 @@ Data: 23/09/2026. Escopo: seleção e cópia da base, inspeção do código e pl
 
 **Interface:** as ações foram reunidas no menu da header; a nota voltou a ser uma superfície de escrita sem barra de botões. O teste de layout e teclado está registrado em [PLANO.md](PLANO.md#ajuste-da-superfície-de-escrita--23092026).
 
+**Correção da interface:** ícone ☰, nome e abas passaram a ocupar uma única header. O campo de edição cobre toda a área abaixo dela e usa padding para manter a largura de leitura. Testes de abas e clique nas margens constam em [PLANO.md](PLANO.md#correção-da-header-e-área-de-edição--23092026).
+
 ## 1. Base escolhida
 
 O destino estava vazio e não havia documentos em `docs`. Foi copiado `../sloth-note-gpt`, exceto `.git`, `node_modules` e `dist`; dependências e build foram gerados localmente. As origens não foram alteradas.

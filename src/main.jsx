@@ -42,6 +42,8 @@ function App() {
   const menuWrap = useRef(null)
   const menuFirst = useRef(null)
   const editorRef = useRef(null)
+  const tabListRef = useRef(null)
+  const activeTabRef = useRef(null)
   const trashFirst = useRef(null)
   const returnFocus = useRef(null)
   const active = data.notes.find(note => note.id === data.activeId) ?? null
@@ -150,6 +152,13 @@ function App() {
   useEffect(() => { if (conflict) conflictFirst.current?.focus() }, [conflict])
   useEffect(() => { if (trashOpen) trashFirst.current?.focus() }, [trashOpen])
   useEffect(() => { if (trashOpen && document.activeElement === document.body) trashFirst.current?.focus() }, [trashOpen, data.trash.length])
+  useEffect(() => {
+    const list = tabListRef.current, tab = activeTabRef.current
+    if (!list || !tab) return
+    const listBox = list.getBoundingClientRect(), tabBox = tab.getBoundingClientRect()
+    if (tabBox.left < listBox.left) list.scrollLeft += tabBox.left - listBox.left
+    else if (tabBox.right > listBox.right) list.scrollLeft += tabBox.right - listBox.right
+  }, [data.activeId, data.openIds, prefs.tabsVisible])
   useEffect(() => { if (menuOpen) menuFirst.current?.focus() }, [menuOpen])
   useEffect(() => {
     if (!menuOpen) return
@@ -173,7 +182,7 @@ function App() {
   return <main className="app" style={{ '--editor-size': `${prefs.fontSize}px` }}>
     <header className="app-header">
       <div className="main-menu-wrap" ref={menuWrap}>
-        <button ref={menuButton} className="menu-trigger" aria-haspopup="menu" aria-expanded={menuOpen} aria-controls="main-menu" onClick={() => setMenuOpen(value => !value)} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setMenuOpen(true) } }}>☰ <span>Menu</span></button>
+        <button ref={menuButton} className="menu-trigger" aria-label="Main menu" aria-haspopup="menu" aria-expanded={menuOpen} aria-controls="main-menu" onClick={() => setMenuOpen(value => !value)} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setMenuOpen(true) } }}>☰</button>
         {menuOpen && <div id="main-menu" className="main-menu" role="menu" aria-label="Main menu" onKeyDown={event => {
           const items = [...event.currentTarget.querySelectorAll('[role="menuitem"]:not(:disabled)')]
           const index = items.indexOf(document.activeElement)
@@ -202,17 +211,17 @@ function App() {
         </div>}
       </div>
       <span className="app-title">Sloth Note</span>
-      <span className="save-state" role="status" title="Saved in this browser">{error ? 'Not saved' : 'Saved'}</span>
+      {prefs.tabsVisible && data.openIds.length > 0 && <nav className="tabs" aria-label="Open notes"><div className="tab-list" ref={tabListRef}>{data.openIds.map(id => {
+        const note = data.notes.find(item => item.id === id)
+        return note && <button key={id} ref={id === data.activeId ? activeTabRef : null} className={id === data.activeId ? 'tab active' : 'tab'} onClick={() => openNote(id)}>{note.name}</button>
+      })}</div></nav>}
+      <span className="sr-only" role="status">{error ? 'Not saved' : 'Saved in this browser'}</span>
       <input ref={importInput} type="file" accept=".md,.markdown,text/markdown,text/plain" hidden onChange={event => { importFile(event.target.files?.[0]); event.target.value = '' }} />
     </header>
-    {prefs.tabsVisible && data.openIds.length > 0 && <nav className="tabs" aria-label="Open notes"><div className="tab-list">{data.openIds.map(id => {
-      const note = data.notes.find(item => item.id === id)
-      return note && <button key={id} className={id === data.activeId ? 'tab active' : 'tab'} onClick={() => openNote(id)}>{note.name}</button>
-    })}</div></nav>}
     <section className="editor-shell">
       {error && <div className="save-error" role="alert">Storage failed: {error}. Text stays in memory; export notes before closing.{blocked && <div>{initial.current.raw !== null && <button onClick={() => download('sloth-note-damaged.json', initial.current.raw, 'application/json;charset=utf-8')}>Download stored data</button>}<button onClick={resetDamagedStorage}>Replace storage with current notes</button></div>}</div>}
       {importError && <div className="save-error" role="alert">Import failed: {importError}</div>}
-      {active ? (reading ? <div className="reading"><Markdown text={active.body} onCopy={copyCode} />{copyStatus && <span role="status">{copyStatus}</span>}</div> : <textarea ref={editorRef} key={active.id} aria-label="Markdown editor" spellCheck="false" value={active.body} onChange={event => updateBody(event.target.value)} />) : <div className="empty-note">No open note. Use Menu to find or create one.</div>}
+      {active ? (reading ? <div className="reading"><Markdown text={active.body} onCopy={copyCode} />{copyStatus && <span role="status">{copyStatus}</span>}</div> : <textarea ref={editorRef} key={active.id} aria-label="Markdown editor" spellCheck="false" value={active.body} onChange={event => updateBody(event.target.value)} />) : <div className="empty-note">No open note. Use ☰ to find or create one.</div>}
     </section>
     {palette && <div className="palette-backdrop" onMouseDown={closePalette}><section className="palette" role="dialog" aria-modal="true" aria-label="Find note" onMouseDown={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'Tab') { const focusable = [search.current, ...event.currentTarget.querySelectorAll('button')]; const first = focusable[0], last = focusable.at(-1); if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() } } }}><input ref={search} aria-label="Search notes" value={query} onChange={event => { setQuery(event.target.value); setSelected(0) }} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setSelected(index => Math.min(choices.length - 1, index + 1)) } if (event.key === 'ArrowUp') { event.preventDefault(); setSelected(index => Math.max(0, index - 1)) } if (event.key === 'Enter' && choices[selected]) openNote(choices[selected].id) }} placeholder="Find a note…" /><div className="results">{choices.length ? choices.map((note, index) => <button key={note.id} className={index === selected ? 'selected' : ''} aria-current={index === selected ? 'true' : undefined} onClick={() => openNote(note.id)}>{note.name}</button>) : <p>No notes found</p>}</div><button className="dialog-close" onClick={closePalette}>Close</button></section></div>}
     {conflict && <div className="palette-backdrop"><section className="palette conflict" role="dialog" aria-modal="true" aria-label="Import conflict" onKeyDown={event => { if (event.key === 'Escape') closeConflict(); if (event.key === 'Tab') { const buttons = [...event.currentTarget.querySelectorAll('button')]; if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1).focus() } else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0].focus() } } }}><p>A note named <strong>{conflict.name}</strong> already exists.</p><button ref={conflictFirst} onClick={() => resolveConflict(false)}>Keep both</button><button onClick={() => resolveConflict(true)}>Replace existing note</button><button onClick={closeConflict}>Cancel</button></section></div>}

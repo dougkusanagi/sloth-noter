@@ -87,6 +87,12 @@ Cada entrega registra verificações executadas e pendências. Atualizar README 
 - Verificado no Chrome: abertura/fechamento do menu, navegação por setas, criação, leitura/edição e busca. Em viewports de 360 e 180 pixels CSS não houve rolagem horizontal; 180 pixels CSS apenas aproxima a largura disponível em zoom de 200%, sem substituir teste de zoom real.
 - `npm test`: 10 testes passaram. `npm run build`: 65,42 kB gzip de JavaScript e 1,90 kB gzip de CSS.
 
+## Correção da header e área de edição — 23/09/2026
+
+- A segunda faixa de abas foi eliminada. Uma única header contém o botão ☰ com nome acessível, o nome do app e as abas. O estado de salvamento bem-sucedido é anunciado sem ocupar espaço visual; falhas continuam visíveis no alerta.
+- As abas têm rolagem horizontal interna e a aba ativa é trazida para a área visível. Com 20 notas e viewport de 360 px, a lista tinha 226 px visíveis e 1667 px de conteúdo, enquanto a página continuou com 360 px de largura.
+- O `textarea` cobre toda a área de conteúdo; o texto mantém uma coluna central por meio de padding. O cursor de texto aparece nas margens. No Chrome, cliques à esquerda e à direita em quatro linhas explícitas posicionaram o cursor respectivamente no início e no fim da linha correspondente, usando o comportamento nativo do campo.
+
 ## Alinhamento com o plano herdado
 
 O plano anterior antecipava pasta local, escrita atômica, Worker, CodeMirror/Lezer, remark/rehype, Tailwind Typography e shadcn/ui. Passam a alternativas, não requisitos. H1 obrigatório sai da direção de produto. Persistência, integridade e portabilidade vêm antes de realce, indexação e experiência semelhante ao Obsidian.
