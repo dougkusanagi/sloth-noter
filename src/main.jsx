@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Markdown } from './markdown.jsx'
+import { moveToTrash, purgeFromTrash, restoreFromTrash, uniqueName } from './notes.js'
 import { loadDocument, saveDocument } from './storage.js'
 import './styles.css'
 
@@ -15,13 +16,6 @@ function download(name, body, type = 'text/markdown;charset=utf-8') {
   link.download = name
   link.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
-function uniqueName(notes, proposed) {
-  const dot = proposed.toLowerCase().endsWith('.md') ? proposed.slice(0, -3) : proposed
-  let name = `${dot}.md`, number = 2
-  while (notes.some(note => note.name.toLocaleLowerCase() === name.toLocaleLowerCase())) name = `${dot} (${number++}).md`
-  return name
 }
 
 function App() {
@@ -39,11 +33,13 @@ function App() {
   const [copyStatus, setCopyStatus] = useState('')
   const [importError, setImportError] = useState('')
   const [conflict, setConflict] = useState(null)
-  const [deleted, setDeleted] = useState(null)
+  const [trashOpen, setTrashOpen] = useState(false)
   const search = useRef(null)
   const conflictFirst = useRef(null)
   const importInput = useRef(null)
   const importButton = useRef(null)
+  const trashButton = useRef(null)
+  const trashFirst = useRef(null)
   const returnFocus = useRef(null)
   const active = data.notes.find(note => note.id === data.activeId) ?? null
   const choices = data.notes.filter(note => note.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
@@ -86,21 +82,19 @@ function App() {
     commit({ ...current.current, notes: current.current.notes.map(note => note.id === active.id ? { ...note, name, revision: note.revision + 1 } : note) })
   }
   function deleteNote() {
-    if (!active || !window.confirm(`Delete ${active.name}? You can undo this until you leave the page.`)) return
-    const old = current.current
-    setDeleted({ note: active, index: old.notes.findIndex(note => note.id === active.id) })
-    const openIds = old.openIds.filter(id => id !== active.id)
-    commit({ ...old, notes: old.notes.filter(note => note.id !== active.id), openIds, activeId: openIds.at(-1) ?? null })
+    if (!active || !window.confirm(`Move ${active.name} to Trash?`)) return
+    commit(moveToTrash(current.current, active.id, Date.now()))
   }
-  function undoDelete() {
-    if (!deleted) return
-    const old = current.current
-    const notes = [...old.notes]
-    notes.splice(Math.min(deleted.index, notes.length), 0, deleted.note)
-    const openIds = old.openIds.includes(deleted.note.id) ? old.openIds : [...old.openIds, deleted.note.id]
-    commit({ ...old, notes, openIds, activeId: deleted.note.id })
-    setDeleted(null)
+  function restoreNote(id) {
+    commit(restoreFromTrash(current.current, id))
+    setReading(false)
+    closeTrash()
   }
+  function purgeNote(id) {
+    const note = data.trash.find(entry => entry.note.id === id)?.note
+    if (note && window.confirm(`Permanently delete ${note.name}? This cannot be undone.`)) commit(purgeFromTrash(current.current, id))
+  }
+  function closeTrash() { setTrashOpen(false); setTimeout(() => trashButton.current?.focus(), 0) }
   async function importFile(file) {
     if (!file) return
     setImportError('')
@@ -146,9 +140,12 @@ function App() {
   useEffect(() => { if (palette) search.current?.focus() }, [palette])
   useEffect(() => { if (palette) document.querySelector('.results .selected')?.scrollIntoView({ block: 'nearest' }) }, [palette, query, selected])
   useEffect(() => { if (conflict) conflictFirst.current?.focus() }, [conflict])
+  useEffect(() => { if (trashOpen) trashFirst.current?.focus() }, [trashOpen])
+  useEffect(() => { if (trashOpen && document.activeElement === document.body) trashFirst.current?.focus() }, [trashOpen, data.trash.length])
   useEffect(() => {
     const onKey = event => {
       if (conflict) { if (event.key === 'Escape') closeConflict(); return }
+      if (trashOpen) { if (event.key === 'Escape') closeTrash(); return }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p') { event.preventDefault(); openPalette() }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 't') { event.preventDefault(); createNote() }
       if (event.key === 'Escape' && palette) closePalette()
@@ -164,14 +161,15 @@ function App() {
     })}</div><button className="new-note" onClick={() => createNote()} aria-label="New note">+</button></nav>}
     <section className="editor-shell">
       <header><span className="vault">Saved in this browser</span><span className="save-state" role="status">{error ? 'Not saved' : 'Saved'}</span></header>
-      {error && <div className="save-error" role="alert">Storage failed: {error}. Text stays in memory; export notes before closing.{blocked && <div><button onClick={() => download('sloth-note-damaged.json', initial.current.raw, 'application/json;charset=utf-8')}>Download stored data</button><button onClick={resetDamagedStorage}>Replace damaged storage with current notes</button></div>}</div>}
+      {error && <div className="save-error" role="alert">Storage failed: {error}. Text stays in memory; export notes before closing.{blocked && <div>{initial.current.raw !== null && <button onClick={() => download('sloth-note-damaged.json', initial.current.raw, 'application/json;charset=utf-8')}>Download stored data</button>}<button onClick={resetDamagedStorage}>Replace storage with current notes</button></div>}</div>}
       {importError && <div className="save-error" role="alert">Import failed: {importError}</div>}
-      <div className="toolbar"><button onClick={() => createNote()}>New note</button><button onClick={openPalette}>Find note</button><button ref={importButton} onClick={() => importInput.current?.click()}>Import .md</button><input ref={importInput} type="file" accept=".md,.markdown,text/markdown,text/plain" hidden onChange={event => { importFile(event.target.files?.[0]); event.target.value = '' }} /><button onClick={() => active && download(active.name, active.body)} disabled={!active}>Export .md</button><button onClick={renameNote} disabled={!active}>Rename</button><button onClick={() => setReading(value => !value)} disabled={!active}>{reading ? 'Edit' : 'Read'}</button><button onClick={() => updatePrefs({ tabsVisible: !prefs.tabsVisible })}>{prefs.tabsVisible ? 'Hide tabs' : 'Show tabs'}</button><button onClick={() => updatePrefs({ theme: prefs.theme === 'system' ? 'light' : prefs.theme === 'light' ? 'dark' : 'system' })}>Theme: {prefs.theme}</button><button onClick={() => updatePrefs({ fontSize: Math.max(14, prefs.fontSize - 1) })} aria-label="Decrease font size">A−</button><button onClick={() => updatePrefs({ fontSize: Math.min(24, prefs.fontSize + 1) })} aria-label="Increase font size">A+</button><button onClick={deleteNote} disabled={!active}>Delete</button>{deleted && <button onClick={undoDelete}>Undo delete</button>}</div>
+      <div className="toolbar"><button onClick={() => createNote()}>New note</button><button onClick={openPalette}>Find note</button><button ref={importButton} onClick={() => importInput.current?.click()}>Import .md</button><input ref={importInput} type="file" accept=".md,.markdown,text/markdown,text/plain" hidden onChange={event => { importFile(event.target.files?.[0]); event.target.value = '' }} /><button onClick={() => active && download(active.name, active.body)} disabled={!active}>Export .md</button><button onClick={renameNote} disabled={!active}>Rename</button><button onClick={() => setReading(value => !value)} disabled={!active}>{reading ? 'Edit' : 'Read'}</button><button onClick={() => updatePrefs({ tabsVisible: !prefs.tabsVisible })}>{prefs.tabsVisible ? 'Hide tabs' : 'Show tabs'}</button><button onClick={() => updatePrefs({ theme: prefs.theme === 'system' ? 'light' : prefs.theme === 'light' ? 'dark' : 'system' })}>Theme: {prefs.theme}</button><button onClick={() => updatePrefs({ fontSize: Math.max(14, prefs.fontSize - 1) })} aria-label="Decrease font size">A−</button><button onClick={() => updatePrefs({ fontSize: Math.min(24, prefs.fontSize + 1) })} aria-label="Increase font size">A+</button><button onClick={deleteNote} disabled={!active}>Delete</button>{data.trash.length > 0 && <button onClick={() => restoreNote(data.trash.at(-1).note.id)}>Undo delete</button>}<button ref={trashButton} onClick={() => setTrashOpen(true)}>Trash ({data.trash.length})</button></div>
       {active ? (reading ? <div className="reading"><Markdown text={active.body} onCopy={copyCode} />{copyStatus && <span role="status">{copyStatus}</span>}</div> : <textarea key={active.id} aria-label="Markdown editor" spellCheck="false" value={active.body} onChange={event => updateBody(event.target.value)} />) : <div className="empty-note">No open note. Find an existing note or create one.</div>}
       <div className="hint">Ctrl P find note · Ctrl T new note</div>
     </section>
     {palette && <div className="palette-backdrop" onMouseDown={closePalette}><section className="palette" role="dialog" aria-modal="true" aria-label="Find note" onMouseDown={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'Tab') { const focusable = [search.current, ...event.currentTarget.querySelectorAll('button')]; const first = focusable[0], last = focusable.at(-1); if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() } } }}><input ref={search} aria-label="Search notes" value={query} onChange={event => { setQuery(event.target.value); setSelected(0) }} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setSelected(index => Math.min(choices.length - 1, index + 1)) } if (event.key === 'ArrowUp') { event.preventDefault(); setSelected(index => Math.max(0, index - 1)) } if (event.key === 'Enter' && choices[selected]) openNote(choices[selected].id) }} placeholder="Find a note…" /><div className="results">{choices.length ? choices.map((note, index) => <button key={note.id} className={index === selected ? 'selected' : ''} aria-current={index === selected ? 'true' : undefined} onClick={() => openNote(note.id)}>{note.name}</button>) : <p>No notes found</p>}</div><button className="dialog-close" onClick={closePalette}>Close</button></section></div>}
     {conflict && <div className="palette-backdrop"><section className="palette conflict" role="dialog" aria-modal="true" aria-label="Import conflict" onKeyDown={event => { if (event.key === 'Escape') closeConflict(); if (event.key === 'Tab') { const buttons = [...event.currentTarget.querySelectorAll('button')]; if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1).focus() } else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0].focus() } } }}><p>A note named <strong>{conflict.name}</strong> already exists.</p><button ref={conflictFirst} onClick={() => resolveConflict(false)}>Keep both</button><button onClick={() => resolveConflict(true)}>Replace existing note</button><button onClick={closeConflict}>Cancel</button></section></div>}
+    {trashOpen && <div className="palette-backdrop"><section className="palette trash-dialog" role="dialog" aria-modal="true" aria-label="Trash" onKeyDown={event => { if (event.key === 'Tab') { const buttons = [...event.currentTarget.querySelectorAll('button')]; if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1).focus() } else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0].focus() } } }}><h2>Trash</h2>{data.trash.length ? <div className="trash-list">{data.trash.map(entry => <div className="trash-item" key={entry.note.id}><span>{entry.note.name}</span><button onClick={() => restoreNote(entry.note.id)}>Restore</button><button onClick={() => purgeNote(entry.note.id)}>Delete forever</button></div>)}</div> : <p>Trash is empty.</p>}<button ref={trashFirst} onClick={closeTrash}>Close</button></section></div>}
   </main>
 }
 

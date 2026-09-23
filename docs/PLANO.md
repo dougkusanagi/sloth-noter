@@ -1,6 +1,6 @@
 # Plano de implementação
 
-Vigente em 23/09/2026, baseado no [relatório](RELATORIO.md). As Etapas 1–3 estão em andamento. O registro da entrega atual está no fim deste documento.
+Vigente em 23/09/2026, baseado no [relatório](RELATORIO.md). As Etapas 1–3 estão em andamento. Os registros das entregas estão no fim deste documento.
 
 ## Direção
 
@@ -70,7 +70,15 @@ Cada entrega registra verificações executadas e pendências. Atualizar README 
 - **Etapa 2:** leitura separada com sintaxe delimitada, HTML bruto como texto e protocolos de link permitidos; paleta com seleção reiniciada, estado vazio, foco e Escape. Botões para ações principais, foco visível e confirmação de cópia.
 - **Etapa 3:** notas separadas das abas abertas; importação UTF-8 com escolha entre manter ambas e substituir; renomeação, exclusão com desfazer durante a sessão, preferências persistidas, fontes do sistema e npm com versões fixadas. `npm audit` sem vulnerabilidades após atualização das dependências transitivas.
 - **Verificado:** `npm ci`, 5 testes unitários de armazenamento, build e `npm audit` (zero vulnerabilidades); criação, edição e recarga no Chrome; busca por nome; importação Unicode e preservação de linha final; conflito de importação; fechar/reabrir; excluir/desfazer; leitura de HTML bruto e bloqueio de link `javascript:`; largura de 360 px sem rolagem horizontal. Com armazenamento v2 corrompido, a interface mostrou “Not saved” e manteve o valor original após edição.
-- **Pendente:** testar IME, seleção entre parágrafos, undo/redo e zoom de 200% manualmente; testar falha de quota na interface e o fluxo completo de recuperação após recarga; medir latência em 10 kB, 100 kB, 1 MB e 100 notas. O desfazer exclusão não sobrevive à recarga. A leitura não pretende implementar todo o CommonMark. Não há integração com pasta local ou Tauri.
+- **Pendente naquela entrega:** testar IME, seleção entre parágrafos, undo/redo e zoom de 200% manualmente; testar falha de quota na interface e o fluxo completo de recuperação após recarga; medir latência em 10 kB, 100 kB, 1 MB e 100 notas. A exclusão ainda não sobrevivia à recarga; isso foi resolvido na continuação abaixo. A leitura não pretende implementar todo o CommonMark. Não há integração com pasta local ou Tauri.
+
+## Continuação de 23/09/2026
+
+- `IMPLEMENTATION_PLAN.md` foi movido da raiz para `docs/`; [este plano](PLANO.md) continua sendo a fonte detalhada.
+- Armazenamento v3 migra v2 e v1, mantendo as chaves antigas. Exclusões vão para lixeira persistida; restauração resolve conflito de nome e funciona após recarga. Apagar definitivamente exige confirmação.
+- Falha ao gravar durante migração mantém as notas legíveis em memória. Falha de leitura bloqueia substituição automática, mesmo quando o conteúdo bruto não está disponível para download.
+- Verificação: 10 testes unitários; exclusão, recarga e restauração no Chrome. Composição IME via CDP preservou Unicode; substituição de seleção e inserção de quebra de linha atualizaram o texto e o armazenamento. Teclas físicas de Backspace e undo/redo ainda exigem verificação manual.
+- Medição exploratória no Chrome 153 / Windows 10, 30 amostras por caso, medindo `JSON.stringify` mais `localStorage.setItem` em uma chave temporária: 10 kB p95 0,1 ms; 100 kB p95 0,3 ms; 1 MB p95 2,9 ms; 100 notas com 1 kB cada p95 0,3 ms. O build tem 65,07 kB gzip de JS e 1,75 kB gzip de CSS. Esses números não medem a atualização visual, que continua pendente.
 
 ## Alinhamento com o plano herdado
 

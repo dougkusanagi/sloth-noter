@@ -53,4 +53,11 @@ textarea { display:block; width:100%; flex:1; min-height:55vh; resize:vertical; 
 .dialog-close { margin:7px 4px 3px; }
 .conflict { display:flex; flex-wrap:wrap; gap:8px; }
 .conflict p { flex-basis:100%; margin:8px; }
+.trash-dialog { max-height:70vh; overflow:auto; }
+.trash-dialog h2 { font:500 20px Georgia,serif; margin:10px; }
+.trash-dialog > p { margin:12px 10px; color:var(--muted); }
+.trash-dialog > button,.trash-item button { border:1px solid var(--soft); background:var(--paper); padding:6px 10px; cursor:pointer; font:11px monospace; }
+.trash-dialog > button { margin:10px; }
+.trash-item { display:flex; align-items:center; flex-wrap:wrap; gap:6px; border-top:1px solid var(--soft); padding:10px; }
+.trash-item span { flex:1; min-width:120px; overflow-wrap:anywhere; }
 @media (max-width:600px) { .tabs { padding:0 8px; } .editor-shell { width:calc(100% - 32px); } header { padding-top:18px; } .toolbar { margin-bottom:16px; } }

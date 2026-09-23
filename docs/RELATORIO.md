@@ -11,6 +11,8 @@ Data: 23/09/2026. Escopo: seleção e cópia da base, inspeção do código e pl
 
 **Continuação:** o formato v2 migra v1 sem apagar o registro anterior. Se encontrar dados corrompidos, o aplicativo bloqueia gravações automáticas e permite baixar o valor armazenado antes de substituição explícita. A leitura agora cobre um subconjunto definido de Markdown; importação/exportação, abas independentes, renomeação, exclusão com desfazer e preferências foram adicionadas. Testes de navegador e pendências constam em [PLANO.md](PLANO.md#entrega-de-23092026--andamento).
 
+**Nova continuação:** o formato v3 migra v2/v1 e guarda uma lixeira recuperável após recarga. A migração mantém dados legíveis em memória quando a gravação falha. Medições exploratórias e pendências atualizadas estão em [PLANO.md](PLANO.md#continuação-de-23092026).
+
 ## 1. Base escolhida
 
 O destino estava vazio e não havia documentos em `docs`. Foi copiado `../sloth-note-gpt`, exceto `.git`, `node_modules` e `dist`; dependências e build foram gerados localmente. As origens não foram alteradas.
