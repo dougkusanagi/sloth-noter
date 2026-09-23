@@ -9,6 +9,8 @@ Data: 23/09/2026. Escopo: seleção e cópia da base, inspeção do código e pl
 - Testes automatizados de leitura, escrita, corrupção e falha de armazenamento foram adicionados. Ainda falta validação de interação em navegador (IME, seleção, histórico e recarga).
 - Tailwind CDN e fontes remotas foram retirados. A leitura Markdown ainda é simples e será tratada na Etapa 2.
 
+**Continuação:** o formato v2 migra v1 sem apagar o registro anterior. Se encontrar dados corrompidos, o aplicativo bloqueia gravações automáticas e permite baixar o valor armazenado antes de substituição explícita. A leitura agora cobre um subconjunto definido de Markdown; importação/exportação, abas independentes, renomeação, exclusão com desfazer e preferências foram adicionadas. Testes de navegador e pendências constam em [PLANO.md](PLANO.md#entrega-de-23092026--andamento).
+
 ## 1. Base escolhida
 
 O destino estava vazio e não havia documentos em `docs`. Foi copiado `../sloth-note-gpt`, exceto `.git`, `node_modules` e `dist`; dependências e build foram gerados localmente. As origens não foram alteradas.

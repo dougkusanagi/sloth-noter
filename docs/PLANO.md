@@ -1,6 +1,6 @@
 # Plano de implementação
 
-Vigente em 23/09/2026, baseado no [relatório](RELATORIO.md). A Etapa 1 foi iniciada: campo de texto único, gravação síncrona versionada, erro de gravação visível e exportação da nota ativa. Validação completa no navegador e demais etapas pendentes.
+Vigente em 23/09/2026, baseado no [relatório](RELATORIO.md). As Etapas 1–3 estão em andamento. O registro da entrega atual está no fim deste documento.
 
 ## Direção
 
@@ -63,6 +63,14 @@ Para pasta local, definir ambiente suportado, permissões revogadas, alteraçõe
 Testes unitários para persistência, erros, migração e serialização; integração para troca de nota e gravações atrasadas; navegador para edição, foco, atalhos e recarga. Acessibilidade e layout exigem também inspeção manual. Build isolado não cobre esses aspectos.
 
 Cada entrega registra verificações executadas e pendências. Atualizar README e relatório conforme o comportamento real; remover avisos somente após resolver o problema correspondente.
+
+## Entrega de 23/09/2026 — andamento
+
+- **Etapa 1:** armazenamento v2 com migração v1, validação e bloqueio de gravação quando os dados existentes estão corrompidos. Gravação síncrona a cada alteração, sem janela de debounce; falha visível e exportação disponíveis. Editor de texto único.
+- **Etapa 2:** leitura separada com sintaxe delimitada, HTML bruto como texto e protocolos de link permitidos; paleta com seleção reiniciada, estado vazio, foco e Escape. Botões para ações principais, foco visível e confirmação de cópia.
+- **Etapa 3:** notas separadas das abas abertas; importação UTF-8 com escolha entre manter ambas e substituir; renomeação, exclusão com desfazer durante a sessão, preferências persistidas, fontes do sistema e npm com versões fixadas. `npm audit` sem vulnerabilidades após atualização das dependências transitivas.
+- **Verificado:** `npm ci`, 5 testes unitários de armazenamento, build e `npm audit` (zero vulnerabilidades); criação, edição e recarga no Chrome; busca por nome; importação Unicode e preservação de linha final; conflito de importação; fechar/reabrir; excluir/desfazer; leitura de HTML bruto e bloqueio de link `javascript:`; largura de 360 px sem rolagem horizontal. Com armazenamento v2 corrompido, a interface mostrou “Not saved” e manteve o valor original após edição.
+- **Pendente:** testar IME, seleção entre parágrafos, undo/redo e zoom de 200% manualmente; testar falha de quota na interface e o fluxo completo de recuperação após recarga; medir latência em 10 kB, 100 kB, 1 MB e 100 notas. O desfazer exclusão não sobrevive à recarga. A leitura não pretende implementar todo o CommonMark. Não há integração com pasta local ou Tauri.
 
 ## Alinhamento com o plano herdado
 
