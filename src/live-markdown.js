@@ -5,7 +5,7 @@ export function classifyLine(text, inFence) {
   if (heading) return { kind: `h${heading[1].length}`, prefix: heading[0].length, nextFence: false }
   const quote = text.match(/^> +/)
   if (quote) return { kind: 'quote', prefix: quote[0].length, nextFence: false }
-  const bullet = text.match(/^[-*] +/)
+  const bullet = text.match(/^[-*+] +/)
   if (bullet) return { kind: 'bullet', prefix: bullet[0].length, nextFence: false }
   if (/^\d+\. +/.test(text)) return { kind: 'ordered', prefix: 0, nextFence: false }
   if (/^\|.*\|$/.test(text)) return { kind: 'table', prefix: 0, nextFence: false }

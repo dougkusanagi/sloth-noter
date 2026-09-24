@@ -8,6 +8,8 @@ import { tableCells, tableGroup } from './markdown-table.js'
 import { wrapSelection } from './wrap-selection.js'
 import { activeFormats, formatSelection } from './format-selection.js'
 import { blockTemplate } from './insert-block.js'
+import { continueBlock } from './continue-block.js'
+import { safeHref } from './markdown.jsx'
 
 const formatButtons = [
   ['bold', 'Negrito', <strong>B</strong>],
@@ -35,20 +37,33 @@ function BlockIcon({ action }) {
 }
 
 class TableRowWidget extends WidgetType {
-  constructor(cells, header) { super(); this.cells = cells; this.header = header }
-  eq(other) { return this.header === other.header && this.cells.join('\0') === other.cells.join('\0') }
-  toDOM() {
+  constructor(cells, header, from) { super(); this.cells = cells; this.header = header; this.from = from }
+  eq(other) { return this.from === other.from && this.header === other.header && this.cells.join('\0') === other.cells.join('\0') }
+  toDOM(view) {
     const row = document.createElement('span')
     row.className = `cm-table-row${this.header ? ' cm-table-head' : ''}`
     row.style.gridTemplateColumns = `repeat(${this.cells.length}, minmax(0, 1fr))`
     row.setAttribute('role', 'row')
-    for (const cell of this.cells) {
+    row.title = 'Clique para editar tabela'
+    for (const [index, cell] of this.cells.entries()) {
       const item = document.createElement('span')
       item.className = 'cm-table-cell'
+      item.dataset.column = String(index)
       item.setAttribute('role', this.header ? 'columnheader' : 'cell')
       item.textContent = cell
       row.append(item)
     }
+    row.addEventListener('mousedown', event => {
+      event.preventDefault()
+      event.stopPropagation()
+      const column = Number(event.target.closest('.cm-table-cell')?.dataset.column ?? 0)
+      const line = view.state.doc.lineAt(this.from)
+      let offset = 0
+      for (let index = 0; index <= column; index++) offset = line.text.indexOf('|', offset) + 1
+      while (line.text[offset] === ' ') offset++
+      view.focus()
+      view.dispatch({ selection: { anchor: line.from + offset }, scrollIntoView: true })
+    })
     return row
   }
 }
@@ -80,6 +95,25 @@ function wrapSelectedText(event, view) {
   }
   view.dispatch({ changes, selection: EditorSelection.create(selections, view.state.selection.mainIndex), userEvent: 'input.type' })
   event.preventDefault()
+  return true
+}
+
+function continueList(view) {
+  if (view.state.selection.ranges.length !== 1 || !view.state.selection.main.empty) return false
+  const continued = continueBlock(view.state.doc.toString(), view.state.selection.main.head)
+  if (!continued) return false
+  view.dispatch({ changes: { from: continued.from, to: continued.to, insert: continued.insert }, selection: { anchor: continued.cursor }, userEvent: 'input.type' })
+  return true
+}
+
+function navigateToFence(view, direction) {
+  if (view.state.selection.ranges.length !== 1 || !view.state.selection.main.empty) return false
+  const line = view.state.doc.lineAt(view.state.selection.main.head)
+  const next = line.number + direction
+  if (next < 1 || next > view.state.doc.lines) return false
+  const target = view.state.doc.line(next)
+  if (!target.text.startsWith('```')) return false
+  view.dispatch({ selection: { anchor: target.from }, scrollIntoView: true })
   return true
 }
 
@@ -126,7 +160,7 @@ function decorationsFor(view) {
         } else {
           const cells = tableCells(line.text)
           ranges.push(Decoration.line({ attributes: { class: 'cm-md-table' } }).range(line.from))
-          ranges.push(Decoration.replace({ widget: new TableRowWidget(cells, number === table.first) }).range(line.from, line.to))
+          ranges.push(Decoration.replace({ widget: new TableRowWidget(cells, number === table.first, line.from) }).range(line.from, line.to))
         }
         continue
       }
@@ -139,7 +173,10 @@ function decorationsFor(view) {
         const start = offset + token.start, end = offset + token.end
         const contentStart = offset + token.contentStart, contentEnd = offset + token.contentEnd
         if (start < contentStart) ranges.push(Decoration.replace({}).range(start, contentStart))
-        ranges.push(Decoration.mark({ class: `cm-md-inline-${token.kind}` }).range(contentStart, contentEnd))
+        if (token.kind === 'link') {
+          const href = safeHref(line.text.slice(shape.prefix + token.contentEnd + 2, shape.prefix + token.end - 1))
+          ranges.push(Decoration.mark({ class: 'cm-md-inline-link', attributes: { title: 'Ctrl + clique · Abrir link ↗', 'data-href': href ?? '' } }).range(contentStart, contentEnd))
+        } else ranges.push(Decoration.mark({ class: `cm-md-inline-${token.kind}` }).range(contentStart, contentEnd))
         if (contentEnd < end) ranges.push(Decoration.replace({}).range(contentEnd, end))
       }
     }
@@ -219,11 +256,26 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
         doc: body,
         extensions: [
           history(),
-          keymap.of([...defaultKeymap, ...historyKeymap]),
+          keymap.of([
+            { key: 'Enter', run: continueList },
+            { key: 'ArrowDown', run: view => navigateToFence(view, 1) },
+            { key: 'ArrowUp', run: view => navigateToFence(view, -1) },
+            ...defaultKeymap, ...historyKeymap,
+          ]),
           EditorView.lineWrapping,
           EditorView.contentAttributes.of({ 'aria-label': 'Editor Markdown visual', spellcheck: 'false' }),
           EditorView.domEventHandlers({
             keydown: wrapSelectedText,
+            mousedown: (event) => {
+              const link = event.target.closest?.('.cm-md-inline-link')
+              if (link && (event.ctrlKey || event.metaKey) && link.dataset.href) {
+                event.preventDefault()
+                event.stopPropagation()
+                window.open(link.dataset.href, '_blank', 'noopener,noreferrer')
+                return true
+              }
+              return false
+            },
             focus: (_event, view) => { positionToolbar(view); positionInsert(view); return false },
             blur: event => { if (!event.relatedTarget?.closest?.('.format-toolbar')) setToolbar(null); if (!event.relatedTarget?.closest?.('.insert-trigger, .block-menu')) { setInsertAt(null); setBlockMenu(false) } return false },
             mousemove: (event, view) => { if (!blockMenuRef.current) { const pos = view.posAtCoords({ x: event.clientX, y: event.clientY }); if (pos !== null) positionInsert(view, pos) } return false },

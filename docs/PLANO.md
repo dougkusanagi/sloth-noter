@@ -174,6 +174,13 @@ Cada entrega registra verificações executadas e pendências. Atualizar README 
 - As abas têm rolagem horizontal interna e a aba ativa é trazida para a área visível. Com 20 notas e viewport de 360 px, a lista tinha 226 px visíveis e 1667 px de conteúdo, enquanto a página continuou com 360 px de largura.
 - O `textarea` cobre toda a área de conteúdo; o texto mantém uma coluna central por meio de padding. O cursor de texto aparece nas margens. No Chrome, cliques à esquerda e à direita em quatro linhas explícitas posicionaram o cursor respectivamente no início e no fim da linha correspondente, usando o comportamento nativo do campo.
 
+## Usabilidade do editor — 24/09/2026
+
+- Enter continua listas com `-`, `*`, `+`, números e citações; item vazio encerra o bloco. O comportamento é compartilhado entre Padrão e Código e não altera o texto dentro de cercas de código.
+- Setas acima e abaixo de blocos de código param na cerca adjacente. Clicar em uma célula da tabela revela o Markdown e posiciona o cursor na célula.
+- Links renderizados usam cursor de ponteiro, dica de Ctrl/Cmd + clique e abrem somente com esse modificador.
+- Verificado por testes unitários e no Chrome, incluindo continuação e término de lista, navegação por setas, clique em tabela e ativação de link.
+
 ## Alinhamento com o plano herdado
 
 O plano anterior antecipava pasta local, escrita atômica, Worker, CodeMirror/Lezer, remark/rehype, Tailwind Typography e shadcn/ui. Passam a alternativas, não requisitos. H1 obrigatório sai da direção de produto. Persistência, integridade e portabilidade vêm antes de realce, indexação e experiência semelhante ao Obsidian.

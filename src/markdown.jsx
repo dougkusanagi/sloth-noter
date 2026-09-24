@@ -69,12 +69,12 @@ export function Markdown({ text, onCopy }) {
       index = table.end
       continue
     }
-    const list = line.match(/^([-*] |\d+\. )/)
+    const list = line.match(/^([-*+] |\d+\. )/)
     if (list) {
       const ordered = /^\d/.test(list[1])
       const items = []
-      while (index < lines.length && (ordered ? /^\d+\. / : /^[-*] /).test(lines[index])) {
-        items.push(<li key={items.length}><Inline text={lines[index].replace(ordered ? /^\d+\. / : /^[-*] /, '')} /></li>)
+      while (index < lines.length && (ordered ? /^\d+\. / : /^[-*+] /).test(lines[index])) {
+        items.push(<li key={items.length}><Inline text={lines[index].replace(ordered ? /^\d+\. / : /^[-*+] /, '')} /></li>)
         index++
       }
       add(ordered ? <ol>{items}</ol> : <ul>{items}</ul>)
@@ -87,7 +87,7 @@ export function Markdown({ text, onCopy }) {
       continue
     }
     const paragraph = []
-    while (index < lines.length && lines[index].trim() && !/^(#{1,4} |```|[-*] |\d+\. |> )/.test(lines[index])) paragraph.push(lines[index++])
+    while (index < lines.length && lines[index].trim() && !/^(#{1,4} |```|[-*+] |\d+\. |> )/.test(lines[index])) paragraph.push(lines[index++])
     if (!paragraph.length) paragraph.push(lines[index++])
     add(<p>{paragraph.map((part, i) => <React.Fragment key={i}>{i > 0 && <br />}<Inline text={part} /></React.Fragment>)}</p>)
   }

@@ -18,6 +18,8 @@ A barra marca os estilos presentes na seleção; clicar em um botão ativo remov
 
 No modo Padrão, tabelas aparecem como células até o cursor entrar nelas. Entrar em um bloco de código revela as duas cercas Markdown para edição. Blocos com linguagem conhecida recebem realce de sintaxe também na Leitura. Trechos como `normal *itálico*` são Markdown válido; estilos separados e aninhados são renderizados fora da linha ativa.
 
+Enter no fim de uma lista continua o marcador ou a numeração; Enter em um item vazio encerra a lista. Isso também funciona para citações e no modo Código. No modo Padrão, as setas param nas cercas de um bloco de código antes de entrar no conteúdo. Clicar em uma célula da tabela revela o Markdown para editá-la. Links renderizados mostram a dica de abertura e abrem com Ctrl/Cmd + clique.
+
 Nos modos Padrão e Código, digitar `(`, `[`, `{`, aspas simples, aspas duplas ou crase com texto selecionado envolve a seleção com o par correspondente. O texto permanece selecionado dentro dos delimitadores.
 
 O primeiro H1 (`# Título`) define o nome da nota e do arquivo `.md` exportado. Alterá-lo renomeia a nota, inclusive com undo/redo. A importação e as notas já salvas também seguem essa regra. Caracteres proibidos em nomes de arquivo viram `-`; conflitos recebem um sufixo numérico. Sem H1, o nome atual permanece. A ação “Rename note” altera o H1 quando ele existe.

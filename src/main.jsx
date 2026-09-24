@@ -7,6 +7,7 @@ import { headingFileName, moveToTrash, nameFromHeading, purgeFromTrash, reconcil
 import { loadDocument, saveDocument } from './storage.js'
 import { VisualEditor } from './visual-editor.jsx'
 import { wrapSelection } from './wrap-selection.js'
+import { continueBlock } from './continue-block.js'
 import './styles.css'
 
 function getStorage() {
@@ -105,6 +106,16 @@ function App() {
   function wrapSourceSelection(event) {
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return
     const field = event.currentTarget
+    if (event.key === 'Enter' && !event.shiftKey && field.selectionStart === field.selectionEnd) {
+      const continued = continueBlock(field.value, field.selectionStart)
+      if (continued) {
+        event.preventDefault()
+        field.setRangeText(continued.insert, continued.from, continued.to, 'end')
+        field.setSelectionRange(continued.cursor, continued.cursor)
+        updateBody(field.value)
+        return
+      }
+    }
     const wrapped = wrapSelection(field.value, field.selectionStart, field.selectionEnd, event.key)
     if (!wrapped) return
     event.preventDefault()
