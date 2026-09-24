@@ -113,8 +113,8 @@ Até esses critérios serem definidos, não haverá promessa de sincronização 
 
 ### Ajuste do seletor de modos
 
-- O seletor foi para a ponta direita da header. Padrão, Código e Leitura usam ícones e aparência segmentada, sem círculos visíveis; as opções continuam sendo radios nativos com nomes acessíveis.
-- Em larguras de até 600 px, os nomes visuais se recolhem e os ícones permanecem. Verificado no Chrome em 360 e 180 px CSS sem rolagem horizontal; as setas alternaram os três modos mantendo o foco no seletor.
+- Padrão, Código e Leitura usam ícones e aparência segmentada, sem círculos visíveis; as opções continuam sendo radios nativos com nomes acessíveis.
+- O seletor flutua no canto direito da área do editor, deixando a header para as abas. Até 1300 px, os nomes visuais se recolhem e os ícones permanecem. Até 1000 px, o texto começa abaixo do seletor. Verificado no Chrome em 1680, 1200, 960, 360 e 180 px CSS sem rolagem horizontal.
 
 Para pasta local, definir ambiente suportado, permissões revogadas, alterações externas, conflitos e recuperação. Não prometer escrita atômica universal antes de escolher/verificar o mecanismo. Importação/exportação permanece como caminho simples.
 

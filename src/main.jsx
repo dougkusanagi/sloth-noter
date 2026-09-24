@@ -278,15 +278,15 @@ function App() {
         const note = data.notes.find(item => item.id === id)
         return note && <button key={id} ref={id === data.activeId ? activeTabRef : null} className={id === data.activeId ? 'tab active' : 'tab'} onClick={() => openNote(id)}>{note.name}</button>
       })}</div></nav>}
-      <fieldset className="mode-switch">
-        <legend className="sr-only">Modo de visualização</legend>
-        {[['visual', 'Padrão'], ['source', 'Código'], ['reading', 'Leitura']].map(([value, label]) => <label key={value} title={label}><input type="radio" name="editor-mode" value={value} aria-label={label} checked={mode === value} onChange={() => changeMode(value)} /><ModeIcon mode={value} /><span className="mode-label">{label}</span></label>)}
-      </fieldset>
       <span className="sr-only" role="status">{error ? 'Not saved' : 'Saved in this browser'}</span>
       <input ref={importInput} type="file" accept=".md,.markdown,text/markdown,text/plain" hidden onChange={event => { importFile(event.target.files?.[0]); event.target.value = '' }} />
       <input ref={backupInput} type="file" accept=".json,application/json" hidden onChange={event => { restoreBackup(event.target.files?.[0]); event.target.value = '' }} />
     </header>
     <section className="editor-shell">
+      <fieldset className="mode-switch">
+        <legend className="sr-only">Modo de visualização</legend>
+        {[['visual', 'Padrão'], ['source', 'Código'], ['reading', 'Leitura']].map(([value, label]) => <label key={value} title={label}><input type="radio" name="editor-mode" value={value} aria-label={label} checked={mode === value} onChange={() => changeMode(value)} /><ModeIcon mode={value} /><span className="mode-label">{label}</span></label>)}
+      </fieldset>
       {error && <div className="save-error" role="alert">Storage failed: {error}. Text stays in memory; download a backup before closing.<div><button onClick={downloadBackup}>Download backup</button>{blocked && <>{initial.current.raw !== null && <button onClick={() => download('sloth-note-damaged.json', initial.current.raw, 'application/json;charset=utf-8')}>Download stored data</button>}<button onClick={resetDamagedStorage}>Replace storage with current notes</button></>}</div></div>}
       {importError && <div className="save-error" role="alert">Import failed: {importError}</div>}
       {active ? (mode === 'reading' ? <div className="reading"><Markdown text={active.body} onCopy={copyCode} />{copyStatus && <span role="status">{copyStatus}</span>}</div> : mode === 'source' ? <textarea ref={editorRef} key={active.id} aria-label="Editor Markdown em texto puro" spellCheck="false" value={active.body} onChange={event => updateBody(event.target.value)} /> : <VisualEditor key={active.id} noteId={active.id} body={active.body} onChange={updateBody} onReady={view => { visualRef.current = view }} />) : <div className="empty-note">No open note. Use ☰ to find or create one.</div>}

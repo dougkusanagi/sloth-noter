@@ -8,7 +8,7 @@ Base copiada de `../sloth-note-gpt`, commit `443d23c`, de 24/07/2026. `../sloth-
 
 **Estado atual:** as notas são gravadas no armazenamento deste navegador a cada alteração. Falhas de gravação aparecem em um alerta; o estado também é anunciado a tecnologias assistivas. É possível importar e exportar `.md`, baixar e restaurar um backup completo `.json`, renomear notas, fechar abas sem apagar o texto e mover notas para uma lixeira que persiste após recarga. A lixeira permite restaurar ou apagar definitivamente. Ainda não há pasta local conectada nem sincronização. Faça exportações para manter uma cópia fora do navegador.
 
-O ícone ☰, o nome do app e as abas ficam à esquerda da header; o seletor de modos, à direita. As abas rolam horizontalmente. O menu reúne as ações de notas e aparência; use as setas para navegar e Escape para fechar.
+O ícone ☰, o nome do app e as abas ficam na header. As abas rolam horizontalmente. O seletor de modos flutua no canto direito da área do editor; quando falta espaço na margem, mostra só os ícones e reserva espaço acima do texto. O menu reúne as ações de notas e aparência; use as setas para navegar e Escape para fechar.
 
 **Padrão** mostra títulos, ênfase, citações, listas, links, tags `#tag` e código estilizados nas linhas fora do cursor; a linha em edição mostra a sintaxe Markdown original. **Código** mostra todo o Markdown sem estilos; **Leitura** mostra o documento sem cursor de edição. O seletor usa ícones, exibe o nome de cada modo em telas largas e aceita setas do teclado para alternar.
 
