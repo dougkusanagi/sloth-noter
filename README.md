@@ -2,11 +2,13 @@
 
 Editor Markdown local com abas opcionais, busca de notas e de texto na nota, e três modos: Padrão, Código e Leitura.
 
-O MVP web está concluído. Pasta local, sincronização e aplicativo desktop permanecem no roadmap como trabalhos separados.
+O MVP web está concluído. A entrega final obrigatória é o aplicativo desktop nativo com Tauri V2; ela ainda está em desenvolvimento. A pasta local faz parte dessa entrega. Sincronização em nuvem permanece fora do escopo.
 
 Base copiada de `../sloth-note-gpt`, commit `443d23c`, de 24/07/2026. `../sloth-note` foi consultado como referência complementar.
 
 **Estado atual:** as notas são gravadas no armazenamento deste navegador a cada alteração. Falhas de gravação aparecem em um alerta; o estado também é anunciado a tecnologias assistivas. É possível importar e exportar `.md`, baixar e restaurar um backup completo `.json`, renomear notas, fechar abas sem apagar o texto e mover notas para uma lixeira que persiste após recarga. A lixeira permite restaurar ou apagar definitivamente. Ainda não há pasta local conectada nem sincronização. Faça exportações para manter uma cópia fora do navegador.
+
+**Requisito de produto:** a versão completa será uma janela nativa Tauri V2, executável offline e capaz de ler e gravar arquivos `.md` em uma pasta escolhida pelo usuário. Os arquivos serão a fonte de verdade no desktop; abas, preferências, revisões, conflitos e lixeira serão estado auxiliar versionado. O web atual é uma base funcional e um fallback de importação/exportação, não o destino final do armazenamento.
 
 O ícone ☰, o nome do app e as abas ficam na header. As abas rolam horizontalmente. O seletor de modos flutua no canto direito da área do editor; quando falta espaço na margem, mostra só os ícones e reserva espaço acima do texto. O menu reúne as ações de notas e aparência; use as setas para navegar e Escape para fechar.
 

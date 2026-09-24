@@ -1,6 +1,6 @@
 # Plano de implementação
 
-Vigente em 24/09/2026, baseado no [relatório](RELATORIO.md). As Etapas 1–3, que definem o MVP web, estão concluídas. Os registros das entregas e verificações estão abaixo. A Etapa 4 e o Tauri V2 permanecem opcionais e separados do MVP.
+Vigente em 24/09/2026, baseado no [relatório](RELATORIO.md). As Etapas 1–3, que definem o MVP web, estão concluídas. O MVP web é a base funcional e de validação do editor, mas não é a entrega final do produto. O requisito obrigatório é concluir a aplicação desktop nativa com Tauri V2, incluindo armazenamento em pasta local, recuperação e distribuição. O produto só será considerado completo depois da validação das etapas desktop descritas abaixo.
 
 ## Direção
 
@@ -8,9 +8,18 @@ Editor pequeno e confiável: texto primeiro, leitura opcional, poucas preferênc
 
 - Manter React/Vite e CSS próprio.
 - Começar com campo de texto único. Motor de edição e prévia avançada dependem de necessidade e medição.
-- Armazenamento no navegador mais importação/exportação inicialmente. Distinguir salvar no navegador de salvar em arquivo; `default vault` não pode sugerir pasta conectada inexistente.
+- Armazenamento no navegador mais importação/exportação inicialmente. Distinguir salvar no navegador de salvar em arquivo; a versão web não pode sugerir uma pasta conectada inexistente.
 - H1 opcional; fechar aba diferente de excluir nota.
 - Kit de componentes, store global, Worker e novos renderizadores não são requisitos prévios.
+
+### Contrato de produto
+
+- A versão web continua sendo uma superfície funcional para desenvolvimento, uso provisório e importação/exportação, mas não substitui a entrega desktop.
+- A versão final obrigatória será um aplicativo nativo em Tauri V2, executável sem rede e capaz de trabalhar com uma pasta local escolhida pelo usuário.
+- No desktop, os arquivos `.md` UTF-8 da pasta escolhida serão a fonte de verdade do conteúdo. O armazenamento do navegador não será usado como banco principal do desktop.
+- Abas abertas, preferências, revisões/hash dos arquivos, conflitos pendentes e lixeira persistente serão dados auxiliares versionados do aplicativo, sem alterar silenciosamente o conteúdo dos `.md`.
+- Sincronização em nuvem, contas, colaboração e serviços externos continuam fora deste plano. “Desktop” não significa sincronização automática.
+- A interface e os testes do MVP web devem ser reaproveitados por meio de um adaptador de persistência; componentes React não devem chamar diretamente APIs nativas de arquivos.
 
 ## Etapa 1 — Integridade e salvamento real
 
@@ -52,23 +61,61 @@ Depende da etapa 2; cobre C09/C11/C12 e manutenção.
 
 **Aceite:** exportar/reimportar sem alterar texto, incluindo linhas vazias e Unicode; fechar/reabrir sem perda e recuperar exclusão. Build servido localmente funciona sem rede externa. Verificações passam e medições são registradas com ambiente/método.
 
-## Etapa 4 — Opcionais
+## Etapa 4 — Preparação obrigatória para o desktop Tauri V2
 
-Após as anteriores: busca textual na nota, tema do sistema e contagem opcional. Prévia avançada e pasta local são decisões separadas, justificadas por demanda e custo.
+Depende das Etapas 1–3 e inicia a entrega final do produto. Esta etapa não é empacotamento cosmético: cria a fronteira entre a interface e as implementações de armazenamento.
 
-#### Tauri V2 — etapa posterior, ainda não iniciada
+- Criar o projeto `src-tauri` com Tauri V2 fixado, scripts de desenvolvimento/build e uma execução local que funcione sem rede.
+- Reaproveitar React/Vite como frontend e introduzir um contrato de persistência/vault com implementação web e implementação desktop.
+- Mover operações privilegiadas para o lado nativo ou para plugins oficiais com capabilities explícitas; não liberar filesystem global ao webview.
+- Manter importação/exportação, backup e recuperação disponíveis enquanto a migração para o vault desktop estiver em andamento.
+- Testar a mesma suíte de domínio (serialização, títulos, conflitos, lixeira e backup) contra as duas implementações quando o contrato estiver isolado.
 
-O Tauri V2 fica no roadmap como empacotamento opcional para desktop, depois da estabilização do fluxo web. Ele não substitui importação/exportação nem transforma automaticamente o armazenamento do navegador em uma pasta local.
+**Aceite:** o aplicativo abre como janela Tauri V2, funciona offline, não depende de `localStorage` para considerar uma nota salva no desktop e o build web continua funcionando separadamente.
 
-Antes de iniciar essa etapa, será necessário definir e validar:
+## Etapa 5 — Vault em pasta local e paridade funcional
 
-- alvo de sistema operacional e estratégia de distribuição/atualização;
-- permissões mínimas do plugin de filesystem e comportamento quando forem revogadas;
-- escrita segura, alterações externas e conflitos entre abas/processos;
-- migração e recuperação sem perda, mantendo o modo web como fallback;
-- testes de build, assinatura e execução offline no ambiente suportado.
+Obrigatória para considerar o desktop utilizável. O usuário escolhe ou cria uma pasta de notas por um diálogo nativo.
 
-Até esses critérios serem definidos, não haverá promessa de sincronização com pasta local. A implementação atual continua deliberadamente independente do Tauri.
+- Ler, criar, renomear, editar, buscar e exportar notas `.md` diretamente na pasta selecionada, preservando UTF-8, Unicode, linhas vazias e texto não suportado.
+- Definir a extensão do vault (apenas a pasta escolhida ou subpastas) e ignorar explicitamente arquivos internos/temporários.
+- Manter o conteúdo dos `.md` como fonte de verdade. Guardar estado auxiliar em diretório de dados do aplicativo, com esquema versionado e caminho do vault associado.
+- Persistir abas, preferências, revisões, lixeira e conflitos pendentes após reiniciar o aplicativo. Fechar uma aba nunca exclui a nota.
+- Reaproveitar os três modos de visualização, edição visual, busca, formatação, tabelas, blocos de código, importação, exportação e backup do MVP web.
+- Oferecer migração explícita do armazenamento web/backup JSON para um vault, com prévia, conflitos e confirmação; nunca sobrescrever um vault sem ação do usuário.
+
+**Aceite:** uma nota criada no desktop permanece em um `.md` verificável fora do app; fechar, reiniciar, trocar de vault e reabrir preserva o conteúdo e o estado permitido. Cada recurso já entregue no web possui fluxo equivalente no desktop ou uma limitação documentada.
+
+## Etapa 6 — Alterações externas, permissões e recuperação
+
+Obrigatória antes de chamar a pasta local de armazenamento confiável.
+
+- Observar alterações no vault e coalescer eventos; ao detectar alteração, comparar revisão/hash e recarregar automaticamente apenas quando não houver edição local pendente.
+- Exibir conflito quando o arquivo mudou fora do app durante uma edição local. Permitir manter a versão local, aceitar a externa ou salvar ambas com nomes distintos; nenhuma versão pode desaparecer silenciosamente.
+- Tratar pasta inexistente, arquivo movido/removido, arquivo somente leitura, permissão revogada, caminho inválido, pouco espaço e falhas de leitura/escrita.
+- Gravar com arquivo temporário no mesmo diretório e substituição segura conforme o sistema suportado; preservar a versão anterior quando a operação falhar. Não mostrar “salvo” antes da confirmação real.
+- Definir e testar o comportamento de duas janelas/processos, incluindo revisão obsoleta e conflito de renomeação.
+- Configurar capabilities e scopes mínimos para a janela principal e para o diretório escolhido. O usuário deve conseguir negar/reautorizar acesso sem corromper o vault.
+- Manter backup completo `.json` e exportação individual como recuperação quando o filesystem estiver indisponível.
+
+**Aceite:** alterações externas são detectadas, conflitos são visíveis e recuperáveis, falhas não resultam em falso sucesso e testes de interrupção/reinício não perdem a versão anterior nem o texto em memória.
+
+## Etapa 7 — Distribuição nativa e acabamento
+
+Obrigatória para a entrega do app completo, após a paridade e a integridade do vault.
+
+- Definir e registrar a matriz de sistemas operacionais suportados. A primeira matriz deve cobrir integralmente o ambiente de lançamento; outros sistemas só entram na promessa após build e teste próprios.
+- Gerar instalador(es) Tauri V2, identificar versão, nome do produto, ícone e diretórios de dados; documentar atualização e desinstalação sem apagar notas do usuário.
+- Validar execução offline, primeiro uso, upgrade, downgrade suportado ou bloqueado, reparo/reinstalação e preservação do vault.
+- Assinar artefatos quando a plataforma exigir e documentar o processo de release; não considerar um build local isolado como distribuição concluída.
+- Repetir a rodada de uso real: edição longa, IME, seleção/undo, zoom real de 200%, navegação somente por teclado, leitores de tela, nomes Unicode, caminhos longos, vault grande e recuperação após falhas.
+- Revisar textos ainda em inglês, mensagens de erro, atalhos e fluxo de escolha/troca de pasta.
+
+**Aceite de release:** uma pessoa consegue instalar, escolher um vault, criar/editar/fechar/reabrir notas, lidar com uma alteração externa e recuperar um erro sem terminal ou ferramentas de desenvolvimento; o pacote é reproduzível e os limites por sistema operacional estão publicados.
+
+### Critério de conclusão do produto
+
+O Sloth Note só sai do estado “MVP web + desktop em desenvolvimento” quando as Etapas 4–7 estiverem aceitas. A ausência de sincronização em nuvem não bloqueia a conclusão; a ausência do aplicativo Tauri V2, da pasta local confiável ou da distribuição validada bloqueia.
 
 ### Entrega de 23/09/2026 — busca textual
 
@@ -151,7 +198,7 @@ Cada entrega registra verificações executadas e pendências. Atualizar README 
 - **Etapa 2:** leitura separada com sintaxe delimitada, HTML bruto como texto e protocolos de link permitidos; paleta com seleção reiniciada, estado vazio, foco e Escape. Botões para ações principais, foco visível e confirmação de cópia.
 - **Etapa 3:** notas separadas das abas abertas; importação UTF-8 com escolha entre manter ambas e substituir; renomeação, exclusão com desfazer durante a sessão, preferências persistidas, fontes do sistema e npm com versões fixadas. `npm audit` sem vulnerabilidades após atualização das dependências transitivas.
 - **Verificado:** `npm ci`, 5 testes unitários de armazenamento, build e `npm audit` (zero vulnerabilidades); criação, edição e recarga no Chrome; busca por nome; importação Unicode e preservação de linha final; conflito de importação; fechar/reabrir; excluir/desfazer; leitura de HTML bruto e bloqueio de link `javascript:`; largura de 360 px sem rolagem horizontal. Com armazenamento v2 corrompido, a interface mostrou “Not saved” e manteve o valor original após edição.
-- **Pendente naquela entrega:** testar IME, seleção entre parágrafos, undo/redo e zoom de 200% manualmente; testar falha de quota na interface e o fluxo completo de recuperação após recarga; medir latência em 10 kB, 100 kB, 1 MB e 100 notas. A exclusão ainda não sobrevivia à recarga; isso foi resolvido na continuação abaixo. A leitura não pretende implementar todo o CommonMark. Não há integração com pasta local ou Tauri.
+- **Pendente naquela entrega:** testar IME, seleção entre parágrafos, undo/redo e zoom de 200% manualmente; testar falha de quota na interface e o fluxo completo de recuperação após recarga; medir latência em 10 kB, 100 kB, 1 MB e 100 notas. A exclusão ainda não sobrevivia à recarga; isso foi resolvido na continuação abaixo. A leitura não pretende implementar todo o CommonMark. Naquela entrega ainda não havia integração com pasta local ou Tauri.
 
 ## Continuação de 23/09/2026
 

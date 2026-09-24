@@ -2,6 +2,8 @@
 
 Data: 23/09/2026. Escopo: seleção e cópia da base, inspeção do código e planejamento. Nenhuma correção funcional foi aplicada nesta revisão.
 
+**Atualização de requisito:** o MVP web descrito neste relatório é uma etapa concluída, não o produto final. A entrega final obrigatória é o aplicativo desktop nativo com Tauri V2 e armazenamento em pasta local. A sincronização em nuvem continua fora do escopo.
+
 ## Atualização de implementação — 23/09/2026
 
 - C01/C02 iniciados: notas em `localStorage` com esquema v1, revisões por nota, gravação síncrona e indicação baseada no resultado; editor em `textarea` único.
@@ -85,7 +87,7 @@ Armazenamento, exportação com Blob e separação em componentes são boas refe
 | Buscar na nota | Texto simples, próxima/anterior ocorrência; sem indexador global | Após editor confiável |
 | Tema do sistema | Complementa claro/escuro e guarda preferência | Refinamento |
 | Contagem de palavras | Opcional, sem barra permanente adicional | Opcional |
-| Pasta local | Permissões, conflitos e fallback por importar/exportar definidos | Posterior |
+| Pasta local | Permissões, conflitos e fallback por importar/exportar definidos | Obrigatória na entrega desktop Tauri V2 |
 
 Fora do plano inicial: contas, nuvem, colaboração, IA, plugins, grafo, banco de conhecimento, painéis de tarefas, matemática/diagramas e renderizadores pesados. Não são necessários para escrever Markdown com confiança.
 
