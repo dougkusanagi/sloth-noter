@@ -3,8 +3,9 @@ import { createRoot } from 'react-dom/client'
 import { Markdown } from './markdown.jsx'
 import { createBackup, readBackup } from './backup.js'
 import { findMatches } from './find.js'
-import { moveToTrash, purgeFromTrash, restoreFromTrash, uniqueName } from './notes.js'
+import { headingFileName, moveToTrash, nameFromHeading, purgeFromTrash, reconcileHeadingNames, restoreFromTrash, uniqueName } from './notes.js'
 import { loadDocument, saveDocument } from './storage.js'
+import { VisualEditor } from './visual-editor.jsx'
 import './styles.css'
 
 function getStorage() {
@@ -23,12 +24,16 @@ function download(name, body, type = 'text/markdown;charset=utf-8') {
 function App() {
   const storage = useRef(getStorage())
   const initial = useRef(null)
-  if (!initial.current) initial.current = loadDocument(storage.current)
+  if (!initial.current) {
+    const loaded = loadDocument(storage.current)
+    const document = loaded.blocked ? loaded.document : reconcileHeadingNames(loaded.document)
+    initial.current = document === loaded.document ? loaded : { ...loaded, document, error: saveDocument(storage.current, document) }
+  }
   const current = useRef(initial.current.document)
   const [data, setData] = useState(initial.current.document)
   const [error, setError] = useState(initial.current.error)
   const [blocked, setBlocked] = useState(initial.current.blocked)
-  const [reading, setReading] = useState(false)
+  const [mode, setMode] = useState('visual')
   const [palette, setPalette] = useState(false)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(0)
@@ -49,6 +54,7 @@ function App() {
   const menuFirst = useRef(null)
   const findInput = useRef(null)
   const editorRef = useRef(null)
+  const visualRef = useRef(null)
   const tabListRef = useRef(null)
   const activeTabRef = useRef(null)
   const trashFirst = useRef(null)
@@ -63,24 +69,26 @@ function App() {
     if (!blocked) setError(saveDocument(storage.current, next))
   }
   function updatePrefs(change) { commit({ ...current.current, preferences: { ...current.current.preferences, ...change } }) }
+  function focusEditor() { if (mode === 'source') editorRef.current?.focus(); else visualRef.current?.focus() }
   function openNote(id) {
     const old = current.current
     commit({ ...old, openIds: old.openIds.includes(id) ? old.openIds : [...old.openIds, id], activeId: id })
-    setReading(false)
+    if (mode === 'reading') setMode('visual')
     if (palette) closePalette()
-    setTimeout(() => editorRef.current?.focus(), 0)
+    setTimeout(focusEditor, 0)
   }
   function createNote(name = 'new note.md', body = '') {
     const old = current.current
-    const note = { id: crypto.randomUUID(), name: uniqueName(old.notes, name), body, revision: 0 }
+    const note = { id: crypto.randomUUID(), name: uniqueName(old.notes, headingFileName(body) ?? name), body, revision: 0 }
     commit({ ...old, notes: [...old.notes, note], openIds: [...old.openIds, note.id], activeId: note.id })
-    setReading(false)
+    if (mode === 'reading') setMode('visual')
     if (palette) closePalette()
-    setTimeout(() => editorRef.current?.focus(), 0)
+    setTimeout(focusEditor, 0)
   }
   function updateBody(body) {
     const old = current.current
-    commit({ ...old, notes: old.notes.map(note => note.id === old.activeId ? { ...note, body, revision: note.revision + 1 } : note) })
+    const name = nameFromHeading(body, old.notes, old.activeId)
+    commit({ ...old, notes: old.notes.map(note => note.id === old.activeId ? { ...note, name: name ?? note.name, body, revision: note.revision + 1 } : note) })
   }
   function closeTab(id) {
     const old = current.current
@@ -93,7 +101,8 @@ function App() {
     if (!proposed || proposed === active.name) return
     const name = proposed.toLowerCase().endsWith('.md') ? proposed : `${proposed}.md`
     if (data.notes.some(note => note.id !== active.id && note.name.toLocaleLowerCase() === name.toLocaleLowerCase())) { window.alert('A note with that name already exists.'); return }
-    commit({ ...current.current, notes: current.current.notes.map(note => note.id === active.id ? { ...note, name, revision: note.revision + 1 } : note) })
+    const body = active.body.replace(/^# [ \t]*(.+?)[ \t]*$/m, `# ${name.slice(0, -3)}`)
+    commit({ ...current.current, notes: current.current.notes.map(note => note.id === active.id ? { ...note, name, body, revision: note.revision + 1 } : note) })
   }
   function deleteNote() {
     if (!active || !window.confirm(`Move ${active.name} to Trash?`)) return
@@ -101,7 +110,7 @@ function App() {
   }
   function restoreNote(id) {
     commit(restoreFromTrash(current.current, id))
-    setReading(false)
+    if (mode === 'reading') setMode('visual')
     closeTrash()
   }
   function purgeNote(id) {
@@ -114,7 +123,7 @@ function App() {
     setImportError('')
     try {
       const body = await file.text()
-      const name = file.name.toLowerCase().endsWith('.md') ? file.name : `${file.name}.md`
+      const name = headingFileName(body) ?? (file.name.toLowerCase().endsWith('.md') ? file.name : `${file.name}.md`)
       const existing = current.current.notes.find(note => note.name.toLocaleLowerCase() === name.toLocaleLowerCase())
       if (existing) setConflict({ name, body, id: existing.id })
       else createNote(name, body)
@@ -130,7 +139,7 @@ function App() {
       const restored = readBackup(await file.text())
       if (!window.confirm(`Replace current notes with this backup (${restored.notes.length} notes, ${restored.trash.length} in Trash)?`)) return
       commit(restored)
-      setReading(false)
+      if (mode === 'reading') setMode('visual')
       setFindOpen(false)
       setTrashOpen(false)
     } catch (cause) { setImportError(cause instanceof Error ? cause.message : 'Could not read backup') }
@@ -140,7 +149,7 @@ function App() {
     if (replace) {
       const old = current.current
       commit({ ...old, notes: old.notes.map(note => note.id === conflict.id ? { ...note, body: conflict.body, revision: note.revision + 1 } : note), openIds: old.openIds.includes(conflict.id) ? old.openIds : [...old.openIds, conflict.id], activeId: conflict.id })
-      setReading(false)
+      if (mode === 'reading') setMode('visual')
     } else createNote(conflict.name, conflict.body)
     closeConflict()
   }
@@ -152,20 +161,24 @@ function App() {
   function openPalette() { returnFocus.current = menuOpen ? menuButton.current : document.activeElement; setQuery(''); setSelected(0); setPalette(true) }
   function closePalette() { setPalette(false); setTimeout(() => (returnFocus.current?.isConnected ? returnFocus.current : menuButton.current)?.focus(), 0) }
   function closeMenu(restoreFocus = true) { setMenuOpen(false); if (restoreFocus) setTimeout(() => menuButton.current?.focus(), 0) }
-  function openFind() { setMenuOpen(false); setReading(false); setFindOpen(true); setFindIndex(0); setTimeout(() => findInput.current?.focus(), 0) }
-  function closeFind() { setFindOpen(false); setTimeout(() => editorRef.current?.focus(), 0) }
+  function openFind() { setMenuOpen(false); if (mode === 'reading') setMode('visual'); setFindOpen(true); setFindIndex(0); setTimeout(() => findInput.current?.focus(), 0) }
+  function closeFind() { setFindOpen(false); setTimeout(focusEditor, 0) }
   function currentMatches() { return active ? findMatches(active.body, findQuery) : [] }
   function selectFind(index = findIndex) {
     const matches = currentMatches()
-    if (!matches.length || !editorRef.current) return
+    if (!matches.length) return
     const safeIndex = (index + matches.length) % matches.length
-    editorRef.current.focus()
-    editorRef.current.setSelectionRange(matches[safeIndex].start, matches[safeIndex].end)
+    if (mode === 'source' && editorRef.current) {
+      editorRef.current.focus()
+      editorRef.current.setSelectionRange(matches[safeIndex].start, matches[safeIndex].end)
+    } else if (visualRef.current) {
+      visualRef.current.dispatch({ selection: { anchor: matches[safeIndex].start, head: matches[safeIndex].end }, scrollIntoView: true })
+    }
     findInput.current?.focus()
     setFindIndex(safeIndex)
   }
   function runMenu(action, restoreFocus = true) { setMenuOpen(false); action(); if (restoreFocus) setTimeout(() => menuButton.current?.focus(), 0) }
-  function toggleReading() { setReading(!reading); if (reading) setTimeout(() => editorRef.current?.focus(), 0) }
+  function changeMode(next) { setMode(next); setMenuOpen(false); if (next !== 'reading') setTimeout(() => next === 'source' ? editorRef.current?.focus() : visualRef.current?.focus(), 0) }
   function resetDamagedStorage() {
     const failure = saveDocument(storage.current, current.current)
     setError(failure)
@@ -248,7 +261,6 @@ function App() {
           {data.trash.length > 0 && <button role="menuitem" onClick={() => runMenu(() => restoreNote(data.trash.at(-1).note.id))}>Undo delete</button>}
           <button role="menuitem" onClick={() => runMenu(() => setTrashOpen(true), false)}>Trash ({data.trash.length})</button>
           <div className="menu-heading" role="presentation">View</div>
-          <button role="menuitem" disabled={!active} onClick={() => runMenu(toggleReading, !reading)}>{reading ? 'Edit note' : 'Read note'}</button>
           <button role="menuitem" onClick={() => runMenu(() => updatePrefs({ tabsVisible: !prefs.tabsVisible }))}>{prefs.tabsVisible ? 'Hide tabs' : 'Show tabs'}</button>
           <button role="menuitem" onClick={() => runMenu(() => updatePrefs({ theme: prefs.theme === 'system' ? 'light' : prefs.theme === 'light' ? 'dark' : 'system' }))}>Theme: {prefs.theme}</button>
           <button role="menuitem" onClick={() => runMenu(() => updatePrefs({ fontSize: Math.max(14, prefs.fontSize - 1) }))}>Smaller text</button>
@@ -256,6 +268,10 @@ function App() {
         </div>}
       </div>
       <span className="app-title">Sloth Note</span>
+      <fieldset className="mode-switch">
+        <legend className="sr-only">Modo de visualização</legend>
+        {[['visual', 'Visual'], ['source', 'Texto puro'], ['reading', 'Leitura']].map(([value, label]) => <label key={value}><input type="radio" name="editor-mode" value={value} checked={mode === value} onChange={() => changeMode(value)} />{label}</label>)}
+      </fieldset>
       {prefs.tabsVisible && data.openIds.length > 0 && <nav className="tabs" aria-label="Open notes"><div className="tab-list" ref={tabListRef}>{data.openIds.map(id => {
         const note = data.notes.find(item => item.id === id)
         return note && <button key={id} ref={id === data.activeId ? activeTabRef : null} className={id === data.activeId ? 'tab active' : 'tab'} onClick={() => openNote(id)}>{note.name}</button>
@@ -267,7 +283,7 @@ function App() {
     <section className="editor-shell">
       {error && <div className="save-error" role="alert">Storage failed: {error}. Text stays in memory; download a backup before closing.<div><button onClick={downloadBackup}>Download backup</button>{blocked && <>{initial.current.raw !== null && <button onClick={() => download('sloth-note-damaged.json', initial.current.raw, 'application/json;charset=utf-8')}>Download stored data</button>}<button onClick={resetDamagedStorage}>Replace storage with current notes</button></>}</div></div>}
       {importError && <div className="save-error" role="alert">Import failed: {importError}</div>}
-      {active ? (reading ? <div className="reading"><Markdown text={active.body} onCopy={copyCode} />{copyStatus && <span role="status">{copyStatus}</span>}</div> : <textarea ref={editorRef} key={active.id} aria-label="Markdown editor" spellCheck="false" value={active.body} onChange={event => updateBody(event.target.value)} />) : <div className="empty-note">No open note. Use ☰ to find or create one.</div>}
+      {active ? (mode === 'reading' ? <div className="reading"><Markdown text={active.body} onCopy={copyCode} />{copyStatus && <span role="status">{copyStatus}</span>}</div> : mode === 'source' ? <textarea ref={editorRef} key={active.id} aria-label="Editor Markdown em texto puro" spellCheck="false" value={active.body} onChange={event => updateBody(event.target.value)} /> : <VisualEditor key={active.id} noteId={active.id} body={active.body} onChange={updateBody} onReady={view => { visualRef.current = view }} />) : <div className="empty-note">No open note. Use ☰ to find or create one.</div>}
     </section>
     {palette && <div className="palette-backdrop" onMouseDown={closePalette}><section className="palette" role="dialog" aria-modal="true" aria-label="Find note" onMouseDown={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'Tab') { const focusable = [search.current, ...event.currentTarget.querySelectorAll('button')]; const first = focusable[0], last = focusable.at(-1); if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() } } }}><input ref={search} aria-label="Search notes" value={query} onChange={event => { setQuery(event.target.value); setSelected(0) }} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setSelected(index => Math.min(choices.length - 1, index + 1)) } if (event.key === 'ArrowUp') { event.preventDefault(); setSelected(index => Math.max(0, index - 1)) } if (event.key === 'Enter' && choices[selected]) openNote(choices[selected].id) }} placeholder="Find a note…" /><div className="results">{choices.length ? choices.map((note, index) => <button key={note.id} className={index === selected ? 'selected' : ''} aria-current={index === selected ? 'true' : undefined} onClick={() => openNote(note.id)}>{note.name}</button>) : <p>No notes found</p>}</div><button className="dialog-close" onClick={closePalette}>Close</button></section></div>}
     {conflict && <div className="palette-backdrop"><section className="palette conflict" role="dialog" aria-modal="true" aria-label="Import conflict" onKeyDown={event => { if (event.key === 'Escape') closeConflict(); if (event.key === 'Tab') { const buttons = [...event.currentTarget.querySelectorAll('button')]; if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1).focus() } else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0].focus() } } }}><p>A note named <strong>{conflict.name}</strong> already exists.</p><button ref={conflictFirst} onClick={() => resolveConflict(false)}>Keep both</button><button onClick={() => resolveConflict(true)}>Replace existing note</button><button onClick={closeConflict}>Cancel</button></section></div>}

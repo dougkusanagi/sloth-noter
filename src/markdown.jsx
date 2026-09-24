@@ -7,11 +7,12 @@ export function safeHref(value) {
 }
 
 export function Inline({ text }) {
-  const pieces = text.split(/(`[^`]+`|\*\*[^*]+\*\*|(?<!\*)\*[^*]+\*(?!\*)|\[[^\]]+\]\([^)]+\))/g)
+  const pieces = text.split(/(`[^`]+`|\*\*[^*]+\*\*|(?<!\*)\*[^*]+\*(?!\*)|\[[^\]]+\]\([^)]+\)|(?<![\p{L}\p{N}_])#[\p{L}\p{N}_/-]+)/gu)
   return pieces.map((piece, index) => {
     if (piece.startsWith('`') && piece.endsWith('`')) return <code key={index}>{piece.slice(1, -1)}</code>
     if (piece.startsWith('**') && piece.endsWith('**')) return <strong key={index}>{piece.slice(2, -2)}</strong>
     if (piece.startsWith('*') && piece.endsWith('*')) return <em key={index}>{piece.slice(1, -1)}</em>
+    if (/^#[\p{L}\p{N}_/-]+$/u.test(piece)) return <span className="markdown-tag" key={index}>{piece}</span>
     const link = piece.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
     if (link) {
       const href = safeHref(link[2])

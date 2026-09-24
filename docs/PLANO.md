@@ -104,6 +104,13 @@ Até esses critérios serem definidos, não haverá promessa de sincronização 
 - Verificação final: 14 testes automatizados, build com 66,18 kB gzip de JavaScript e 1,94 kB gzip de CSS, `npm audit` sem vulnerabilidades. O build não contém referências a CDN ou fontes remotas obrigatórias.
 - Limites conhecidos: a leitura implementa o subconjunto Markdown descrito no README; o zoom real de 200% e leitores de tela específicos não foram medidos nesta rodada. O armazenamento continua no navegador, com backup e importação/exportação como portabilidade.
 
+### Ampliação solicitada — edição visual e título como arquivo
+
+- O modo Visual tornou-se padrão. CodeMirror mantém texto, seleção, composição e histórico de edição; decorações mostram Markdown estilizado nas linhas fora do cursor e revelam a sintaxe completa na linha ativa. Tags `#tag` aparecem destacadas também na Leitura. Texto puro e Leitura continuam disponíveis por três botões de opção na header.
+- O primeiro H1 controla o nome da nota e do `.md` exportado. Edição e undo/redo atualizam o nome; importação e abertura de notas salvas reconciliam nomes com títulos. Sem H1, o nome existente é mantido. Conflitos recebem sufixo e caracteres inválidos são substituídos.
+- Verificado no Chrome: edição de H1 com renomeação imediata, undo/redo do texto e nome, alternância entre os três modos sem mudar o conteúdo, revelação da sintaxe ao entrar na linha de ênfase, busca no modo Visual, importação com H1 e reconciliação ao recarregar. Nota de 1 MiB aceitou inserção e recarga sem perda. Viewport de 360 px permaneceu sem rolagem horizontal.
+- `npm test`: 19 testes. `npm run build`: 154,14 kB gzip de JavaScript e 2,38 kB gzip de CSS; `npm audit` sem vulnerabilidades. O JavaScript excede a meta anterior de 80 kB gzip porque a edição visual solicitada requer um motor de edição com seleção, IME, histórico e decorações. Esse custo substitui a premissa anterior de campo de texto único como modo padrão.
+
 Para pasta local, definir ambiente suportado, permissões revogadas, alterações externas, conflitos e recuperação. Não prometer escrita atômica universal antes de escolher/verificar o mecanismo. Importação/exportação permanece como caminho simples.
 
 ## Verificação e documentação

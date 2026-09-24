@@ -5,6 +5,42 @@ export function uniqueName(notes, proposed) {
   return name
 }
 
+export function headingFileName(body) {
+  const heading = body.match(/^# [ \t]*(.+?)[ \t]*$/m)
+  if (!heading) return null
+  const title = heading[1]
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '$1')
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '-')
+    .replace(/[. ]+$/, '').trim()
+  if (!title) return null
+  if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(title)) return `_${title}.md`
+  return title.toLocaleLowerCase().endsWith('.md') ? title : `${title}.md`
+}
+
+export function nameFromHeading(body, notes, currentId) {
+  const name = headingFileName(body)
+  return name ? uniqueName(notes.filter(note => note.id !== currentId), name) : null
+}
+
+export function reconcileHeadingNames(document) {
+  const reserved = document.notes.filter(note => !headingFileName(note.body))
+  const assigned = []
+  let changed = false
+  const notes = document.notes.map(note => {
+    const proposed = headingFileName(note.body)
+    if (!proposed) return note
+    const name = uniqueName([...reserved, ...assigned], proposed)
+    const next = name === note.name ? note : { ...note, name, revision: note.revision + 1 }
+    if (next !== note) changed = true
+    assigned.push(next)
+    return next
+  })
+  return changed ? { ...document, notes } : document
+}
+
 export function moveToTrash(document, id, deletedAt) {
   const index = document.notes.findIndex(note => note.id === id)
   if (index < 0) return document
