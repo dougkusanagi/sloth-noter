@@ -88,6 +88,13 @@ Até esses critérios serem definidos, não haverá promessa de sincronização 
 - A restauração valida a estrutura, pede confirmação antes de substituir o estado atual e informa erros de leitura. Quando a gravação está bloqueada por dados corrompidos, o backup restaurado permanece em memória até a ação explícita de substituir o armazenamento.
 - Verificação: 14 testes automatizados passaram, incluindo preservação de Unicode e linhas vazias no backup e rejeição de dados inválidos; build concluído. O fluxo visual de restauração ainda precisa de validação no navegador.
 
+### Validação de interface de 24/09/2026 — edição e busca
+
+- No build servido localmente no Chrome, criação e gravação de nota, restauração de backup com confirmação, falha simulada de quota, retomada da gravação e recuperação após recarga passaram. Dados v3 corrompidos permaneceram intactos até a ação explícita de substituição.
+- Enter no meio do texto, substituição de seleção entre linhas, Backspace, undo e redo mantiveram o valor salvo igual ao editor. A busca selecionou o trecho esperado.
+- O diálogo de busca agora mantém o foco dentro dele ao navegar entre ocorrências e fecha o ciclo de Tab. Verificado no Chrome com seleção correta e foco no campo de busca após avançar.
+- Viewports de 360 e 180 pixels CSS não produziram rolagem horizontal. O caso de 180 pixels é uma aproximação do espaço de 200% de zoom, não uma medição de zoom real.
+
 Para pasta local, definir ambiente suportado, permissões revogadas, alterações externas, conflitos e recuperação. Não prometer escrita atômica universal antes de escolher/verificar o mecanismo. Importação/exportação permanece como caminho simples.
 
 ## Verificação e documentação
