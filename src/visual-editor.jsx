@@ -1,8 +1,30 @@
 import { useEffect, useRef } from 'react'
-import { EditorState } from '@codemirror/state'
+import { EditorSelection, EditorState } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { Decoration, EditorView, ViewPlugin, keymap } from '@codemirror/view'
 import { classifyLine, inlineSyntax } from './live-markdown.js'
+import { wrapSelection } from './wrap-selection.js'
+
+function wrapSelectedText(event, view) {
+  if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return false
+  const ranges = view.state.selection.ranges
+  if (!ranges.some(range => !range.empty)) return false
+  const changes = [], selections = []
+  for (const range of ranges) {
+    const wrapped = wrapSelection(view.state.doc.sliceString(range.from, range.to), 0, range.to - range.from, event.key)
+    if (!wrapped) return false
+    changes.push({ from: range.from, to: range.to, insert: wrapped.insert })
+  }
+  let offset = 0
+  for (let index = 0; index < ranges.length; index++) {
+    const range = ranges[index], insert = changes[index].insert
+    selections.push(EditorSelection.range(range.from + offset + 1, range.from + offset + insert.length - 1))
+    offset += insert.length - (range.to - range.from)
+  }
+  view.dispatch({ changes, selection: EditorSelection.create(selections, view.state.selection.mainIndex), userEvent: 'input.type' })
+  event.preventDefault()
+  return true
+}
 
 function decorationsFor(view) {
   const doc = view.state.doc, ranges = []
@@ -58,6 +80,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.lineWrapping,
           EditorView.contentAttributes.of({ 'aria-label': 'Editor Markdown visual', spellcheck: 'false' }),
+          EditorView.domEventHandlers({ keydown: wrapSelectedText }),
           liveMarkdown,
           EditorView.updateListener.of(update => {
             if (update.docChanged && !syncing.current) callbacks.current.onChange(update.state.doc.toString())

@@ -6,6 +6,7 @@ import { findMatches } from './find.js'
 import { headingFileName, moveToTrash, nameFromHeading, purgeFromTrash, reconcileHeadingNames, restoreFromTrash, uniqueName } from './notes.js'
 import { loadDocument, saveDocument } from './storage.js'
 import { VisualEditor } from './visual-editor.jsx'
+import { wrapSelection } from './wrap-selection.js'
 import './styles.css'
 
 function getStorage() {
@@ -95,6 +96,17 @@ function App() {
     const old = current.current
     const name = nameFromHeading(body, old.notes, old.activeId)
     commit({ ...old, notes: old.notes.map(note => note.id === old.activeId ? { ...note, name: name ?? note.name, body, revision: note.revision + 1 } : note) })
+  }
+  function wrapSourceSelection(event) {
+    if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return
+    const field = event.currentTarget
+    const wrapped = wrapSelection(field.value, field.selectionStart, field.selectionEnd, event.key)
+    if (!wrapped) return
+    event.preventDefault()
+    const start = field.selectionStart, end = field.selectionEnd
+    field.setRangeText(wrapped.insert, start, end, 'preserve')
+    field.setSelectionRange(wrapped.from, wrapped.to)
+    updateBody(field.value)
   }
   function closeTab(id) {
     const old = current.current
@@ -289,7 +301,7 @@ function App() {
       </fieldset>
       {error && <div className="save-error" role="alert">Storage failed: {error}. Text stays in memory; download a backup before closing.<div><button onClick={downloadBackup}>Download backup</button>{blocked && <>{initial.current.raw !== null && <button onClick={() => download('sloth-note-damaged.json', initial.current.raw, 'application/json;charset=utf-8')}>Download stored data</button>}<button onClick={resetDamagedStorage}>Replace storage with current notes</button></>}</div></div>}
       {importError && <div className="save-error" role="alert">Import failed: {importError}</div>}
-      {active ? (mode === 'reading' ? <div className="reading"><Markdown text={active.body} onCopy={copyCode} />{copyStatus && <span role="status">{copyStatus}</span>}</div> : mode === 'source' ? <textarea ref={editorRef} key={active.id} aria-label="Editor Markdown em texto puro" spellCheck="false" value={active.body} onChange={event => updateBody(event.target.value)} /> : <VisualEditor key={active.id} noteId={active.id} body={active.body} onChange={updateBody} onReady={view => { visualRef.current = view }} />) : <div className="empty-note">No open note. Use ☰ to find or create one.</div>}
+      {active ? (mode === 'reading' ? <div className="reading"><Markdown text={active.body} onCopy={copyCode} />{copyStatus && <span role="status">{copyStatus}</span>}</div> : mode === 'source' ? <textarea ref={editorRef} key={active.id} aria-label="Editor Markdown em texto puro" spellCheck="false" value={active.body} onChange={event => updateBody(event.target.value)} onKeyDown={wrapSourceSelection} /> : <VisualEditor key={active.id} noteId={active.id} body={active.body} onChange={updateBody} onReady={view => { visualRef.current = view }} />) : <div className="empty-note">No open note. Use ☰ to find or create one.</div>}
     </section>
     {palette && <div className="palette-backdrop" onMouseDown={closePalette}><section className="palette" role="dialog" aria-modal="true" aria-label="Find note" onMouseDown={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'Tab') { const focusable = [search.current, ...event.currentTarget.querySelectorAll('button')]; const first = focusable[0], last = focusable.at(-1); if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() } } }}><input ref={search} aria-label="Search notes" value={query} onChange={event => { setQuery(event.target.value); setSelected(0) }} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setSelected(index => Math.min(choices.length - 1, index + 1)) } if (event.key === 'ArrowUp') { event.preventDefault(); setSelected(index => Math.max(0, index - 1)) } if (event.key === 'Enter' && choices[selected]) openNote(choices[selected].id) }} placeholder="Find a note…" /><div className="results">{choices.length ? choices.map((note, index) => <button key={note.id} className={index === selected ? 'selected' : ''} aria-current={index === selected ? 'true' : undefined} onClick={() => openNote(note.id)}>{note.name}</button>) : <p>No notes found</p>}</div><button className="dialog-close" onClick={closePalette}>Close</button></section></div>}
     {conflict && <div className="palette-backdrop"><section className="palette conflict" role="dialog" aria-modal="true" aria-label="Import conflict" onKeyDown={event => { if (event.key === 'Escape') closeConflict(); if (event.key === 'Tab') { const buttons = [...event.currentTarget.querySelectorAll('button')]; if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1).focus() } else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0].focus() } } }}><p>A note named <strong>{conflict.name}</strong> already exists.</p><button ref={conflictFirst} onClick={() => resolveConflict(false)}>Keep both</button><button onClick={() => resolveConflict(true)}>Replace existing note</button><button onClick={closeConflict}>Cancel</button></section></div>}
