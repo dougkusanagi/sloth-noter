@@ -105,6 +105,6 @@ test('restoring a deleted note resolves name conflicts; permanent deletion remov
   const deleted = moveToTrash(newDocument(), 'welcome', 1234)
   const conflicting = { ...deleted, notes: [{ id: 'other', name: 'welcome.md', body: '', revision: 0 }], openIds: ['other'], activeId: 'other' }
   const restored = restoreFromTrash(conflicting, 'welcome')
-  assert.equal(restored.notes.find(note => note.id === 'welcome').name, 'welcome (2).md')
+  assert.equal(restored.notes.find(note => note.id === 'welcome').name, 'Welcome (2).md')
   assert.equal(purgeFromTrash(deleted, 'welcome').trash.length, 0)
 })

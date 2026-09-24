@@ -12,6 +12,8 @@ O ícone ☰, o nome do app e as abas ficam na header. As abas rolam horizontalm
 
 **Padrão** mostra títulos, ênfase, citações, listas, links, tags `#tag` e código estilizados nas linhas fora do cursor; a linha em edição mostra a sintaxe Markdown original. **Código** mostra todo o Markdown sem estilos; **Leitura** mostra o documento sem cursor de edição. O seletor usa ícones, exibe o nome de cada modo em telas largas e aceita setas do teclado para alternar.
 
+Ao selecionar texto no modo Padrão, uma barra discreta oferece negrito, itálico, código em linha, link, título H2, citação e lista. O botão de link pede o endereço na própria barra. Novas instalações começam com `Welcome.md`, uma nota de exemplo com esses estilos, listas, tags e bloco de código; notas já salvas continuam intactas.
+
 Nos modos Padrão e Código, digitar `(`, `[`, `{`, aspas simples, aspas duplas ou crase com texto selecionado envolve a seleção com o par correspondente. O texto permanece selecionado dentro dos delimitadores.
 
 O primeiro H1 (`# Título`) define o nome da nota e do arquivo `.md` exportado. Alterá-lo renomeia a nota, inclusive com undo/redo. A importação e as notas já salvas também seguem essa regra. Caracteres proibidos em nomes de arquivo viram `-`; conflitos recebem um sufixo numérico. Sem H1, o nome atual permanece. A ação “Rename note” altera o H1 quando ele existe.

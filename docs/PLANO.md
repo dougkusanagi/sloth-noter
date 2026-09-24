@@ -120,6 +120,11 @@ Até esses critérios serem definidos, não haverá promessa de sincronização 
 
 - Nos modos Padrão e Código, os delimitadores `()`, `[]`, `{}`, aspas simples, aspas duplas e crases envolvem o texto selecionado ao digitar o caractere de abertura. A seleção permanece no conteúdo interno; sem seleção, a digitação segue o comportamento normal.
 
+### Nota inicial e barra de formatação
+
+- Novas instalações abrem `Welcome.md` com exemplos de títulos, negrito, itálico, código, link, citação, listas, tag e bloco de código. Documentos já salvos não são substituídos.
+- Selecionar texto no modo Padrão mostra uma barra flutuante com negrito, itálico, código em linha, link com campo de endereço, título H2, citação e lista. A formatação altera o Markdown original e mantém a seleção. Links aceitam endereços HTTP/HTTPS, `mailto:` e caminhos locais suportados pelo leitor.
+
 Para pasta local, definir ambiente suportado, permissões revogadas, alterações externas, conflitos e recuperação. Não prometer escrita atômica universal antes de escolher/verificar o mecanismo. Importação/exportação permanece como caminho simples.
 
 ## Verificação e documentação
