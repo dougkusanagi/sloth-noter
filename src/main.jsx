@@ -189,9 +189,16 @@ function App() {
   useEffect(() => {
     const list = tabListRef.current, tab = activeTabRef.current
     if (!list || !tab) return
-    const listBox = list.getBoundingClientRect(), tabBox = tab.getBoundingClientRect()
-    if (tabBox.left < listBox.left) list.scrollLeft += tabBox.left - listBox.left
-    else if (tabBox.right > listBox.right) list.scrollLeft += tabBox.right - listBox.right
+    const showActiveTab = () => {
+      const listBox = list.getBoundingClientRect(), tabBox = tab.getBoundingClientRect()
+      if (tabBox.left < listBox.left) list.scrollLeft += tabBox.left - listBox.left
+      else if (tabBox.right > listBox.right) list.scrollLeft += tabBox.right - listBox.right
+    }
+    showActiveTab()
+    const observer = new ResizeObserver(showActiveTab)
+    observer.observe(list)
+    window.addEventListener('resize', showActiveTab)
+    return () => { observer.disconnect(); window.removeEventListener('resize', showActiveTab) }
   }, [data.activeId, data.openIds, prefs.tabsVisible])
   useEffect(() => { if (menuOpen) menuFirst.current?.focus() }, [menuOpen])
   useEffect(() => {

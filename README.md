@@ -2,6 +2,8 @@
 
 Editor Markdown local com abas opcionais, busca de notas e de texto na nota, e modos de edição e leitura.
 
+O MVP web está concluído. Pasta local, sincronização e aplicativo desktop permanecem no roadmap como trabalhos separados.
+
 Base copiada de `../sloth-note-gpt`, commit `443d23c`, de 24/07/2026. `../sloth-note` foi consultado como referência complementar.
 
 **Estado atual:** as notas são gravadas no armazenamento deste navegador a cada alteração. Falhas de gravação aparecem em um alerta; o estado também é anunciado a tecnologias assistivas. É possível importar e exportar `.md`, baixar e restaurar um backup completo `.json`, renomear notas, fechar abas sem apagar o texto e mover notas para uma lixeira que persiste após recarga. A lixeira permite restaurar ou apagar definitivamente. Ainda não há pasta local conectada nem sincronização. Faça exportações para manter uma cópia fora do navegador.

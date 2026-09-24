@@ -1,6 +1,6 @@
 # Plano de implementação
 
-Vigente em 23/09/2026, baseado no [relatório](RELATORIO.md). As Etapas 1–3 estão em andamento. Os registros das entregas estão no fim deste documento.
+Vigente em 24/09/2026, baseado no [relatório](RELATORIO.md). As Etapas 1–3, que definem o MVP web, estão concluídas. Os registros das entregas e verificações estão abaixo. A Etapa 4 e o Tauri V2 permanecem opcionais e separados do MVP.
 
 ## Direção
 
@@ -94,6 +94,15 @@ Até esses critérios serem definidos, não haverá promessa de sincronização 
 - Enter no meio do texto, substituição de seleção entre linhas, Backspace, undo e redo mantiveram o valor salvo igual ao editor. A busca selecionou o trecho esperado.
 - O diálogo de busca agora mantém o foco dentro dele ao navegar entre ocorrências e fecha o ciclo de Tab. Verificado no Chrome com seleção correta e foco no campo de busca após avançar.
 - Viewports de 360 e 180 pixels CSS não produziram rolagem horizontal. O caso de 180 pixels é uma aproximação do espaço de 200% de zoom, não uma medição de zoom real.
+
+### Fechamento do MVP web — 24/09/2026
+
+- Importação `.md` preservou acentos e linhas vazias. Conflitos permitiram manter ambas as notas ou substituir a existente; exportação devolveu o nome e o texto exatos. Backup inválido foi rejeitado sem alterar os dados salvos.
+- Leitura apresentou título, ênfase e código, manteve HTML bruto como texto e não ativou link `javascript:`. A paleta filtrou 100 notas e Enter abriu o resultado selecionado.
+- Ao reduzir a largura com 100 abas abertas, a aba ativa passou a ser trazida de volta à área visível. Em 360 px, a página não teve rolagem horizontal; a lista de abas rolou internamente. A mudança de largura foi verificada com evento de `resize` após emulação de viewport.
+- Uma nota de 1 MiB aceitou nova digitação, persistiu o texto completo e voltou intacta após recarga. Em 30 inserções por tamanho no Chrome/Windows, as chamadas do browser-harness tiveram p95 de 21,3 ms (10 KiB), 30,6 ms (100 KiB) e 47,5 ms (1 MiB). Esses tempos incluem IPC da automação e processamento do navegador; não são medidas isoladas de atualização visual nem devem ser comparados diretamente às metas de renderização.
+- Verificação final: 14 testes automatizados, build com 66,18 kB gzip de JavaScript e 1,94 kB gzip de CSS, `npm audit` sem vulnerabilidades. O build não contém referências a CDN ou fontes remotas obrigatórias.
+- Limites conhecidos: a leitura implementa o subconjunto Markdown descrito no README; o zoom real de 200% e leitores de tela específicos não foram medidos nesta rodada. O armazenamento continua no navegador, com backup e importação/exportação como portabilidade.
 
 Para pasta local, definir ambiente suportado, permissões revogadas, alterações externas, conflitos e recuperação. Não prometer escrita atômica universal antes de escolher/verificar o mecanismo. Importação/exportação permanece como caminho simples.
 
