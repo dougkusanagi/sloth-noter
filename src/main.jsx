@@ -28,6 +28,11 @@ function ModeIcon({ mode }) {
   </svg>
 }
 
+function Shortcut({ letter }) {
+  const modifier = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
+  return <span className="menu-shortcut" aria-label={`${modifier}+${letter}`}><kbd>{modifier}</kbd><span>+</span><kbd>{letter}</kbd></span>
+}
+
 function App() {
   const storage = useRef(getStorage())
   const initial = useRef(null)
@@ -266,9 +271,9 @@ function App() {
           if (event.key === 'Escape') { event.stopPropagation(); closeMenu() }
         }}>
           <div className="menu-heading" role="presentation">Notes</div>
-          <button ref={menuFirst} role="menuitem" onClick={() => runMenu(() => createNote(), false)}><span>New note</span><kbd>Ctrl+T</kbd></button>
-          <button role="menuitem" onClick={() => runMenu(openPalette, false)}><span>Find note</span><kbd>Ctrl+P</kbd></button>
-          <button role="menuitem" disabled={!active} onClick={() => runMenu(openFind, false)}><span>Find in note</span><kbd>Ctrl+F</kbd></button>
+          <button ref={menuFirst} role="menuitem" onClick={() => runMenu(() => createNote(), false)}><span>New note</span><Shortcut letter="T" /></button>
+          <button role="menuitem" onClick={() => runMenu(openPalette, false)}><span>Find note</span><Shortcut letter="P" /></button>
+          <button role="menuitem" disabled={!active} onClick={() => runMenu(openFind, false)}><span>Find in note</span><Shortcut letter="F" /></button>
           <button role="menuitem" onClick={() => runMenu(() => importInput.current?.click(), false)}>Import .md</button>
           <button role="menuitem" disabled={!active} onClick={() => runMenu(() => download(active.name, active.body))}>Export .md</button>
           <button role="menuitem" onClick={() => runMenu(downloadBackup)}>Download backup</button>

@@ -1,4 +1,11 @@
 import React from 'react'
+import { codeTokens } from './syntax-highlight.js'
+import { tableGroup } from './markdown-table.js'
+import { inlineSyntax } from './live-markdown.js'
+
+function highlightedCode(tokens) {
+  return tokens.map((token, index) => typeof token === 'string' ? token : <span key={index} className={`token ${token.type}`}>{highlightedCode(Array.isArray(token.content) ? token.content : [token.content])}</span>)
+}
 
 export function safeHref(value) {
   const href = value.trim()
@@ -7,19 +14,28 @@ export function safeHref(value) {
 }
 
 export function Inline({ text }) {
-  const pieces = text.split(/(`[^`]+`|\*\*[^*]+\*\*|(?<!\*)\*[^*]+\*(?!\*)|\[[^\]]+\]\([^)]+\)|(?<![\p{L}\p{N}_])#[\p{L}\p{N}_/-]+)/gu)
-  return pieces.map((piece, index) => {
-    if (piece.startsWith('`') && piece.endsWith('`')) return <code key={index}>{piece.slice(1, -1)}</code>
-    if (piece.startsWith('**') && piece.endsWith('**')) return <strong key={index}>{piece.slice(2, -2)}</strong>
-    if (piece.startsWith('*') && piece.endsWith('*')) return <em key={index}>{piece.slice(1, -1)}</em>
-    if (/^#[\p{L}\p{N}_/-]+$/u.test(piece)) return <span className="markdown-tag" key={index}>{piece}</span>
-    const link = piece.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
-    if (link) {
-      const href = safeHref(link[2])
-      return href ? <a key={index} href={href} target="_blank" rel="noopener noreferrer">{link[1]}</a> : piece
+  const tokens = inlineSyntax(text)
+  function render(from, to) {
+    const pieces = []
+    let cursor = from
+    for (const token of tokens) {
+      if (token.start < cursor || token.end > to || token.start < from) continue
+      if (token.start > cursor) pieces.push(text.slice(cursor, token.start))
+      const content = token.kind === 'code' || token.kind === 'tag' ? text.slice(token.contentStart, token.contentEnd) : render(token.contentStart, token.contentEnd)
+      if (token.kind === 'strong') pieces.push(<strong key={token.start}>{content}</strong>)
+      else if (token.kind === 'em') pieces.push(<em key={token.start}>{content}</em>)
+      else if (token.kind === 'code') pieces.push(<code key={token.start}>{content}</code>)
+      else if (token.kind === 'tag') pieces.push(<span key={token.start} className="markdown-tag">{content}</span>)
+      else if (token.kind === 'link') {
+        const href = safeHref(text.slice(token.contentEnd + 2, token.end - 1))
+        pieces.push(href ? <a key={token.start} href={href} target="_blank" rel="noopener noreferrer">{content}</a> : text.slice(token.start, token.end))
+      }
+      cursor = token.end
     }
-    return piece
-  })
+    if (cursor < to) pieces.push(text.slice(cursor, to))
+    return pieces
+  }
+  return render(0, text.length)
 }
 
 export function Markdown({ text, onCopy }) {
@@ -37,7 +53,7 @@ export function Markdown({ text, onCopy }) {
       while (index < lines.length && !lines[index].startsWith('```')) code.push(lines[index++])
       if (index < lines.length) index++
       const source = code.join('\n')
-      add(<pre><code>{source}</code><button className="copy-code" onClick={() => onCopy(source)}>Copy</button></pre>)
+      add(<pre><code>{highlightedCode(codeTokens(source, fence[1].trim()))}</code><button className="copy-code" onClick={() => onCopy(source)}>Copy</button></pre>)
       continue
     }
     const heading = line.match(/^(#{1,4}) (.*)$/)
@@ -47,13 +63,10 @@ export function Markdown({ text, onCopy }) {
       index++
       continue
     }
-    const cells = value => value.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.trim())
-    if (/^\|.*\|$/.test(line) && index + 1 < lines.length && /^\|\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|$/.test(lines[index + 1])) {
-      const headings = cells(line)
-      index += 2
-      const rows = []
-      while (index < lines.length && /^\|.*\|$/.test(lines[index])) rows.push(cells(lines[index++]))
-      add(<table><thead><tr>{headings.map((cell, i) => <th key={i}><Inline text={cell} /></th>)}</tr></thead><tbody>{rows.map((row, i) => <tr key={i}>{headings.map((_, j) => <td key={j}><Inline text={row[j] ?? ''} /></td>)}</tr>)}</tbody></table>)
+    const table = tableGroup(lines, index)
+    if (table) {
+      add(<table><thead><tr>{table.headers.map((cell, i) => <th key={i}><Inline text={cell} /></th>)}</tr></thead><tbody>{table.rows.map((row, i) => <tr key={i}>{table.headers.map((_, j) => <td key={j}><Inline text={row[j] ?? ''} /></td>)}</tr>)}</tbody></table>)
+      index = table.end
       continue
     }
     const list = line.match(/^([-*] |\d+\. )/)

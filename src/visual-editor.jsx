@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { EditorSelection, EditorState } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
-import { Decoration, EditorView, ViewPlugin, keymap } from '@codemirror/view'
+import { Decoration, EditorView, ViewPlugin, WidgetType, keymap } from '@codemirror/view'
 import { classifyLine, inlineSyntax } from './live-markdown.js'
+import { codeTokens, syntaxRanges } from './syntax-highlight.js'
+import { tableCells, tableGroup } from './markdown-table.js'
 import { wrapSelection } from './wrap-selection.js'
 import { activeFormats, formatSelection } from './format-selection.js'
 import { blockTemplate } from './insert-block.js'
@@ -21,6 +23,44 @@ const blockButtons = [
   ['quote', 'Citação'], ['list', 'Lista com marcadores'], ['numbered', 'Lista numerada'],
   ['table', 'Tabela'], ['code', 'Bloco de código'],
 ]
+
+function BlockIcon({ action }) {
+  if (action.startsWith('h')) return <span className="block-icon">H<sub>{action.slice(1)}</sub></span>
+  if (action === 'quote') return <span className="block-icon" aria-hidden="true">❝</span>
+  if (action === 'numbered') return <span className="block-icon" aria-hidden="true">1.</span>
+  if (action === 'code') return <span className="block-icon" aria-hidden="true">{'</>'}</span>
+  return <svg className="block-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+    {action === 'table' ? <><rect x="2" y="3" width="16" height="14" rx="1" /><path d="M2 8h16M2 12.5h16M10 3v14" /></> : <><circle cx="3.5" cy="5" r=".75" fill="currentColor" /><circle cx="3.5" cy="10" r=".75" fill="currentColor" /><circle cx="3.5" cy="15" r=".75" fill="currentColor" /><path d="M7 5h11M7 10h11M7 15h11" /></>}
+  </svg>
+}
+
+class TableRowWidget extends WidgetType {
+  constructor(cells, header) { super(); this.cells = cells; this.header = header }
+  eq(other) { return this.header === other.header && this.cells.join('\0') === other.cells.join('\0') }
+  toDOM() {
+    const row = document.createElement('span')
+    row.className = `cm-table-row${this.header ? ' cm-table-head' : ''}`
+    row.style.gridTemplateColumns = `repeat(${this.cells.length}, minmax(0, 1fr))`
+    row.setAttribute('role', 'row')
+    for (const cell of this.cells) {
+      const item = document.createElement('span')
+      item.className = 'cm-table-cell'
+      item.setAttribute('role', this.header ? 'columnheader' : 'cell')
+      item.textContent = cell
+      row.append(item)
+    }
+    return row
+  }
+}
+
+function tableAt(doc, number) {
+  let first = number
+  while (first > 1 && tableCells(doc.line(first - 1).text)) first--
+  const lines = []
+  for (let current = first; current <= doc.lines && tableCells(doc.line(current).text); current++) lines.push(doc.line(current).text)
+  const group = tableGroup(lines, 0)
+  return group ? { first, last: first + group.end - 1, group } : null
+}
 
 function wrapSelectedText(event, view) {
   if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return false
@@ -45,24 +85,55 @@ function wrapSelectedText(event, view) {
 
 function decorationsFor(view) {
   const doc = view.state.doc, ranges = []
-  const editing = new Set()
+  const editing = new Set(), selectedLines = []
   for (const selection of view.state.selection.ranges) {
     const first = doc.lineAt(selection.from).number, last = doc.lineAt(selection.to).number
+    selectedLines.push({ first, last })
     for (let number = first; number <= last; number++) editing.add(number)
   }
+  let openFence = null
+  for (let number = 1; number <= doc.lines; number++) {
+    if (!doc.line(number).text.startsWith('```')) continue
+    if (openFence === null) openFence = number
+    else {
+      if (selectedLines.some(range => range.first <= number && range.last >= openFence)) { editing.add(openFence); editing.add(number) }
+      openFence = null
+    }
+  }
+  if (openFence !== null && selectedLines.some(range => range.last >= openFence)) editing.add(openFence)
   for (const visible of view.visibleRanges) {
     const first = doc.lineAt(visible.from).number, last = doc.lineAt(visible.to).number
-    let inFence = false
+    let inFence = false, fenceLanguage = ''
     for (let number = 1; number < first; number++) {
-      if (doc.line(number).text.startsWith('```')) inFence = !inFence
+      if (doc.line(number).text.startsWith('```')) { inFence = !inFence; fenceLanguage = inFence ? doc.line(number).text.slice(3).trim() : '' }
     }
     for (let number = first; number <= last; number++) {
       const line = doc.line(number), shape = classifyLine(line.text, inFence)
       inFence = shape.nextFence
+      if (shape.kind === 'fence') fenceLanguage = inFence ? line.text.slice(3).trim() : ''
+      if (shape.kind === 'code') {
+        ranges.push(Decoration.line({ attributes: { class: 'cm-md-code' } }).range(line.from))
+        for (const token of syntaxRanges(codeTokens(line.text, fenceLanguage)).ranges) {
+          ranges.push(Decoration.mark({ class: token.types.map(type => `syntax-${type}`).join(' ') }).range(line.from + token.from, line.from + token.to))
+        }
+        continue
+      }
+      const table = shape.kind === 'table' ? tableAt(doc, number) : null
+      if (table && !Array.from({ length: table.last - table.first + 1 }, (_, index) => table.first + index).some(item => editing.has(item))) {
+        if (number === table.first + 1) {
+          ranges.push(Decoration.line({ attributes: { class: 'cm-md-table-divider' } }).range(line.from))
+          ranges.push(Decoration.replace({}).range(line.from, line.to))
+        } else {
+          const cells = tableCells(line.text)
+          ranges.push(Decoration.line({ attributes: { class: 'cm-md-table' } }).range(line.from))
+          ranges.push(Decoration.replace({ widget: new TableRowWidget(cells, number === table.first) }).range(line.from, line.to))
+        }
+        continue
+      }
       if (editing.has(number)) continue
       if (shape.kind !== 'paragraph') ranges.push(Decoration.line({ attributes: { class: `cm-md-${shape.kind}` } }).range(line.from))
       if (shape.prefix) ranges.push(Decoration.replace({}).range(line.from, line.from + shape.prefix))
-      if (shape.kind === 'code' || shape.kind === 'fence') continue
+      if (shape.kind === 'fence') continue
       const offset = line.from + shape.prefix
       for (const token of inlineSyntax(line.text.slice(shape.prefix))) {
         const start = offset + token.start, end = offset + token.end
@@ -198,7 +269,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
         if (event.key === 'Escape') { event.preventDefault(); setBlockMenu(false); viewRef.current?.focus() }
         if (event.key === 'Tab') setBlockMenu(false)
       }}>
-        {blockButtons.map(([action, label]) => <button key={action} type="button" role="menuitem" onClick={() => insertBlock(action)}>{label}</button>)}
+        {blockButtons.map(([action, label]) => <button key={action} type="button" role="menuitem" onClick={() => insertBlock(action)}><BlockIcon action={action} /><span>{label}</span></button>)}
       </div>}
     </>}
   </div>

@@ -131,6 +131,12 @@ Até esses critérios serem definidos, não haverá promessa de sincronização 
 - O menu principal exibe os atalhos Ctrl+T, Ctrl+P e Ctrl+F com alinhamento próprio; os títulos de grupo ganharam cor e espaçamento distintos.
 - O botão `+` aparece ao passar por uma linha vazia ou colocar o cursor nela. Insere H2–H4, citação, listas, tabela e bloco de código. Tabelas são exibidas no modo Leitura; a nota inicial inclui um exemplo.
 
+### Refinamento do modo Padrão
+
+- Tabelas passam a mostrar células no editor visual; ao entrar em uma linha da tabela, o Markdown da tabela inteira fica visível para edição.
+- O cursor em um bloco de código revela as cercas de abertura e fechamento. Código com linguagem indicada recebe realce de sintaxe no editor e na Leitura; linguagens desconhecidas permanecem como texto simples.
+- Ênfases separadas e aninhadas são renderizadas, inclusive `normal *itálico*` e `**forte *suave***`. O menu principal mostra atalhos em teclas visuais e o menu `+` ganhou ícones.
+
 Para pasta local, definir ambiente suportado, permissões revogadas, alterações externas, conflitos e recuperação. Não prometer escrita atômica universal antes de escolher/verificar o mecanismo. Importação/exportação permanece como caminho simples.
 
 ## Verificação e documentação
