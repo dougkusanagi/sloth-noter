@@ -6,7 +6,7 @@ O MVP web está concluído. A entrega final obrigatória é o aplicativo desktop
 
 Base copiada de `../sloth-note-gpt`, commit `443d23c`, de 24/07/2026. `../sloth-note` foi consultado como referência complementar.
 
-**Estado atual:** as notas são gravadas no armazenamento deste navegador a cada alteração. Falhas de gravação aparecem em um alerta; o estado também é anunciado a tecnologias assistivas. É possível importar e exportar `.md`, baixar e restaurar um backup completo `.json`, renomear notas, fechar abas sem apagar o texto e mover notas para uma lixeira que persiste após recarga. A lixeira permite restaurar ou apagar definitivamente. Ainda não há pasta local conectada nem sincronização. Faça exportações para manter uma cópia fora do navegador.
+**Estado atual:** no site, as notas são gravadas no armazenamento do navegador a cada alteração. A janela nativa Tauri V2 já abre offline e grava o documento em um arquivo de estado versionado na pasta de dados do aplicativo (`state.v3.json`), sem usar `localStorage`; a pasta local com arquivos `.md` ainda não está conectada. Em ambos, falhas de gravação aparecem em um alerta que informa onde as escritas acontecem; o estado também é anunciado a tecnologias assistivas. É possível importar e exportar `.md`, baixar e restaurar um backup completo `.json`, renomear notas, fechar abas sem apagar o texto e mover notas para uma lixeira que persiste após recarga. A lixeira permite restaurar ou apagar definitivamente. Faça exportações para manter uma cópia fora do aplicativo.
 
 **Requisito de produto:** a versão completa será uma janela nativa Tauri V2, executável offline e capaz de ler e gravar arquivos `.md` em uma pasta escolhida pelo usuário. Os arquivos serão a fonte de verdade no desktop; abas, preferências, revisões, conflitos e lixeira serão estado auxiliar versionado. O web atual é uma base funcional e um fallback de importação/exportação, não o destino final do armazenamento.
 
@@ -34,7 +34,9 @@ Se dados salvos estiverem corrompidos, a aplicação bloqueia novas gravações 
 
 ## Executar
 
-Ambiente verificado: Node.js 24.21.0 e npm 11.19.0.
+Ambiente verificado: Node.js 24.21.0, npm 11.19.0, Rust 1.96.0 e WebView2 153 no Windows.
+
+No navegador:
 
 ```sh
 npm ci
@@ -46,7 +48,19 @@ npm run build
 npm run preview
 ```
 
-`npm test` verifica armazenamento, migrações, lixeira, backup, títulos, sintaxe visual, corrupção e falha de gravação. `npm run build` gera o site.
+Na janela nativa (Tauri V2):
+
+```sh
+npm run desktop:dev
+```
+
+```sh
+npm run desktop:build
+```
+
+`npm run desktop:test` roda os testes Rust do armazenamento nativo. O build do site continua independente do desktop: `npm run build` gera `dist/` sem exigir Rust.
+
+`npm test` verifica armazenamento, migrações, lixeira, backup, títulos, sintaxe visual, corrupção, falha de gravação, a fila de gravação e a mesma suíte de domínio contra o armazenamento do navegador e o arquivo de estado nativo. `npm run build` gera o site.
 
 ## Documentação
 

@@ -184,7 +184,21 @@ O Sloth Note só sai do estado “MVP web + desktop em desenvolvimento” quando
 - O cursor em um bloco de código revela as cercas de abertura e fechamento. Código com linguagem indicada recebe realce de sintaxe no editor e na Leitura; linguagens desconhecidas permanecem como texto simples.
 - Ênfases separadas e aninhadas são renderizadas, inclusive `normal *itálico*` e `**forte *suave***`. O menu principal mostra atalhos em teclas visuais e o menu `+` ganhou ícones.
 
-Para pasta local, definir ambiente suportado, permissões revogadas, alterações externas, conflitos e recuperação. Não prometer escrita atômica universal antes de escolher/verificar o mecanismo. Importação/exportação permanece como caminho simples.
+### Preparação do desktop Tauri V2 — 24/09/2026 (Etapa 4)
+
+- `src-tauri` foi criado com Tauri V2 fixado (`tauri` 2.11.6, `tauri-build` 2.6.3, `@tauri-apps/cli` 2.11.5), `Cargo.lock` versionado e scripts `desktop:dev`, `desktop:build`, `desktop:test` e `desktop:check`. O build do site continua independente: `npm run build` gera `dist/` sem exigir Rust.
+- A interface passou a usar um contrato de persistência assíncrono (`createPersistence`) com duas implementações: o armazenamento do navegador (`createWebAdapter`) e o arquivo de estado nativo (`createDesktopAdapter`). O documento versionado, a validação, a migração e o bloqueio por corrupção são compartilhados, para as implementações não divergirem.
+- A escolha é automática: com a ponte Tauri presente (`__TAURI_INTERNALS__`), o app usa os comandos `read_state`, `write_state` e `persistence_info`; sem ela, segue no navegador. `@tauri-apps/api/core` é carregado sob demanda em um chunk de 1,05 kB gzip.
+- O lado nativo expõe apenas esses comandos e fica restrito ao diretório de dados do aplicativo (`%APPDATA%\dev.slothnote.app\state.v3.json`). Não há plugin de filesystem: a capability `default` concede somente `core:default`, sem acesso global a arquivos para o webview.
+- A gravação do estado usa arquivo temporário e preserva a versão anterior em `state.v3.json.previous`; se a substituição falhar, a versão anterior é restaurada em vez de desaparecer.
+- As gravações do editor passaram por uma fila que serializa e agrupa pedidos: o estado mais recente é gravado, um disco lento não atrasa a digitação e nenhum documento antigo é gravado depois de um novo.
+- Importação, exportação, backup e recuperação continuam disponíveis. O alerta de falha de gravação agora informa onde as escritas acontecem (`this browser` ou o caminho do arquivo de estado) e o texto de boas-vindas não afirma mais que tudo é salvo no navegador.
+- Verificação: 57 testes em Node, incluindo a mesma suíte de domínio (gravação, títulos, lixeira, backup, corrupção e falha) contra as duas implementações; 4 testes Rust (`cargo test --release`) do armazenamento nativo; `npm run build`; `npx tauri build --no-bundle`.
+- Na janela nativa: abriu com o título “Sloth Note”, criou `state.v3.json` com `version: 3` no primeiro uso e, no segundo, leu o estado existente sem reescrevê-lo. O binário não abriu conexões próprias; as duas conexões TCP observadas pertenciam a processos do runtime WebView2. A página usa apenas os arquivos embutidos e a CSP não permite origens remotas.
+- Tamanho: binário de 5,7 MB; JavaScript 171,73 kB gzip mais 1,05 kB gzip do chunk Tauri e CSS 3,32 kB gzip. No commit anterior (101f692) o build era 170,44 kB gzip de JavaScript e 3,29 kB gzip de CSS, ou seja, esta etapa acrescentou 1,29 kB gzip. O excedente em relação à meta de 80 kB gzip continua sendo o motor de edição e o realce de sintaxe registrados nas etapas anteriores.
+- Pendente nesta etapa: exercitar `desktop:dev` com o servidor Vite e repetir uso manual na janela nativa (edição longa, IME, seleção, leitura e atalhos). A pasta local com arquivos `.md` é a Etapa 5.
+
+Para pasta local, definir ambiente suportado, permissões revogadas, alterações externas, conflitos e recuperação. A escrita do arquivo de estado nativo já usa um arquivo temporário e preserva a versão anterior; isso não promete escrita atômica universal nem substitui a verificação da pasta local. Importação/exportação permanece como caminho simples.
 
 ## Verificação e documentação
 

@@ -15,6 +15,8 @@ Data: 23/09/2026. Escopo: seleção e cópia da base, inspeção do código e pl
 
 **Nova continuação:** o formato v3 migra v2/v1 e guarda uma lixeira recuperável após recarga. A migração mantém dados legíveis em memória quando a gravação falha. Medições exploratórias e pendências atualizadas estão em [PLANO.md](PLANO.md#continuação-de-23092026).
 
+**Continuação:** a etapa de preparação do desktop criou `src-tauri` com Tauri V2 fixado e um contrato de persistência com implementação web (armazenamento do navegador) e desktop (arquivo de estado no diretório de dados do aplicativo). A janela nativa abre offline, não usa `localStorage` para considerar uma nota salva e só expõe ao webview comandos restritos àquele diretório. A pasta local com arquivos `.md` continua na Etapa 5. Verificações e pendências em [PLANO.md](PLANO.md#preparação-do-desktop-tauri-v2--24092026-etapa-4).
+
 **Interface:** as ações foram reunidas no menu da header; a nota voltou a ser uma superfície de escrita sem barra de botões. O teste de layout e teclado está registrado em [PLANO.md](PLANO.md#ajuste-da-superfície-de-escrita--23092026).
 
 **Correção da interface:** ícone ☰, nome e abas passaram a ocupar uma única header. O campo de edição cobre toda a área abaixo dela e usa padding para manter a largura de leitura. Testes de abas e clique nas margens constam em [PLANO.md](PLANO.md#correção-da-header-e-área-de-edição--23092026).
