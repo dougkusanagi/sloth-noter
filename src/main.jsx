@@ -3,16 +3,14 @@ import { createRoot } from 'react-dom/client'
 import { Markdown } from './markdown.jsx'
 import { createBackup, readBackup } from './backup.js'
 import { findMatches } from './find.js'
-import { headingFileName, moveToTrash, nameFromHeading, purgeFromTrash, reconcileHeadingNames, restoreFromTrash, uniqueName } from './notes.js'
-import { loadDocument, saveDocument } from './storage.js'
+import { headingFileName, moveToTrash, nameFromHeading, purgeFromTrash, restoreFromTrash, uniqueName } from './notes.js'
+import { openWorkspace } from './boot.js'
+import { createAppPersistence } from './persistence-runtime.js'
+import { createWriteQueue } from './write-queue.js'
 import { VisualEditor } from './visual-editor.jsx'
 import { wrapSelection } from './wrap-selection.js'
 import { continueBlock } from './continue-block.js'
 import './styles.css'
-
-function getStorage() {
-  try { return window.localStorage } catch { return null }
-}
 
 function download(name, body, type = 'text/markdown;charset=utf-8') {
   const url = URL.createObjectURL(new Blob([body], { type }))
@@ -34,18 +32,33 @@ function Shortcut({ letter }) {
   return <span className="menu-shortcut" aria-label={`${modifier}+${letter}`}><kbd>{modifier}</kbd><span>+</span><kbd>{letter}</kbd></span>
 }
 
+function Opening({ failure }) {
+  return <main className="app boot">
+    <p role={failure ? 'alert' : 'status'}>{failure ? `Sloth Note could not open its notes: ${failure}` : 'Opening notes…'}</p>
+  </main>
+}
+
 function App() {
-  const storage = useRef(getStorage())
-  const initial = useRef(null)
-  if (!initial.current) {
-    const loaded = loadDocument(storage.current)
-    const document = loaded.blocked ? loaded.document : reconcileHeadingNames(loaded.document)
-    initial.current = document === loaded.document ? loaded : { ...loaded, document, error: saveDocument(storage.current, document) }
-  }
-  const current = useRef(initial.current.document)
-  const [data, setData] = useState(initial.current.document)
-  const [error, setError] = useState(initial.current.error)
-  const [blocked, setBlocked] = useState(initial.current.blocked)
+  const [started, setStarted] = useState(null)
+  const [failure, setFailure] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    createAppPersistence()
+      .then(async persistence => ({ persistence, loaded: await openWorkspace(persistence) }))
+      .then(result => { if (!cancelled) setStarted(result) })
+      .catch(cause => { if (!cancelled) setFailure(cause instanceof Error ? cause.message : 'storage is unavailable') })
+    return () => { cancelled = true }
+  }, [])
+  if (failure) return <Opening failure={failure} />
+  if (!started) return <Opening />
+  return <Workspace persistence={started.persistence} loaded={started.loaded} />
+}
+
+function Workspace({ persistence, loaded }) {
+  const current = useRef(loaded.document)
+  const [data, setData] = useState(loaded.document)
+  const [error, setError] = useState(loaded.error)
+  const [blocked, setBlocked] = useState(loaded.blocked)
   const [mode, setMode] = useState('visual')
   const [palette, setPalette] = useState(false)
   const [query, setQuery] = useState('')
@@ -58,6 +71,9 @@ function App() {
   const [findOpen, setFindOpen] = useState(false)
   const [findQuery, setFindQuery] = useState('')
   const [findIndex, setFindIndex] = useState(0)
+  const damaged = useRef(loaded.raw)
+  const writer = useRef(null)
+  if (!writer.current) writer.current = createWriteQueue(document => persistence.save(document), setError)
   const search = useRef(null)
   const conflictFirst = useRef(null)
   const importInput = useRef(null)
@@ -79,7 +95,7 @@ function App() {
   function commit(next) {
     current.current = next
     setData(next)
-    if (!blocked) setError(saveDocument(storage.current, next))
+    if (!blocked) writer.current.write(next)
   }
   function updatePrefs(change) { commit({ ...current.current, preferences: { ...current.current.preferences, ...change } }) }
   function focusEditor() { if (mode === 'source') editorRef.current?.focus(); else visualRef.current?.focus() }
@@ -213,8 +229,8 @@ function App() {
   }
   function runMenu(action, restoreFocus = true) { setMenuOpen(false); action(); if (restoreFocus) setTimeout(() => menuButton.current?.focus(), 0) }
   function changeMode(next) { setMode(next); setMenuOpen(false) }
-  function resetDamagedStorage() {
-    const failure = saveDocument(storage.current, current.current)
+  async function resetDamagedStorage() {
+    const failure = await persistence.save(current.current)
     setError(failure)
     if (!failure) setBlocked(false)
   }
@@ -306,7 +322,7 @@ function App() {
         const note = data.notes.find(item => item.id === id)
         return note && <button key={id} ref={id === data.activeId ? activeTabRef : null} className={id === data.activeId ? 'tab active' : 'tab'} onClick={() => openNote(id)}>{note.name}</button>
       })}</div></nav>}
-      <span className="sr-only" role="status">{error ? 'Not saved' : 'Saved in this browser'}</span>
+      <span className="sr-only" role="status">{error ? 'Not saved' : 'Saved'}</span>
       <input ref={importInput} type="file" accept=".md,.markdown,text/markdown,text/plain" hidden onChange={event => { importFile(event.target.files?.[0]); event.target.value = '' }} />
       <input ref={backupInput} type="file" accept=".json,application/json" hidden onChange={event => { restoreBackup(event.target.files?.[0]); event.target.value = '' }} />
     </header>
@@ -315,7 +331,7 @@ function App() {
         <legend className="sr-only">Modo de visualização</legend>
         {[['visual', 'Padrão'], ['source', 'Código'], ['reading', 'Leitura']].map(([value, label]) => <label key={value} title={label}><input type="radio" name="editor-mode" value={value} aria-label={label} checked={mode === value} onChange={() => changeMode(value)} /><ModeIcon mode={value} /><span className="mode-label">{label}</span></label>)}
       </fieldset>
-      {error && <div className="save-error" role="alert">Storage failed: {error}. Text stays in memory; download a backup before closing.<div><button onClick={downloadBackup}>Download backup</button>{blocked && <>{initial.current.raw !== null && <button onClick={() => download('sloth-note-damaged.json', initial.current.raw, 'application/json;charset=utf-8')}>Download stored data</button>}<button onClick={resetDamagedStorage}>Replace storage with current notes</button></>}</div></div>}
+      {error && <div className="save-error" role="alert">Storage failed: {error}. Text stays in memory; download a backup before closing. Writes go to {persistence.label}.<div><button onClick={downloadBackup}>Download backup</button>{blocked && <>{damaged.current !== null && <button onClick={() => download('sloth-note-damaged.json', damaged.current, 'application/json;charset=utf-8')}>Download stored data</button>}<button onClick={resetDamagedStorage}>Replace storage with current notes</button></>}</div></div>}
       {importError && <div className="save-error" role="alert">Import failed: {importError}</div>}
       {active ? (mode === 'reading' ? <div className="reading"><Markdown text={active.body} onCopy={copyCode} />{copyStatus && <span role="status">{copyStatus}</span>}</div> : mode === 'source' ? <textarea ref={editorRef} key={active.id} aria-label="Editor Markdown em texto puro" spellCheck="false" value={active.body} onChange={event => updateBody(event.target.value)} onKeyDown={wrapSourceSelection} /> : <VisualEditor key={active.id} noteId={active.id} body={active.body} onChange={updateBody} onReady={view => { visualRef.current = view }} />) : <div className="empty-note">No open note. Use ☰ to find or create one.</div>}
     </section>

@@ -8,7 +8,7 @@ export function newDocument() {
     notes: [{ id: 'welcome', name: 'Welcome.md', body: [
       '# Welcome',
       '',
-      'Bem-vindo ao Sloth Note. Selecione um trecho para experimentar a barra de formatação. Suas alterações são salvas neste navegador; use Export .md para guardar uma cópia.',
+      'Suas alterações são salvas automaticamente; use Export .md para guardar uma cópia.',
       '',
       '## Texto e links',
       '',
@@ -81,38 +81,55 @@ function migrateV2(value) {
 
 function message(error) { return error instanceof Error ? error.message : 'Storage is unavailable' }
 
-export function loadDocument(storage) {
-  let raw = null
-  let source = null
+/**
+ * Reads a document from raw payloads, without touching any storage API.
+ *
+ * `current` is the payload of the schema in use and `legacy` describes an older
+ * record found by the adapter. The result keeps the caller's raw payload when
+ * the data cannot be parsed, so nothing is replaced silently.
+ */
+export function readStoredDocument({ current, legacy }) {
+  let document
   try {
-    raw = storage.getItem(STORAGE_KEY)
-    if (raw !== null) source = 'v3'
-    else {
-      raw = storage.getItem(V2_KEY)
-      if (raw !== null) source = 'v2'
+    document = current !== null ? validateDocument(JSON.parse(current))
+      : legacy === null ? newDocument()
+        : legacy.source === 'v2' ? migrateV2(JSON.parse(legacy.raw)) : migrateV1(JSON.parse(legacy.raw))
+  } catch (error) {
+    return { document: newDocument(), error: message(error), blocked: true, raw: current, needsWrite: false }
+  }
+  return { document, error: null, blocked: false, raw: null, needsWrite: current === null }
+}
+
+export function serializeDocument(document) {
+  validateDocument(document)
+  return JSON.stringify(document)
+}
+
+export function loadDocument(storage) {
+  let current = null
+  let legacy = null
+  try {
+    current = storage.getItem(STORAGE_KEY)
+    if (current === null) {
+      const version2 = storage.getItem(V2_KEY)
+      if (version2 !== null) legacy = { source: 'v2', raw: version2 }
       else {
-        raw = storage.getItem(LEGACY_KEY)
-        if (raw !== null) source = 'v1'
+        const version1 = storage.getItem(LEGACY_KEY)
+        if (version1 !== null) legacy = { source: 'v1', raw: version1 }
       }
     }
   } catch (error) {
     return { document: newDocument(), error: message(error), blocked: true, raw: null }
   }
-  let document
-  try {
-    document = source === 'v3' ? validateDocument(JSON.parse(raw)) : source === 'v2' ? migrateV2(JSON.parse(raw)) : source === 'v1' ? migrateV1(JSON.parse(raw)) : newDocument()
-  } catch (error) {
-    return { document: newDocument(), error: message(error), blocked: true, raw }
-  }
-  if (source === 'v3') return { document, error: null, blocked: false, raw: null }
-  const error = saveDocument(storage, document)
-  return { document, error, blocked: false, raw: null }
+  const read = readStoredDocument({ current, legacy })
+  if (!read.needsWrite) return { document: read.document, error: read.error, blocked: read.blocked, raw: read.raw }
+  return { document: read.document, error: saveDocument(storage, read.document), blocked: false, raw: null }
 }
 
 export function saveDocument(storage, document) {
   try {
-    validateDocument(document)
-    storage.setItem(STORAGE_KEY, JSON.stringify(document))
+    storage.setItem(STORAGE_KEY, serializeDocument(document))
     return null
   } catch (error) { return message(error) }
 }
+
