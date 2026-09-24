@@ -4,7 +4,8 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { Decoration, EditorView, ViewPlugin, keymap } from '@codemirror/view'
 import { classifyLine, inlineSyntax } from './live-markdown.js'
 import { wrapSelection } from './wrap-selection.js'
-import { formatSelection } from './format-selection.js'
+import { activeFormats, formatSelection } from './format-selection.js'
+import { blockTemplate } from './insert-block.js'
 
 const formatButtons = [
   ['bold', 'Negrito', <strong>B</strong>],
@@ -14,6 +15,11 @@ const formatButtons = [
   ['heading', 'Título 2', <span>H₂</span>],
   ['quote', 'Citação', <span>❝</span>],
   ['list', 'Lista', <span>☷</span>],
+]
+const blockButtons = [
+  ['h2', 'Título 2'], ['h3', 'Título 3'], ['h4', 'Título 4'],
+  ['quote', 'Citação'], ['list', 'Lista com marcadores'], ['numbered', 'Lista numerada'],
+  ['table', 'Tabela'], ['code', 'Bloco de código'],
 ]
 
 function wrapSelectedText(event, view) {
@@ -80,6 +86,10 @@ const liveMarkdown = ViewPlugin.fromClass(class {
 export function VisualEditor({ noteId, body, onChange, onReady }) {
   const host = useRef(null), viewRef = useRef(null), syncing = useRef(false)
   const [toolbar, setToolbar] = useState(null)
+  const [insertAt, setInsertAt] = useState(null)
+  const [blockMenu, setBlockMenu] = useState(false)
+  const blockMenuRef = useRef(false)
+  blockMenuRef.current = blockMenu
   const [linkEditing, setLinkEditing] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const linkInput = useRef(null)
@@ -95,7 +105,25 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
     const margin = Math.min(124, window.innerWidth / 2)
     const x = Math.max(margin, Math.min(window.innerWidth - margin, (start.left + end.right) / 2))
     const y = start.top > 55 ? start.top - 8 : end.bottom + 8
-    setToolbar({ x, y, below: start.top <= 55 })
+    setToolbar({ x, y, below: start.top <= 55, active: activeFormats(view.state.doc.toString(), selection.from, selection.to) })
+  }
+
+  function positionInsert(view, position = view.state.selection.main.head) {
+    if (!view.state.selection.main.empty) { setInsertAt(null); setBlockMenu(false); return }
+    const line = view.state.doc.lineAt(position)
+    if (line.text.trim()) { if (!blockMenuRef.current) setInsertAt(null); return }
+    const coords = view.coordsAtPos(line.from)
+    if (!coords || coords.top < 48 || coords.top > window.innerHeight) { if (!blockMenuRef.current) setInsertAt(null); return }
+    setInsertAt({ from: line.from, x: Math.max(5, coords.left - 34), y: coords.top })
+  }
+
+  function insertBlock(action) {
+    const view = viewRef.current, template = blockTemplate(action)
+    if (!view || !template || !insertAt) return
+    view.dispatch({ changes: { from: insertAt.from, insert: template.text }, selection: EditorSelection.single(insertAt.from + template.selectionFrom, insertAt.from + template.selectionTo), userEvent: 'input.type' })
+    setBlockMenu(false)
+    setInsertAt(null)
+    view.focus()
   }
 
   function applyFormat(action, url = '') {
@@ -112,6 +140,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
   }
 
   useEffect(() => { if (linkEditing) linkInput.current?.focus() }, [linkEditing])
+  useEffect(() => { if (blockMenu) host.current?.querySelector('.block-menu button')?.focus() }, [blockMenu])
 
   useEffect(() => {
     const view = new EditorView({
@@ -122,18 +151,23 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.lineWrapping,
           EditorView.contentAttributes.of({ 'aria-label': 'Editor Markdown visual', spellcheck: 'false' }),
-          EditorView.domEventHandlers({ keydown: wrapSelectedText, focus: (_event, view) => { positionToolbar(view); return false }, blur: event => { if (!event.relatedTarget?.closest?.('.format-toolbar')) setToolbar(null); return false } }),
+          EditorView.domEventHandlers({
+            keydown: wrapSelectedText,
+            focus: (_event, view) => { positionToolbar(view); positionInsert(view); return false },
+            blur: event => { if (!event.relatedTarget?.closest?.('.format-toolbar')) setToolbar(null); if (!event.relatedTarget?.closest?.('.insert-trigger, .block-menu')) { setInsertAt(null); setBlockMenu(false) } return false },
+            mousemove: (event, view) => { if (!blockMenuRef.current) { const pos = view.posAtCoords({ x: event.clientX, y: event.clientY }); if (pos !== null) positionInsert(view, pos) } return false },
+          }),
           liveMarkdown,
           EditorView.updateListener.of(update => {
             if (update.docChanged && !syncing.current) callbacks.current.onChange(update.state.doc.toString())
-            if (update.selectionSet || update.docChanged || update.viewportChanged) positionToolbar(update.view)
+            if (update.selectionSet || update.docChanged || update.viewportChanged) { positionToolbar(update.view); positionInsert(update.view) }
           }),
         ],
       }),
       parent: host.current,
     })
     viewRef.current = view
-    view.scrollDOM.addEventListener('scroll', () => positionToolbar(view))
+    view.scrollDOM.addEventListener('scroll', () => { positionToolbar(view); positionInsert(view) })
     callbacks.current.onReady(view)
     return () => { callbacks.current.onReady(null); viewRef.current = null; view.destroy() }
   }, [noteId])
@@ -151,7 +185,21 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
       {linkEditing ? <form className="format-link" onSubmit={event => { event.preventDefault(); applyFormat('link', linkUrl) }} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); setLinkEditing(false); viewRef.current?.focus() } }}>
         <input ref={linkInput} aria-label="Endereço do link" type="text" inputMode="url" placeholder="https://..." value={linkUrl} onChange={event => setLinkUrl(event.target.value)} required />
         <button type="submit" aria-label="Aplicar link" title="Aplicar link">↗</button>
-      </form> : formatButtons.map(([action, label, icon]) => <button key={action} type="button" title={label} aria-label={label} onClick={() => action === 'link' ? setLinkEditing(true) : applyFormat(action)}>{icon}</button>)}
+      </form> : formatButtons.map(([action, label, icon]) => <button key={action} type="button" title={label} aria-label={label} aria-pressed={toolbar.active.includes(action)} className={toolbar.active.includes(action) ? 'active' : undefined} onClick={() => action === 'link' && !toolbar.active.includes('link') ? setLinkEditing(true) : applyFormat(action)}>{icon}</button>)}
     </div>}
+    {insertAt && <>
+      <button type="button" className="insert-trigger" aria-label="Inserir bloco" aria-expanded={blockMenu} title="Inserir bloco" style={{ left: insertAt.x, top: insertAt.y }} onMouseDown={event => event.preventDefault()} onClick={() => setBlockMenu(value => !value)}>+</button>
+      {blockMenu && <div className="block-menu" role="menu" aria-label="Inserir bloco" style={{ left: Math.max(8, insertAt.x), top: Math.max(52, Math.min(insertAt.y + 30, window.innerHeight - Math.min(350, window.innerHeight * .6) - 8)) }} onMouseDown={event => event.preventDefault()} onKeyDown={event => {
+        const buttons = [...event.currentTarget.querySelectorAll('button')]
+        const index = buttons.indexOf(document.activeElement)
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); buttons[(index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length]?.focus() }
+        if (event.key === 'Home') { event.preventDefault(); buttons[0]?.focus() }
+        if (event.key === 'End') { event.preventDefault(); buttons.at(-1)?.focus() }
+        if (event.key === 'Escape') { event.preventDefault(); setBlockMenu(false); viewRef.current?.focus() }
+        if (event.key === 'Tab') setBlockMenu(false)
+      }}>
+        {blockButtons.map(([action, label]) => <button key={action} type="button" role="menuitem" onClick={() => insertBlock(action)}>{label}</button>)}
+      </div>}
+    </>}
   </div>
 }

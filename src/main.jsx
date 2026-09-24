@@ -266,9 +266,9 @@ function App() {
           if (event.key === 'Escape') { event.stopPropagation(); closeMenu() }
         }}>
           <div className="menu-heading" role="presentation">Notes</div>
-          <button ref={menuFirst} role="menuitem" onClick={() => runMenu(() => createNote(), false)}>New note</button>
-          <button role="menuitem" onClick={() => runMenu(openPalette, false)}>Find note</button>
-          <button role="menuitem" disabled={!active} onClick={() => runMenu(openFind, false)}>Find in note</button>
+          <button ref={menuFirst} role="menuitem" onClick={() => runMenu(() => createNote(), false)}><span>New note</span><kbd>Ctrl+T</kbd></button>
+          <button role="menuitem" onClick={() => runMenu(openPalette, false)}><span>Find note</span><kbd>Ctrl+P</kbd></button>
+          <button role="menuitem" disabled={!active} onClick={() => runMenu(openFind, false)}><span>Find in note</span><kbd>Ctrl+F</kbd></button>
           <button role="menuitem" onClick={() => runMenu(() => importInput.current?.click(), false)}>Import .md</button>
           <button role="menuitem" disabled={!active} onClick={() => runMenu(() => download(active.name, active.body))}>Export .md</button>
           <button role="menuitem" onClick={() => runMenu(downloadBackup)}>Download backup</button>

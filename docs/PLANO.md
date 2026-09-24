@@ -125,6 +125,12 @@ Até esses critérios serem definidos, não haverá promessa de sincronização 
 - Novas instalações abrem `Welcome.md` com exemplos de títulos, negrito, itálico, código, link, citação, listas, tag e bloco de código. Documentos já salvos não são substituídos.
 - Selecionar texto no modo Padrão mostra uma barra flutuante com negrito, itálico, código em linha, link com campo de endereço, título H2, citação e lista. A formatação altera o Markdown original e mantém a seleção. Links aceitam endereços HTTP/HTTPS, `mailto:` e caminhos locais suportados pelo leitor.
 
+### Estados de formatação e inserção de blocos
+
+- A barra da seleção marca estilos ativos e o mesmo botão os remove, preservando o texto selecionado. Estilos aninhados como negrito e código são reconhecidos separadamente.
+- O menu principal exibe os atalhos Ctrl+T, Ctrl+P e Ctrl+F com alinhamento próprio; os títulos de grupo ganharam cor e espaçamento distintos.
+- O botão `+` aparece ao passar por uma linha vazia ou colocar o cursor nela. Insere H2–H4, citação, listas, tabela e bloco de código. Tabelas são exibidas no modo Leitura; a nota inicial inclui um exemplo.
+
 Para pasta local, definir ambiente suportado, permissões revogadas, alterações externas, conflitos e recuperação. Não prometer escrita atômica universal antes de escolher/verificar o mecanismo. Importação/exportação permanece como caminho simples.
 
 ## Verificação e documentação

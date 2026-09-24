@@ -40,11 +40,20 @@ export function Markdown({ text, onCopy }) {
       add(<pre><code>{source}</code><button className="copy-code" onClick={() => onCopy(source)}>Copy</button></pre>)
       continue
     }
-    const heading = line.match(/^(#{1,3}) (.*)$/)
+    const heading = line.match(/^(#{1,4}) (.*)$/)
     if (heading) {
       const content = <Inline text={heading[2]} />
-      add(heading[1].length === 1 ? <h1>{content}</h1> : heading[1].length === 2 ? <h2>{content}</h2> : <h3>{content}</h3>)
+      add(heading[1].length === 1 ? <h1>{content}</h1> : heading[1].length === 2 ? <h2>{content}</h2> : heading[1].length === 3 ? <h3>{content}</h3> : <h4>{content}</h4>)
       index++
+      continue
+    }
+    const cells = value => value.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.trim())
+    if (/^\|.*\|$/.test(line) && index + 1 < lines.length && /^\|\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|$/.test(lines[index + 1])) {
+      const headings = cells(line)
+      index += 2
+      const rows = []
+      while (index < lines.length && /^\|.*\|$/.test(lines[index])) rows.push(cells(lines[index++]))
+      add(<table><thead><tr>{headings.map((cell, i) => <th key={i}><Inline text={cell} /></th>)}</tr></thead><tbody>{rows.map((row, i) => <tr key={i}>{headings.map((_, j) => <td key={j}><Inline text={row[j] ?? ''} /></td>)}</tr>)}</tbody></table>)
       continue
     }
     const list = line.match(/^([-*] |\d+\. )/)
@@ -65,7 +74,7 @@ export function Markdown({ text, onCopy }) {
       continue
     }
     const paragraph = []
-    while (index < lines.length && lines[index].trim() && !/^(#{1,3} |```|[-*] |\d+\. |> )/.test(lines[index])) paragraph.push(lines[index++])
+    while (index < lines.length && lines[index].trim() && !/^(#{1,4} |```|[-*] |\d+\. |> )/.test(lines[index])) paragraph.push(lines[index++])
     if (!paragraph.length) paragraph.push(lines[index++])
     add(<p>{paragraph.map((part, i) => <React.Fragment key={i}>{i > 0 && <br />}<Inline text={part} /></React.Fragment>)}</p>)
   }

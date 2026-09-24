@@ -1,13 +1,14 @@
 export function classifyLine(text, inFence) {
   if (text.startsWith('```')) return { kind: 'fence', prefix: text.length, nextFence: !inFence }
   if (inFence) return { kind: 'code', prefix: 0, nextFence: true }
-  const heading = text.match(/^(#{1,3}) +/)
+  const heading = text.match(/^(#{1,4}) +/)
   if (heading) return { kind: `h${heading[1].length}`, prefix: heading[0].length, nextFence: false }
   const quote = text.match(/^> +/)
   if (quote) return { kind: 'quote', prefix: quote[0].length, nextFence: false }
   const bullet = text.match(/^[-*] +/)
   if (bullet) return { kind: 'bullet', prefix: bullet[0].length, nextFence: false }
   if (/^\d+\. +/.test(text)) return { kind: 'ordered', prefix: 0, nextFence: false }
+  if (/^\|.*\|$/.test(text)) return { kind: 'table', prefix: 0, nextFence: false }
   return { kind: 'paragraph', prefix: 0, nextFence: false }
 }
 
