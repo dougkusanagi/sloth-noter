@@ -249,6 +249,14 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
 
   useEffect(() => { if (linkEditing) linkInput.current?.focus() }, [linkEditing])
   useEffect(() => { if (blockMenu) host.current?.querySelector('.block-menu button')?.focus() }, [blockMenu])
+  useEffect(() => {
+    if (!blockMenu) return
+    function closeOnOutsideClick(event) {
+      if (!event.target.closest?.('.insert-trigger, .block-menu')) setBlockMenu(false)
+    }
+    document.addEventListener('click', closeOnOutsideClick, true)
+    return () => document.removeEventListener('click', closeOnOutsideClick, true)
+  }, [blockMenu])
 
   useEffect(() => {
     const view = new EditorView({
