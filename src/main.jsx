@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Markdown } from './markdown.jsx'
+import { findMatches } from './find.js'
 import { moveToTrash, purgeFromTrash, restoreFromTrash, uniqueName } from './notes.js'
 import { loadDocument, saveDocument } from './storage.js'
 import './styles.css'
@@ -136,19 +137,13 @@ function App() {
   function closeMenu(restoreFocus = true) { setMenuOpen(false); if (restoreFocus) setTimeout(() => menuButton.current?.focus(), 0) }
   function openFind() { setMenuOpen(false); setReading(false); setFindOpen(true); setFindIndex(0); setTimeout(() => findInput.current?.focus(), 0) }
   function closeFind() { setFindOpen(false); setTimeout(() => editorRef.current?.focus(), 0) }
-  function findMatches() {
-    if (!active || !findQuery) return []
-    const matches = [], source = active.body.toLocaleLowerCase(), needle = findQuery.toLocaleLowerCase()
-    let from = 0
-    while ((from = source.indexOf(needle, from)) !== -1) { matches.push(from); from += needle.length }
-    return matches
-  }
+  function currentMatches() { return active ? findMatches(active.body, findQuery) : [] }
   function selectFind(index = findIndex) {
-    const matches = findMatches()
+    const matches = currentMatches()
     if (!matches.length || !editorRef.current) return
     const safeIndex = (index + matches.length) % matches.length
     editorRef.current.focus()
-    editorRef.current.setSelectionRange(matches[safeIndex], matches[safeIndex] + findQuery.length)
+    editorRef.current.setSelectionRange(matches[safeIndex].start, matches[safeIndex].end)
     setFindIndex(safeIndex)
   }
   function runMenu(action, restoreFocus = true) { setMenuOpen(false); action(); if (restoreFocus) setTimeout(() => menuButton.current?.focus(), 0) }
@@ -249,7 +244,7 @@ function App() {
     {palette && <div className="palette-backdrop" onMouseDown={closePalette}><section className="palette" role="dialog" aria-modal="true" aria-label="Find note" onMouseDown={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'Tab') { const focusable = [search.current, ...event.currentTarget.querySelectorAll('button')]; const first = focusable[0], last = focusable.at(-1); if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() } } }}><input ref={search} aria-label="Search notes" value={query} onChange={event => { setQuery(event.target.value); setSelected(0) }} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setSelected(index => Math.min(choices.length - 1, index + 1)) } if (event.key === 'ArrowUp') { event.preventDefault(); setSelected(index => Math.max(0, index - 1)) } if (event.key === 'Enter' && choices[selected]) openNote(choices[selected].id) }} placeholder="Find a note…" /><div className="results">{choices.length ? choices.map((note, index) => <button key={note.id} className={index === selected ? 'selected' : ''} aria-current={index === selected ? 'true' : undefined} onClick={() => openNote(note.id)}>{note.name}</button>) : <p>No notes found</p>}</div><button className="dialog-close" onClick={closePalette}>Close</button></section></div>}
     {conflict && <div className="palette-backdrop"><section className="palette conflict" role="dialog" aria-modal="true" aria-label="Import conflict" onKeyDown={event => { if (event.key === 'Escape') closeConflict(); if (event.key === 'Tab') { const buttons = [...event.currentTarget.querySelectorAll('button')]; if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1).focus() } else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0].focus() } } }}><p>A note named <strong>{conflict.name}</strong> already exists.</p><button ref={conflictFirst} onClick={() => resolveConflict(false)}>Keep both</button><button onClick={() => resolveConflict(true)}>Replace existing note</button><button onClick={closeConflict}>Cancel</button></section></div>}
     {trashOpen && <div className="palette-backdrop"><section className="palette trash-dialog" role="dialog" aria-modal="true" aria-label="Trash" onKeyDown={event => { if (event.key === 'Tab') { const buttons = [...event.currentTarget.querySelectorAll('button')]; if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1).focus() } else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0].focus() } } }}><h2>Trash</h2>{data.trash.length ? <div className="trash-list">{data.trash.map(entry => <div className="trash-item" key={entry.note.id}><span>{entry.note.name}</span><button onClick={() => restoreNote(entry.note.id)}>Restore</button><button onClick={() => purgeNote(entry.note.id)}>Delete forever</button></div>)}</div> : <p>Trash is empty.</p>}<button ref={trashFirst} onClick={closeTrash}>Close</button></section></div>}
-    {findOpen && <div className="palette-backdrop" onMouseDown={closeFind}><section className="palette find-dialog" role="dialog" aria-modal="true" aria-label="Find in note" onMouseDown={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'Escape') closeFind(); if (event.key === 'Enter') { event.preventDefault(); selectFind(findIndex + (event.shiftKey ? -1 : 1)) } }}><input ref={findInput} aria-label="Text to find" value={findQuery} onChange={event => { setFindQuery(event.target.value); setFindIndex(0) }} placeholder="Find in this note…" /><p role="status">{findQuery ? `${findMatches().length} match${findMatches().length === 1 ? '' : 'es'}` : 'Type text to search'}</p><button disabled={!findMatches().length} onClick={() => selectFind(findIndex - 1)}>Previous</button><button disabled={!findMatches().length} onClick={() => selectFind(findIndex + 1)}>Next</button><button className="dialog-close" onClick={closeFind}>Close</button></section></div>}
+    {findOpen && <div className="palette-backdrop" onMouseDown={closeFind}><section className="palette find-dialog" role="dialog" aria-modal="true" aria-label="Find in note" onMouseDown={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'Escape') closeFind(); if (event.key === 'Enter') { event.preventDefault(); selectFind(findIndex + (event.shiftKey ? -1 : 1)) } }}><input ref={findInput} aria-label="Text to find" value={findQuery} onChange={event => { setFindQuery(event.target.value); setFindIndex(0) }} placeholder="Find in this note…" /><p role="status">{findQuery ? `${currentMatches().length} match${currentMatches().length === 1 ? '' : 'es'}` : 'Type text to search'}</p><button disabled={!currentMatches().length} onClick={() => selectFind(findIndex - 1)}>Previous</button><button disabled={!currentMatches().length} onClick={() => selectFind(findIndex + 1)}>Next</button><button className="dialog-close" onClick={closeFind}>Close</button></section></div>}
   </main>
 }
 

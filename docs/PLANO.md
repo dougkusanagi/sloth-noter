@@ -76,6 +76,12 @@ Até esses critérios serem definidos, não haverá promessa de sincronização 
 - Enter avança para a próxima ocorrência; Shift+Enter retorna à anterior; a seleção nativa do editor destaca o trecho.
 - A busca é case-insensitive, não altera o Markdown original e informa a quantidade de ocorrências.
 
+### Ajuste de 24/09/2026 — posições da busca
+
+- A busca passa a obter posições diretamente do texto original. A seleção permanece correta após caracteres cuja conversão para minúsculas muda o comprimento, como `İ`.
+- Caracteres especiais de expressão regular digitados na busca são tratados como texto literal.
+- Verificação: 12 testes automatizados passaram e o build concluiu. A interação visual da busca ainda não foi repetida no navegador nesta entrega.
+
 Para pasta local, definir ambiente suportado, permissões revogadas, alterações externas, conflitos e recuperação. Não prometer escrita atômica universal antes de escolher/verificar o mecanismo. Importação/exportação permanece como caminho simples.
 
 ## Verificação e documentação
