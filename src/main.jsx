@@ -21,6 +21,12 @@ function download(name, body, type = 'text/markdown;charset=utf-8') {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+function ModeIcon({ mode }) {
+  return <svg className="mode-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {mode === 'visual' ? <><path d="M1.5 10s3.2-5 8.5-5 8.5 5 8.5 5-3.2 5-8.5 5-8.5-5-8.5-5Z" /><circle cx="10" cy="10" r="2.2" /></> : mode === 'source' ? <><path d="m7 5-4.5 5L7 15M13 5l4.5 5-4.5 5" /></> : <><path d="M10 5C7.8 3.7 5.3 3.5 2 4.5v10.7c3.3-1 5.8-.8 8 .5m0-10.7c2.2-1.3 4.7-1.5 8-.5v10.7c-3.3-1-5.8-.8-8 .5V5Z" /></>}
+  </svg>
+}
+
 function App() {
   const storage = useRef(getStorage())
   const initial = useRef(null)
@@ -178,7 +184,7 @@ function App() {
     setFindIndex(safeIndex)
   }
   function runMenu(action, restoreFocus = true) { setMenuOpen(false); action(); if (restoreFocus) setTimeout(() => menuButton.current?.focus(), 0) }
-  function changeMode(next) { setMode(next); setMenuOpen(false); if (next !== 'reading') setTimeout(() => next === 'source' ? editorRef.current?.focus() : visualRef.current?.focus(), 0) }
+  function changeMode(next) { setMode(next); setMenuOpen(false) }
   function resetDamagedStorage() {
     const failure = saveDocument(storage.current, current.current)
     setError(failure)
@@ -268,14 +274,14 @@ function App() {
         </div>}
       </div>
       <span className="app-title">Sloth Note</span>
-      <fieldset className="mode-switch">
-        <legend className="sr-only">Modo de visualização</legend>
-        {[['visual', 'Visual'], ['source', 'Texto puro'], ['reading', 'Leitura']].map(([value, label]) => <label key={value}><input type="radio" name="editor-mode" value={value} checked={mode === value} onChange={() => changeMode(value)} />{label}</label>)}
-      </fieldset>
       {prefs.tabsVisible && data.openIds.length > 0 && <nav className="tabs" aria-label="Open notes"><div className="tab-list" ref={tabListRef}>{data.openIds.map(id => {
         const note = data.notes.find(item => item.id === id)
         return note && <button key={id} ref={id === data.activeId ? activeTabRef : null} className={id === data.activeId ? 'tab active' : 'tab'} onClick={() => openNote(id)}>{note.name}</button>
       })}</div></nav>}
+      <fieldset className="mode-switch">
+        <legend className="sr-only">Modo de visualização</legend>
+        {[['visual', 'Padrão'], ['source', 'Código'], ['reading', 'Leitura']].map(([value, label]) => <label key={value} title={label}><input type="radio" name="editor-mode" value={value} aria-label={label} checked={mode === value} onChange={() => changeMode(value)} /><ModeIcon mode={value} /><span className="mode-label">{label}</span></label>)}
+      </fieldset>
       <span className="sr-only" role="status">{error ? 'Not saved' : 'Saved in this browser'}</span>
       <input ref={importInput} type="file" accept=".md,.markdown,text/markdown,text/plain" hidden onChange={event => { importFile(event.target.files?.[0]); event.target.value = '' }} />
       <input ref={backupInput} type="file" accept=".json,application/json" hidden onChange={event => { restoreBackup(event.target.files?.[0]); event.target.value = '' }} />

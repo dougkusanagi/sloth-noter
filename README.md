@@ -1,6 +1,6 @@
 # Sloth Note
 
-Editor Markdown local com abas opcionais, busca de notas e de texto na nota, e três modos: Visual, Texto puro e Leitura.
+Editor Markdown local com abas opcionais, busca de notas e de texto na nota, e três modos: Padrão, Código e Leitura.
 
 O MVP web está concluído. Pasta local, sincronização e aplicativo desktop permanecem no roadmap como trabalhos separados.
 
@@ -8,9 +8,9 @@ Base copiada de `../sloth-note-gpt`, commit `443d23c`, de 24/07/2026. `../sloth-
 
 **Estado atual:** as notas são gravadas no armazenamento deste navegador a cada alteração. Falhas de gravação aparecem em um alerta; o estado também é anunciado a tecnologias assistivas. É possível importar e exportar `.md`, baixar e restaurar um backup completo `.json`, renomear notas, fechar abas sem apagar o texto e mover notas para uma lixeira que persiste após recarga. A lixeira permite restaurar ou apagar definitivamente. Ainda não há pasta local conectada nem sincronização. Faça exportações para manter uma cópia fora do navegador.
 
-O ícone ☰, o nome do app, os modos e as abas ficam na header. As abas rolam horizontalmente. O menu reúne as ações de notas e aparência; use as setas para navegar e Escape para fechar.
+O ícone ☰, o nome do app e as abas ficam à esquerda da header; o seletor de modos, à direita. As abas rolam horizontalmente. O menu reúne as ações de notas e aparência; use as setas para navegar e Escape para fechar.
 
-**Visual** é o modo padrão: títulos, ênfase, citações, listas, links, tags `#tag` e código aparecem estilizados nas linhas fora do cursor. A linha em edição mostra a sintaxe Markdown original. **Texto puro** mostra todo o Markdown sem estilos; **Leitura** mostra o documento sem cursor de edição. Os três modos são escolhidos pelos botões de opção da header.
+**Padrão** mostra títulos, ênfase, citações, listas, links, tags `#tag` e código estilizados nas linhas fora do cursor; a linha em edição mostra a sintaxe Markdown original. **Código** mostra todo o Markdown sem estilos; **Leitura** mostra o documento sem cursor de edição. O seletor usa ícones, exibe o nome de cada modo em telas largas e aceita setas do teclado para alternar.
 
 O primeiro H1 (`# Título`) define o nome da nota e do arquivo `.md` exportado. Alterá-lo renomeia a nota, inclusive com undo/redo. A importação e as notas já salvas também seguem essa regra. Caracteres proibidos em nomes de arquivo viram `-`; conflitos recebem um sufixo numérico. Sem H1, o nome atual permanece. A ação “Rename note” altera o H1 quando ele existe.
 

@@ -111,6 +111,11 @@ Até esses critérios serem definidos, não haverá promessa de sincronização 
 - Verificado no Chrome: edição de H1 com renomeação imediata, undo/redo do texto e nome, alternância entre os três modos sem mudar o conteúdo, revelação da sintaxe ao entrar na linha de ênfase, busca no modo Visual, importação com H1 e reconciliação ao recarregar. Nota de 1 MiB aceitou inserção e recarga sem perda. Viewport de 360 px permaneceu sem rolagem horizontal.
 - `npm test`: 19 testes. `npm run build`: 154,14 kB gzip de JavaScript e 2,38 kB gzip de CSS; `npm audit` sem vulnerabilidades. O JavaScript excede a meta anterior de 80 kB gzip porque a edição visual solicitada requer um motor de edição com seleção, IME, histórico e decorações. Esse custo substitui a premissa anterior de campo de texto único como modo padrão.
 
+### Ajuste do seletor de modos
+
+- O seletor foi para a ponta direita da header. Padrão, Código e Leitura usam ícones e aparência segmentada, sem círculos visíveis; as opções continuam sendo radios nativos com nomes acessíveis.
+- Em larguras de até 600 px, os nomes visuais se recolhem e os ícones permanecem. Verificado no Chrome em 360 e 180 px CSS sem rolagem horizontal; as setas alternaram os três modos mantendo o foco no seletor.
+
 Para pasta local, definir ambiente suportado, permissões revogadas, alterações externas, conflitos e recuperação. Não prometer escrita atômica universal antes de escolher/verificar o mecanismo. Importação/exportação permanece como caminho simples.
 
 ## Verificação e documentação
