@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { EditorSelection, EditorState } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { Decoration, EditorView, ViewPlugin, WidgetType, keymap } from '@codemirror/view'
@@ -217,6 +218,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
   }
 
   function positionInsert(view, position = view.state.selection.main.head) {
+    if (blockMenuRef.current) return
     if (!view.state.selection.main.empty) { setInsertAt(null); setBlockMenu(false); return }
     const line = view.state.doc.lineAt(position)
     if (line.text.trim()) { if (!blockMenuRef.current) setInsertAt(null); return }
@@ -252,10 +254,15 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
   useEffect(() => {
     if (!blockMenu) return
     function closeOnOutsideClick(event) {
-      if (!event.target.closest?.('.insert-trigger, .block-menu')) setBlockMenu(false)
+      if (event.target.closest?.('.insert-trigger, .block-menu')) return
+      flushSync(() => { setBlockMenu(false); setInsertAt(null) })
     }
+    document.addEventListener('pointerdown', closeOnOutsideClick, true)
     document.addEventListener('click', closeOnOutsideClick, true)
-    return () => document.removeEventListener('click', closeOnOutsideClick, true)
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsideClick, true)
+      document.removeEventListener('click', closeOnOutsideClick, true)
+    }
   }, [blockMenu])
 
   useEffect(() => {
