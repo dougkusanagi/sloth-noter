@@ -82,6 +82,12 @@ Até esses critérios serem definidos, não haverá promessa de sincronização 
 - Caracteres especiais de expressão regular digitados na busca são tratados como texto literal.
 - Verificação: 12 testes automatizados passaram e o build concluiu. A interação visual da busca ainda não foi repetida no navegador nesta entrega.
 
+### Continuação de 24/09/2026 — backup completo
+
+- O menu permite baixar um backup `.json` com notas, lixeira, abas e preferências. O alerta de falha de armazenamento oferece o mesmo download, inclusive para notas mantidas apenas em memória.
+- A restauração valida a estrutura, pede confirmação antes de substituir o estado atual e informa erros de leitura. Quando a gravação está bloqueada por dados corrompidos, o backup restaurado permanece em memória até a ação explícita de substituir o armazenamento.
+- Verificação: 14 testes automatizados passaram, incluindo preservação de Unicode e linhas vazias no backup e rejeição de dados inválidos; build concluído. O fluxo visual de restauração ainda precisa de validação no navegador.
+
 Para pasta local, definir ambiente suportado, permissões revogadas, alterações externas, conflitos e recuperação. Não prometer escrita atômica universal antes de escolher/verificar o mecanismo. Importação/exportação permanece como caminho simples.
 
 ## Verificação e documentação

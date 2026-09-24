@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Markdown } from './markdown.jsx'
+import { createBackup, readBackup } from './backup.js'
 import { findMatches } from './find.js'
 import { moveToTrash, purgeFromTrash, restoreFromTrash, uniqueName } from './notes.js'
 import { loadDocument, saveDocument } from './storage.js'
@@ -42,6 +43,7 @@ function App() {
   const search = useRef(null)
   const conflictFirst = useRef(null)
   const importInput = useRef(null)
+  const backupInput = useRef(null)
   const menuButton = useRef(null)
   const menuWrap = useRef(null)
   const menuFirst = useRef(null)
@@ -117,6 +119,21 @@ function App() {
       if (existing) setConflict({ name, body, id: existing.id })
       else createNote(name, body)
     } catch (cause) { setImportError(cause instanceof Error ? cause.message : 'Could not read file') }
+  }
+  function downloadBackup() {
+    download('sloth-note-backup.json', createBackup(current.current), 'application/json;charset=utf-8')
+  }
+  async function restoreBackup(file) {
+    if (!file) return
+    setImportError('')
+    try {
+      const restored = readBackup(await file.text())
+      if (!window.confirm(`Replace current notes with this backup (${restored.notes.length} notes, ${restored.trash.length} in Trash)?`)) return
+      commit(restored)
+      setReading(false)
+      setFindOpen(false)
+      setTrashOpen(false)
+    } catch (cause) { setImportError(cause instanceof Error ? cause.message : 'Could not read backup') }
   }
   function resolveConflict(replace) {
     if (!conflict) return
@@ -215,6 +232,8 @@ function App() {
           <button role="menuitem" disabled={!active} onClick={() => runMenu(openFind, false)}>Find in note</button>
           <button role="menuitem" onClick={() => runMenu(() => importInput.current?.click(), false)}>Import .md</button>
           <button role="menuitem" disabled={!active} onClick={() => runMenu(() => download(active.name, active.body))}>Export .md</button>
+          <button role="menuitem" onClick={() => runMenu(downloadBackup)}>Download backup</button>
+          <button role="menuitem" onClick={() => runMenu(() => backupInput.current?.click(), false)}>Restore backup</button>
           <button role="menuitem" disabled={!active} onClick={() => runMenu(renameNote)}>Rename note</button>
           <button role="menuitem" disabled={!active} onClick={() => runMenu(() => closeTab(active.id))}>Close tab</button>
           <button role="menuitem" disabled={!active} onClick={() => runMenu(deleteNote)}>Move to Trash</button>
@@ -235,9 +254,10 @@ function App() {
       })}</div></nav>}
       <span className="sr-only" role="status">{error ? 'Not saved' : 'Saved in this browser'}</span>
       <input ref={importInput} type="file" accept=".md,.markdown,text/markdown,text/plain" hidden onChange={event => { importFile(event.target.files?.[0]); event.target.value = '' }} />
+      <input ref={backupInput} type="file" accept=".json,application/json" hidden onChange={event => { restoreBackup(event.target.files?.[0]); event.target.value = '' }} />
     </header>
     <section className="editor-shell">
-      {error && <div className="save-error" role="alert">Storage failed: {error}. Text stays in memory; export notes before closing.{blocked && <div>{initial.current.raw !== null && <button onClick={() => download('sloth-note-damaged.json', initial.current.raw, 'application/json;charset=utf-8')}>Download stored data</button>}<button onClick={resetDamagedStorage}>Replace storage with current notes</button></div>}</div>}
+      {error && <div className="save-error" role="alert">Storage failed: {error}. Text stays in memory; download a backup before closing.<div><button onClick={downloadBackup}>Download backup</button>{blocked && <>{initial.current.raw !== null && <button onClick={() => download('sloth-note-damaged.json', initial.current.raw, 'application/json;charset=utf-8')}>Download stored data</button>}<button onClick={resetDamagedStorage}>Replace storage with current notes</button></>}</div></div>}
       {importError && <div className="save-error" role="alert">Import failed: {importError}</div>}
       {active ? (reading ? <div className="reading"><Markdown text={active.body} onCopy={copyCode} />{copyStatus && <span role="status">{copyStatus}</span>}</div> : <textarea ref={editorRef} key={active.id} aria-label="Markdown editor" spellCheck="false" value={active.body} onChange={event => updateBody(event.target.value)} />) : <div className="empty-note">No open note. Use ☰ to find or create one.</div>}
     </section>
