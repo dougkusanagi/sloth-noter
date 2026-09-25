@@ -12,6 +12,7 @@ import { activeFormats, formatSelection } from './format-selection.js'
 import { blockTemplate } from './insert-block.js'
 import { continueBlock } from './continue-block.js'
 import { safeHref } from './markdown.jsx'
+import { ArrowDownToLine, ArrowRightToLine, CodeXml, Heading1, Heading2, Heading3, Heading4, List, ListOrdered, Quote, Table as TableIcon, Trash2 } from 'lucide-react'
 
 const formatButtons = [
   ['bold', 'Negrito', <strong>B</strong>],
@@ -30,35 +31,42 @@ const blockButtons = [
 const trashIconMarkup = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l.7 10h6.6L14 6M8.5 9v4M11.5 9v4" /></svg>'
 
 function TableMenuIcon({ kind }) {
-  if (kind === 'row') return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M3 10h14M10 6l4 4-4 4M3 5h14M3 15h14" /></svg>
-  if (kind === 'column') return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M10 3v14M6 6l4-4 4 4M6 14l4 4 4-4M5 3h10M5 17h10" /></svg>
-  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l.7 10h6.6L14 6M8.5 9v4M11.5 9v4" /></svg>
+  const props = { size: 16, 'aria-hidden': true }
+  if (kind === 'row') return <ArrowDownToLine {...props} />
+  if (kind === 'column') return <ArrowRightToLine {...props} />
+  return <Trash2 {...props} />
+}
+
+const blockIcons = {
+  h1: Heading1, h2: Heading2, h3: Heading3, h4: Heading4,
+  quote: Quote, list: List, numbered: ListOrdered, table: TableIcon, code: CodeXml,
 }
 
 function BlockIcon({ action }) {
-  if (action.startsWith('h')) return <span className="block-icon">H<sub>{action.slice(1)}</sub></span>
-  if (action === 'quote') return <span className="block-icon" aria-hidden="true">❝</span>
-  if (action === 'numbered') return <span className="block-icon" aria-hidden="true">1.</span>
-  if (action === 'code') return <span className="block-icon" aria-hidden="true">{'</>'}</span>
-  return <svg className="block-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-    {action === 'table' ? <><rect x="2" y="3" width="16" height="14" rx="1" /><path d="M2 8h16M2 12.5h16M10 3v14" /></> : <><circle cx="3.5" cy="5" r=".75" fill="currentColor" /><circle cx="3.5" cy="10" r=".75" fill="currentColor" /><circle cx="3.5" cy="15" r=".75" fill="currentColor" /><path d="M7 5h11M7 10h11M7 15h11" /></>}
-  </svg>
+  const Icon = blockIcons[action]
+  if (!Icon) return null
+  return <Icon className="block-icon" aria-hidden="true" />
 }
 
 class TableCellWidget extends WidgetType {
-  constructor({ from, to, column, header, active }) {
+  constructor({ from, to, column, columnCount, header, active }) {
     super()
     this.from = from
     this.to = to
     this.column = column
+    this.columnCount = columnCount
     this.header = header
     this.active = active
   }
   eq(other) {
-    return this.from === other.from && this.to === other.to && this.column === other.column && this.header === other.header && this.active === other.active
+    return this.from === other.from && this.to === other.to && this.column === other.column && this.columnCount === other.columnCount && this.header === other.header && this.active === other.active
+  }
+  get cellClass() {
+    const edge = `${this.column === 0 ? ' cm-md-table-cell-first' : ''}${this.column === this.columnCount - 1 ? ' cm-md-table-cell-last' : ''}`
+    return `cm-md-table-cell${edge}${this.active ? ' cm-md-table-cell-active' : ''}`
   }
   updateDOM(dom) {
-    dom.className = `cm-md-table-cell${this.active ? ' cm-md-table-cell-active' : ''}`
+    dom.className = this.cellClass
     dom.dataset.column = String(this.column)
     dom.dataset.cellFrom = String(this.from)
     dom.dataset.cellTo = String(this.to)
@@ -70,7 +78,7 @@ class TableCellWidget extends WidgetType {
   }
   toDOM() {
     const cell = document.createElement('span')
-    cell.className = `cm-md-table-cell${this.active ? ' cm-md-table-cell-active' : ''}`
+    cell.className = this.cellClass
     cell.dataset.column = String(this.column)
     cell.dataset.cellFrom = String(this.from)
     cell.dataset.cellTo = String(this.to)
@@ -147,9 +155,10 @@ class TableColumnControlsWidget extends WidgetType {
   ignoreEvent() { return false }
 }
 
-function tableCellAttributes(cell, header, active, lineFrom) {
+function tableCellAttributes(cell, header, active, lineFrom, columnCount) {
+  const edge = `${cell.index === 0 ? ' cm-md-table-cell-first' : ''}${cell.index === columnCount - 1 ? ' cm-md-table-cell-last' : ''}`
   return {
-    class: `cm-md-table-cell${active ? ' cm-md-table-cell-active' : ''}`,
+    class: `cm-md-table-cell${edge}${active ? ' cm-md-table-cell-active' : ''}`,
     role: header ? 'columnheader' : 'cell',
     'aria-colindex': String(cell.index + 1),
     'data-column': String(cell.index),
@@ -186,7 +195,8 @@ function tableSelectionColumn(view, line, parsed) {
 
 function tableDecorations(ranges, view, line, number, table) {
   const row = number - table.first
-  ranges.push(Decoration.line({ attributes: { class: `cm-md-table-row${row === 0 ? ' cm-md-table-head' : ''}`, role: 'row', 'aria-rowindex': String(row + 1), style: `--table-columns:${table.columnCount}` } }).range(line.from))
+  const last = number === table.last || (table.last === table.first + 1 && number === table.first)
+  ranges.push(Decoration.line({ attributes: { class: `cm-md-table-row${row === 0 ? ' cm-md-table-head' : ''}${last ? ' cm-md-table-last' : ''}`, role: 'row', 'aria-rowindex': String(row + 1), style: `--table-columns:${table.columnCount}` } }).range(line.from))
   if (row === 0) ranges.push(Decoration.widget({ widget: new TableColumnControlsWidget({ tableFirst: table.first, columnCount: table.columnCount }), side: -1 }).range(line.from))
   if (row === 1) {
     ranges.push(Decoration.line({ attributes: { class: 'cm-md-table-divider' } }).range(line.from))
@@ -204,9 +214,9 @@ function tableDecorations(ranges, view, line, number, table) {
     if (cursor < cell.from) ranges.push(Decoration.mark({ class: 'cm-md-table-source' }).range(line.from + cursor, line.from + cell.from))
     const active = column === activeColumn
     if (cell.to > cell.from) {
-      ranges.push(Decoration.mark({ attributes: tableCellAttributes(cell, row === 0, active, line.from) }).range(line.from + cell.from, line.from + cell.rawTo))
+      ranges.push(Decoration.mark({ attributes: tableCellAttributes(cell, row === 0, active, line.from, table.columnCount) }).range(line.from + cell.from, line.from + cell.rawTo))
       addInlineRangeDecorations(ranges, line, cell.from, cell.to, false)
-    } else ranges.push(Decoration.widget({ widget: new TableCellWidget({ from: line.from + cell.from, to: line.from + cell.to, column, header: row === 0, active }), side: column + 1 }).range(line.from + cell.from))
+    } else ranges.push(Decoration.widget({ widget: new TableCellWidget({ from: line.from + cell.from, to: line.from + cell.to, column, columnCount: table.columnCount, header: row === 0, active }), side: column + 1 }).range(line.from + cell.from))
     cursor = cell.rawTo
   }
   if (cursor < line.length) ranges.push(Decoration.mark({ class: 'cm-md-table-source' }).range(line.from + cursor, line.to))
@@ -432,15 +442,19 @@ function decorationsFor(view) {
     for (let number = first; number <= last; number++) editing.add(number)
   }
   let openFence = null
+  const fenceStarts = new Set(), fenceEnds = new Set()
   for (let number = 1; number <= doc.lines; number++) {
     if (!doc.line(number).text.startsWith('```')) continue
     if (openFence === null) openFence = number
     else {
       if (selectedLines.some(range => range.first <= number && range.last >= openFence)) { editing.add(openFence); editing.add(number) }
+      fenceStarts.add(openFence)
+      fenceEnds.add(number)
       openFence = null
     }
   }
   if (openFence !== null && selectedLines.some(range => range.last >= openFence)) editing.add(openFence)
+  if (openFence !== null) fenceStarts.add(openFence)
   for (const visible of view.visibleRanges) {
     const first = doc.lineAt(visible.from).number, last = doc.lineAt(visible.to).number
     let inFence = false, fenceLanguage = ''
@@ -464,12 +478,17 @@ function decorationsFor(view) {
         continue
       }
       const active = editing.has(number)
+      const attrs = lineAttributes(line, shape, active)
+      if (shape.kind === 'fence') {
+        if (fenceStarts.has(number)) attrs.class += ' cm-md-fence-start'
+        if (fenceEnds.has(number)) attrs.class += ' cm-md-fence-end'
+      }
       if (active) {
-        ranges.push(Decoration.line({ attributes: lineAttributes(line, shape, true) }).range(line.from))
+        ranges.push(Decoration.line({ attributes: attrs }).range(line.from))
         if (shape.kind !== 'fence' && shape.kind !== 'table') addInlineDecorations(ranges, line, shape, true)
         continue
       }
-      ranges.push(Decoration.line({ attributes: lineAttributes(line, shape, false) }).range(line.from))
+      ranges.push(Decoration.line({ attributes: attrs }).range(line.from))
       if (shape.prefix) ranges.push(Decoration.replace({}).range(line.from, line.from + shape.prefix))
       if (shape.kind === 'fence') continue
       addInlineDecorations(ranges, line, shape, false)

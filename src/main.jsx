@@ -11,6 +11,7 @@ import { VisualEditor } from './visual-editor.jsx'
 import { wrapSelection } from './wrap-selection.js'
 import { continueBlock } from './continue-block.js'
 import { restoreWindowState } from './window-state.js'
+import { BookOpen, Code, Eye } from 'lucide-react'
 import './styles.css'
 
 function download(name, body, type = 'text/markdown;charset=utf-8') {
@@ -23,9 +24,10 @@ function download(name, body, type = 'text/markdown;charset=utf-8') {
 }
 
 function ModeIcon({ mode }) {
-  return <svg className="mode-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    {mode === 'visual' ? <><path d="M1.5 10s3.2-5 8.5-5 8.5 5 8.5 5-3.2 5-8.5 5-8.5-5-8.5-5Z" /><circle cx="10" cy="10" r="2.2" /></> : mode === 'source' ? <><path d="m7 5-4.5 5L7 15M13 5l4.5 5-4.5 5" /></> : <><path d="M10 5C7.8 3.7 5.3 3.5 2 4.5v10.7c3.3-1 5.8-.8 8 .5m0-10.7c2.2-1.3 4.7-1.5 8-.5v10.7c-3.3-1-5.8-.8-8 .5V5Z" /></>}
-  </svg>
+  const props = { className: 'mode-icon', 'aria-hidden': true }
+  if (mode === 'visual') return <Eye {...props} />
+  if (mode === 'source') return <Code {...props} />
+  return <BookOpen {...props} />
 }
 
 function Shortcut({ letter }) {
