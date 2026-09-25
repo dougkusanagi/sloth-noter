@@ -1,6 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { headingFileName, nameFromHeading, reconcileHeadingNames } from './notes.js'
+import { headingFileName, isDiscardableEmptyNote, nameFromHeading, reconcileHeadingNames } from './notes.js'
+
+test('identifies untouched new notes that can be discarded', () => {
+  assert.equal(isDiscardableEmptyNote({ name: 'new note.md', body: '', revision: 0 }), true)
+  assert.equal(isDiscardableEmptyNote({ name: 'new note (7).md', body: '', revision: 0 }), true)
+  assert.equal(isDiscardableEmptyNote({ name: 'new note.md', body: 'text', revision: 1 }), false)
+  assert.equal(isDiscardableEmptyNote({ name: 'untitled.md', body: '', revision: 0 }), false)
+})
 
 test('uses the first H1 as a note filename', () => {
   assert.equal(nameFromHeading('intro\n# Título\n# Outro', [], 'a'), 'Título.md')

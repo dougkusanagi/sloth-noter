@@ -3,5 +3,10 @@
   "identifier": "default",
   "description": "Core APIs for the Sloth Note window. No filesystem plugin is granted: notes are read and written only by the commands below, inside the application data directory.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-position",
+    "core:window:allow-set-size",
+    "core:window:allow-maximize"
+  ]
 }

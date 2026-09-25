@@ -3,13 +3,14 @@ import { createRoot } from 'react-dom/client'
 import { Markdown } from './markdown.jsx'
 import { createBackup, readBackup } from './backup.js'
 import { findMatches } from './find.js'
-import { headingFileName, moveToTrash, nameFromHeading, purgeFromTrash, restoreFromTrash, uniqueName } from './notes.js'
+import { headingFileName, isDiscardableEmptyNote, moveToTrash, nameFromHeading, purgeFromTrash, restoreFromTrash, uniqueName } from './notes.js'
 import { openWorkspace } from './boot.js'
 import { createAppPersistence } from './persistence-runtime.js'
 import { createWriteQueue } from './write-queue.js'
 import { VisualEditor } from './visual-editor.jsx'
 import { wrapSelection } from './wrap-selection.js'
 import { continueBlock } from './continue-block.js'
+import { restoreWindowState } from './window-state.js'
 import './styles.css'
 
 function download(name, body, type = 'text/markdown;charset=utf-8') {
@@ -68,6 +69,7 @@ function Workspace({ persistence, loaded }) {
   const [conflict, setConflict] = useState(null)
   const [trashOpen, setTrashOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [tabMenu, setTabMenu] = useState(null)
   const [findOpen, setFindOpen] = useState(false)
   const [findQuery, setFindQuery] = useState('')
   const [findIndex, setFindIndex] = useState(0)
@@ -86,11 +88,22 @@ function Workspace({ persistence, loaded }) {
   const visualRef = useRef(null)
   const tabListRef = useRef(null)
   const activeTabRef = useRef(null)
+  const tabMenuFirst = useRef(null)
   const trashFirst = useRef(null)
   const returnFocus = useRef(null)
   const active = data.notes.find(note => note.id === data.activeId) ?? null
   const choices = data.notes.filter(note => note.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
   const prefs = data.preferences
+
+  useEffect(() => {
+    let disposed = false
+    let cleanup = () => {}
+    restoreWindowState().then(stop => {
+      if (disposed) stop()
+      else cleanup = stop
+    }).catch(() => {})
+    return () => { disposed = true; cleanup() }
+  }, [])
 
   function commit(next) {
     current.current = next
@@ -142,21 +155,39 @@ function Workspace({ persistence, loaded }) {
   }
   function closeTab(id) {
     const old = current.current
+    const note = old.notes.find(item => item.id === id)
     const openIds = old.openIds.filter(item => item !== id)
-    commit({ ...old, openIds, activeId: old.activeId === id ? (openIds.at(-1) ?? null) : old.activeId })
+    const notes = note && isDiscardableEmptyNote(note) ? old.notes.filter(item => item.id !== id) : old.notes
+    commit({ ...old, notes, openIds, activeId: old.activeId === id ? (openIds.at(-1) ?? null) : old.activeId })
   }
-  function renameNote() {
-    if (!active) return
-    const proposed = window.prompt('Note name', active.name)?.trim()
-    if (!proposed || proposed === active.name) return
+  function openTabMenu(event, id) {
+    event.preventDefault()
+    event.stopPropagation()
+    setTabMenu({ id, x: Math.max(8, Math.min(event.clientX, window.innerWidth - 230)), y: Math.max(8, Math.min(event.clientY, window.innerHeight - 220)) })
+  }
+  function runTabMenu(action) {
+    const menu = tabMenu
+    if (!menu || !current.current.notes.some(note => note.id === menu.id)) return
+    setTabMenu(null)
+    if (action === 'open') openNote(menu.id)
+    if (action === 'rename') renameNote(menu.id)
+    if (action === 'close') closeTab(menu.id)
+    if (action === 'trash') deleteNote(menu.id)
+  }
+  function renameNote(id = active?.id) {
+    const note = data.notes.find(item => item.id === id)
+    if (!note) return
+    const proposed = window.prompt('Note name', note.name)?.trim()
+    if (!proposed || proposed === note.name) return
     const name = proposed.toLowerCase().endsWith('.md') ? proposed : `${proposed}.md`
-    if (data.notes.some(note => note.id !== active.id && note.name.toLocaleLowerCase() === name.toLocaleLowerCase())) { window.alert('A note with that name already exists.'); return }
-    const body = active.body.replace(/^# [ \t]*(.+?)[ \t]*$/m, `# ${name.slice(0, -3)}`)
-    commit({ ...current.current, notes: current.current.notes.map(note => note.id === active.id ? { ...note, name, body, revision: note.revision + 1 } : note) })
+    if (data.notes.some(item => item.id !== id && item.name.toLocaleLowerCase() === name.toLocaleLowerCase())) { window.alert('A note with that name already exists.'); return }
+    const body = note.body.replace(/^# [ \t]*(.+?)[ \t]*$/m, `# ${name.slice(0, -3)}`)
+    commit({ ...current.current, notes: current.current.notes.map(item => item.id === id ? { ...item, name, body, revision: item.revision + 1 } : item) })
   }
-  function deleteNote() {
-    if (!active || !window.confirm(`Move ${active.name} to Trash?`)) return
-    commit(moveToTrash(current.current, active.id, Date.now()))
+  function deleteNote(id = active?.id) {
+    const note = data.notes.find(item => item.id === id)
+    if (!note || !window.confirm(`Move ${note.name} to Trash?`)) return
+    commit(moveToTrash(current.current, id, Date.now()))
   }
   function restoreNote(id) {
     commit(restoreFromTrash(current.current, id))
@@ -271,13 +302,30 @@ function Workspace({ persistence, loaded }) {
     return () => document.removeEventListener('pointerdown', onPointer)
   }, [menuOpen])
   useEffect(() => {
+    if (!tabMenu) return
+    const onPointer = event => { if (!event.target.closest('.tab-context-menu')) setTabMenu(null) }
+    const onKey = event => { if (event.key === 'Escape') { event.preventDefault(); setTabMenu(null) } }
+    document.addEventListener('pointerdown', onPointer, true)
+    document.addEventListener('keydown', onKey, true)
+    const frame = requestAnimationFrame(() => tabMenuFirst.current?.focus())
+    return () => { cancelAnimationFrame(frame); document.removeEventListener('pointerdown', onPointer, true); document.removeEventListener('keydown', onKey, true) }
+  }, [tabMenu])
+  useEffect(() => {
     const onKey = event => {
       if (conflict) { if (event.key === 'Escape') closeConflict(); return }
       if (trashOpen) { if (event.key === 'Escape') closeTrash(); return }
       if (menuOpen && event.key === 'Escape') { closeMenu(); return }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p') { event.preventDefault(); setMenuOpen(false); openPalette() }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') { event.preventDefault(); openFind() }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 't') { event.preventDefault(); setMenuOpen(false); createNote() }
+      const modifier = event.ctrlKey || event.metaKey
+      const key = event.key.toLowerCase()
+      if (modifier && key === 'p') { event.preventDefault(); setMenuOpen(false); openPalette() }
+      if (modifier && key === 'f') { event.preventDefault(); openFind() }
+      if (modifier && key === 't') { event.preventDefault(); setMenuOpen(false); createNote() }
+      if (modifier && key === 'w') { event.preventDefault(); setMenuOpen(false); if (active) closeTab(active.id) }
+      if (modifier && key === 'i') { event.preventDefault(); setMenuOpen(false); importInput.current?.click() }
+      if (modifier && key === 'e') { event.preventDefault(); if (active) download(active.name, active.body) }
+      if (modifier && (event.key === '+' || event.code === 'Equal')) { event.preventDefault(); updatePrefs({ fontSize: Math.min(24, prefs.fontSize + 1) }) }
+      if (modifier && (event.key === '-' || event.code === 'Minus')) { event.preventDefault(); updatePrefs({ fontSize: Math.max(14, prefs.fontSize - 1) }) }
+      if (modifier && key === '0') { event.preventDefault(); updatePrefs({ fontSize: 18 }) }
       if (event.key === 'Escape' && palette) closePalette()
     }
     document.addEventListener('keydown', onKey)
@@ -301,31 +349,45 @@ function Workspace({ persistence, loaded }) {
           <button ref={menuFirst} role="menuitem" onClick={() => runMenu(() => createNote(), false)}><span>New note</span><Shortcut letter="T" /></button>
           <button role="menuitem" onClick={() => runMenu(openPalette, false)}><span>Find note</span><Shortcut letter="P" /></button>
           <button role="menuitem" disabled={!active} onClick={() => runMenu(openFind, false)}><span>Find in note</span><Shortcut letter="F" /></button>
-          <button role="menuitem" onClick={() => runMenu(() => importInput.current?.click(), false)}>Import .md</button>
-          <button role="menuitem" disabled={!active} onClick={() => runMenu(() => download(active.name, active.body))}>Export .md</button>
+           <button role="menuitem" onClick={() => runMenu(() => importInput.current?.click(), false)}><span>Import .md</span><Shortcut letter="I" /></button>
+           <button role="menuitem" disabled={!active} onClick={() => runMenu(() => download(active.name, active.body))}><span>Export .md</span><Shortcut letter="E" /></button>
           <button role="menuitem" onClick={() => runMenu(downloadBackup)}>Download backup</button>
           <button role="menuitem" onClick={() => runMenu(() => backupInput.current?.click(), false)}>Restore backup</button>
           <button role="menuitem" disabled={!active} onClick={() => runMenu(renameNote)}>Rename note</button>
-          <button role="menuitem" disabled={!active} onClick={() => runMenu(() => closeTab(active.id))}>Close tab</button>
+           <button role="menuitem" disabled={!active} onClick={() => runMenu(() => closeTab(active.id))}><span>Close tab</span><Shortcut letter="W" /></button>
           <button role="menuitem" disabled={!active} onClick={() => runMenu(deleteNote)}>Move to Trash</button>
           {data.trash.length > 0 && <button role="menuitem" onClick={() => runMenu(() => restoreNote(data.trash.at(-1).note.id))}>Undo delete</button>}
           <button role="menuitem" onClick={() => runMenu(() => setTrashOpen(true), false)}>Trash ({data.trash.length})</button>
           <div className="menu-heading" role="presentation">View</div>
           <button role="menuitem" onClick={() => runMenu(() => updatePrefs({ tabsVisible: !prefs.tabsVisible }))}>{prefs.tabsVisible ? 'Hide tabs' : 'Show tabs'}</button>
           <button role="menuitem" onClick={() => runMenu(() => updatePrefs({ theme: prefs.theme === 'system' ? 'light' : prefs.theme === 'light' ? 'dark' : 'system' }))}>Theme: {prefs.theme}</button>
-          <button role="menuitem" onClick={() => runMenu(() => updatePrefs({ fontSize: Math.max(14, prefs.fontSize - 1) }))}>Smaller text</button>
-          <button role="menuitem" onClick={() => runMenu(() => updatePrefs({ fontSize: Math.min(24, prefs.fontSize + 1) }))}>Larger text</button>
+           <button role="menuitem" onClick={() => runMenu(() => updatePrefs({ fontSize: Math.max(14, prefs.fontSize - 1) }))}><span>Smaller text</span><Shortcut letter="-" /></button>
+           <button role="menuitem" onClick={() => runMenu(() => updatePrefs({ fontSize: Math.min(24, prefs.fontSize + 1) }))}><span>Larger text</span><Shortcut letter="+" /></button>
         </div>}
       </div>
       <span className="app-title">Sloth Note</span>
       {prefs.tabsVisible && data.openIds.length > 0 && <nav className="tabs" aria-label="Open notes"><div className="tab-list" ref={tabListRef}>{data.openIds.map(id => {
         const note = data.notes.find(item => item.id === id)
-        return note && <button key={id} ref={id === data.activeId ? activeTabRef : null} className={id === data.activeId ? 'tab active' : 'tab'} onClick={() => openNote(id)}>{note.name}</button>
+        return note && <button key={id} ref={id === data.activeId ? activeTabRef : null} className={id === data.activeId ? 'tab active' : 'tab'} aria-haspopup="menu" aria-expanded={tabMenu?.id === id} onClick={() => openNote(id)} onAuxClick={event => { if (event.button === 1) { event.preventDefault(); closeTab(id) } }} onContextMenu={event => openTabMenu(event, id)} onMouseDown={event => { if (event.button === 1) event.preventDefault() }}>{note.name}</button>
       })}</div></nav>}
       <span className="sr-only" role="status">{error ? 'Not saved' : 'Saved'}</span>
       <input ref={importInput} type="file" accept=".md,.markdown,text/markdown,text/plain" hidden onChange={event => { importFile(event.target.files?.[0]); event.target.value = '' }} />
       <input ref={backupInput} type="file" accept=".json,application/json" hidden onChange={event => { restoreBackup(event.target.files?.[0]); event.target.value = '' }} />
     </header>
+    {tabMenu && <div className="tab-context-menu" role="menu" aria-label="Ações da aba" style={{ left: tabMenu.x, top: tabMenu.y }} onKeyDown={event => {
+      const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')]
+      const index = buttons.indexOf(document.activeElement)
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); buttons[(index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length]?.focus() }
+      if (event.key === 'Home') { event.preventDefault(); buttons[0]?.focus() }
+      if (event.key === 'End') { event.preventDefault(); buttons.at(-1)?.focus() }
+      if (event.key === 'Escape') { event.preventDefault(); setTabMenu(null) }
+    }}>
+      <button ref={tabMenuFirst} type="button" role="menuitem" onClick={() => runTabMenu('open')}><span>Abrir nota</span></button>
+      <button type="button" role="menuitem" onClick={() => runTabMenu('rename')}><span>Renomear nota</span></button>
+      <button type="button" role="menuitem" onClick={() => runTabMenu('close')}><span>Fechar aba</span><Shortcut letter="W" /></button>
+      <div className="table-context-menu-separator" />
+      <button type="button" role="menuitem" onClick={() => runTabMenu('trash')}><span>Mover para Lixeira</span></button>
+    </div>}
     <section className="editor-shell">
       <fieldset className="mode-switch">
         <legend className="sr-only">Modo de visualização</legend>

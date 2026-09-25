@@ -1,3 +1,7 @@
+export function isDiscardableEmptyNote(note) {
+  return note?.body === '' && note.revision === 0 && /^new note(?: \(\d+\))?\.md$/i.test(note.name)
+}
+
 export function uniqueName(notes, proposed) {
   const stem = proposed.toLocaleLowerCase().endsWith('.md') ? proposed.slice(0, -3) : proposed
   let name = `${stem}.md`, number = 2
