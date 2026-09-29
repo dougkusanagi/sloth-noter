@@ -73,10 +73,11 @@ export async function restoreWindowState() {
       // Saving the window geometry is best effort.
     }
   }
+  // No onCloseRequested listener: Tauri then destroys the window from JS, which would
+  // need an extra permission, and moves/resizes already keep the geometry saved.
   const registrations = await Promise.allSettled([
     appWindow.onMoved(save),
     appWindow.onResized(save),
-    appWindow.onCloseRequested(save),
   ])
   const unlisten = registrations
     .filter((result) => result.status === 'fulfilled')
