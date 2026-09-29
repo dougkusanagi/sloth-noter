@@ -6,6 +6,7 @@
   --soft: #e8e5df;
   --paper: #fdfcf9;
   --accent: #a65427;
+  --accent-ink: #9d4f25;
   --radius: 8px;
   --radius-md: 6px;
   --radius-sm: 4px;
@@ -18,6 +19,7 @@
   --soft: #30302d;
   --paper: #1e1e1b;
   --accent: #e2a074;
+  --accent-ink: #e2a074;
 }
 * {
   box-sizing: border-box;
@@ -759,17 +761,17 @@ textarea:focus-visible {
 }
 .syntax-keyword,
 .token.keyword {
-  color: #aa5c9f;
+  color: #904e87;
 }
 .syntax-string,
 .token.string {
-  color: #4b8a61;
+  color: #3c6f4e;
 }
 .syntax-number,
 .token.number,
 .syntax-boolean,
 .token.boolean {
-  color: #b97732;
+  color: #8c5a25;
 }
 .syntax-comment,
 .token.comment {
@@ -778,7 +780,7 @@ textarea:focus-visible {
 }
 .syntax-function,
 .token.function {
-  color: #5385ac;
+  color: #416987;
 }
 .syntax-operator,
 .token.operator,
@@ -823,7 +825,7 @@ textarea:focus-visible {
 }
 .visual-editor .cm-md-inline-tag,
 .markdown-tag {
-  color: var(--accent);
+  color: var(--accent-ink);
   background: var(--soft);
   border-radius: var(--radius-sm);
   padding: 0.1em 0.25em;

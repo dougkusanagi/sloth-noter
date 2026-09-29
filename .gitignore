@@ -4,3 +4,5 @@ dist/
 *.local
 .tmp-*
 vite.log
+test-results/
+playwright-report/

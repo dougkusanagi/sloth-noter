@@ -53,8 +53,6 @@ export class TableCellWidget extends WidgetType {
     dom.dataset.cellFrom = String(this.from)
     dom.dataset.cellTo = String(this.to)
     dom.dataset.cellEmpty = this.from === this.to ? 'true' : 'false'
-    dom.setAttribute('role', this.header ? 'columnheader' : 'cell')
-    dom.setAttribute('aria-colindex', String(this.column + 1))
     dom.title = 'Enter/Tab navega · Enter no fim cria linha · Tab no fim cria coluna'
     return true
   }
@@ -65,8 +63,6 @@ export class TableCellWidget extends WidgetType {
     cell.dataset.cellFrom = String(this.from)
     cell.dataset.cellTo = String(this.to)
     cell.dataset.cellEmpty = this.from === this.to ? 'true' : 'false'
-    cell.setAttribute('role', this.header ? 'columnheader' : 'cell')
-    cell.setAttribute('aria-colindex', String(this.column + 1))
     cell.title = 'Enter/Tab navega · Enter no fim cria linha · Tab no fim cria coluna'
     cell.contentEditable = 'false'
     return cell
@@ -164,8 +160,6 @@ export function tableCellAttributes(cell, header, active, lineFrom, columnCount)
   const edge = `${cell.index === 0 ? ' cm-md-table-cell-first' : ''}${cell.index === columnCount - 1 ? ' cm-md-table-cell-last' : ''}`
   return {
     class: `cm-md-table-cell${edge}${active ? ' cm-md-table-cell-active' : ''}`,
-    role: header ? 'columnheader' : 'cell',
-    'aria-colindex': String(cell.index + 1),
     'data-column': String(cell.index),
     'data-cell-from': String(lineFrom + cell.from),
     'data-cell-to': String(lineFrom + cell.to),
@@ -213,8 +207,6 @@ export function tableDecorations(ranges, view, line, number, table) {
     Decoration.line({
       attributes: {
         class: `cm-md-table-row${row === 0 ? ' cm-md-table-head' : ''}${last ? ' cm-md-table-last' : ''}`,
-        role: 'row',
-        'aria-rowindex': String(row + 1),
         style: `--table-columns:${table.columnCount}`,
       },
     }).range(line.from),

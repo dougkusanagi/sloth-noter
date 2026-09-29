@@ -8,10 +8,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 - CI (versão, lint, formatação, testes, build, `cargo test`) e workflow de release com `.msi` e `.AppImage`.
 - ESLint, Prettier e `.editorconfig`.
+- Testes E2E (Playwright) e verificação de acessibilidade (axe) no CI.
+
+### Corrigido
+
+- Contraste de tags e realce de código no tema claro; papéis ARIA de tabela inválidos dentro do editor.
 
 ### Alterado
 
 - Bun como gerenciador de pacotes; a versão vive em `package.json`.
+- `visual-editor.jsx` e `main.jsx` divididos em módulos (`src/editor/`, `src/components/`).
 - Documentação reduzida a README, `docs/RECURSOS.md` e `docs/ROADMAP.md`.
 
 ## [0.1.0]

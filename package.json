@@ -18,7 +18,8 @@
     "version:check": "node scripts/check-version.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@codemirror/commands": "6.11.1",
@@ -31,7 +32,9 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "9",
+    "@playwright/test": "^1.63.0",
     "@tauri-apps/cli": "2.11.5",
     "eslint": "9",
     "eslint-plugin-react": "^7.37.5",
