@@ -1,0 +1,20 @@
+# Changelog
+
+Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
+
+## [Não lançado]
+
+### Adicionado
+
+- CI (versão, lint, formatação, testes, build, `cargo test`) e workflow de release com `.msi` e `.AppImage`.
+- ESLint, Prettier e `.editorconfig`.
+
+### Alterado
+
+- Bun como gerenciador de pacotes; a versão vive em `package.json`.
+- Documentação reduzida a README, `docs/RECURSOS.md` e `docs/ROADMAP.md`.
+
+## [0.1.0]
+
+- Editor Markdown com modos Padrão, Código e Leitura, abas, busca, lixeira, importação/exportação e backup.
+- Aplicativo Tauri V2 com estado em arquivo versionado.

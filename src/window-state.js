@@ -69,7 +69,9 @@ export async function restoreWindowState() {
           STORAGE_KEY,
           JSON.stringify({ version: STATE_VERSION, ...normal, maximized }),
         )
-    } catch {}
+    } catch {
+      // Saving the window geometry is best effort.
+    }
   }
   const registrations = await Promise.allSettled([
     appWindow.onMoved(save),
@@ -83,6 +85,8 @@ export async function restoreWindowState() {
     unlisten.forEach((stop) => {
       try {
         stop()
-      } catch {}
+      } catch {
+        // The listener may already be gone when the window closes.
+      }
     })
 }

@@ -44,6 +44,7 @@ import {
   Trash2,
 } from 'lucide-react'
 
+/* eslint-disable react/jsx-key -- static tuples, rendered with explicit keys below */
 const formatButtons = [
   ['bold', 'Negrito', <strong>B</strong>],
   ['italic', 'Itálico', <em>I</em>],
@@ -53,6 +54,7 @@ const formatButtons = [
   ['quote', 'Citação', <span>❝</span>],
   ['list', 'Lista', <span>☷</span>],
 ]
+/* eslint-enable react/jsx-key */
 const blockButtons = [
   ['h2', 'Título 2'],
   ['h3', 'Título 3'],
@@ -1069,6 +1071,8 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
       view.scrollDOM.removeEventListener('mousedown', focusBlankArea)
       view.destroy()
     }
+    // The view is recreated per note; later body changes are synced by the effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId])
 
   useEffect(() => {

@@ -19,6 +19,7 @@ export function headingFileName(body) {
     .replace(/`([^`]+)`/g, '$1')
     .replace(/\*\*([^*]+)\*\*/g, '$1')
     .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '$1')
+    // eslint-disable-next-line no-control-regex -- control characters are invalid in file names
     .replace(/[<>:"/\\|?*\x00-\x1f]/g, '-')
     .replace(/[. ]+$/, '')
     .trim()

@@ -20,6 +20,7 @@ Requisitos: [Bun](https://bun.sh) 1.4, Node.js 24 (executa os testes) e, para o 
 bun install
 bun run dev            # site em http://localhost:5173
 bun run test           # testes de domínio (Node)
+bun run lint           # ESLint; `bun run format` aplica o Prettier
 bun run build          # gera dist/, sem exigir Rust
 bun run desktop:dev    # janela Tauri
 bun run desktop:test   # testes Rust do armazenamento nativo

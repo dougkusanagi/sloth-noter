@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Markdown } from './markdown.jsx'
 import { createBackup, readBackup } from './backup.js'
