@@ -22,6 +22,12 @@ function fakeHost({ files = {}, aux = null, chosen = '/notes', state = null } = 
       return [...host.files]
         .map(([name, contents]) => ({ name, contents }))
         .sort((a, b) => a.name.localeCompare(b.name))
+    if (command === 'vault_stamps')
+      return [...host.files].map(([name, contents]) => ({
+        name,
+        len: contents.length,
+        modifiedMs: contents,
+      }))
     if (command === 'vault_read_aux') return host.aux
     if (command === 'vault_write_aux') {
       host.aux = args.contents
@@ -152,7 +158,7 @@ test('the runtime picks the folder when one is connected and reports a missing o
   missing.missing = true
   const fallback = await createAppPersistence(target, async () => ({ invoke: missing.invoke }))
   assert.equal(fallback.kind, 'desktop')
-  assert.match(fallback.vaultProblem, /not found: \/notes/)
+  assert.deepEqual(fallback.vaultProblem, { path: '/notes' })
 })
 
 test('connecting an empty folder offers to copy the current notes, only once accepted', async () => {
@@ -180,4 +186,114 @@ test('cancelling the folder dialog changes nothing', async () => {
   const host = fakeHost({ chosen: null })
   assert.equal(await connectVault(host.invoke, () => true), false)
   assert.equal(host.calls.includes('vault_list'), false)
+})
+
+async function opened(files) {
+  const host = fakeHost({ files })
+  const adapter = createVaultAdapter(host.invoke, '/notes')
+  const persistence = createPersistence(adapter)
+  const { document } = await persistence.load()
+  const refresh = async (current) => {
+    const scanned = await persistence.sync.scan()
+    return scanned === null ? null : persistence.sync.merge(current, scanned)
+  }
+  return { host, persistence, document, refresh }
+}
+
+test('an unchanged folder is not read again', async () => {
+  const { refresh, document } = await opened({ 'a.md': 'A' })
+  assert.notEqual(await refresh(document), null)
+  assert.equal(await refresh(document), null)
+})
+
+test('outside edits to untouched notes and new files are imported', async () => {
+  const { host, refresh, document } = await opened({ 'a.md': 'A' })
+  host.files.set('a.md', 'A editada fora')
+  host.files.set('nova.md', 'criada fora')
+  const result = await refresh(document)
+  assert.equal(result.changed, true)
+  assert.deepEqual(result.conflicts, [])
+  assert.deepEqual(
+    result.document.notes.map((note) => [note.name, note.body]),
+    [
+      ['a.md', 'A editada fora'],
+      ['nova.md', 'criada fora'],
+    ],
+  )
+  assert.equal(result.document.notes[0].revision, 1)
+})
+
+test('a note deleted outside is dropped when untouched and reported when edited here', async () => {
+  const { host, refresh, document } = await opened({ 'a.md': 'A', 'b.md': 'B' })
+  host.files.delete('a.md')
+  const dropped = await refresh(document)
+  assert.deepEqual(
+    dropped.document.notes.map((note) => note.name),
+    ['b.md'],
+  )
+  assert.equal(dropped.document.openIds.includes(document.notes[0].id), false)
+
+  const second = await opened({ 'a.md': 'A' })
+  const edited = {
+    ...second.document,
+    notes: [{ ...second.document.notes[0], body: 'A local' }],
+  }
+  second.host.files.delete('a.md')
+  const result = await second.refresh(edited)
+  assert.deepEqual(result.conflicts, [{ id: edited.notes[0].id, name: 'a.md', kind: 'deleted' }])
+  assert.equal(result.document.notes.length, 1)
+})
+
+test('our own writes never look like outside changes', async () => {
+  const { persistence, refresh, document } = await opened({ 'a.md': 'A' })
+  const saved = { ...document, notes: [{ ...document.notes[0], body: 'A + local' }] }
+  assert.equal(await persistence.save(saved), null)
+  const result = await refresh(saved)
+  assert.equal(result.changed, false)
+  assert.deepEqual(result.conflicts, [])
+})
+
+test('when both sides changed nothing is overwritten until the user decides', async () => {
+  for (const choice of ['mine', 'external', 'both']) {
+    const { host, persistence, document, refresh } = await opened({ 'a.md': 'A' })
+    const local = { ...document, notes: [{ ...document.notes[0], body: 'A local' }] }
+    host.files.set('a.md', 'A disk')
+    const { conflicts } = await refresh(local)
+    assert.equal(conflicts.length, 1)
+    assert.equal(conflicts[0].kind, 'changed')
+    assert.match(await persistence.save(local), /outside Sloth Note/)
+    assert.equal(host.files.get('a.md'), 'A disk')
+
+    const resolved = persistence.sync.resolve(local, conflicts[0], choice)
+    assert.equal(await persistence.save(resolved), null)
+    if (choice === 'mine') assert.deepEqual([...host.files], [['a.md', 'A local']])
+    if (choice === 'external') assert.deepEqual([...host.files], [['a.md', 'A disk']])
+    if (choice === 'both')
+      assert.deepEqual(Object.fromEntries(host.files), {
+        'a.md': 'A local',
+        'a (disk).md': 'A disk',
+      })
+  }
+})
+
+test('deleting outside while editing here can keep the local text', async () => {
+  const { host, persistence, document, refresh } = await opened({ 'a.md': 'A' })
+  const local = { ...document, notes: [{ ...document.notes[0], body: 'A local' }] }
+  host.files.delete('a.md')
+  const { conflicts } = await refresh(local)
+  const resolved = persistence.sync.resolve(local, conflicts[0], 'mine')
+  assert.equal(await persistence.save(resolved), null)
+  assert.equal(host.files.get('a.md'), 'A local')
+})
+
+test('restoring a backup replaces same-named files and never deletes the others', async () => {
+  const { host, persistence, document } = await opened({ 'a.md': 'A', 'b.md': 'B' })
+  const backup = {
+    ...document,
+    notes: [{ id: 'from-backup', name: 'a.md', body: 'A do backup', revision: 0 }],
+    openIds: ['from-backup'],
+    activeId: 'from-backup',
+  }
+  assert.equal(await persistence.save(backup), null)
+  assert.deepEqual(Object.fromEntries(host.files), { 'a.md': 'A do backup', 'b.md': 'B' })
 })

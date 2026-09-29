@@ -1,4 +1,5 @@
 import React from 'react'
+import { t } from './i18n.js'
 import { codeTokens } from './syntax-highlight.js'
 import { tableGroup } from './markdown-table.js'
 import { inlineSyntax } from './live-markdown.js'
@@ -84,7 +85,7 @@ export function Markdown({ text, onCopy }) {
         <pre>
           <code>{highlightedCode(codeTokens(source, fence[1].trim()))}</code>
           <button className="copy-code" onClick={() => onCopy(source)}>
-            Copy
+            {t('code.copy')}
           </button>
         </pre>,
       )

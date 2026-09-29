@@ -1,9 +1,11 @@
 import { newDocument, validateDocument } from './storage.js'
+import { mergeExternal, resolveConflict } from './vault-sync.js'
 
 export const VAULT_STATUS = 'vault_status'
 export const VAULT_CHOOSE = 'vault_choose'
 export const VAULT_DISCONNECT = 'vault_disconnect'
 const VAULT_LIST = 'vault_list'
+const VAULT_STAMPS = 'vault_stamps'
 const VAULT_APPLY = 'vault_apply'
 const VAULT_READ_AUX = 'vault_read_aux'
 const VAULT_WRITE_AUX = 'vault_write_aux'
@@ -28,14 +30,28 @@ function newId() {
  */
 export function createVaultAdapter(invoke, path) {
   let known = new Map()
+  let lastStamps = null
 
   return {
     kind: 'vault',
     label: path,
+    // Bringing outside changes in: cheap stamp check first, full read only on change.
+    sync: {
+      async scan() {
+        const stamps = JSON.stringify(await invoke(VAULT_STAMPS))
+        if (stamps === lastStamps) return null
+        const files = await invoke(VAULT_LIST)
+        lastStamps = stamps
+        return files
+      },
+      merge: (document, files) => mergeExternal(document, files, known),
+      resolve: (document, conflict, choice) => resolveConflict(document, conflict, choice, known),
+    },
     async readState() {
       const files = await invoke(VAULT_LIST)
       const rawAux = await invoke(VAULT_READ_AUX)
       known = new Map()
+      lastStamps = null
       if (files.length === 0 && rawAux === null) return null
       const aux = rawAux === null ? {} : JSON.parse(rawAux)
       const trash = Array.isArray(aux.trash) ? aux.trash : []
@@ -65,22 +81,26 @@ export function createVaultAdapter(invoke, path) {
     },
     async writeState(contents) {
       const document = JSON.parse(contents)
+      const kept = new Set(document.notes.map((note) => note.id))
+      const trashed = new Set(document.trash.map((entry) => entry.note.id))
       const byId = new Map([...known].map(([name, entry]) => [entry.id, { name, ...entry }]))
-      const removals = []
       const renames = []
       const writes = []
       for (const note of document.notes) {
         const previous = byId.get(note.id)
-        if (!previous) {
-          writes.push({ note, expected: null })
+        if (previous) {
+          if (previous.name !== note.name) renames.push({ from: previous.name, note })
+          if (previous.body !== note.body) writes.push({ note, expected: previous.body })
           continue
         }
-        if (previous.name !== note.name) renames.push({ from: previous.name, note })
-        if (previous.body !== note.body) writes.push({ note, expected: previous.body })
+        // A note without a file yet. If an orphaned file already has its name (a
+        // restored backup), the note takes it over, still guarded by the seen text.
+        const orphan = known.get(note.name)
+        if (orphan && !kept.has(orphan.id)) {
+          known.set(note.name, { id: note.id, body: orphan.body })
+          if (orphan.body !== note.body) writes.push({ note, expected: orphan.body })
+        } else writes.push({ note, expected: null })
       }
-      const kept = new Set(document.notes.map((note) => note.id))
-      for (const [name, entry] of known)
-        if (!kept.has(entry.id)) removals.push({ name, body: entry.body })
 
       // The auxiliary state goes first: a failure part-way leaves files intact and
       // the trash body saved, so at worst the newest keystrokes stay in memory.
@@ -95,8 +115,12 @@ export function createVaultAdapter(invoke, path) {
         }),
       })
 
-      for (const { name, body } of removals) {
-        await invoke(VAULT_APPLY, { op: { kind: 'remove', name, expected: body } })
+      // Only a note moved to the trash deletes its file. A note that merely left the
+      // document (a restored backup) keeps its file, which is picked up again later.
+      for (const [name, entry] of [...known]) {
+        if (kept.has(entry.id)) continue
+        if (trashed.has(entry.id))
+          await invoke(VAULT_APPLY, { op: { kind: 'remove', name, expected: entry.body } })
         known.delete(name)
       }
       // A rename may target a name freed by another rename in the same save.

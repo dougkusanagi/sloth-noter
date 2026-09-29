@@ -1,3 +1,4 @@
+import { t } from '../i18n.js'
 import { addInlineRangeDecorations } from './inline-decorations.js'
 import { EditorSelection } from '@codemirror/state'
 import { Decoration, WidgetType } from '@codemirror/view'
@@ -53,7 +54,7 @@ export class TableCellWidget extends WidgetType {
     dom.dataset.cellFrom = String(this.from)
     dom.dataset.cellTo = String(this.to)
     dom.dataset.cellEmpty = this.from === this.to ? 'true' : 'false'
-    dom.title = 'Enter/Tab navega · Enter no fim cria linha · Tab no fim cria coluna'
+    dom.title = t('table.cellHint')
     return true
   }
   toDOM() {
@@ -63,7 +64,7 @@ export class TableCellWidget extends WidgetType {
     cell.dataset.cellFrom = String(this.from)
     cell.dataset.cellTo = String(this.to)
     cell.dataset.cellEmpty = this.from === this.to ? 'true' : 'false'
-    cell.title = 'Enter/Tab navega · Enter no fim cria linha · Tab no fim cria coluna'
+    cell.title = t('table.cellHint')
     cell.contentEditable = 'false'
     return cell
   }
@@ -91,10 +92,8 @@ export class TableRowControlWidget extends WidgetType {
     button.type = 'button'
     button.className = 'cm-md-table-remove-row'
     button.innerHTML = trashIconMarkup
-    button.title = this.removable
-      ? 'Remover linha'
-      : 'A tabela precisa de pelo menos uma linha de dados'
-    button.setAttribute('aria-label', 'Remover linha')
+    button.title = this.removable ? t('table.removeRow') : t('table.needRow')
+    button.setAttribute('aria-label', t('table.removeRow'))
     button.disabled = !this.removable
     const stop = (event) => {
       event.preventDefault()
@@ -134,9 +133,8 @@ export class TableColumnControlsWidget extends WidgetType {
       button.type = 'button'
       button.className = 'cm-md-table-remove-column'
       button.innerHTML = trashIconMarkup
-      button.title =
-        this.columnCount > 1 ? 'Remover coluna' : 'A tabela precisa de pelo menos uma coluna'
-      button.setAttribute('aria-label', `Remover coluna ${column + 1}`)
+      button.title = this.columnCount > 1 ? t('table.removeColumn') : t('table.needColumn')
+      button.setAttribute('aria-label', t('table.removeColumnN', { n: column + 1 }))
       button.disabled = this.columnCount <= 1
       const stop = (event) => {
         event.preventDefault()
@@ -164,7 +162,7 @@ export function tableCellAttributes(cell, header, active, lineFrom, columnCount)
     'data-cell-from': String(lineFrom + cell.from),
     'data-cell-to': String(lineFrom + cell.to),
     'data-cell-empty': cell.to === cell.from ? 'true' : 'false',
-    title: 'Enter/Tab navega · Enter no fim cria linha · Tab no fim cria coluna',
+    title: t('table.cellHint'),
   }
 }
 

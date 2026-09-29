@@ -16,6 +16,7 @@ export function createPersistence(adapter, label = adapter.label) {
   const persistence = {
     kind: adapter.kind,
     label,
+    sync: adapter.sync ?? null,
     async load() {
       let current = null
       let legacy = null

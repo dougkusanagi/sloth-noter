@@ -21,14 +21,14 @@ for (const theme of ['light', 'dark']) {
 }
 
 test('the main menu has no detectable violations', async ({ page }) => {
-  await page.getByRole('button', { name: 'Main menu' }).click()
-  await expect(page.getByRole('menu', { name: 'Main menu' })).toBeVisible()
+  await page.getByRole('button', { name: 'Menu principal' }).click()
+  await expect(page.getByRole('menu', { name: 'Menu principal' })).toBeVisible()
   expect(await violations(page)).toEqual([])
 })
 
 test('the find dialog has no detectable violations', async ({ page }) => {
   await page.keyboard.press('Control+f')
-  await expect(page.getByRole('dialog', { name: 'Find in note' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Buscar na nota' })).toBeVisible()
   expect(await violations(page)).toEqual([])
 })
 

@@ -1,3 +1,5 @@
+import { DEFAULT_LANGUAGE, isLanguage } from './i18n.js'
+
 export const STORAGE_KEY = 'sloth-note:v3'
 export const V2_KEY = 'sloth-note:v2'
 export const LEGACY_KEY = 'sloth-note:v1'
@@ -49,7 +51,7 @@ export function newDocument() {
     trash: [],
     openIds: ['welcome'],
     activeId: 'welcome',
-    preferences: { tabsVisible: true, theme: 'system', fontSize: 18 },
+    preferences: { tabsVisible: true, theme: 'system', fontSize: 18, language: DEFAULT_LANGUAGE },
   }
 }
 
@@ -111,7 +113,8 @@ export function validateDocument(value) {
     !['system', 'light', 'dark'].includes(prefs.theme) ||
     !Number.isInteger(prefs.fontSize) ||
     prefs.fontSize < 14 ||
-    prefs.fontSize > 24
+    prefs.fontSize > 24 ||
+    (prefs.language !== undefined && !isLanguage(prefs.language))
   )
     throw new Error('Invalid preferences')
   return value
@@ -126,7 +129,7 @@ function migrateV1(value) {
     trash: [],
     openIds: value.notes.map((note) => note.id),
     activeId: value.activeId,
-    preferences: { tabsVisible: true, theme: 'system', fontSize: 18 },
+    preferences: { tabsVisible: true, theme: 'system', fontSize: 18, language: DEFAULT_LANGUAGE },
   }
   return validateDocument(migrated)
 }

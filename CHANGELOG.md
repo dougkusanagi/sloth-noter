@@ -16,10 +16,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Adicionado (desktop)
 
+- Diálogo da pasta de notas e importação automática de alterações externas, com resolução de conflitos.
 - Pasta de notas: cada nota é um `.md` numa pasta escolhida pelo usuário; abas, preferências e lixeira ficam no diretório de dados do app.
 
 ### Alterado
 
+- Interface em português (Brasil) por padrão, com English opcional no menu; confirmações e renomeação agora são diálogos do app (`window.prompt` não existe nos webviews do Tauri).
 - Bun como gerenciador de pacotes; a versão vive em `package.json`.
 - `visual-editor.jsx` e `main.jsx` divididos em módulos (`src/editor/`, `src/components/`).
 - Documentação reduzida a README, `docs/RECURSOS.md` e `docs/ROADMAP.md`.

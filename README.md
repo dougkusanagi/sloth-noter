@@ -1,13 +1,13 @@
 # Sloth Note
 
-Editor Markdown local e offline, com abas opcionais, busca de notas e de texto, e três modos: Padrão (estilo ao vivo), Código (Markdown puro) e Leitura.
+Editor Markdown local e offline, em português (Brasil) ou inglês, com abas opcionais, busca de notas e de texto, e três modos: Padrão (estilo ao vivo), Código (Markdown puro) e Leitura.
 
 O produto final é um aplicativo desktop Tauri V2 que lê e grava arquivos `.md` em uma pasta escolhida pelo usuário. A versão web é a base funcional e um fallback com importação e exportação. Sincronização em nuvem está fora do escopo.
 
 ## Estado
 
 - **Web:** as notas são gravadas no armazenamento do navegador a cada alteração.
-- **Desktop:** o app abre offline, sem `localStorage`. Por padrão grava um arquivo de estado versionado (`state.v3.json`) no diretório de dados do aplicativo. Em **Menu → Choose notes folder…** você escolhe uma pasta: cada nota vira um `.md` nela, e abas, preferências e lixeira ficam no diretório de dados do app. Veja o [roteiro](docs/ROADMAP.md) para o que falta (observação de alterações externas, subpastas).
+- **Desktop:** o app abre offline, sem `localStorage`. Por padrão grava um arquivo de estado versionado (`state.v3.json`) no diretório de dados do aplicativo. Em **Menu → Choose notes folder…** você escolhe uma pasta: cada nota vira um `.md` nela, e abas, preferências e lixeira ficam no diretório de dados do app. Alterações feitas por fora na pasta são importadas automaticamente. Veja o [roteiro](docs/ROADMAP.md) para o que falta.
 - **Em ambos:** falhas de gravação aparecem em um alerta; há importação/exportação `.md`, backup completo `.json`, lixeira persistente e renomeação. Faça exportações para manter uma cópia fora do aplicativo.
 
 Detalhes de comportamento, atalhos e limites do Markdown: [docs/RECURSOS.md](docs/RECURSOS.md).

@@ -19,6 +19,15 @@ pub struct VaultFile {
     pub contents: String,
 }
 
+/// Cheap change detector: size and modification time of every note file.
+#[derive(Serialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultStamp {
+    pub name: String,
+    pub len: u64,
+    pub modified_ms: u128,
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum VaultOp {
@@ -69,6 +78,26 @@ pub fn list(root: &Path) -> io::Result<Vec<VaultFile>> {
     }
     files.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
     Ok(files)
+}
+
+pub fn stamps(root: &Path) -> io::Result<Vec<VaultStamp>> {
+    let mut stamps = Vec::new();
+    for entry in fs::read_dir(root)? {
+        let entry = entry?;
+        let Ok(name) = entry.file_name().into_string() else { continue };
+        if !valid_name(&name) || !entry.file_type()?.is_file() {
+            continue;
+        }
+        let metadata = entry.metadata()?;
+        let modified_ms = metadata
+            .modified()
+            .ok()
+            .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+            .map_or(0, |elapsed| elapsed.as_millis());
+        stamps.push(VaultStamp { name, len: metadata.len(), modified_ms });
+    }
+    stamps.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(stamps)
 }
 
 fn changed_outside(name: &str) -> String {
@@ -165,6 +194,23 @@ mod tests {
         let names: Vec<_> = list(&root).unwrap().into_iter().map(|file| file.name).collect();
         assert_eq!(names, ["A.md", "b.md"]);
         assert_eq!(list(&root).unwrap()[0].contents, "olá\n\n");
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn stamps_change_when_a_note_is_edited_added_or_removed() {
+        let root = folder("stamps");
+        fs::write(root.join("a.md"), "one").unwrap();
+        fs::write(root.join("ignored.txt"), "x").unwrap();
+        let before = stamps(&root).unwrap();
+        assert_eq!(before.len(), 1);
+        fs::write(root.join("a.md"), "longer text").unwrap();
+        assert_ne!(stamps(&root).unwrap(), before);
+        let edited = stamps(&root).unwrap();
+        fs::write(root.join("b.md"), "x").unwrap();
+        assert_eq!(stamps(&root).unwrap().len(), 2);
+        fs::remove_file(root.join("b.md")).unwrap();
+        assert_eq!(stamps(&root).unwrap(), edited);
         fs::remove_dir_all(&root).unwrap();
     }
 

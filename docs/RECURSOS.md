@@ -26,6 +26,19 @@ Se dados salvos estiverem corrompidos, a aplicação bloqueia novas gravações 
 
 ## Pasta de notas (desktop)
 
-**Choose notes folder…** no menu abre o diálogo nativo. Cada arquivo `.md` no nível superior da pasta é uma nota; subpastas, arquivos ocultos e arquivos que não são UTF-8 são ignorados e nunca alterados. Numa pasta vazia, o app oferece copiar as notas do armazenamento do app; numa pasta com notas, nada é copiado nem sobrescrito. **Use app storage** volta ao armazenamento do app, que continua intacto.
+**Menu → Pasta de notas…** abre um diálogo com a pasta atual e o botão que chama o seletor nativo. Cada arquivo `.md` no nível superior da pasta é uma nota; subpastas, arquivos ocultos e arquivos que não são UTF-8 são ignorados e nunca alterados. Numa pasta vazia, o app oferece copiar as notas do armazenamento do app; numa pasta com notas, nada é copiado nem sobrescrito. **Usar o armazenamento do app** volta ao armazenamento anterior, que continua intacto.
 
-O nome do arquivo segue o primeiro H1, como no resto do app. Excluir uma nota remove o arquivo da pasta e a guarda na lixeira do app até ser apagada em definitivo. As gravações usam um arquivo temporário oculto. Se um arquivo foi alterado fora do app depois de aberto, o app não o sobrescreve: mostra o erro e mantém o texto em memória. Alterações externas só são lidas ao iniciar o app; o recarregamento automático e a resolução de conflitos ainda não existem.
+O nome do arquivo segue o primeiro H1, como no resto do app. Excluir uma nota apaga o arquivo e a guarda na lixeira do app até ser excluída em definitivo; só a lixeira apaga arquivos (restaurar um backup nunca remove arquivos que ele não menciona). As gravações usam um arquivo temporário oculto.
+
+### Alterações externas
+
+O app verifica a pasta a cada poucos segundos e ao recuperar o foco, e só relê o que mudou:
+
+- **Nota sem edições locais:** o texto do disco a substitui.
+- **Arquivo novo:** vira uma nota (sem abrir aba).
+- **Arquivo apagado:** a nota some, se não tinha edições locais.
+- **Editada nos dois lados:** nada é sobrescrito. Um diálogo pergunta se mantém a sua versão, usa a do disco ou mantém as duas (a do disco vira uma cópia `nome (disk).md`). Se o arquivo foi apagado, a escolha é recriá-lo com a sua versão ou apagar a nota.
+
+## Idioma
+
+O idioma padrão é português (Brasil); **Menu → Idioma** alterna para English. A escolha fica nas preferências, junto do tema. As mensagens técnicas de erro do sistema (por exemplo, falhas de disco) aparecem no idioma original.

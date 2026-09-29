@@ -17,7 +17,17 @@ import { createAppPersistence } from './persistence-runtime.js'
 import { VAULT_DISCONNECT, connectVault } from './persistence-vault.js'
 import { createWriteQueue } from './write-queue.js'
 import { VisualEditor } from './visual-editor.jsx'
-import { ConflictDialog, FindDialog, PaletteDialog, TrashDialog } from './components/dialogs.jsx'
+import {
+  ConfirmDialog,
+  ConflictDialog,
+  FindDialog,
+  FolderDialog,
+  PaletteDialog,
+  PromptDialog,
+  SyncConflictDialog,
+  TrashDialog,
+} from './components/dialogs.jsx'
+import { LANGUAGES, setLanguage, t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
 import { continueBlock } from './continue-block.js'
 import { restoreWindowState } from './window-state.js'
@@ -55,7 +65,7 @@ function Opening({ failure }) {
   return (
     <main className="app boot">
       <p role={failure ? 'alert' : 'status'}>
-        {failure ? `Sloth Note could not open its notes: ${failure}` : 'Opening notes…'}
+        {failure ? t('app.openFailed', { failure }) : t('app.opening')}
       </p>
     </main>
   )
@@ -96,6 +106,9 @@ function Workspace({ persistence, loaded }) {
   const [copyStatus, setCopyStatus] = useState('')
   const [importError, setImportError] = useState('')
   const [folderError, setFolderError] = useState('')
+  const [folderOpen, setFolderOpen] = useState(false)
+  const [asking, setAsking] = useState(null)
+  const [syncConflicts, setSyncConflicts] = useState([])
   const [conflict, setConflict] = useState(null)
   const [trashOpen, setTrashOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -127,6 +140,7 @@ function Workspace({ persistence, loaded }) {
     note.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
   )
   const prefs = data.preferences
+  setLanguage(prefs.language)
 
   useEffect(() => {
     let disposed = false
@@ -143,6 +157,14 @@ function Workspace({ persistence, loaded }) {
     }
   }, [])
 
+  // In-app replacements for window.confirm/prompt/alert (unsupported in Tauri webviews).
+  function ask(dialog) {
+    return new Promise((resolve) => setAsking({ ...dialog, resolve }))
+  }
+  function answer(value) {
+    asking.resolve(value)
+    setAsking(null)
+  }
   function commit(next) {
     current.current = next
     setData(next)
@@ -249,18 +271,20 @@ function Workspace({ persistence, loaded }) {
     if (action === 'close') closeTab(menu.id)
     if (action === 'trash') deleteNote(menu.id)
   }
-  function renameNote(id = active?.id) {
+  async function renameNote(id = active?.id) {
     const note = data.notes.find((item) => item.id === id)
     if (!note) return
-    const proposed = window.prompt('Note name', note.name)?.trim()
+    const proposed = (
+      await ask({ kind: 'prompt', label: t('dialog.renameLabel'), initial: note.name })
+    )?.trim()
     if (!proposed || proposed === note.name) return
     const name = proposed.toLowerCase().endsWith('.md') ? proposed : `${proposed}.md`
     if (
-      data.notes.some(
+      current.current.notes.some(
         (item) => item.id !== id && item.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
       )
     ) {
-      window.alert('A note with that name already exists.')
+      await ask({ kind: 'confirm', single: true, message: t('error.nameExists') })
       return
     }
     const body = note.body.replace(/^# [ \t]*(.+?)[ \t]*$/m, `# ${name.slice(0, -3)}`)
@@ -271,9 +295,15 @@ function Workspace({ persistence, loaded }) {
       ),
     })
   }
-  function deleteNote(id = active?.id) {
+  async function deleteNote(id = active?.id) {
     const note = data.notes.find((item) => item.id === id)
-    if (!note || !window.confirm(`Move ${note.name} to Trash?`)) return
+    if (!note) return
+    const confirmed = await ask({
+      kind: 'confirm',
+      message: t('dialog.moveToTrash', { name: note.name }),
+      confirmLabel: t('dialog.moveToTrashConfirm'),
+    })
+    if (!confirmed) return
     commit(moveToTrash(current.current, id, Date.now()))
   }
   function restoreNote(id) {
@@ -281,10 +311,15 @@ function Workspace({ persistence, loaded }) {
     if (mode === 'reading') setMode('visual')
     closeTrash()
   }
-  function purgeNote(id) {
+  async function purgeNote(id) {
     const note = data.trash.find((entry) => entry.note.id === id)?.note
-    if (note && window.confirm(`Permanently delete ${note.name}? This cannot be undone.`))
-      commit(purgeFromTrash(current.current, id))
+    if (!note) return
+    const confirmed = await ask({
+      kind: 'confirm',
+      message: t('dialog.purge', { name: note.name }),
+      confirmLabel: t('dialog.purgeConfirm'),
+    })
+    if (confirmed) commit(purgeFromTrash(current.current, id))
   }
   function closeTrash() {
     setTrashOpen(false)
@@ -304,7 +339,7 @@ function Workspace({ persistence, loaded }) {
       if (existing) setConflict({ name, body, id: existing.id })
       else createNote(name, body)
     } catch (cause) {
-      setImportError(cause instanceof Error ? cause.message : 'Could not read file')
+      setImportError(cause instanceof Error ? cause.message : t('error.readFile'))
     }
   }
   async function switchFolder(change) {
@@ -319,9 +354,12 @@ function Workspace({ persistence, loaded }) {
   function chooseFolder() {
     return switchFolder(() =>
       connectVault(persistence.invoke, (count) =>
-        window.confirm(
-          `The folder has no notes. Copy the ${count} note${count === 1 ? '' : 's'} from the app storage into it?`,
-        ),
+        ask({
+          kind: 'confirm',
+          message: t('dialog.folderCopy', { count }),
+          confirmLabel: t('dialog.folderCopyConfirm'),
+          cancelLabel: t('dialog.folderCopyDecline'),
+        }),
       ),
     )
   }
@@ -330,6 +368,11 @@ function Workspace({ persistence, loaded }) {
       await persistence.invoke(VAULT_DISCONNECT)
       return true
     })
+  }
+  function resolveSync(choice) {
+    const [conflict, ...rest] = syncConflicts
+    setSyncConflicts(rest)
+    commit(persistence.sync.resolve(current.current, conflict, choice))
   }
   function downloadBackup() {
     download(
@@ -343,18 +386,21 @@ function Workspace({ persistence, loaded }) {
     setImportError('')
     try {
       const restored = readBackup(await file.text())
-      if (
-        !window.confirm(
-          `Replace current notes with this backup (${restored.notes.length} notes, ${restored.trash.length} in Trash)?`,
-        )
-      )
-        return
+      const confirmed = await ask({
+        kind: 'confirm',
+        message: t('dialog.backupReplace', {
+          notes: restored.notes.length,
+          trash: restored.trash.length,
+        }),
+        confirmLabel: t('dialog.backupReplaceConfirm'),
+      })
+      if (!confirmed) return
       commit(restored)
       if (mode === 'reading') setMode('visual')
       setFindOpen(false)
       setTrashOpen(false)
     } catch (cause) {
-      setImportError(cause instanceof Error ? cause.message : 'Could not read backup')
+      setImportError(cause instanceof Error ? cause.message : t('error.readBackup'))
     }
   }
   function resolveConflict(replace) {
@@ -382,9 +428,9 @@ function Workspace({ persistence, loaded }) {
   async function copyCode(source) {
     try {
       await navigator.clipboard.writeText(source)
-      setCopyStatus('Copied')
+      setCopyStatus(t('code.copied'))
     } catch {
-      setCopyStatus('Could not copy')
+      setCopyStatus(t('code.copyFailed'))
     }
   }
   function openPalette() {
@@ -449,6 +495,39 @@ function Workspace({ persistence, loaded }) {
     if (!failure) setBlocked(false)
   }
 
+  // Pick up notes changed outside the app: on a timer and when the window regains focus.
+  useEffect(() => {
+    const sync = persistence.sync
+    if (!sync) return
+    let stopped = false
+    let running = false
+    async function poll() {
+      if (running || stopped || document.visibilityState === 'hidden') return
+      running = true
+      try {
+        await writer.current.whenIdle()
+        const files = await sync.scan()
+        if (files === null || stopped) return
+        const result = sync.merge(current.current, files)
+        if (result.changed) commit(result.document)
+        setSyncConflicts(result.conflicts)
+        setFolderError('')
+      } catch (cause) {
+        setFolderError(cause instanceof Error ? cause.message : String(cause))
+      } finally {
+        running = false
+      }
+    }
+    const timer = setInterval(poll, 2500)
+    window.addEventListener('focus', poll)
+    return () => {
+      stopped = true
+      clearInterval(timer)
+      window.removeEventListener('focus', poll)
+    }
+    // commit only touches refs and state setters, so it is stable enough to skip here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persistence])
   useEffect(() => {
     const theme =
       prefs.theme === 'system'
@@ -599,7 +678,7 @@ function Workspace({ persistence, loaded }) {
           <button
             ref={menuButton}
             className="menu-trigger"
-            aria-label="Main menu"
+            aria-label={t('menu.main')}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             aria-controls="main-menu"
@@ -618,7 +697,7 @@ function Workspace({ persistence, loaded }) {
               id="main-menu"
               className="main-menu"
               role="menu"
-              aria-label="Main menu"
+              aria-label={t('menu.main')}
               onKeyDown={(event) => {
                 const items = [
                   ...event.currentTarget.querySelectorAll('[role="menuitem"]:not(:disabled)'),
@@ -649,29 +728,29 @@ function Workspace({ persistence, loaded }) {
               }}
             >
               <div className="menu-heading" role="presentation">
-                Notes
+                {t('menu.notes')}
               </div>
               <button
                 ref={menuFirst}
                 role="menuitem"
                 onClick={() => runMenu(() => createNote(), false)}
               >
-                <span>New note</span>
+                <span>{t('menu.newNote')}</span>
                 <Shortcut letter="T" />
               </button>
               <button role="menuitem" onClick={() => runMenu(openPalette, false)}>
-                <span>Find note</span>
+                <span>{t('menu.findNote')}</span>
                 <Shortcut letter="P" />
               </button>
               <button role="menuitem" disabled={!active} onClick={() => runMenu(openFind, false)}>
-                <span>Find in note</span>
+                <span>{t('menu.findInNote')}</span>
                 <Shortcut letter="F" />
               </button>
               <button
                 role="menuitem"
                 onClick={() => runMenu(() => importInput.current?.click(), false)}
               >
-                <span>Import .md</span>
+                <span>{t('menu.import')}</span>
                 <Shortcut letter="I" />
               </button>
               <button
@@ -679,30 +758,25 @@ function Workspace({ persistence, loaded }) {
                 disabled={!active}
                 onClick={() => runMenu(() => download(active.name, active.body))}
               >
-                <span>Export .md</span>
+                <span>{t('menu.export')}</span>
                 <Shortcut letter="E" />
               </button>
               <button role="menuitem" onClick={() => runMenu(downloadBackup)}>
-                Download backup
+                {t('menu.backupDownload')}
               </button>
               <button
                 role="menuitem"
                 onClick={() => runMenu(() => backupInput.current?.click(), false)}
               >
-                Restore backup
+                {t('menu.backupRestore')}
               </button>
               {persistence.invoke && (
-                <button role="menuitem" onClick={() => runMenu(chooseFolder, false)}>
-                  Choose notes folder…
-                </button>
-              )}
-              {persistence.vault && (
-                <button role="menuitem" onClick={() => runMenu(useAppStorage, false)}>
-                  Use app storage
+                <button role="menuitem" onClick={() => runMenu(() => setFolderOpen(true), false)}>
+                  {t('menu.folder')}
                 </button>
               )}
               <button role="menuitem" disabled={!active} onClick={() => runMenu(renameNote)}>
-                Rename note
+                {t('menu.rename')}
               </button>
               <button
                 role="menuitem"
@@ -713,27 +787,27 @@ function Workspace({ persistence, loaded }) {
                 <Shortcut letter="W" />
               </button>
               <button role="menuitem" disabled={!active} onClick={() => runMenu(deleteNote)}>
-                Move to Trash
+                {t('menu.trashMove')}
               </button>
               {data.trash.length > 0 && (
                 <button
                   role="menuitem"
                   onClick={() => runMenu(() => restoreNote(data.trash.at(-1).note.id))}
                 >
-                  Undo delete
+                  {t('menu.undoDelete')}
                 </button>
               )}
               <button role="menuitem" onClick={() => runMenu(() => setTrashOpen(true), false)}>
-                Trash ({data.trash.length})
+                {t('menu.trash', { count: data.trash.length })}
               </button>
               <div className="menu-heading" role="presentation">
-                View
+                {t('menu.view')}
               </div>
               <button
                 role="menuitem"
                 onClick={() => runMenu(() => updatePrefs({ tabsVisible: !prefs.tabsVisible }))}
               >
-                {prefs.tabsVisible ? 'Hide tabs' : 'Show tabs'}
+                {prefs.tabsVisible ? t('menu.tabsHide') : t('menu.tabsShow')}
               </button>
               <button
                 role="menuitem"
@@ -750,7 +824,7 @@ function Workspace({ persistence, loaded }) {
                   )
                 }
               >
-                Theme: {prefs.theme}
+                {t('menu.theme', { theme: t(`theme.${prefs.theme}`) })}
               </button>
               <button
                 role="menuitem"
@@ -758,7 +832,7 @@ function Workspace({ persistence, loaded }) {
                   runMenu(() => updatePrefs({ fontSize: Math.max(14, prefs.fontSize - 1) }))
                 }
               >
-                <span>Smaller text</span>
+                <span>{t('menu.smaller')}</span>
                 <Shortcut letter="-" />
               </button>
               <button
@@ -767,15 +841,23 @@ function Workspace({ persistence, loaded }) {
                   runMenu(() => updatePrefs({ fontSize: Math.min(24, prefs.fontSize + 1) }))
                 }
               >
-                <span>Larger text</span>
+                <span>{t('menu.larger')}</span>
                 <Shortcut letter="+" />
+              </button>
+              <button
+                role="menuitem"
+                onClick={() =>
+                  runMenu(() => updatePrefs({ language: prefs.language === 'en' ? 'pt-BR' : 'en' }))
+                }
+              >
+                {t('menu.language', { language: LANGUAGES[prefs.language] ?? LANGUAGES['pt-BR'] })}
               </button>
             </div>
           )}
         </div>
         <span className="app-title">Sloth Note</span>
         {prefs.tabsVisible && data.openIds.length > 0 && (
-          <nav className="tabs" aria-label="Open notes">
+          <nav className="tabs" aria-label={t('tabs.label')}>
             <div className="tab-list" ref={tabListRef}>
               {data.openIds.map((id) => {
                 const note = data.notes.find((item) => item.id === id)
@@ -808,7 +890,7 @@ function Workspace({ persistence, loaded }) {
           </nav>
         )}
         <span className="sr-only" role="status">
-          {error ? 'Not saved' : 'Saved'}
+          {error ? t('save.notSaved') : t('save.saved')}
         </span>
         <input
           ref={importInput}
@@ -835,7 +917,7 @@ function Workspace({ persistence, loaded }) {
         <div
           className="tab-context-menu"
           role="menu"
-          aria-label="Ações da aba"
+          aria-label={t('tabs.menu')}
           style={{ left: tabMenu.x, top: tabMenu.y }}
           onKeyDown={(event) => {
             const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')]
@@ -866,28 +948,28 @@ function Workspace({ persistence, loaded }) {
             role="menuitem"
             onClick={() => runTabMenu('open')}
           >
-            <span>Abrir nota</span>
+            <span>{t('tabs.open')}</span>
           </button>
           <button type="button" role="menuitem" onClick={() => runTabMenu('rename')}>
-            <span>Renomear nota</span>
+            <span>{t('tabs.rename')}</span>
           </button>
           <button type="button" role="menuitem" onClick={() => runTabMenu('close')}>
-            <span>Fechar aba</span>
+            <span>{t('tabs.close')}</span>
             <Shortcut letter="W" />
           </button>
           <div className="table-context-menu-separator" />
           <button type="button" role="menuitem" onClick={() => runTabMenu('trash')}>
-            <span>Mover para Lixeira</span>
+            <span>{t('tabs.trash')}</span>
           </button>
         </div>
       )}
       <section className="editor-shell">
         <fieldset className="mode-switch">
-          <legend className="sr-only">Modo de visualização</legend>
+          <legend className="sr-only">{t('mode.legend')}</legend>
           {[
-            ['visual', 'Padrão'],
-            ['source', 'Código'],
-            ['reading', 'Leitura'],
+            ['visual', t('mode.visual')],
+            ['source', t('mode.source')],
+            ['reading', t('mode.reading')],
           ].map(([value, label]) => (
             <label key={value} title={label}>
               <input
@@ -905,10 +987,9 @@ function Workspace({ persistence, loaded }) {
         </fieldset>
         {error && (
           <div className="save-error" role="alert">
-            Storage failed: {error}. Text stays in memory; download a backup before closing. Writes
-            go to {persistence.label}.
+            {t('error.storage', { error, label: persistence.label })}
             <div>
-              <button onClick={downloadBackup}>Download backup</button>
+              <button onClick={downloadBackup}>{t('menu.backupDownload')}</button>
               {blocked && (
                 <>
                   {damaged.current !== null && (
@@ -921,10 +1002,10 @@ function Workspace({ persistence, loaded }) {
                         )
                       }
                     >
-                      Download stored data
+                      {t('error.downloadStored')}
                     </button>
                   )}
-                  <button onClick={resetDamagedStorage}>Replace storage with current notes</button>
+                  <button onClick={resetDamagedStorage}>{t('error.replaceStorage')}</button>
                 </>
               )}
             </div>
@@ -932,21 +1013,21 @@ function Workspace({ persistence, loaded }) {
         )}
         {persistence.vaultProblem && (
           <div className="save-error" role="alert">
-            {persistence.vaultProblem}. Using the app storage until you choose another folder.
+            {t('error.vaultMissing', { path: persistence.vaultProblem.path })}
             <div>
-              <button onClick={chooseFolder}>Choose notes folder…</button>
-              <button onClick={useAppStorage}>Forget this folder</button>
+              <button onClick={() => setFolderOpen(true)}>{t('menu.folder')}</button>
+              <button onClick={useAppStorage}>{t('folder.useAppStorage')}</button>
             </div>
           </div>
         )}
         {folderError && (
           <div className="save-error" role="alert">
-            Notes folder: {folderError}
+            {t('error.folder', { error: folderError })}
           </div>
         )}
         {importError && (
           <div className="save-error" role="alert">
-            Import failed: {importError}
+            {t('error.import', { error: importError })}
           </div>
         )}
         {active ? (
@@ -959,7 +1040,7 @@ function Workspace({ persistence, loaded }) {
             <textarea
               ref={editorRef}
               key={active.id}
-              aria-label="Editor Markdown em texto puro"
+              aria-label={t('mode.sourceEditor')}
               spellCheck="false"
               value={active.body}
               onChange={(event) => updateBody(event.target.value)}
@@ -967,7 +1048,7 @@ function Workspace({ persistence, loaded }) {
             />
           ) : (
             <VisualEditor
-              key={active.id}
+              key={`${active.id}:${prefs.language}`}
               noteId={active.id}
               body={active.body}
               onChange={updateBody}
@@ -977,7 +1058,7 @@ function Workspace({ persistence, loaded }) {
             />
           )
         ) : (
-          <div className="empty-note">No open note. Use ☰ to find or create one.</div>
+          <div className="empty-note">{t('empty.note')}</div>
         )}
       </section>
       {palette && (
@@ -1024,6 +1105,32 @@ function Workspace({ persistence, loaded }) {
           onStep={(step) => selectFind(findIndex + step)}
           onClose={closeFind}
         />
+      )}
+      {folderOpen && (
+        <FolderDialog
+          path={persistence.vault?.path ?? null}
+          onChoose={chooseFolder}
+          onUseAppStorage={useAppStorage}
+          onClose={() => {
+            setFolderOpen(false)
+            setTimeout(() => menuButton.current?.focus(), 0)
+          }}
+        />
+      )}
+      {syncConflicts.length > 0 && !asking && (
+        <SyncConflictDialog conflict={syncConflicts[0]} onResolve={resolveSync} />
+      )}
+      {asking?.kind === 'confirm' && (
+        <ConfirmDialog
+          message={asking.message}
+          confirmLabel={asking.confirmLabel}
+          cancelLabel={asking.cancelLabel}
+          single={asking.single}
+          onAnswer={answer}
+        />
+      )}
+      {asking?.kind === 'prompt' && (
+        <PromptDialog label={asking.label} initial={asking.initial} onAnswer={answer} />
       )}
     </main>
   )

@@ -1003,6 +1003,34 @@ textarea:focus-visible {
   flex-basis: 100%;
   margin: 8px;
 }
+.conflict h2 {
+  flex-basis: 100%;
+  margin: 10px 8px 0;
+  font:
+    500 20px Georgia,
+    serif;
+}
+.dialog-hint {
+  color: var(--muted);
+  font-size: 13px;
+}
+.prompt-dialog form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+.prompt-dialog label {
+  flex-basis: 100%;
+  margin: 8px 8px 0;
+  color: var(--muted);
+  font: 12px monospace;
+}
+.prompt-dialog input {
+  margin-top: 6px;
+  border: 1px solid var(--soft);
+  border-radius: var(--radius-md);
+}
 .trash-dialog {
   max-height: 70vh;
   overflow: auto;

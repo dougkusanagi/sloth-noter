@@ -9,6 +9,7 @@ import {
 } from './editor/table.js'
 import { continueList, navigateToFence, wrapSelectedText } from './editor/keys.js'
 import { useEffect, useRef, useState } from 'react'
+import { t } from './i18n.js'
 import { flushSync } from 'react-dom'
 import { EditorSelection, EditorState } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
@@ -34,24 +35,24 @@ import {
 /* eslint-disable react/jsx-key -- static tuples, rendered with explicit keys below */
 
 const formatButtons = [
-  ['bold', 'Negrito', <strong>B</strong>],
-  ['italic', 'Itálico', <em>I</em>],
-  ['code', 'Código em linha', <span className="format-code">&lt;/&gt;</span>],
-  ['link', 'Link', <span aria-hidden="true">↗</span>],
-  ['heading', 'Título 2', <span>H₂</span>],
-  ['quote', 'Citação', <span>❝</span>],
-  ['list', 'Lista', <span>☷</span>],
+  ['bold', 'format.bold', <strong>B</strong>],
+  ['italic', 'format.italic', <em>I</em>],
+  ['code', 'format.code', <span className="format-code">&lt;/&gt;</span>],
+  ['link', 'format.link', <span aria-hidden="true">↗</span>],
+  ['heading', 'format.heading', <span>H₂</span>],
+  ['quote', 'format.quote', <span>❝</span>],
+  ['list', 'format.list', <span>☷</span>],
 ]
 /* eslint-enable react/jsx-key */
 const blockButtons = [
-  ['h2', 'Título 2'],
-  ['h3', 'Título 3'],
-  ['h4', 'Título 4'],
-  ['quote', 'Citação'],
-  ['list', 'Lista com marcadores'],
-  ['numbered', 'Lista numerada'],
-  ['table', 'Tabela'],
-  ['code', 'Bloco de código'],
+  ['h2', 'block.h2'],
+  ['h3', 'block.h3'],
+  ['h4', 'block.h4'],
+  ['quote', 'block.quote'],
+  ['list', 'block.list'],
+  ['numbered', 'block.numbered'],
+  ['table', 'block.table'],
+  ['code', 'block.code'],
 ]
 
 function TableMenuIcon({ kind }) {
@@ -268,7 +269,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
           ]),
           EditorView.lineWrapping,
           EditorView.contentAttributes.of({
-            'aria-label': 'Editor Markdown visual',
+            'aria-label': t('editor.visual'),
             spellcheck: 'false',
           }),
           EditorView.domEventHandlers({
@@ -432,7 +433,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
         <div
           className={`format-toolbar${toolbar.below ? ' below' : ''}`}
           role="toolbar"
-          aria-label="Formatação do texto selecionado"
+          aria-label={t('editor.formatBar')}
           style={{ left: toolbar.x, top: toolbar.y }}
           onMouseDown={(event) => {
             if (!event.target.closest('input')) event.preventDefault()
@@ -455,7 +456,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
             >
               <input
                 ref={linkInput}
-                aria-label="Endereço do link"
+                aria-label={t('editor.linkUrl')}
                 type="text"
                 inputMode="url"
                 placeholder="https://..."
@@ -463,7 +464,11 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
                 onChange={(event) => setLinkUrl(event.target.value)}
                 required
               />
-              <button type="submit" aria-label="Aplicar link" title="Aplicar link">
+              <button
+                type="submit"
+                aria-label={t('editor.linkApply')}
+                title={t('editor.linkApply')}
+              >
                 ↗
               </button>
             </form>
@@ -472,8 +477,8 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
               <button
                 key={action}
                 type="button"
-                title={label}
-                aria-label={label}
+                title={t(label)}
+                aria-label={t(label)}
                 aria-pressed={toolbar.active.includes(action)}
                 className={toolbar.active.includes(action) ? 'active' : undefined}
                 onClick={() =>
@@ -493,9 +498,9 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
           <button
             type="button"
             className="insert-trigger"
-            aria-label="Inserir bloco"
+            aria-label={t('editor.insertBlock')}
             aria-expanded={blockMenu}
-            title="Inserir bloco"
+            title={t('editor.insertBlock')}
             style={{ left: insertAt.x, top: insertAt.y }}
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => setBlockMenu((value) => !value)}
@@ -506,7 +511,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
             <div
               className="block-menu"
               role="menu"
-              aria-label="Inserir bloco"
+              aria-label={t('editor.insertBlock')}
               style={{
                 left: Math.max(8, insertAt.x),
                 top: Math.max(
@@ -551,7 +556,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
                   onClick={() => insertBlock(action)}
                 >
                   <BlockIcon action={action} />
-                  <span>{label}</span>
+                  <span>{t(label)}</span>
                 </button>
               ))}
             </div>
@@ -562,7 +567,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
         <div
           className="table-context-menu"
           role="menu"
-          aria-label="Ações da tabela"
+          aria-label={t('table.actions')}
           style={{ left: tableMenu.x, top: tableMenu.y }}
           onMouseDown={(event) => event.preventDefault()}
           onKeyDown={(event) => {
@@ -594,7 +599,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
             <span className="table-context-menu-icon">
               <TableMenuIcon kind="row" />
             </span>
-            <span>Adicionar linha abaixo</span>
+            <span>{t('table.addRow')}</span>
             <span className="menu-shortcut">
               <kbd>Enter</kbd>
             </span>
@@ -603,7 +608,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
             <span className="table-context-menu-icon">
               <TableMenuIcon kind="column" />
             </span>
-            <span>Adicionar coluna à direita</span>
+            <span>{t('table.addColumn')}</span>
             <span className="menu-shortcut">
               <kbd>Tab</kbd>
             </span>
@@ -618,7 +623,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
             <span className="table-context-menu-icon">
               <TableMenuIcon kind="trash" />
             </span>
-            <span>Remover linha</span>
+            <span>{t('table.removeRow')}</span>
           </button>
           <button
             type="button"
@@ -629,7 +634,7 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
             <span className="table-context-menu-icon">
               <TableMenuIcon kind="trash" />
             </span>
-            <span>Remover coluna</span>
+            <span>{t('table.removeColumn')}</span>
           </button>
         </div>
       )}

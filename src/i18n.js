@@ -1,0 +1,331 @@
+export const LANGUAGES = { 'pt-BR': 'Português (Brasil)', en: 'English' }
+export const DEFAULT_LANGUAGE = 'pt-BR'
+
+const messages = {
+  'pt-BR': {
+    'app.opening': 'Abrindo notas…',
+    'app.openFailed': 'O Sloth Note não conseguiu abrir as notas: {failure}',
+    'save.saved': 'Salvo',
+    'save.notSaved': 'Não salvo',
+    'empty.note': 'Nenhuma nota aberta. Use ☰ para buscar ou criar uma.',
+
+    'menu.main': 'Menu principal',
+    'menu.notes': 'Notas',
+    'menu.newNote': 'Nova nota',
+    'menu.findNote': 'Buscar nota',
+    'menu.findInNote': 'Buscar na nota',
+    'menu.import': 'Importar .md',
+    'menu.export': 'Exportar .md',
+    'menu.backupDownload': 'Baixar backup',
+    'menu.backupRestore': 'Restaurar backup',
+    'menu.folder': 'Pasta de notas…',
+    'menu.rename': 'Renomear nota',
+    'menu.trashMove': 'Mover para a lixeira',
+    'menu.undoDelete': 'Desfazer exclusão',
+    'menu.trash': 'Lixeira ({count})',
+    'menu.view': 'Exibição',
+    'menu.tabsHide': 'Ocultar abas',
+    'menu.tabsShow': 'Mostrar abas',
+    'menu.theme': 'Tema: {theme}',
+    'menu.smaller': 'Texto menor',
+    'menu.larger': 'Texto maior',
+    'menu.language': 'Idioma: {language}',
+    'theme.system': 'sistema',
+    'theme.light': 'claro',
+    'theme.dark': 'escuro',
+
+    'tabs.label': 'Notas abertas',
+    'tabs.menu': 'Ações da aba',
+    'tabs.open': 'Abrir nota',
+    'tabs.rename': 'Renomear nota',
+    'tabs.close': 'Fechar aba',
+    'tabs.trash': 'Mover para a lixeira',
+
+    'mode.legend': 'Modo de visualização',
+    'mode.visual': 'Padrão',
+    'mode.source': 'Código',
+    'mode.reading': 'Leitura',
+    'mode.sourceEditor': 'Editor Markdown em texto puro',
+
+    'error.storage':
+      'Falha ao gravar: {error}. O texto continua na memória; baixe um backup antes de fechar. As gravações vão para {label}.',
+    'error.downloadStored': 'Baixar dados armazenados',
+    'error.replaceStorage': 'Substituir o armazenamento pelas notas atuais',
+    'error.import': 'Falha na importação: {error}',
+    'error.folder': 'Pasta de notas: {error}',
+    'error.readFile': 'Não foi possível ler o arquivo',
+    'error.readBackup': 'Não foi possível ler o backup',
+    'error.vaultMissing':
+      'Pasta de notas não encontrada: {path}. Usando o armazenamento do app até você escolher outra pasta.',
+    'error.nameExists': 'Já existe uma nota com esse nome.',
+
+    'code.copy': 'Copiar',
+    'code.copied': 'Copiado',
+    'code.copyFailed': 'Não foi possível copiar',
+
+    'dialog.ok': 'OK',
+    'dialog.cancel': 'Cancelar',
+    'dialog.close': 'Fechar',
+    'dialog.moveToTrash': 'Mover {name} para a lixeira?',
+    'dialog.moveToTrashConfirm': 'Mover',
+    'dialog.purge': 'Excluir {name} definitivamente? Isso não pode ser desfeito.',
+    'dialog.purgeConfirm': 'Excluir',
+    'dialog.backupReplace':
+      'Substituir as notas atuais por este backup ({notes} notas, {trash} na lixeira)?',
+    'dialog.backupReplaceConfirm': 'Substituir',
+    'dialog.folderCopy.one':
+      'A pasta não tem notas. Copiar para ela a nota do armazenamento do app?',
+    'dialog.folderCopy.other':
+      'A pasta não tem notas. Copiar para ela as {count} notas do armazenamento do app?',
+    'dialog.folderCopyConfirm': 'Copiar',
+    'dialog.folderCopyDecline': 'Não copiar',
+    'dialog.renameLabel': 'Nome da nota',
+
+    'palette.label': 'Buscar nota',
+    'palette.search': 'Buscar notas',
+    'palette.placeholder': 'Buscar uma nota…',
+    'palette.none': 'Nenhuma nota encontrada',
+    'conflict.label': 'Conflito de importação',
+    'conflict.text': 'Já existe uma nota chamada {name}.',
+    'conflict.keepBoth': 'Manter as duas',
+    'conflict.replace': 'Substituir a nota existente',
+    'trash.title': 'Lixeira',
+    'trash.restore': 'Restaurar',
+    'trash.purge': 'Excluir definitivamente',
+    'trash.empty': 'A lixeira está vazia.',
+    'find.label': 'Buscar na nota',
+    'find.input': 'Texto a buscar',
+    'find.placeholder': 'Buscar nesta nota…',
+    'find.matches.one': '{count} ocorrência',
+    'find.matches.other': '{count} ocorrências',
+    'find.hint': 'Digite para buscar',
+    'find.previous': 'Anterior',
+    'find.next': 'Próxima',
+
+    'sync.title': 'Alterado fora do Sloth Note',
+    'sync.changed': '{name} foi alterada no disco enquanto havia edições não salvas aqui.',
+    'sync.deleted': '{name} foi apagada da pasta enquanto havia edições não salvas aqui.',
+    'sync.keepMine': 'Manter a minha versão',
+    'sync.useExternal': 'Usar a versão do disco',
+    'sync.useExternalDeleted': 'Apagar a nota',
+    'sync.keepBoth': 'Manter as duas',
+
+    'folder.title': 'Pasta de notas',
+    'folder.current': 'Pasta atual: {path}',
+    'folder.appStorage': 'As notas estão no armazenamento do próprio app.',
+    'folder.hint':
+      'Cada arquivo .md da pasta é uma nota. Arquivos alterados fora do app são importados automaticamente.',
+    'folder.choose': 'Escolher pasta…',
+    'folder.change': 'Trocar pasta…',
+    'folder.useAppStorage': 'Usar o armazenamento do app',
+
+    'editor.visual': 'Editor Markdown visual',
+    'editor.formatBar': 'Formatação do texto selecionado',
+    'editor.linkUrl': 'Endereço do link',
+    'editor.linkApply': 'Aplicar link',
+    'editor.insertBlock': 'Inserir bloco',
+    'format.bold': 'Negrito',
+    'format.italic': 'Itálico',
+    'format.code': 'Código em linha',
+    'format.link': 'Link',
+    'format.heading': 'Título 2',
+    'format.quote': 'Citação',
+    'format.list': 'Lista',
+    'block.h2': 'Título 2',
+    'block.h3': 'Título 3',
+    'block.h4': 'Título 4',
+    'block.quote': 'Citação',
+    'block.list': 'Lista com marcadores',
+    'block.numbered': 'Lista numerada',
+    'block.table': 'Tabela',
+    'block.code': 'Bloco de código',
+    'table.actions': 'Ações da tabela',
+    'table.addRow': 'Adicionar linha abaixo',
+    'table.addColumn': 'Adicionar coluna à direita',
+    'table.removeRow': 'Remover linha',
+    'table.removeColumn': 'Remover coluna',
+    'table.removeColumnN': 'Remover coluna {n}',
+    'table.needRow': 'A tabela precisa de pelo menos uma linha de dados',
+    'table.needColumn': 'A tabela precisa de pelo menos uma coluna',
+    'table.cellHint': 'Enter/Tab navega · Enter no fim cria linha · Tab no fim cria coluna',
+  },
+  en: {
+    'app.opening': 'Opening notes…',
+    'app.openFailed': 'Sloth Note could not open its notes: {failure}',
+    'save.saved': 'Saved',
+    'save.notSaved': 'Not saved',
+    'empty.note': 'No open note. Use ☰ to find or create one.',
+
+    'menu.main': 'Main menu',
+    'menu.notes': 'Notes',
+    'menu.newNote': 'New note',
+    'menu.findNote': 'Find note',
+    'menu.findInNote': 'Find in note',
+    'menu.import': 'Import .md',
+    'menu.export': 'Export .md',
+    'menu.backupDownload': 'Download backup',
+    'menu.backupRestore': 'Restore backup',
+    'menu.folder': 'Notes folder…',
+    'menu.rename': 'Rename note',
+    'menu.trashMove': 'Move to Trash',
+    'menu.undoDelete': 'Undo delete',
+    'menu.trash': 'Trash ({count})',
+    'menu.view': 'View',
+    'menu.tabsHide': 'Hide tabs',
+    'menu.tabsShow': 'Show tabs',
+    'menu.theme': 'Theme: {theme}',
+    'menu.smaller': 'Smaller text',
+    'menu.larger': 'Larger text',
+    'menu.language': 'Language: {language}',
+    'theme.system': 'system',
+    'theme.light': 'light',
+    'theme.dark': 'dark',
+
+    'tabs.label': 'Open notes',
+    'tabs.menu': 'Tab actions',
+    'tabs.open': 'Open note',
+    'tabs.rename': 'Rename note',
+    'tabs.close': 'Close tab',
+    'tabs.trash': 'Move to Trash',
+
+    'mode.legend': 'View mode',
+    'mode.visual': 'Default',
+    'mode.source': 'Code',
+    'mode.reading': 'Reading',
+    'mode.sourceEditor': 'Plain text Markdown editor',
+
+    'error.storage':
+      'Storage failed: {error}. Text stays in memory; download a backup before closing. Writes go to {label}.',
+    'error.downloadStored': 'Download stored data',
+    'error.replaceStorage': 'Replace storage with current notes',
+    'error.import': 'Import failed: {error}',
+    'error.folder': 'Notes folder: {error}',
+    'error.readFile': 'Could not read file',
+    'error.readBackup': 'Could not read backup',
+    'error.vaultMissing':
+      'Notes folder not found: {path}. Using the app storage until you choose another folder.',
+    'error.nameExists': 'A note with that name already exists.',
+
+    'code.copy': 'Copy',
+    'code.copied': 'Copied',
+    'code.copyFailed': 'Could not copy',
+
+    'dialog.ok': 'OK',
+    'dialog.cancel': 'Cancel',
+    'dialog.close': 'Close',
+    'dialog.moveToTrash': 'Move {name} to Trash?',
+    'dialog.moveToTrashConfirm': 'Move',
+    'dialog.purge': 'Permanently delete {name}? This cannot be undone.',
+    'dialog.purgeConfirm': 'Delete',
+    'dialog.backupReplace':
+      'Replace current notes with this backup ({notes} notes, {trash} in Trash)?',
+    'dialog.backupReplaceConfirm': 'Replace',
+    'dialog.folderCopy.one': 'The folder has no notes. Copy the note from the app storage into it?',
+    'dialog.folderCopy.other':
+      'The folder has no notes. Copy the {count} notes from the app storage into it?',
+    'dialog.folderCopyConfirm': 'Copy',
+    'dialog.folderCopyDecline': "Don't copy",
+    'dialog.renameLabel': 'Note name',
+
+    'palette.label': 'Find note',
+    'palette.search': 'Search notes',
+    'palette.placeholder': 'Find a note…',
+    'palette.none': 'No notes found',
+    'conflict.label': 'Import conflict',
+    'conflict.text': 'A note named {name} already exists.',
+    'conflict.keepBoth': 'Keep both',
+    'conflict.replace': 'Replace existing note',
+    'trash.title': 'Trash',
+    'trash.restore': 'Restore',
+    'trash.purge': 'Delete forever',
+    'trash.empty': 'Trash is empty.',
+    'find.label': 'Find in note',
+    'find.input': 'Text to find',
+    'find.placeholder': 'Find in this note…',
+    'find.matches.one': '{count} match',
+    'find.matches.other': '{count} matches',
+    'find.hint': 'Type text to search',
+    'find.previous': 'Previous',
+    'find.next': 'Next',
+
+    'sync.title': 'Changed outside Sloth Note',
+    'sync.changed': '{name} was changed on disk while there were unsaved edits here.',
+    'sync.deleted': '{name} was deleted from the folder while there were unsaved edits here.',
+    'sync.keepMine': 'Keep my version',
+    'sync.useExternal': 'Use the disk version',
+    'sync.useExternalDeleted': 'Delete the note',
+    'sync.keepBoth': 'Keep both',
+
+    'folder.title': 'Notes folder',
+    'folder.current': 'Current folder: {path}',
+    'folder.appStorage': "The notes are stored in the app's own storage.",
+    'folder.hint':
+      'Each .md file in the folder is a note. Files changed outside the app are imported automatically.',
+    'folder.choose': 'Choose folder…',
+    'folder.change': 'Change folder…',
+    'folder.useAppStorage': 'Use app storage',
+
+    'editor.visual': 'Visual Markdown editor',
+    'editor.formatBar': 'Formatting for the selected text',
+    'editor.linkUrl': 'Link address',
+    'editor.linkApply': 'Apply link',
+    'editor.insertBlock': 'Insert block',
+    'format.bold': 'Bold',
+    'format.italic': 'Italic',
+    'format.code': 'Inline code',
+    'format.link': 'Link',
+    'format.heading': 'Heading 2',
+    'format.quote': 'Quote',
+    'format.list': 'List',
+    'block.h2': 'Heading 2',
+    'block.h3': 'Heading 3',
+    'block.h4': 'Heading 4',
+    'block.quote': 'Quote',
+    'block.list': 'Bulleted list',
+    'block.numbered': 'Numbered list',
+    'block.table': 'Table',
+    'block.code': 'Code block',
+    'table.actions': 'Table actions',
+    'table.addRow': 'Add row below',
+    'table.addColumn': 'Add column to the right',
+    'table.removeRow': 'Remove row',
+    'table.removeColumn': 'Remove column',
+    'table.removeColumnN': 'Remove column {n}',
+    'table.needRow': 'The table needs at least one data row',
+    'table.needColumn': 'The table needs at least one column',
+    'table.cellHint':
+      'Enter/Tab to move · Enter at the end adds a row · Tab at the end adds a column',
+  },
+}
+
+let language = DEFAULT_LANGUAGE
+
+export function isLanguage(value) {
+  return Object.hasOwn(LANGUAGES, value)
+}
+
+export function setLanguage(next) {
+  language = isLanguage(next) ? next : DEFAULT_LANGUAGE
+  if (typeof document !== 'undefined') document.documentElement.lang = language
+}
+
+export function currentLanguage() {
+  return language
+}
+
+/**
+ * Looks a message up in the active language, falling back to English and then to
+ * the key. `{name}` placeholders are filled from `vars`; when `vars.count` is
+ * given, `key.one` or `key.other` is used if the message has plural forms.
+ */
+export function t(key, vars = {}, lang = language) {
+  const table = messages[lang] ?? messages[DEFAULT_LANGUAGE]
+  const plural = 'count' in vars ? `${key}.${vars.count === 1 ? 'one' : 'other'}` : null
+  const template =
+    (plural && (table[plural] ?? messages.en[plural])) ?? table[key] ?? messages.en[key] ?? key
+  return template.replace(/\{(\w+)\}/g, (match, name) =>
+    name in vars ? String(vars[name]) : match,
+  )
+}
+
+export const messageKeys = (lang) => Object.keys(messages[lang])

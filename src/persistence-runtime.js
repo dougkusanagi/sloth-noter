@@ -31,6 +31,6 @@ export async function createAppPersistence(target = window, loadCore) {
   return Object.assign(createPersistence(adapter, label), {
     invoke,
     vault: null,
-    vaultProblem: status.path ? `Notes folder not found: ${status.path}` : null,
+    vaultProblem: status.path ? { path: status.path } : null,
   })
 }

@@ -105,6 +105,11 @@ fn vault_list(app: AppHandle) -> Result<Vec<vault::VaultFile>, String> {
 }
 
 #[tauri::command]
+fn vault_stamps(app: AppHandle) -> Result<Vec<vault::VaultStamp>, String> {
+    vault::stamps(&vault_root(&app)?).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn vault_apply(app: AppHandle, op: vault::VaultOp) -> Result<(), String> {
     vault::apply(&vault_root(&app)?, &op)
 }
@@ -135,6 +140,7 @@ fn main() {
             vault_choose,
             vault_disconnect,
             vault_list,
+            vault_stamps,
             vault_apply,
             vault_read_aux,
             vault_write_aux
