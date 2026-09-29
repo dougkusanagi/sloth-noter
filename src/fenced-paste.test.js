@@ -5,7 +5,12 @@ import { fencedPasteInEmptyBlock } from './fenced-paste.js'
 
 test('pasting a fenced snippet into an empty code block keeps one block and its language', () => {
   const doc = Text.of(['Intro', '```', '', '```', 'Fim'])
-  const result = fencedPasteInEmptyBlock(doc, 10, 10, '```php\n<?php\n    echo "Testando";\n?>\n```\n')
+  const result = fencedPasteInEmptyBlock(
+    doc,
+    10,
+    10,
+    '```php\n<?php\n    echo "Testando";\n?>\n```\n',
+  )
   assert.deepEqual(result, {
     from: 6,
     to: 14,

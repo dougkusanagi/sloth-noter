@@ -5,15 +5,44 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { Decoration, EditorView, ViewPlugin, WidgetType, keymap } from '@codemirror/view'
 import { classifyLine, inlineSyntax } from './live-markdown.js'
 import { codeTokens, syntaxRanges } from './syntax-highlight.js'
-import { parseTableLine, tableCellAtColumn, tableCellAtOffset, tableCells, tableGroupDetails } from './markdown-table.js'
-import { tableAddColumn, tableAddRow, tableCellRange, tableInsertColumn, tableInsertRow, tableLineIndex, tableMoveTarget, tableRemoveColumn, tableRemoveRow } from './table-navigation.js'
+import {
+  parseTableLine,
+  tableCellAtColumn,
+  tableCellAtOffset,
+  tableCells,
+  tableGroupDetails,
+} from './markdown-table.js'
+import {
+  tableAddColumn,
+  tableAddRow,
+  tableCellRange,
+  tableInsertColumn,
+  tableInsertRow,
+  tableLineIndex,
+  tableMoveTarget,
+  tableRemoveColumn,
+  tableRemoveRow,
+} from './table-navigation.js'
 import { wrapSelection } from './wrap-selection.js'
 import { activeFormats, formatSelection } from './format-selection.js'
 import { blockTemplate } from './insert-block.js'
 import { fencedPasteInEmptyBlock } from './fenced-paste.js'
 import { continueBlock } from './continue-block.js'
 import { safeHref } from './markdown.jsx'
-import { ArrowDownToLine, ArrowRightToLine, CodeXml, Heading1, Heading2, Heading3, Heading4, List, ListOrdered, Quote, Table as TableIcon, Trash2 } from 'lucide-react'
+import {
+  ArrowDownToLine,
+  ArrowRightToLine,
+  CodeXml,
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  List,
+  ListOrdered,
+  Quote,
+  Table as TableIcon,
+  Trash2,
+} from 'lucide-react'
 
 const formatButtons = [
   ['bold', 'Negrito', <strong>B</strong>],
@@ -25,11 +54,17 @@ const formatButtons = [
   ['list', 'Lista', <span>☷</span>],
 ]
 const blockButtons = [
-  ['h2', 'Título 2'], ['h3', 'Título 3'], ['h4', 'Título 4'],
-  ['quote', 'Citação'], ['list', 'Lista com marcadores'], ['numbered', 'Lista numerada'],
-  ['table', 'Tabela'], ['code', 'Bloco de código'],
+  ['h2', 'Título 2'],
+  ['h3', 'Título 3'],
+  ['h4', 'Título 4'],
+  ['quote', 'Citação'],
+  ['list', 'Lista com marcadores'],
+  ['numbered', 'Lista numerada'],
+  ['table', 'Tabela'],
+  ['code', 'Bloco de código'],
 ]
-const trashIconMarkup = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l.7 10h6.6L14 6M8.5 9v4M11.5 9v4" /></svg>'
+const trashIconMarkup =
+  '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l.7 10h6.6L14 6M8.5 9v4M11.5 9v4" /></svg>'
 
 function TableMenuIcon({ kind }) {
   const props = { size: 16, 'aria-hidden': true }
@@ -39,8 +74,15 @@ function TableMenuIcon({ kind }) {
 }
 
 const blockIcons = {
-  h1: Heading1, h2: Heading2, h3: Heading3, h4: Heading4,
-  quote: Quote, list: List, numbered: ListOrdered, table: TableIcon, code: CodeXml,
+  h1: Heading1,
+  h2: Heading2,
+  h3: Heading3,
+  h4: Heading4,
+  quote: Quote,
+  list: List,
+  numbered: ListOrdered,
+  table: TableIcon,
+  code: CodeXml,
 }
 
 function BlockIcon({ action }) {
@@ -60,7 +102,14 @@ class TableCellWidget extends WidgetType {
     this.active = active
   }
   eq(other) {
-    return this.from === other.from && this.to === other.to && this.column === other.column && this.columnCount === other.columnCount && this.header === other.header && this.active === other.active
+    return (
+      this.from === other.from &&
+      this.to === other.to &&
+      this.column === other.column &&
+      this.columnCount === other.columnCount &&
+      this.header === other.header &&
+      this.active === other.active
+    )
   }
   get cellClass() {
     const edge = `${this.column === 0 ? ' cm-md-table-cell-first' : ''}${this.column === this.columnCount - 1 ? ' cm-md-table-cell-last' : ''}`
@@ -90,7 +139,9 @@ class TableCellWidget extends WidgetType {
     cell.contentEditable = 'false'
     return cell
   }
-  ignoreEvent() { return false }
+  ignoreEvent() {
+    return false
+  }
 }
 
 class TableRowControlWidget extends WidgetType {
@@ -100,24 +151,37 @@ class TableRowControlWidget extends WidgetType {
     this.row = row
     this.removable = removable
   }
-  eq(other) { return this.tableFirst === other.tableFirst && this.row === other.row && this.removable === other.removable }
+  eq(other) {
+    return (
+      this.tableFirst === other.tableFirst &&
+      this.row === other.row &&
+      this.removable === other.removable
+    )
+  }
   toDOM(view) {
     const button = document.createElement('button')
     button.type = 'button'
     button.className = 'cm-md-table-remove-row'
     button.innerHTML = trashIconMarkup
-    button.title = this.removable ? 'Remover linha' : 'A tabela precisa de pelo menos uma linha de dados'
+    button.title = this.removable
+      ? 'Remover linha'
+      : 'A tabela precisa de pelo menos uma linha de dados'
     button.setAttribute('aria-label', 'Remover linha')
     button.disabled = !this.removable
-    const stop = event => { event.preventDefault(); event.stopPropagation() }
+    const stop = (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+    }
     button.addEventListener('mousedown', stop)
-    button.addEventListener('click', event => {
+    button.addEventListener('click', (event) => {
       stop(event)
       removeTableRowAt(view, this.tableFirst, this.row)
     })
     return button
   }
-  ignoreEvent() { return false }
+  ignoreEvent() {
+    return false
+  }
 }
 
 class TableColumnControlsWidget extends WidgetType {
@@ -126,7 +190,9 @@ class TableColumnControlsWidget extends WidgetType {
     this.tableFirst = tableFirst
     this.columnCount = columnCount
   }
-  eq(other) { return this.tableFirst === other.tableFirst && this.columnCount === other.columnCount }
+  eq(other) {
+    return this.tableFirst === other.tableFirst && this.columnCount === other.columnCount
+  }
   toDOM(view) {
     const root = document.createElement('div')
     root.className = 'cm-md-table-column-controls'
@@ -140,12 +206,16 @@ class TableColumnControlsWidget extends WidgetType {
       button.type = 'button'
       button.className = 'cm-md-table-remove-column'
       button.innerHTML = trashIconMarkup
-      button.title = this.columnCount > 1 ? 'Remover coluna' : 'A tabela precisa de pelo menos uma coluna'
+      button.title =
+        this.columnCount > 1 ? 'Remover coluna' : 'A tabela precisa de pelo menos uma coluna'
       button.setAttribute('aria-label', `Remover coluna ${column + 1}`)
       button.disabled = this.columnCount <= 1
-      const stop = event => { event.preventDefault(); event.stopPropagation() }
+      const stop = (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+      }
       button.addEventListener('mousedown', stop)
-      button.addEventListener('click', event => {
+      button.addEventListener('click', (event) => {
         stop(event)
         removeTableColumnAt(view, this.tableFirst, column)
       })
@@ -153,7 +223,9 @@ class TableColumnControlsWidget extends WidgetType {
     }
     return root
   }
-  ignoreEvent() { return false }
+  ignoreEvent() {
+    return false
+  }
 }
 
 function tableCellAttributes(cell, header, active, lineFrom, columnCount) {
@@ -174,11 +246,18 @@ function tableAt(doc, number) {
   let first = number
   while (first > 1 && tableCells(doc.line(first - 1).text)) first--
   const lines = []
-  for (let current = first; current <= doc.lines && tableCells(doc.line(current).text); current++) lines.push(doc.line(current).text)
+  for (let current = first; current <= doc.lines && tableCells(doc.line(current).text); current++)
+    lines.push(doc.line(current).text)
   const relative = number - first
   for (let start = 0; start < lines.length; start++) {
     const group = tableGroupDetails(lines, start)
-    if (group && relative >= start && relative < group.end) return { first: first + start, last: first + start + group.end - 1, group, columnCount: group.columnCount }
+    if (group && relative >= start && relative < group.end)
+      return {
+        first: first + start,
+        last: first + start + group.end - 1,
+        group,
+        columnCount: group.columnCount,
+      }
   }
   return null
 }
@@ -190,15 +269,34 @@ function tableSelectionColumn(view, line, parsed) {
   if (range.head < line.from || range.head > line.to) return -1
   const column = tableCellAtOffset(parsed, range.head - line.from)
   const cell = tableCellAtColumn(parsed, column)
-  if (!range.empty && (range.from < line.from + cell.from || range.to > line.from + cell.to)) return -1
+  if (!range.empty && (range.from < line.from + cell.from || range.to > line.from + cell.to))
+    return -1
   return column
 }
 
 function tableDecorations(ranges, view, line, number, table) {
   const row = number - table.first
   const last = number === table.last || (table.last === table.first + 1 && number === table.first)
-  ranges.push(Decoration.line({ attributes: { class: `cm-md-table-row${row === 0 ? ' cm-md-table-head' : ''}${last ? ' cm-md-table-last' : ''}`, role: 'row', 'aria-rowindex': String(row + 1), style: `--table-columns:${table.columnCount}` } }).range(line.from))
-  if (row === 0) ranges.push(Decoration.widget({ widget: new TableColumnControlsWidget({ tableFirst: table.first, columnCount: table.columnCount }), side: -1 }).range(line.from))
+  ranges.push(
+    Decoration.line({
+      attributes: {
+        class: `cm-md-table-row${row === 0 ? ' cm-md-table-head' : ''}${last ? ' cm-md-table-last' : ''}`,
+        role: 'row',
+        'aria-rowindex': String(row + 1),
+        style: `--table-columns:${table.columnCount}`,
+      },
+    }).range(line.from),
+  )
+  if (row === 0)
+    ranges.push(
+      Decoration.widget({
+        widget: new TableColumnControlsWidget({
+          tableFirst: table.first,
+          columnCount: table.columnCount,
+        }),
+        side: -1,
+      }).range(line.from),
+    )
   if (row === 1) {
     ranges.push(Decoration.line({ attributes: { class: 'cm-md-table-divider' } }).range(line.from))
     ranges.push(Decoration.replace({}).range(line.from, line.to))
@@ -207,20 +305,53 @@ function tableDecorations(ranges, view, line, number, table) {
   const parsed = parseTableLine(line.text)
   if (!parsed) return
   const firstCell = tableCellAtColumn(parsed, 0)
-  ranges.push(Decoration.widget({ widget: new TableRowControlWidget({ tableFirst: table.first, row: row === 0 ? 0 : row - 1, removable: row !== 0 || table.last > table.first + 1 }), side: -1 }).range(line.from + firstCell.from))
+  ranges.push(
+    Decoration.widget({
+      widget: new TableRowControlWidget({
+        tableFirst: table.first,
+        row: row === 0 ? 0 : row - 1,
+        removable: row !== 0 || table.last > table.first + 1,
+      }),
+      side: -1,
+    }).range(line.from + firstCell.from),
+  )
   const activeColumn = tableSelectionColumn(view, line, parsed)
   let cursor = 0
   for (let column = 0; column < table.columnCount; column++) {
     const cell = tableCellAtColumn(parsed, column)
-    if (cursor < cell.from) ranges.push(Decoration.mark({ class: 'cm-md-table-source' }).range(line.from + cursor, line.from + cell.from))
+    if (cursor < cell.from)
+      ranges.push(
+        Decoration.mark({ class: 'cm-md-table-source' }).range(
+          line.from + cursor,
+          line.from + cell.from,
+        ),
+      )
     const active = column === activeColumn
     if (cell.to > cell.from) {
-      ranges.push(Decoration.mark({ attributes: tableCellAttributes(cell, row === 0, active, line.from, table.columnCount) }).range(line.from + cell.from, line.from + cell.rawTo))
+      ranges.push(
+        Decoration.mark({
+          attributes: tableCellAttributes(cell, row === 0, active, line.from, table.columnCount),
+        }).range(line.from + cell.from, line.from + cell.rawTo),
+      )
       addInlineRangeDecorations(ranges, line, cell.from, cell.to, false)
-    } else ranges.push(Decoration.widget({ widget: new TableCellWidget({ from: line.from + cell.from, to: line.from + cell.to, column, columnCount: table.columnCount, header: row === 0, active }), side: column + 1 }).range(line.from + cell.from))
+    } else
+      ranges.push(
+        Decoration.widget({
+          widget: new TableCellWidget({
+            from: line.from + cell.from,
+            to: line.from + cell.to,
+            column,
+            columnCount: table.columnCount,
+            header: row === 0,
+            active,
+          }),
+          side: column + 1,
+        }).range(line.from + cell.from),
+      )
     cursor = cell.rawTo
   }
-  if (cursor < line.length) ranges.push(Decoration.mark({ class: 'cm-md-table-source' }).range(line.from + cursor, line.to))
+  if (cursor < line.length)
+    ranges.push(Decoration.mark({ class: 'cm-md-table-source' }).range(line.from + cursor, line.to))
 }
 
 function tableContextAt(view) {
@@ -234,8 +365,17 @@ function tableContextAt(view) {
   if (!parsed) return null
   const column = tableCellAtOffset(parsed, range.head - line.from)
   const cell = tableCellAtColumn(parsed, column)
-  if (!range.empty && (range.from < line.from + cell.from || range.to > line.from + cell.to)) return null
-  return { view, table, line, parsed, row: line.number === table.first ? 0 : line.number - table.first - 1, column, cell }
+  if (!range.empty && (range.from < line.from + cell.from || range.to > line.from + cell.to))
+    return null
+  return {
+    view,
+    table,
+    line,
+    parsed,
+    row: line.number === table.first ? 0 : line.number - table.first - 1,
+    column,
+    cell,
+  }
 }
 
 function tableRowNumber(table, row) {
@@ -252,12 +392,21 @@ function tableCellTarget(view, table, row, column) {
 
 function selectTableCell(view, target) {
   if (!target) return false
-  view.dispatch({ selection: EditorSelection.range(target.line.from + target.cell.from, target.line.from + target.cell.to), scrollIntoView: true })
+  view.dispatch({
+    selection: EditorSelection.range(
+      target.line.from + target.cell.from,
+      target.line.from + target.cell.to,
+    ),
+    scrollIntoView: true,
+  })
   return true
 }
 
 function tableLines(view, table) {
-  return Array.from({ length: table.last - table.first + 1 }, (_, index) => view.state.doc.line(table.first + index).text)
+  return Array.from(
+    { length: table.last - table.first + 1 },
+    (_, index) => view.state.doc.line(table.first + index).text,
+  )
 }
 
 function replaceTable(view, table, lines, row, column) {
@@ -266,7 +415,12 @@ function replaceTable(view, table, lines, row, column) {
   const lineBreak = view.state.lineBreak
   const range = tableCellRange(lines, row, column, lineBreak, from)
   if (!range) return false
-  view.dispatch({ changes: { from, to, insert: lines.join(lineBreak) }, selection: EditorSelection.range(range.from, range.to), userEvent: 'input.type', scrollIntoView: true })
+  view.dispatch({
+    changes: { from, to, insert: lines.join(lineBreak) },
+    selection: EditorSelection.range(range.from, range.to),
+    userEvent: 'input.type',
+    scrollIntoView: true,
+  })
   view.focus()
   requestAnimationFrame(() => {
     if (!view.dom.isConnected) return
@@ -283,7 +437,13 @@ function addTableRow(view, context) {
 
 function addTableColumn(view, context) {
   const lines = tableAddColumn(tableLines(view, context.table))
-  return replaceTable(view, context.table, lines, tableLineIndex(context.row), context.table.columnCount)
+  return replaceTable(
+    view,
+    context.table,
+    lines,
+    tableLineIndex(context.row),
+    context.table.columnCount,
+  )
 }
 
 function insertTableRowAt(view, tableFirst, row, column) {
@@ -320,7 +480,13 @@ function removeTableColumnAt(view, tableFirst, column) {
   const table = tableAt(view.state.doc, tableFirst)
   if (!table || table.columnCount <= 1) return false
   const targetColumn = Math.min(column, table.columnCount - 2)
-  return replaceTable(view, table, tableRemoveColumn(tableLines(view, table), column), 0, targetColumn)
+  return replaceTable(
+    view,
+    table,
+    tableRemoveColumn(tableLines(view, table), column),
+    0,
+    targetColumn,
+  )
 }
 
 function moveTable(view, action) {
@@ -329,18 +495,21 @@ function moveTable(view, action) {
   if (!context) return false
   const { table, row, column, cell } = context
   const bodyRows = table.last - table.first - 1
-  const select = (nextRow, nextColumn) => selectTableCell(view, tableCellTarget(view, table, nextRow, nextColumn))
+  const select = (nextRow, nextColumn) =>
+    selectTableCell(view, tableCellTarget(view, table, nextRow, nextColumn))
   const target = tableMoveTarget(action, row, column, bodyRows, table.columnCount)
   if (target?.type === 'add-row') return addTableRow(view, context)
   if (target?.type === 'add-column') return addTableColumn(view, context)
   if (target?.type === 'move') return select(target.row, target.column)
   if (action === 'left' || action === 'right') {
     const range = view.state.selection.main
-    const exactCell = range.from === context.line.from + cell.from && range.to === context.line.from + cell.to
+    const exactCell =
+      range.from === context.line.from + cell.from && range.to === context.line.from + cell.to
     if (!range.empty && !exactCell) return false
     const head = range.head
     if (action === 'right') {
-      if (!range.empty || head >= context.line.from + cell.to) return column < table.columnCount - 1 ? select(row, column + 1) : false
+      if (!range.empty || head >= context.line.from + cell.to)
+        return column < table.columnCount - 1 ? select(row, column + 1) : false
       return false
     }
     if (!range.empty || head <= context.line.from + cell.from) {
@@ -366,20 +535,33 @@ function moveTable(view, action) {
 function wrapSelectedText(event, view) {
   if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return false
   const ranges = view.state.selection.ranges
-  if (!ranges.some(range => !range.empty)) return false
-  const changes = [], selections = []
+  if (!ranges.some((range) => !range.empty)) return false
+  const changes = [],
+    selections = []
   for (const range of ranges) {
-    const wrapped = wrapSelection(view.state.doc.sliceString(range.from, range.to), 0, range.to - range.from, event.key)
+    const wrapped = wrapSelection(
+      view.state.doc.sliceString(range.from, range.to),
+      0,
+      range.to - range.from,
+      event.key,
+    )
     if (!wrapped) return false
     changes.push({ from: range.from, to: range.to, insert: wrapped.insert })
   }
   let offset = 0
   for (let index = 0; index < ranges.length; index++) {
-    const range = ranges[index], insert = changes[index].insert
-    selections.push(EditorSelection.range(range.from + offset + 1, range.from + offset + insert.length - 1))
+    const range = ranges[index],
+      insert = changes[index].insert
+    selections.push(
+      EditorSelection.range(range.from + offset + 1, range.from + offset + insert.length - 1),
+    )
     offset += insert.length - (range.to - range.from)
   }
-  view.dispatch({ changes, selection: EditorSelection.create(selections, view.state.selection.mainIndex), userEvent: 'input.type' })
+  view.dispatch({
+    changes,
+    selection: EditorSelection.create(selections, view.state.selection.mainIndex),
+    userEvent: 'input.type',
+  })
   event.preventDefault()
   return true
 }
@@ -388,7 +570,11 @@ function continueList(view) {
   if (view.state.selection.ranges.length !== 1 || !view.state.selection.main.empty) return false
   const continued = continueBlock(view.state.doc.toString(), view.state.selection.main.head)
   if (!continued) return false
-  view.dispatch({ changes: { from: continued.from, to: continued.to, insert: continued.insert }, selection: { anchor: continued.cursor }, userEvent: 'input.type' })
+  view.dispatch({
+    changes: { from: continued.from, to: continued.to, insert: continued.insert },
+    selection: { anchor: continued.cursor },
+    userEvent: 'input.type',
+  })
   return true
 }
 
@@ -405,16 +591,26 @@ function navigateToFence(view, direction) {
 
 function addInlineRangeDecorations(ranges, line, from, to, editing) {
   for (const token of inlineSyntax(line.text.slice(from, to))) {
-    const start = line.from + from + token.start, end = line.from + from + token.end
-    const contentStart = line.from + from + token.contentStart, contentEnd = line.from + from + token.contentEnd
+    const start = line.from + from + token.start,
+      end = line.from + from + token.end
+    const contentStart = line.from + from + token.contentStart,
+      contentEnd = line.from + from + token.contentEnd
     if (!editing) {
       if (start < contentStart) ranges.push(Decoration.replace({}).range(start, contentStart))
       if (contentEnd < end) ranges.push(Decoration.replace({}).range(contentEnd, end))
     }
     if (token.kind === 'link') {
       const href = safeHref(line.text.slice(from + token.contentEnd + 2, from + token.end - 1))
-      ranges.push(Decoration.mark({ class: 'cm-md-inline-link', attributes: { title: 'Ctrl + clique · Abrir link ↗', 'data-href': href ?? '' } }).range(contentStart, contentEnd))
-    } else ranges.push(Decoration.mark({ class: `cm-md-inline-${token.kind}` }).range(contentStart, contentEnd))
+      ranges.push(
+        Decoration.mark({
+          class: 'cm-md-inline-link',
+          attributes: { title: 'Ctrl + clique · Abrir link ↗', 'data-href': href ?? '' },
+        }).range(contentStart, contentEnd),
+      )
+    } else
+      ranges.push(
+        Decoration.mark({ class: `cm-md-inline-${token.kind}` }).range(contentStart, contentEnd),
+      )
   }
 }
 
@@ -426,8 +622,14 @@ function lineAttributes(line, shape, active) {
   const classes = [shape.kind === 'paragraph' ? 'cm-md-paragraph' : `cm-md-${shape.kind}`]
   if (active) classes.push('cm-md-editing')
   if (shape.prefix && shape.kind !== 'fence') classes.push('cm-md-prefix')
-  const syntax = shape.kind === 'fence' || shape.kind === 'code' || shape.kind === 'paragraph' ? [] : inlineSyntax(line.text.slice(shape.prefix))
-  const reserve = syntax.reduce((length, token) => length + token.contentStart - token.start + token.end - token.contentEnd, 0)
+  const syntax =
+    shape.kind === 'fence' || shape.kind === 'code' || shape.kind === 'paragraph'
+      ? []
+      : inlineSyntax(line.text.slice(shape.prefix))
+  const reserve = syntax.reduce(
+    (length, token) => length + token.contentStart - token.start + token.end - token.contentEnd,
+    0,
+  )
   if (reserve) classes.push('cm-md-syntax')
   const attributes = { class: classes.join(' ') }
   if (reserve) attributes.style = `--md-syntax-reserve:${reserve}ch`
@@ -435,41 +637,60 @@ function lineAttributes(line, shape, active) {
 }
 
 function decorationsFor(view) {
-  const doc = view.state.doc, ranges = []
-  const editing = new Set(), selectedLines = []
+  const doc = view.state.doc,
+    ranges = []
+  const editing = new Set(),
+    selectedLines = []
   for (const selection of view.state.selection.ranges) {
-    const first = doc.lineAt(selection.from).number, last = doc.lineAt(selection.to).number
+    const first = doc.lineAt(selection.from).number,
+      last = doc.lineAt(selection.to).number
     selectedLines.push({ first, last })
     for (let number = first; number <= last; number++) editing.add(number)
   }
   let openFence = null
-  const fenceStarts = new Set(), fenceEnds = new Set()
+  const fenceStarts = new Set(),
+    fenceEnds = new Set()
   for (let number = 1; number <= doc.lines; number++) {
     if (!doc.line(number).text.startsWith('```')) continue
     if (openFence === null) openFence = number
     else {
-      if (selectedLines.some(range => range.first <= number && range.last >= openFence)) { editing.add(openFence); editing.add(number) }
+      if (selectedLines.some((range) => range.first <= number && range.last >= openFence)) {
+        editing.add(openFence)
+        editing.add(number)
+      }
       fenceStarts.add(openFence)
       fenceEnds.add(number)
       openFence = null
     }
   }
-  if (openFence !== null && selectedLines.some(range => range.last >= openFence)) editing.add(openFence)
+  if (openFence !== null && selectedLines.some((range) => range.last >= openFence))
+    editing.add(openFence)
   if (openFence !== null) fenceStarts.add(openFence)
   for (const visible of view.visibleRanges) {
-    const first = doc.lineAt(visible.from).number, last = doc.lineAt(visible.to).number
-    let inFence = false, fenceLanguage = ''
+    const first = doc.lineAt(visible.from).number,
+      last = doc.lineAt(visible.to).number
+    let inFence = false,
+      fenceLanguage = ''
     for (let number = 1; number < first; number++) {
-      if (doc.line(number).text.startsWith('```')) { inFence = !inFence; fenceLanguage = inFence ? doc.line(number).text.slice(3).trim() : '' }
+      if (doc.line(number).text.startsWith('```')) {
+        inFence = !inFence
+        fenceLanguage = inFence ? doc.line(number).text.slice(3).trim() : ''
+      }
     }
     for (let number = first; number <= last; number++) {
-      const line = doc.line(number), shape = classifyLine(line.text, inFence)
+      const line = doc.line(number),
+        shape = classifyLine(line.text, inFence)
       inFence = shape.nextFence
       if (shape.kind === 'fence') fenceLanguage = inFence ? line.text.slice(3).trim() : ''
       if (shape.kind === 'code') {
         ranges.push(Decoration.line({ attributes: { class: 'cm-md-code' } }).range(line.from))
         for (const token of syntaxRanges(codeTokens(line.text, fenceLanguage)).ranges) {
-          ranges.push(Decoration.mark({ class: token.types.map(type => `syntax-${type}`).join(' ') }).range(line.from + token.from, line.from + token.to))
+          ranges.push(
+            Decoration.mark({ class: token.types.map((type) => `syntax-${type}`).join(' ') }).range(
+              line.from + token.from,
+              line.from + token.to,
+            ),
+          )
         }
         continue
       }
@@ -486,11 +707,13 @@ function decorationsFor(view) {
       }
       if (active) {
         ranges.push(Decoration.line({ attributes: attrs }).range(line.from))
-        if (shape.kind !== 'fence' && shape.kind !== 'table') addInlineDecorations(ranges, line, shape, true)
+        if (shape.kind !== 'fence' && shape.kind !== 'table')
+          addInlineDecorations(ranges, line, shape, true)
         continue
       }
       ranges.push(Decoration.line({ attributes: attrs }).range(line.from))
-      if (shape.prefix) ranges.push(Decoration.replace({}).range(line.from, line.from + shape.prefix))
+      if (shape.prefix)
+        ranges.push(Decoration.replace({}).range(line.from, line.from + shape.prefix))
       if (shape.kind === 'fence') continue
       addInlineDecorations(ranges, line, shape, false)
     }
@@ -498,15 +721,23 @@ function decorationsFor(view) {
   return Decoration.set(ranges, true)
 }
 
-const liveMarkdown = ViewPlugin.fromClass(class {
-  constructor(view) { this.decorations = decorationsFor(view) }
-  update(update) {
-    if (update.docChanged || update.selectionSet || update.viewportChanged) this.decorations = decorationsFor(update.view)
-  }
-}, { decorations: plugin => plugin.decorations })
+const liveMarkdown = ViewPlugin.fromClass(
+  class {
+    constructor(view) {
+      this.decorations = decorationsFor(view)
+    }
+    update(update) {
+      if (update.docChanged || update.selectionSet || update.viewportChanged)
+        this.decorations = decorationsFor(update.view)
+    }
+  },
+  { decorations: (plugin) => plugin.decorations },
+)
 
 export function VisualEditor({ noteId, body, onChange, onReady }) {
-  const host = useRef(null), viewRef = useRef(null), syncing = useRef(false)
+  const host = useRef(null),
+    viewRef = useRef(null),
+    syncing = useRef(false)
   const [toolbar, setToolbar] = useState(null)
   const [insertAt, setInsertAt] = useState(null)
   const [blockMenu, setBlockMenu] = useState(false)
@@ -521,30 +752,63 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
 
   function positionToolbar(view) {
     const selection = view.state.selection.main
-    if (selection.empty || !view.hasFocus) { setToolbar(null); return }
-    const start = view.coordsAtPos(selection.from), end = view.coordsAtPos(selection.to)
-    if (!start || !end) { setToolbar(null); return }
-    if (start.top < 48 || start.top > window.innerHeight) { setToolbar(null); return }
+    if (selection.empty || !view.hasFocus) {
+      setToolbar(null)
+      return
+    }
+    const start = view.coordsAtPos(selection.from),
+      end = view.coordsAtPos(selection.to)
+    if (!start || !end) {
+      setToolbar(null)
+      return
+    }
+    if (start.top < 48 || start.top > window.innerHeight) {
+      setToolbar(null)
+      return
+    }
     const margin = Math.min(124, window.innerWidth / 2)
     const x = Math.max(margin, Math.min(window.innerWidth - margin, (start.left + end.right) / 2))
     const y = start.top > 55 ? start.top - 8 : end.bottom + 8
-    setToolbar({ x, y, below: start.top <= 55, active: activeFormats(view.state.doc.toString(), selection.from, selection.to) })
+    setToolbar({
+      x,
+      y,
+      below: start.top <= 55,
+      active: activeFormats(view.state.doc.toString(), selection.from, selection.to),
+    })
   }
 
   function positionInsert(view, position = view.state.selection.main.head) {
     if (blockMenuRef.current) return
-    if (!view.state.selection.main.empty) { setInsertAt(null); setBlockMenu(false); return }
+    if (!view.state.selection.main.empty) {
+      setInsertAt(null)
+      setBlockMenu(false)
+      return
+    }
     const line = view.state.doc.lineAt(position)
-    if (line.text.trim()) { if (!blockMenuRef.current) setInsertAt(null); return }
+    if (line.text.trim()) {
+      if (!blockMenuRef.current) setInsertAt(null)
+      return
+    }
     const coords = view.coordsAtPos(line.from)
-    if (!coords || coords.top < 48 || coords.top > window.innerHeight) { if (!blockMenuRef.current) setInsertAt(null); return }
+    if (!coords || coords.top < 48 || coords.top > window.innerHeight) {
+      if (!blockMenuRef.current) setInsertAt(null)
+      return
+    }
     setInsertAt({ from: line.from, x: Math.max(5, coords.left - 34), y: coords.top })
   }
 
   function insertBlock(action) {
-    const view = viewRef.current, template = blockTemplate(action)
+    const view = viewRef.current,
+      template = blockTemplate(action)
     if (!view || !template || !insertAt) return
-    view.dispatch({ changes: { from: insertAt.from, insert: template.text }, selection: EditorSelection.single(insertAt.from + template.selectionFrom, insertAt.from + template.selectionTo), userEvent: 'input.type' })
+    view.dispatch({
+      changes: { from: insertAt.from, insert: template.text },
+      selection: EditorSelection.single(
+        insertAt.from + template.selectionFrom,
+        insertAt.from + template.selectionTo,
+      ),
+      userEvent: 'input.type',
+    })
     setBlockMenu(false)
     setInsertAt(null)
     view.focus()
@@ -554,9 +818,19 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
     const view = viewRef.current
     if (!view) return
     const selection = view.state.selection.main
-    const result = formatSelection(view.state.doc.toString(), selection.from, selection.to, action, url)
+    const result = formatSelection(
+      view.state.doc.toString(),
+      selection.from,
+      selection.to,
+      action,
+      url,
+    )
     if (!result) return
-    view.dispatch({ changes: { from: result.from, to: result.to, insert: result.insert }, selection: EditorSelection.single(result.selectionFrom, result.selectionTo), userEvent: 'input.type' })
+    view.dispatch({
+      changes: { from: result.from, to: result.to, insert: result.insert },
+      selection: EditorSelection.single(result.selectionFrom, result.selectionTo),
+      userEvent: 'input.type',
+    })
     view.focus()
     setLinkEditing(false)
     setLinkUrl('')
@@ -564,7 +838,8 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
   }
 
   function runTableMenu(action) {
-    const menu = tableMenu, view = viewRef.current
+    const menu = tableMenu,
+      view = viewRef.current
     if (!menu || !view) return
     setTableMenu(null)
     if (action === 'add-row') insertTableRowAt(view, menu.tableFirst, menu.row, menu.column)
@@ -573,13 +848,20 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
     if (action === 'remove-column') removeTableColumnAt(view, menu.tableFirst, menu.column)
   }
 
-  useEffect(() => { if (linkEditing) linkInput.current?.focus() }, [linkEditing])
-  useEffect(() => { if (blockMenu) host.current?.querySelector('.block-menu button')?.focus() }, [blockMenu])
+  useEffect(() => {
+    if (linkEditing) linkInput.current?.focus()
+  }, [linkEditing])
+  useEffect(() => {
+    if (blockMenu) host.current?.querySelector('.block-menu button')?.focus()
+  }, [blockMenu])
   useEffect(() => {
     if (!blockMenu) return
     function closeOnOutsideClick(event) {
       if (event.target.closest?.('.insert-trigger, .block-menu')) return
-      flushSync(() => { setBlockMenu(false); setInsertAt(null) })
+      flushSync(() => {
+        setBlockMenu(false)
+        setInsertAt(null)
+      })
     }
     document.addEventListener('pointerdown', closeOnOutsideClick, true)
     document.addEventListener('click', closeOnOutsideClick, true)
@@ -603,7 +885,9 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
     document.addEventListener('pointerdown', closeOnOutsideClick, true)
     document.addEventListener('click', closeOnOutsideClick, true)
     document.addEventListener('keydown', closeOnEscape, true)
-    const frame = requestAnimationFrame(() => host.current?.querySelector('.table-context-menu button:not(:disabled)')?.focus())
+    const frame = requestAnimationFrame(() =>
+      host.current?.querySelector('.table-context-menu button:not(:disabled)')?.focus(),
+    )
     return () => {
       cancelAnimationFrame(frame)
       document.removeEventListener('pointerdown', closeOnOutsideClick, true)
@@ -619,105 +903,172 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
         extensions: [
           history(),
           keymap.of([
-            { key: 'Enter', run: view => moveTable(view, 'enter') },
-            { key: 'Shift-Enter', run: view => moveTable(view, 'shift-enter') },
-            { key: 'Tab', run: view => moveTable(view, 'tab') },
-            { key: 'Shift-Tab', run: view => moveTable(view, 'shift-tab') },
-            { key: 'ArrowUp', run: view => moveTable(view, 'up') },
-            { key: 'ArrowDown', run: view => moveTable(view, 'down') },
-            { key: 'ArrowLeft', run: view => moveTable(view, 'left') },
-            { key: 'ArrowRight', run: view => moveTable(view, 'right') },
-            { key: 'Home', run: view => moveTable(view, 'home') },
-            { key: 'End', run: view => moveTable(view, 'end') },
-            { key: 'Backspace', run: view => moveTable(view, 'backspace') },
-            { key: 'Delete', run: view => moveTable(view, 'delete') },
+            { key: 'Enter', run: (view) => moveTable(view, 'enter') },
+            { key: 'Shift-Enter', run: (view) => moveTable(view, 'shift-enter') },
+            { key: 'Tab', run: (view) => moveTable(view, 'tab') },
+            { key: 'Shift-Tab', run: (view) => moveTable(view, 'shift-tab') },
+            { key: 'ArrowUp', run: (view) => moveTable(view, 'up') },
+            { key: 'ArrowDown', run: (view) => moveTable(view, 'down') },
+            { key: 'ArrowLeft', run: (view) => moveTable(view, 'left') },
+            { key: 'ArrowRight', run: (view) => moveTable(view, 'right') },
+            { key: 'Home', run: (view) => moveTable(view, 'home') },
+            { key: 'End', run: (view) => moveTable(view, 'end') },
+            { key: 'Backspace', run: (view) => moveTable(view, 'backspace') },
+            { key: 'Delete', run: (view) => moveTable(view, 'delete') },
             { key: 'Enter', run: continueList },
-            { key: 'ArrowDown', run: view => navigateToFence(view, 1) },
-            { key: 'ArrowUp', run: view => navigateToFence(view, -1) },
-            ...defaultKeymap, ...historyKeymap,
+            { key: 'ArrowDown', run: (view) => navigateToFence(view, 1) },
+            { key: 'ArrowUp', run: (view) => navigateToFence(view, -1) },
+            ...defaultKeymap,
+            ...historyKeymap,
           ]),
           EditorView.lineWrapping,
-          EditorView.contentAttributes.of({ 'aria-label': 'Editor Markdown visual', spellcheck: 'false' }),
+          EditorView.contentAttributes.of({
+            'aria-label': 'Editor Markdown visual',
+            spellcheck: 'false',
+          }),
           EditorView.domEventHandlers({
             keydown: wrapSelectedText,
             paste: (event, view) => {
               const selection = view.state.selection.main
               const pasted = event.clipboardData?.getData('text/plain')
-              const replacement = pasted && fencedPasteInEmptyBlock(view.state.doc, selection.from, selection.to, pasted)
+              const replacement =
+                pasted &&
+                fencedPasteInEmptyBlock(view.state.doc, selection.from, selection.to, pasted)
               if (!replacement) return false
               event.preventDefault()
-              view.dispatch({ changes: { from: replacement.from, to: replacement.to, insert: replacement.insert }, selection: EditorSelection.single(replacement.selection), userEvent: 'input.paste' })
+              view.dispatch({
+                changes: { from: replacement.from, to: replacement.to, insert: replacement.insert },
+                selection: EditorSelection.single(replacement.selection),
+                userEvent: 'input.paste',
+              })
               return true
             },
-             mousedown: (event, view) => {
-               const cell = event.target.closest?.('.cm-md-table-cell')
-               if (cell?.dataset.cellEmpty === 'true') {
-                 event.preventDefault()
-                 event.stopPropagation()
-                 const from = Number(cell.dataset.cellFrom)
-                 view.focus()
-                 view.dispatch({ selection: EditorSelection.single(from), scrollIntoView: true })
-                 return true
-               }
-               const link = event.target.closest?.('.cm-md-inline-link')
-                if (link && (event.ctrlKey || event.metaKey) && link.dataset.href) {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  window.open(link.dataset.href, '_blank', 'noopener,noreferrer')
-                  return true
-                }
-                if (cell || event.target.closest?.('button')) return false
-                const line = event.target.closest?.('.cm-line')
-                if (line && !line.classList.contains('cm-md-table-row')) return false
-                const position = view.posAtCoords({ x: event.clientX, y: event.clientY }) ?? (event.target.closest?.('.cm-content, .cm-scroller') ? view.state.doc.length : null)
-                if (position === null) return false
+            mousedown: (event, view) => {
+              const cell = event.target.closest?.('.cm-md-table-cell')
+              if (cell?.dataset.cellEmpty === 'true') {
                 event.preventDefault()
+                event.stopPropagation()
+                const from = Number(cell.dataset.cellFrom)
                 view.focus()
-                view.dispatch({ selection: EditorSelection.single(position) })
+                view.dispatch({ selection: EditorSelection.single(from), scrollIntoView: true })
                 return true
-              },
-             contextmenu: (event, view) => {
-               const cell = event.target.closest?.('.cm-md-table-cell')
-               if (!cell) return false
-               const from = Number(cell.dataset.cellFrom)
-               if (!Number.isSafeInteger(from)) return false
-               const line = view.state.doc.lineAt(from)
-               const table = tableAt(view.state.doc, line.number)
-               if (!table || line.number === table.first + 1) return false
-               const column = Number(cell.dataset.column)
-               const row = line.number === table.first ? 0 : line.number - table.first - 1
-               const x = Math.max(8, Math.min(event.clientX || cell.getBoundingClientRect().left, window.innerWidth - 270))
-               const y = Math.max(8, Math.min(event.clientY || cell.getBoundingClientRect().top, window.innerHeight - 250))
-               event.preventDefault()
-               event.stopPropagation()
-               setTableMenu({ x, y, row, column, tableFirst: table.first, columnCount: table.columnCount, hasBody: table.last > table.first + 1 })
-               return true
-             },
-             focus: (_event, view) => { positionToolbar(view); positionInsert(view); return false },
-            blur: event => { if (!event.relatedTarget?.closest?.('.format-toolbar')) setToolbar(null); if (!event.relatedTarget?.closest?.('.insert-trigger, .block-menu')) { setInsertAt(null); setBlockMenu(false) } return false },
-            mousemove: (event, view) => { if (!blockMenuRef.current) { const pos = view.posAtCoords({ x: event.clientX, y: event.clientY }); if (pos !== null) positionInsert(view, pos) } return false },
+              }
+              const link = event.target.closest?.('.cm-md-inline-link')
+              if (link && (event.ctrlKey || event.metaKey) && link.dataset.href) {
+                event.preventDefault()
+                event.stopPropagation()
+                window.open(link.dataset.href, '_blank', 'noopener,noreferrer')
+                return true
+              }
+              if (cell || event.target.closest?.('button')) return false
+              const line = event.target.closest?.('.cm-line')
+              if (line && !line.classList.contains('cm-md-table-row')) return false
+              const position =
+                view.posAtCoords({ x: event.clientX, y: event.clientY }) ??
+                (event.target.closest?.('.cm-content, .cm-scroller') ? view.state.doc.length : null)
+              if (position === null) return false
+              event.preventDefault()
+              view.focus()
+              view.dispatch({ selection: EditorSelection.single(position) })
+              return true
+            },
+            contextmenu: (event, view) => {
+              const cell = event.target.closest?.('.cm-md-table-cell')
+              if (!cell) return false
+              const from = Number(cell.dataset.cellFrom)
+              if (!Number.isSafeInteger(from)) return false
+              const line = view.state.doc.lineAt(from)
+              const table = tableAt(view.state.doc, line.number)
+              if (!table || line.number === table.first + 1) return false
+              const column = Number(cell.dataset.column)
+              const row = line.number === table.first ? 0 : line.number - table.first - 1
+              const x = Math.max(
+                8,
+                Math.min(
+                  event.clientX || cell.getBoundingClientRect().left,
+                  window.innerWidth - 270,
+                ),
+              )
+              const y = Math.max(
+                8,
+                Math.min(
+                  event.clientY || cell.getBoundingClientRect().top,
+                  window.innerHeight - 250,
+                ),
+              )
+              event.preventDefault()
+              event.stopPropagation()
+              setTableMenu({
+                x,
+                y,
+                row,
+                column,
+                tableFirst: table.first,
+                columnCount: table.columnCount,
+                hasBody: table.last > table.first + 1,
+              })
+              return true
+            },
+            focus: (_event, view) => {
+              positionToolbar(view)
+              positionInsert(view)
+              return false
+            },
+            blur: (event) => {
+              if (!event.relatedTarget?.closest?.('.format-toolbar')) setToolbar(null)
+              if (!event.relatedTarget?.closest?.('.insert-trigger, .block-menu')) {
+                setInsertAt(null)
+                setBlockMenu(false)
+              }
+              return false
+            },
+            mousemove: (event, view) => {
+              if (!blockMenuRef.current) {
+                const pos = view.posAtCoords({ x: event.clientX, y: event.clientY })
+                if (pos !== null) positionInsert(view, pos)
+              }
+              return false
+            },
           }),
           liveMarkdown,
-          EditorView.updateListener.of(update => {
-            if (update.docChanged && !syncing.current) callbacks.current.onChange(update.state.doc.toString())
-            if (update.selectionSet || update.docChanged || update.viewportChanged) { positionToolbar(update.view); positionInsert(update.view) }
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged && !syncing.current)
+              callbacks.current.onChange(update.state.doc.toString())
+            if (update.selectionSet || update.docChanged || update.viewportChanged) {
+              positionToolbar(update.view)
+              positionInsert(update.view)
+            }
           }),
         ],
       }),
       parent: host.current,
     })
     viewRef.current = view
-    const focusBlankArea = event => {
-      if (event.target.closest?.('.cm-line, .cm-md-table-cell, button, .format-toolbar, .insert-trigger, .block-menu')) return
-      const position = view.posAtCoords({ x: event.clientX, y: event.clientY }) ?? view.state.doc.length
+    const focusBlankArea = (event) => {
+      if (
+        event.target.closest?.(
+          '.cm-line, .cm-md-table-cell, button, .format-toolbar, .insert-trigger, .block-menu',
+        )
+      )
+        return
+      const position =
+        view.posAtCoords({ x: event.clientX, y: event.clientY }) ?? view.state.doc.length
       event.preventDefault()
       view.focus()
       view.dispatch({ selection: EditorSelection.single(position) })
     }
-    view.scrollDOM.addEventListener('scroll', () => { positionToolbar(view); positionInsert(view) })
+    view.scrollDOM.addEventListener('scroll', () => {
+      positionToolbar(view)
+      positionInsert(view)
+    })
     view.scrollDOM.addEventListener('mousedown', focusBlankArea)
     callbacks.current.onReady(view)
-    return () => { callbacks.current.onReady(null); viewRef.current = null; view.scrollDOM.removeEventListener('mousedown', focusBlankArea); view.destroy() }
+    return () => {
+      callbacks.current.onReady(null)
+      viewRef.current = null
+      view.scrollDOM.removeEventListener('mousedown', focusBlankArea)
+      view.destroy()
+    }
   }, [noteId])
 
   useEffect(() => {
@@ -728,41 +1079,213 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
     syncing.current = false
   }, [body])
 
-  return <div className="visual-editor" ref={host}>
-    {toolbar && <div className={`format-toolbar${toolbar.below ? ' below' : ''}`} role="toolbar" aria-label="Formatação do texto selecionado" style={{ left: toolbar.x, top: toolbar.y }} onMouseDown={event => { if (!event.target.closest('input')) event.preventDefault() }}>
-      {linkEditing ? <form className="format-link" onSubmit={event => { event.preventDefault(); applyFormat('link', linkUrl) }} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); setLinkEditing(false); viewRef.current?.focus() } }}>
-        <input ref={linkInput} aria-label="Endereço do link" type="text" inputMode="url" placeholder="https://..." value={linkUrl} onChange={event => setLinkUrl(event.target.value)} required />
-        <button type="submit" aria-label="Aplicar link" title="Aplicar link">↗</button>
-      </form> : formatButtons.map(([action, label, icon]) => <button key={action} type="button" title={label} aria-label={label} aria-pressed={toolbar.active.includes(action)} className={toolbar.active.includes(action) ? 'active' : undefined} onClick={() => action === 'link' && !toolbar.active.includes('link') ? setLinkEditing(true) : applyFormat(action)}>{icon}</button>)}
-    </div>}
-    {insertAt && <>
-      <button type="button" className="insert-trigger" aria-label="Inserir bloco" aria-expanded={blockMenu} title="Inserir bloco" style={{ left: insertAt.x, top: insertAt.y }} onMouseDown={event => event.preventDefault()} onClick={() => setBlockMenu(value => !value)}>+</button>
-      {blockMenu && <div className="block-menu" role="menu" aria-label="Inserir bloco" style={{ left: Math.max(8, insertAt.x), top: Math.max(52, Math.min(insertAt.y + 30, window.innerHeight - Math.min(350, window.innerHeight * .6) - 8)) }} onMouseDown={event => event.preventDefault()} onKeyDown={event => {
-        const buttons = [...event.currentTarget.querySelectorAll('button')]
-        const index = buttons.indexOf(document.activeElement)
-        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); buttons[(index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length]?.focus() }
-        if (event.key === 'Home') { event.preventDefault(); buttons[0]?.focus() }
-        if (event.key === 'End') { event.preventDefault(); buttons.at(-1)?.focus() }
-        if (event.key === 'Escape') { event.preventDefault(); setBlockMenu(false); viewRef.current?.focus() }
-        if (event.key === 'Tab') setBlockMenu(false)
-      }}>
-        {blockButtons.map(([action, label]) => <button key={action} type="button" role="menuitem" onClick={() => insertBlock(action)}><BlockIcon action={action} /><span>{label}</span></button>)}
-      </div>}
-    </>}
-    {tableMenu && <div className="table-context-menu" role="menu" aria-label="Ações da tabela" style={{ left: tableMenu.x, top: tableMenu.y }} onMouseDown={event => event.preventDefault()} onKeyDown={event => {
-      const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')]
-      const index = buttons.indexOf(document.activeElement)
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); buttons[(index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length]?.focus() }
-      if (event.key === 'Home') { event.preventDefault(); buttons[0]?.focus() }
-      if (event.key === 'End') { event.preventDefault(); buttons.at(-1)?.focus() }
-      if (event.key === 'Escape') { event.preventDefault(); setTableMenu(null); viewRef.current?.focus() }
-    }}>
-      <div className="table-context-menu-heading">Tabela</div>
-      <button type="button" role="menuitem" onClick={() => runTableMenu('add-row')}><span className="table-context-menu-icon"><TableMenuIcon kind="row" /></span><span>Adicionar linha abaixo</span><span className="menu-shortcut"><kbd>Enter</kbd></span></button>
-      <button type="button" role="menuitem" onClick={() => runTableMenu('add-column')}><span className="table-context-menu-icon"><TableMenuIcon kind="column" /></span><span>Adicionar coluna à direita</span><span className="menu-shortcut"><kbd>Tab</kbd></span></button>
-      <div className="table-context-menu-separator" />
-      <button type="button" role="menuitem" disabled={tableMenu.row === 0 && !tableMenu.hasBody} onClick={() => runTableMenu('remove-row')}><span className="table-context-menu-icon"><TableMenuIcon kind="trash" /></span><span>Remover linha</span></button>
-      <button type="button" role="menuitem" disabled={tableMenu.columnCount <= 1} onClick={() => runTableMenu('remove-column')}><span className="table-context-menu-icon"><TableMenuIcon kind="trash" /></span><span>Remover coluna</span></button>
-    </div>}
-  </div>
+  return (
+    <div className="visual-editor" ref={host}>
+      {toolbar && (
+        <div
+          className={`format-toolbar${toolbar.below ? ' below' : ''}`}
+          role="toolbar"
+          aria-label="Formatação do texto selecionado"
+          style={{ left: toolbar.x, top: toolbar.y }}
+          onMouseDown={(event) => {
+            if (!event.target.closest('input')) event.preventDefault()
+          }}
+        >
+          {linkEditing ? (
+            <form
+              className="format-link"
+              onSubmit={(event) => {
+                event.preventDefault()
+                applyFormat('link', linkUrl)
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  setLinkEditing(false)
+                  viewRef.current?.focus()
+                }
+              }}
+            >
+              <input
+                ref={linkInput}
+                aria-label="Endereço do link"
+                type="text"
+                inputMode="url"
+                placeholder="https://..."
+                value={linkUrl}
+                onChange={(event) => setLinkUrl(event.target.value)}
+                required
+              />
+              <button type="submit" aria-label="Aplicar link" title="Aplicar link">
+                ↗
+              </button>
+            </form>
+          ) : (
+            formatButtons.map(([action, label, icon]) => (
+              <button
+                key={action}
+                type="button"
+                title={label}
+                aria-label={label}
+                aria-pressed={toolbar.active.includes(action)}
+                className={toolbar.active.includes(action) ? 'active' : undefined}
+                onClick={() =>
+                  action === 'link' && !toolbar.active.includes('link')
+                    ? setLinkEditing(true)
+                    : applyFormat(action)
+                }
+              >
+                {icon}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+      {insertAt && (
+        <>
+          <button
+            type="button"
+            className="insert-trigger"
+            aria-label="Inserir bloco"
+            aria-expanded={blockMenu}
+            title="Inserir bloco"
+            style={{ left: insertAt.x, top: insertAt.y }}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => setBlockMenu((value) => !value)}
+          >
+            +
+          </button>
+          {blockMenu && (
+            <div
+              className="block-menu"
+              role="menu"
+              aria-label="Inserir bloco"
+              style={{
+                left: Math.max(8, insertAt.x),
+                top: Math.max(
+                  52,
+                  Math.min(
+                    insertAt.y + 30,
+                    window.innerHeight - Math.min(350, window.innerHeight * 0.6) - 8,
+                  ),
+                ),
+              }}
+              onMouseDown={(event) => event.preventDefault()}
+              onKeyDown={(event) => {
+                const buttons = [...event.currentTarget.querySelectorAll('button')]
+                const index = buttons.indexOf(document.activeElement)
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                  event.preventDefault()
+                  buttons[
+                    (index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length
+                  ]?.focus()
+                }
+                if (event.key === 'Home') {
+                  event.preventDefault()
+                  buttons[0]?.focus()
+                }
+                if (event.key === 'End') {
+                  event.preventDefault()
+                  buttons.at(-1)?.focus()
+                }
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  setBlockMenu(false)
+                  viewRef.current?.focus()
+                }
+                if (event.key === 'Tab') setBlockMenu(false)
+              }}
+            >
+              {blockButtons.map(([action, label]) => (
+                <button
+                  key={action}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => insertBlock(action)}
+                >
+                  <BlockIcon action={action} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+      {tableMenu && (
+        <div
+          className="table-context-menu"
+          role="menu"
+          aria-label="Ações da tabela"
+          style={{ left: tableMenu.x, top: tableMenu.y }}
+          onMouseDown={(event) => event.preventDefault()}
+          onKeyDown={(event) => {
+            const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')]
+            const index = buttons.indexOf(document.activeElement)
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+              event.preventDefault()
+              buttons[
+                (index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length
+              ]?.focus()
+            }
+            if (event.key === 'Home') {
+              event.preventDefault()
+              buttons[0]?.focus()
+            }
+            if (event.key === 'End') {
+              event.preventDefault()
+              buttons.at(-1)?.focus()
+            }
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              setTableMenu(null)
+              viewRef.current?.focus()
+            }
+          }}
+        >
+          <div className="table-context-menu-heading">Tabela</div>
+          <button type="button" role="menuitem" onClick={() => runTableMenu('add-row')}>
+            <span className="table-context-menu-icon">
+              <TableMenuIcon kind="row" />
+            </span>
+            <span>Adicionar linha abaixo</span>
+            <span className="menu-shortcut">
+              <kbd>Enter</kbd>
+            </span>
+          </button>
+          <button type="button" role="menuitem" onClick={() => runTableMenu('add-column')}>
+            <span className="table-context-menu-icon">
+              <TableMenuIcon kind="column" />
+            </span>
+            <span>Adicionar coluna à direita</span>
+            <span className="menu-shortcut">
+              <kbd>Tab</kbd>
+            </span>
+          </button>
+          <div className="table-context-menu-separator" />
+          <button
+            type="button"
+            role="menuitem"
+            disabled={tableMenu.row === 0 && !tableMenu.hasBody}
+            onClick={() => runTableMenu('remove-row')}
+          >
+            <span className="table-context-menu-icon">
+              <TableMenuIcon kind="trash" />
+            </span>
+            <span>Remover linha</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={tableMenu.columnCount <= 1}
+            onClick={() => runTableMenu('remove-column')}
+          >
+            <span className="table-context-menu-icon">
+              <TableMenuIcon kind="trash" />
+            </span>
+            <span>Remover coluna</span>
+          </button>
+        </div>
+      )}
+    </div>
+  )
 }

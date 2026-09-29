@@ -20,9 +20,22 @@ import 'prismjs/components/prism-jsx.js'
 import 'prismjs/components/prism-tsx.js'
 
 const aliases = {
-  js: 'javascript', ts: 'typescript', py: 'python', sh: 'bash', shell: 'bash',
-  html: 'markup', xml: 'markup', svg: 'markup', yml: 'yaml', md: 'markdown',
-  cxx: 'cpp', 'c++': 'cpp', cs: 'csharp', 'c#': 'csharp', golang: 'go', rb: 'ruby',
+  js: 'javascript',
+  ts: 'typescript',
+  py: 'python',
+  sh: 'bash',
+  shell: 'bash',
+  html: 'markup',
+  xml: 'markup',
+  svg: 'markup',
+  yml: 'yaml',
+  md: 'markdown',
+  cxx: 'cpp',
+  'c++': 'cpp',
+  cs: 'csharp',
+  'c#': 'csharp',
+  golang: 'go',
+  rb: 'ruby',
 }
 
 export function codeTokens(text, language = '') {
@@ -37,7 +50,8 @@ export function syntaxRanges(tokens, start = 0, inherited = []) {
   let position = start
   for (const token of tokens) {
     if (typeof token === 'string') {
-      if (token && inherited.length) ranges.push({ from: position, to: position + token.length, types: inherited })
+      if (token && inherited.length)
+        ranges.push({ from: position, to: position + token.length, types: inherited })
       position += token.length
     } else {
       const nested = Array.isArray(token.content) ? token.content : [token.content]

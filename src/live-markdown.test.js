@@ -10,9 +10,28 @@ test('classifies block syntax and fenced code without altering text', () => {
 })
 
 test('finds inline styles while leaving unsafe links literal', () => {
-  assert.deepEqual(inlineSyntax('**bold** *em* `code` [ok](https://example.com)').map(item => item.kind), ['strong', 'em', 'code', 'link'])
+  assert.deepEqual(
+    inlineSyntax('**bold** *em* `code` [ok](https://example.com)').map((item) => item.kind),
+    ['strong', 'em', 'code', 'link'],
+  )
   assert.deepEqual(inlineSyntax('[bad](javascript:alert(1))'), [])
-  assert.deepEqual(inlineSyntax('#tag `#literal` palavra#nao').map(item => item.kind), ['tag', 'code'])
-  assert.deepEqual(inlineSyntax('normal *itálico* e **negrito**.').map(item => [item.kind, item.start, item.end]), [['em', 7, 16], ['strong', 19, 30]])
-  assert.deepEqual(inlineSyntax('**forte *e suave***').map(item => item.kind), ['strong', 'em'])
+  assert.deepEqual(
+    inlineSyntax('#tag `#literal` palavra#nao').map((item) => item.kind),
+    ['tag', 'code'],
+  )
+  assert.deepEqual(
+    inlineSyntax('normal *itálico* e **negrito**.').map((item) => [
+      item.kind,
+      item.start,
+      item.end,
+    ]),
+    [
+      ['em', 7, 16],
+      ['strong', 19, 30],
+    ],
+  )
+  assert.deepEqual(
+    inlineSyntax('**forte *e suave***').map((item) => item.kind),
+    ['strong', 'em'],
+  )
 })

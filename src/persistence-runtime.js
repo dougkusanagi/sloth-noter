@@ -14,6 +14,8 @@ export async function createAppPersistence(target = window, loadCore) {
   try {
     const info = await invoke(PERSISTENCE_INFO)
     if (info?.statePath) label = info.statePath
-  } catch { /* the default label is enough when the native side cannot answer */ }
+  } catch {
+    /* the default label is enough when the native side cannot answer */
+  }
   return createPersistence(adapter, label)
 }

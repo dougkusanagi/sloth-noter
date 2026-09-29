@@ -9,7 +9,9 @@ function fakePersistence(loaded, failures = {}) {
     saved,
     kind: 'test',
     label: 'test',
-    async load() { return loaded },
+    async load() {
+      return loaded
+    },
     async save(document) {
       saved.push(document)
       return failures.save ?? null
@@ -18,7 +20,12 @@ function fakePersistence(loaded, failures = {}) {
 }
 
 test('reconciles headings with filenames and stores the result once', async () => {
-  const document = { ...newDocument(), notes: [{ id: 'a', name: 'old.md', body: '# Plano\n', revision: 0 }], openIds: ['a'], activeId: 'a' }
+  const document = {
+    ...newDocument(),
+    notes: [{ id: 'a', name: 'old.md', body: '# Plano\n', revision: 0 }],
+    openIds: ['a'],
+    activeId: 'a',
+  }
   const persistence = fakePersistence({ document, error: null, blocked: false, raw: null })
   const opened = await openWorkspace(persistence)
   assert.equal(opened.document.notes[0].name, 'Plano.md')
@@ -27,7 +34,12 @@ test('reconciles headings with filenames and stores the result once', async () =
 })
 
 test('a blocked storage is returned without reconciling or writing', async () => {
-  const loaded = { document: newDocument(), error: 'Invalid saved notes', blocked: true, raw: '{bad' }
+  const loaded = {
+    document: newDocument(),
+    error: 'Invalid saved notes',
+    blocked: true,
+    raw: '{bad',
+  }
   const persistence = fakePersistence(loaded)
   const opened = await openWorkspace(persistence)
   assert.deepEqual(opened, loaded)
@@ -35,8 +47,16 @@ test('a blocked storage is returned without reconciling or writing', async () =>
 })
 
 test('a failing reconciliation write still opens the editor', async () => {
-  const document = { ...newDocument(), notes: [{ id: 'a', name: 'old.md', body: '# Plano\n', revision: 0 }], openIds: ['a'], activeId: 'a' }
-  const persistence = fakePersistence({ document, error: null, blocked: false, raw: null }, { save: 'quota exceeded' })
+  const document = {
+    ...newDocument(),
+    notes: [{ id: 'a', name: 'old.md', body: '# Plano\n', revision: 0 }],
+    openIds: ['a'],
+    activeId: 'a',
+  }
+  const persistence = fakePersistence(
+    { document, error: null, blocked: false, raw: null },
+    { save: 'quota exceeded' },
+  )
   const opened = await openWorkspace(persistence)
   assert.equal(opened.error, 'quota exceeded')
   assert.equal(opened.document.notes[0].name, 'Plano.md')

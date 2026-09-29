@@ -1,11 +1,21 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { loadDocument, saveDocument, newDocument, STORAGE_KEY, V2_KEY, LEGACY_KEY } from './storage.js'
+import {
+  loadDocument,
+  saveDocument,
+  newDocument,
+  STORAGE_KEY,
+  V2_KEY,
+  LEGACY_KEY,
+} from './storage.js'
 import { moveToTrash, restoreFromTrash, purgeFromTrash } from './notes.js'
 
 function memoryStorage() {
   const values = new Map()
-  return { getItem: key => values.has(key) ? values.get(key) : null, setItem: (key, value) => values.set(key, value) }
+  return {
+    getItem: (key) => (values.has(key) ? values.get(key) : null),
+    setItem: (key, value) => values.set(key, value),
+  }
 }
 
 test('creates and restores an empty note and preferences', () => {
@@ -13,7 +23,13 @@ test('creates and restores an empty note and preferences', () => {
   const first = loadDocument(storage)
   assert.equal(first.error, null)
   const note = { id: 'empty', name: 'empty.md', body: '', revision: 0 }
-  const document = { ...first.document, notes: [...first.document.notes, note], openIds: ['empty'], activeId: 'empty', preferences: { tabsVisible: false, theme: 'dark', fontSize: 20 } }
+  const document = {
+    ...first.document,
+    notes: [...first.document.notes, note],
+    openIds: ['empty'],
+    activeId: 'empty',
+    preferences: { tabsVisible: false, theme: 'dark', fontSize: 20 },
+  }
   assert.equal(saveDocument(storage, document), null)
   assert.deepEqual(loadDocument(storage).document, document)
 })
@@ -21,7 +37,14 @@ test('creates and restores an empty note and preferences', () => {
 test('migrates v1 notes without changing their text', () => {
   const storage = memoryStorage()
   const body = '# olá\n\nlast line\n'
-  storage.setItem(LEGACY_KEY, JSON.stringify({ version: 1, notes: [{ id: 'a', name: 'a.md', body, revision: 5 }], activeId: 'a' }))
+  storage.setItem(
+    LEGACY_KEY,
+    JSON.stringify({
+      version: 1,
+      notes: [{ id: 'a', name: 'a.md', body, revision: 5 }],
+      activeId: 'a',
+    }),
+  )
   const loaded = loadDocument(storage)
   assert.equal(loaded.error, null)
   assert.equal(loaded.document.notes[0].body, body)
@@ -47,7 +70,12 @@ test('retains readable legacy notes in memory if migration cannot be written', (
   const legacy = { ...newDocument(), version: 2 }
   delete legacy.trash
   legacy.notes[0].body = 'important\n'
-  const storage = { getItem: key => key === V2_KEY ? JSON.stringify(legacy) : null, setItem: () => { throw new Error('quota exceeded') } }
+  const storage = {
+    getItem: (key) => (key === V2_KEY ? JSON.stringify(legacy) : null),
+    setItem: () => {
+      throw new Error('quota exceeded')
+    },
+  }
   const loaded = loadDocument(storage)
   assert.equal(loaded.document.notes[0].body, 'important\n')
   assert.match(loaded.error, /quota exceeded/)
@@ -65,7 +93,12 @@ test('corrupted storage is blocked and remains available for recovery', () => {
 })
 
 test('reports failed writes while retaining the in-memory document', () => {
-  const storage = { getItem: () => null, setItem: () => { throw new Error('quota exceeded') } }
+  const storage = {
+    getItem: () => null,
+    setItem: () => {
+      throw new Error('quota exceeded')
+    },
+  }
   assert.match(loadDocument(storage).error, /quota exceeded/)
   const document = newDocument()
   assert.match(saveDocument(storage, document), /quota exceeded/)
@@ -73,7 +106,14 @@ test('reports failed writes while retaining the in-memory document', () => {
 })
 
 test('blocks writes when existing storage cannot be read', () => {
-  const storage = { getItem: () => { throw new Error('read denied') }, setItem: () => { throw new Error('write denied') } }
+  const storage = {
+    getItem: () => {
+      throw new Error('read denied')
+    },
+    setItem: () => {
+      throw new Error('write denied')
+    },
+  }
   const loaded = loadDocument(storage)
   assert.match(loaded.error, /read denied/)
   assert.equal(loaded.blocked, true)
@@ -103,8 +143,13 @@ test('deleted notes survive reload and can be restored without changing text', (
 
 test('restoring a deleted note resolves name conflicts; permanent deletion removes it', () => {
   const deleted = moveToTrash(newDocument(), 'welcome', 1234)
-  const conflicting = { ...deleted, notes: [{ id: 'other', name: 'welcome.md', body: '', revision: 0 }], openIds: ['other'], activeId: 'other' }
+  const conflicting = {
+    ...deleted,
+    notes: [{ id: 'other', name: 'welcome.md', body: '', revision: 0 }],
+    openIds: ['other'],
+    activeId: 'other',
+  }
   const restored = restoreFromTrash(conflicting, 'welcome')
-  assert.equal(restored.notes.find(note => note.id === 'welcome').name, 'Welcome (2).md')
+  assert.equal(restored.notes.find((note) => note.id === 'welcome').name, 'Welcome (2).md')
   assert.equal(purgeFromTrash(deleted, 'welcome').trash.length, 0)
 })

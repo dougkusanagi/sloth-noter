@@ -5,40 +5,47 @@ export const LEGACY_KEY = 'sloth-note:v1'
 export function newDocument() {
   return {
     version: 3,
-    notes: [{ id: 'welcome', name: 'Welcome.md', body: [
-      '# Welcome',
-      '',
-      'Suas alterações são salvas automaticamente; use Export .md para guardar uma cópia.',
-      '',
-      '## Texto e links',
-      '',
-      'Você pode escrever em **negrito**, *itálico* e `código em linha`. Visite [Markdown Guide](https://www.markdownguide.org/) para conhecer mais.',
-      '',
-      '> Uma citação destaca uma ideia importante sem interromper o fluxo.',
-      '',
-      '## Listas',
-      '',
-      '- Organize ideias em tópicos',
-      '- Use #tags para encontrar assuntos',
-      '- Experimente selecionar texto e clicar na barra',
-      '',
-      '1. Escreva uma nota',
-      '2. Formate o texto',
-      '3. Exporte quando quiser',
-      '',
-      '## Tabela',
-      '',
-      '| Recurso | Como usar |',
-      '| --- | --- |',
-      '| Barra de texto | Selecione palavras |',
-      '| Inserir bloco | Clique em + numa linha vazia |',
-      '',
-      '## Bloco de código',
-      '',
-      '```js',
-      'const nota = "Sua próxima ideia começa aqui"',
-      '```',
-    ].join('\n'), revision: 0 }],
+    notes: [
+      {
+        id: 'welcome',
+        name: 'Welcome.md',
+        body: [
+          '# Welcome',
+          '',
+          'Suas alterações são salvas automaticamente; use Export .md para guardar uma cópia.',
+          '',
+          '## Texto e links',
+          '',
+          'Você pode escrever em **negrito**, *itálico* e `código em linha`. Visite [Markdown Guide](https://www.markdownguide.org/) para conhecer mais.',
+          '',
+          '> Uma citação destaca uma ideia importante sem interromper o fluxo.',
+          '',
+          '## Listas',
+          '',
+          '- Organize ideias em tópicos',
+          '- Use #tags para encontrar assuntos',
+          '- Experimente selecionar texto e clicar na barra',
+          '',
+          '1. Escreva uma nota',
+          '2. Formate o texto',
+          '3. Exporte quando quiser',
+          '',
+          '## Tabela',
+          '',
+          '| Recurso | Como usar |',
+          '| --- | --- |',
+          '| Barra de texto | Selecione palavras |',
+          '| Inserir bloco | Clique em + numa linha vazia |',
+          '',
+          '## Bloco de código',
+          '',
+          '```js',
+          'const nota = "Sua próxima ideia começa aqui"',
+          '```',
+        ].join('\n'),
+        revision: 0,
+      },
+    ],
     trash: [],
     openIds: ['welcome'],
     activeId: 'welcome',
@@ -47,30 +54,80 @@ export function newDocument() {
 }
 
 function validateNote(note, ids) {
-  if (!note || typeof note.id !== 'string' || !note.id || ids.has(note.id) || typeof note.name !== 'string' || !note.name || typeof note.body !== 'string' || !Number.isSafeInteger(note.revision) || note.revision < 0) throw new Error('Invalid saved note')
+  if (
+    !note ||
+    typeof note.id !== 'string' ||
+    !note.id ||
+    ids.has(note.id) ||
+    typeof note.name !== 'string' ||
+    !note.name ||
+    typeof note.body !== 'string' ||
+    !Number.isSafeInteger(note.revision) ||
+    note.revision < 0
+  )
+    throw new Error('Invalid saved note')
   ids.add(note.id)
 }
 
 export function validateDocument(value) {
-  if (!value || value.version !== 3 || !Array.isArray(value.notes) || !Array.isArray(value.trash) || !Array.isArray(value.openIds)) throw new Error('Invalid saved notes')
+  if (
+    !value ||
+    value.version !== 3 ||
+    !Array.isArray(value.notes) ||
+    !Array.isArray(value.trash) ||
+    !Array.isArray(value.openIds)
+  )
+    throw new Error('Invalid saved notes')
   const ids = new Set()
   for (const note of value.notes) validateNote(note, ids)
   for (const entry of value.trash) {
-    if (!entry || !Number.isSafeInteger(entry.index) || entry.index < 0 || !Number.isSafeInteger(entry.deletedAt) || entry.deletedAt < 0) throw new Error('Invalid deleted note')
+    if (
+      !entry ||
+      !Number.isSafeInteger(entry.index) ||
+      entry.index < 0 ||
+      !Number.isSafeInteger(entry.deletedAt) ||
+      entry.deletedAt < 0
+    )
+      throw new Error('Invalid deleted note')
     validateNote(entry.note, ids)
   }
-  const activeIds = new Set(value.notes.map(note => note.id))
-  if (new Set(value.openIds).size !== value.openIds.length || value.openIds.some(id => !activeIds.has(id))) throw new Error('Invalid open tabs')
-  if (value.activeId !== null && (!activeIds.has(value.activeId) || !value.openIds.includes(value.activeId))) throw new Error('Invalid active note')
-  if ((value.openIds.length === 0) !== (value.activeId === null)) throw new Error('Invalid active note')
+  const activeIds = new Set(value.notes.map((note) => note.id))
+  if (
+    new Set(value.openIds).size !== value.openIds.length ||
+    value.openIds.some((id) => !activeIds.has(id))
+  )
+    throw new Error('Invalid open tabs')
+  if (
+    value.activeId !== null &&
+    (!activeIds.has(value.activeId) || !value.openIds.includes(value.activeId))
+  )
+    throw new Error('Invalid active note')
+  if ((value.openIds.length === 0) !== (value.activeId === null))
+    throw new Error('Invalid active note')
   const prefs = value.preferences
-  if (!prefs || typeof prefs.tabsVisible !== 'boolean' || !['system', 'light', 'dark'].includes(prefs.theme) || !Number.isInteger(prefs.fontSize) || prefs.fontSize < 14 || prefs.fontSize > 24) throw new Error('Invalid preferences')
+  if (
+    !prefs ||
+    typeof prefs.tabsVisible !== 'boolean' ||
+    !['system', 'light', 'dark'].includes(prefs.theme) ||
+    !Number.isInteger(prefs.fontSize) ||
+    prefs.fontSize < 14 ||
+    prefs.fontSize > 24
+  )
+    throw new Error('Invalid preferences')
   return value
 }
 
 function migrateV1(value) {
-  if (!value || value.version !== 1 || !Array.isArray(value.notes) || value.notes.length === 0) throw new Error('Invalid legacy notes')
-  const migrated = { version: 3, notes: value.notes, trash: [], openIds: value.notes.map(note => note.id), activeId: value.activeId, preferences: { tabsVisible: true, theme: 'system', fontSize: 18 } }
+  if (!value || value.version !== 1 || !Array.isArray(value.notes) || value.notes.length === 0)
+    throw new Error('Invalid legacy notes')
+  const migrated = {
+    version: 3,
+    notes: value.notes,
+    trash: [],
+    openIds: value.notes.map((note) => note.id),
+    activeId: value.activeId,
+    preferences: { tabsVisible: true, theme: 'system', fontSize: 18 },
+  }
   return validateDocument(migrated)
 }
 
@@ -79,7 +136,9 @@ function migrateV2(value) {
   return validateDocument({ ...value, version: 3, trash: [] })
 }
 
-function message(error) { return error instanceof Error ? error.message : 'Storage is unavailable' }
+function message(error) {
+  return error instanceof Error ? error.message : 'Storage is unavailable'
+}
 
 /**
  * Reads a document from raw payloads, without touching any storage API.
@@ -91,11 +150,22 @@ function message(error) { return error instanceof Error ? error.message : 'Stora
 export function readStoredDocument({ current, legacy }) {
   let document
   try {
-    document = current !== null ? validateDocument(JSON.parse(current))
-      : legacy === null ? newDocument()
-        : legacy.source === 'v2' ? migrateV2(JSON.parse(legacy.raw)) : migrateV1(JSON.parse(legacy.raw))
+    document =
+      current !== null
+        ? validateDocument(JSON.parse(current))
+        : legacy === null
+          ? newDocument()
+          : legacy.source === 'v2'
+            ? migrateV2(JSON.parse(legacy.raw))
+            : migrateV1(JSON.parse(legacy.raw))
   } catch (error) {
-    return { document: newDocument(), error: message(error), blocked: true, raw: current, needsWrite: false }
+    return {
+      document: newDocument(),
+      error: message(error),
+      blocked: true,
+      raw: current,
+      needsWrite: false,
+    }
   }
   return { document, error: null, blocked: false, raw: null, needsWrite: current === null }
 }
@@ -122,14 +192,21 @@ export function loadDocument(storage) {
     return { document: newDocument(), error: message(error), blocked: true, raw: null }
   }
   const read = readStoredDocument({ current, legacy })
-  if (!read.needsWrite) return { document: read.document, error: read.error, blocked: read.blocked, raw: read.raw }
-  return { document: read.document, error: saveDocument(storage, read.document), blocked: false, raw: null }
+  if (!read.needsWrite)
+    return { document: read.document, error: read.error, blocked: read.blocked, raw: read.raw }
+  return {
+    document: read.document,
+    error: saveDocument(storage, read.document),
+    blocked: false,
+    raw: null,
+  }
 }
 
 export function saveDocument(storage, document) {
   try {
     storage.setItem(STORAGE_KEY, serializeDocument(document))
     return null
-  } catch (error) { return message(error) }
+  } catch (error) {
+    return message(error)
+  }
 }
-

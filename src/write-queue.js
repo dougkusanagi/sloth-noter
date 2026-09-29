@@ -16,7 +16,11 @@ export function createWriteQueue(save, onResult = () => {}) {
       const document = pending
       pending = null
       let error
-      try { error = await save(document) } catch (cause) { error = cause instanceof Error ? cause.message : 'Storage is unavailable' }
+      try {
+        error = await save(document)
+      } catch (cause) {
+        error = cause instanceof Error ? cause.message : 'Storage is unavailable'
+      }
       onResult(error)
     })
     return tail
@@ -27,6 +31,8 @@ export function createWriteQueue(save, onResult = () => {}) {
       pending = document
       return schedule()
     },
-    whenIdle() { return tail },
+    whenIdle() {
+      return tail
+    },
   }
 }

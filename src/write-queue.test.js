@@ -2,14 +2,16 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createWriteQueue } from './write-queue.js'
 
-const tick = () => new Promise(resolve => setImmediate(resolve))
+const tick = () => new Promise((resolve) => setImmediate(resolve))
 
 function deferredSave() {
   const calls = []
   const waiters = []
-  const save = document => {
+  const save = (document) => {
     calls.push(document)
-    return new Promise(resolve => { waiters.push(() => resolve(null)) })
+    return new Promise((resolve) => {
+      waiters.push(() => resolve(null))
+    })
   }
   return { calls, save, resolveNext: () => waiters.shift()(), waiting: () => waiters.length }
 }
@@ -47,10 +49,13 @@ test('a document requested while another write is in flight is written after it'
 
 test('a failing save is reported and does not stop the next write', async () => {
   const results = []
-  const queue = createWriteQueue(async document => {
-    if (document === 'bad') throw new Error('disk full')
-    return null
-  }, error => results.push(error))
+  const queue = createWriteQueue(
+    async (document) => {
+      if (document === 'bad') throw new Error('disk full')
+      return null
+    },
+    (error) => results.push(error),
+  )
   queue.write('bad')
   await queue.whenIdle()
   queue.write('good')

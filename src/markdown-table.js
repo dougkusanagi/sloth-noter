@@ -20,7 +20,10 @@ export function parseTableLine(line) {
   let inCode = false
   for (let index = start + 1; index < end - 1; index++) {
     const character = line[index]
-    if (character === '\\' && (line[index + 1] === '|' || line[index + 1] === '`')) { index++; continue }
+    if (character === '\\' && (line[index + 1] === '|' || line[index + 1] === '`')) {
+      index++
+      continue
+    }
     if (character === '`') inCode = !inCode
     if (character === '|' && !inCode) {
       cells.push(makeCell(line, rawFrom, index, cells.length))
@@ -32,12 +35,12 @@ export function parseTableLine(line) {
 }
 
 export function tableCells(line) {
-  return parseTableLine(line)?.cells.map(cell => cell.value) ?? null
+  return parseTableLine(line)?.cells.map((cell) => cell.value) ?? null
 }
 
 export function isTableDivider(line) {
   const cells = tableCells(line)
-  return Boolean(cells?.length && cells.every(cell => /^:?-+:?$/.test(cell)))
+  return Boolean(cells?.length && cells.every((cell) => /^:?-+:?$/.test(cell)))
 }
 
 export function tableGroupDetails(lines, index) {
@@ -59,14 +62,19 @@ export function tableGroupDetails(lines, index) {
     divider,
     rows,
     lines: lines.slice(index, end),
-    columnCount: Math.max(header.cells.length, ...rows.map(row => row.cells.length)),
+    columnCount: Math.max(header.cells.length, ...rows.map((row) => row.cells.length)),
   }
 }
 
 export function tableGroup(lines, index) {
   const group = tableGroupDetails(lines, index)
   if (!group) return null
-  return { start: group.start, end: group.end, headers: group.header.cells.map(cell => cell.value), rows: group.rows.map(row => row.cells.map(cell => cell.value)) }
+  return {
+    start: group.start,
+    end: group.end,
+    headers: group.header.cells.map((cell) => cell.value),
+    rows: group.rows.map((row) => row.cells.map((cell) => cell.value)),
+  }
 }
 
 export function tableCellAtOffset(parsed, offset) {
@@ -74,13 +82,26 @@ export function tableCellAtOffset(parsed, offset) {
   let best = 0
   let distance = Infinity
   for (const cell of parsed.cells) {
-    const current = offset < cell.from ? cell.from - offset : offset > cell.to ? offset - cell.to : 0
-    if (current < distance) { best = cell.index; distance = current }
+    const current =
+      offset < cell.from ? cell.from - offset : offset > cell.to ? offset - cell.to : 0
+    if (current < distance) {
+      best = cell.index
+      distance = current
+    }
   }
   return best
 }
 
 export function tableCellAtColumn(parsed, column) {
   if (!parsed || column < 0) return null
-  return parsed.cells[column] ?? { index: column, rawFrom: parsed.end - 1, rawTo: parsed.end - 1, from: parsed.end - 1, to: parsed.end - 1, value: '' }
+  return (
+    parsed.cells[column] ?? {
+      index: column,
+      rawFrom: parsed.end - 1,
+      rawTo: parsed.end - 1,
+      from: parsed.end - 1,
+      to: parsed.end - 1,
+      value: '',
+    }
+  )
 }

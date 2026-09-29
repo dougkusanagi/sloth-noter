@@ -14,18 +14,33 @@ export function classifyLine(text, inFence) {
 
 export function inlineSyntax(text) {
   const result = []
-  const source = /(`[^`\n]+`|\*\*((?:(?!\*\*(?!\*)).)+)\*\*(?!\*)|(?<!\*)\*[^*\n]+\*(?!\*)|\[[^\]\n]+\]\([^)\n]+\))/g
+  const source =
+    /(`[^`\n]+`|\*\*((?:(?!\*\*(?!\*)).)+)\*\*(?!\*)|(?<!\*)\*[^*\n]+\*(?!\*)|\[[^\]\n]+\]\([^)\n]+\))/g
   function collect(part, offset) {
     for (const match of part.matchAll(new RegExp(source.source, 'g'))) {
-      const token = match[0], start = offset + match.index, end = start + token.length
+      const token = match[0],
+        start = offset + match.index,
+        end = start + token.length
       let kind, contentStart, contentEnd
-      if (token.startsWith('`')) { kind = 'code'; contentStart = start + 1; contentEnd = end - 1 }
-      else if (token.startsWith('**')) { kind = 'strong'; contentStart = start + 2; contentEnd = end - 2 }
-      else if (token.startsWith('*')) { kind = 'em'; contentStart = start + 1; contentEnd = end - 1 }
-      else {
-        const close = token.indexOf(']('), href = token.slice(close + 2, -1).trim()
+      if (token.startsWith('`')) {
+        kind = 'code'
+        contentStart = start + 1
+        contentEnd = end - 1
+      } else if (token.startsWith('**')) {
+        kind = 'strong'
+        contentStart = start + 2
+        contentEnd = end - 2
+      } else if (token.startsWith('*')) {
+        kind = 'em'
+        contentStart = start + 1
+        contentEnd = end - 1
+      } else {
+        const close = token.indexOf(']('),
+          href = token.slice(close + 2, -1).trim()
         if (!/^(https?:|mailto:|#|\/|\.\/|\.\.\/)/i.test(href)) continue
-        kind = 'link'; contentStart = start + 1; contentEnd = start + close
+        kind = 'link'
+        contentStart = start + 1
+        contentEnd = start + close
       }
       result.push({ kind, start, end, contentStart, contentEnd })
       if (kind !== 'code') collect(text.slice(contentStart, contentEnd), contentStart)
@@ -33,8 +48,17 @@ export function inlineSyntax(text) {
   }
   collect(text, 0)
   for (const match of text.matchAll(/(?<![\p{L}\p{N}_])#[\p{L}\p{N}_/-]+/gu)) {
-    const start = match.index, end = start + match[0].length
-    if (!result.some(token => (token.kind === 'code' || token.kind === 'link') && start < token.end && end > token.start)) result.push({ kind: 'tag', start, end, contentStart: start, contentEnd: end })
+    const start = match.index,
+      end = start + match[0].length
+    if (
+      !result.some(
+        (token) =>
+          (token.kind === 'code' || token.kind === 'link') &&
+          start < token.end &&
+          end > token.start,
+      )
+    )
+      result.push({ kind: 'tag', start, end, contentStart: start, contentEnd: end })
   }
   return result.sort((a, b) => a.start - b.start)
 }

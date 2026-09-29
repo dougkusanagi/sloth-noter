@@ -13,7 +13,9 @@ export function tableMoveTarget(action, row, column, bodyRows, columnCount) {
     return null
   }
   if (action === 'tab') {
-    return column < columnCount - 1 ? { type: 'move', row, column: column + 1 } : { type: 'add-column', row, column: columnCount }
+    return column < columnCount - 1
+      ? { type: 'move', row, column: column + 1 }
+      : { type: 'add-column', row, column: columnCount }
   }
   if (action === 'shift-tab') {
     if (column > 0) return { type: 'move', row, column: column - 1 }
@@ -52,14 +54,18 @@ export function tableAddColumn(lines) {
 }
 
 export function tableInsertRow(lines, lineIndex, columnCount) {
-  return [...lines.slice(0, lineIndex + 1), tableBlankRow(columnCount), ...lines.slice(lineIndex + 1)]
+  return [
+    ...lines.slice(0, lineIndex + 1),
+    tableBlankRow(columnCount),
+    ...lines.slice(lineIndex + 1),
+  ]
 }
 
 export function tableInsertColumn(lines, column) {
   return lines.map((line, index) => {
     const parsed = parseTableLine(line)
     if (!parsed) return line
-    const values = parsed.cells.map(cell => cell.value)
+    const values = parsed.cells.map((cell) => cell.value)
     values.splice(Math.max(0, Math.min(column, values.length)), 0, index === 1 ? '---' : '')
     return `| ${values.join(' | ')} |`
   })
@@ -70,10 +76,10 @@ export function tableRemoveRow(lines, lineIndex) {
 }
 
 export function tableRemoveColumn(lines, column) {
-  return lines.map(line => {
+  return lines.map((line) => {
     const parsed = parseTableLine(line)
     if (!parsed) return line
-    const values = parsed.cells.filter(cell => cell.index !== column).map(cell => cell.value)
+    const values = parsed.cells.filter((cell) => cell.index !== column).map((cell) => cell.value)
     return `| ${values.join(' | ')} |`
   })
 }

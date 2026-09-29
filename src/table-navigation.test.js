@@ -1,6 +1,16 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { tableAddColumn, tableAddRow, tableCellRange, tableInsertColumn, tableInsertRow, tableLineIndex, tableMoveTarget, tableRemoveColumn, tableRemoveRow } from './table-navigation.js'
+import {
+  tableAddColumn,
+  tableAddRow,
+  tableCellRange,
+  tableInsertColumn,
+  tableInsertRow,
+  tableLineIndex,
+  tableMoveTarget,
+  tableRemoveColumn,
+  tableRemoveRow,
+} from './table-navigation.js'
 
 test('moves between table cells and creates rows at the last body row', () => {
   assert.deepEqual(tableMoveTarget('enter', 1, 1, 2, 3), { type: 'move', row: 2, column: 1 })
@@ -25,8 +35,17 @@ test('serializes added rows and columns as valid Markdown table lines', () => {
 
 test('inserts rows and columns at a requested position', () => {
   const lines = ['| A | B |', '| --- | --- |', '| 1 | 2 |']
-  assert.deepEqual(tableInsertRow(lines, 1, 2), ['| A | B |', '| --- | --- |', '|  |  |', '| 1 | 2 |'])
-  assert.deepEqual(tableInsertColumn(lines, 1), ['| A |  | B |', '| --- | --- | --- |', '| 1 |  | 2 |'])
+  assert.deepEqual(tableInsertRow(lines, 1, 2), [
+    '| A | B |',
+    '| --- | --- |',
+    '|  |  |',
+    '| 1 | 2 |',
+  ])
+  assert.deepEqual(tableInsertColumn(lines, 1), [
+    '| A |  | B |',
+    '| --- | --- | --- |',
+    '| 1 |  | 2 |',
+  ])
 })
 
 test('removes table rows and columns while keeping valid lines', () => {

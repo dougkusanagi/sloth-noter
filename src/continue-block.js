@@ -13,7 +13,9 @@ export function continueBlock(text, position) {
   const match = list ?? quote
   if (!match) return null
   if (!match[3].trim()) return { from: lineStart, to: lineEnd, insert: '', cursor: lineStart }
-  const marker = /^\d/.test(match[2]) ? match[2].replace(/\d+/, digits => String(Number(digits) + 1)) : match[2]
+  const marker = /^\d/.test(match[2])
+    ? match[2].replace(/\d+/, (digits) => String(Number(digits) + 1))
+    : match[2]
   const insert = `\n${match[1]}${marker}`
   return { from: position, to: position, insert, cursor: position + insert.length }
 }

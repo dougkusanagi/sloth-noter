@@ -9,7 +9,11 @@ import { STORAGE_KEY } from './storage.js'
 
 function memoryStorage() {
   const values = new Map()
-  return { getItem: key => (values.has(key) ? values.get(key) : null), setItem: (key, value) => values.set(key, value), values }
+  return {
+    getItem: (key) => (values.has(key) ? values.get(key) : null),
+    setItem: (key, value) => values.set(key, value),
+    values,
+  }
 }
 
 function memoryHost() {
@@ -26,10 +30,20 @@ function memoryHost() {
       files.set('state', args.contents)
       return null
     }
-    if (command === 'persistence_info') return { kind: 'desktop', statePath: 'state.v3.json', appVersion: '0.1.0' }
+    if (command === 'persistence_info')
+      return { kind: 'desktop', statePath: 'state.v3.json', appVersion: '0.1.0' }
     throw new Error(`unexpected command ${command}`)
   }
-  return { invoke, files, failWritesWith: error => { writeFailure = error }, failReadsWith: error => { readFailure = error } }
+  return {
+    invoke,
+    files,
+    failWritesWith: (error) => {
+      writeFailure = error
+    },
+    failReadsWith: (error) => {
+      readFailure = error
+    },
+  }
 }
 
 /**
@@ -44,9 +58,17 @@ const implementations = [
       return {
         newPersistence: () => createPersistence(createWebAdapter(storage)),
         read: () => (storage.values.has(STORAGE_KEY) ? storage.values.get(STORAGE_KEY) : null),
-        seed: raw => storage.values.set(STORAGE_KEY, raw),
-        failWritesWith: error => { storage.setItem = () => { throw new Error(error) } },
-        failReadsWith: error => { storage.getItem = () => { throw new Error(error) } },
+        seed: (raw) => storage.values.set(STORAGE_KEY, raw),
+        failWritesWith: (error) => {
+          storage.setItem = () => {
+            throw new Error(error)
+          }
+        },
+        failReadsWith: (error) => {
+          storage.getItem = () => {
+            throw new Error(error)
+          }
+        },
       }
     },
   },
@@ -57,7 +79,7 @@ const implementations = [
       return {
         newPersistence: () => createPersistence(createDesktopAdapter(host.invoke)),
         read: () => (host.files.has('state') ? host.files.get('state') : null),
-        seed: raw => host.files.set('state', raw),
+        seed: (raw) => host.files.set('state', raw),
         failWritesWith: host.failWritesWith,
         failReadsWith: host.failReadsWith,
       }
@@ -80,7 +102,12 @@ for (const { label, create } of implementations) {
     const persistence = backing.newPersistence()
     const started = await persistence.load()
     const body = '# Plano\n\nlinha final\n'
-    const note = { id: 'plano', name: nameFromHeading(body, started.document.notes, 'plano'), body, revision: 0 }
+    const note = {
+      id: 'plano',
+      name: nameFromHeading(body, started.document.notes, 'plano'),
+      body,
+      revision: 0,
+    }
     assert.equal(note.name, 'Plano.md')
     const document = {
       ...started.document,
@@ -102,7 +129,7 @@ for (const { label, create } of implementations) {
     assert.equal(afterDelete.document.trash[0].note.body, body)
 
     const restored = restoreFromTrash(afterDelete.document, 'plano')
-    assert.equal(restored.notes.find(item => item.id === 'plano').body, body)
+    assert.equal(restored.notes.find((item) => item.id === 'plano').body, body)
     assert.equal(purgeFromTrash(restored, 'plano').trash.length, 0)
   })
 
@@ -135,7 +162,10 @@ for (const { label, create } of implementations) {
     const started = await persistence.load()
     const previous = backing.read()
     backing.failWritesWith('quota exceeded')
-    const document = { ...started.document, preferences: { ...started.document.preferences, fontSize: 22 } }
+    const document = {
+      ...started.document,
+      preferences: { ...started.document.preferences, fontSize: 22 },
+    }
     assert.match(await persistence.save(document), /quota exceeded/)
     assert.equal(backing.read(), previous)
     assert.equal(document.preferences.fontSize, 22)
@@ -146,8 +176,10 @@ for (const { label, create } of implementations) {
     const persistence = backing.newPersistence()
     const started = await persistence.load()
     const previous = backing.read()
-    assert.equal(await persistence.save({ ...started.document, activeId: 'missing' }), 'Invalid active note')
+    assert.equal(
+      await persistence.save({ ...started.document, activeId: 'missing' }),
+      'Invalid active note',
+    )
     assert.equal(backing.read(), previous)
   })
 }
-

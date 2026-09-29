@@ -7,10 +7,15 @@ export const PERSISTENCE_INFO = 'persistence_info'
  * window. A plain browser keeps the web adapter.
  */
 export function tauriBridge(target = window) {
-  return typeof target?.__TAURI_INTERNALS__?.invoke === 'function' ? target.__TAURI_INTERNALS__ : null
+  return typeof target?.__TAURI_INTERNALS__?.invoke === 'function'
+    ? target.__TAURI_INTERNALS__
+    : null
 }
 
-export async function desktopInvoke(target = window, loadCore = () => import('@tauri-apps/api/core')) {
+export async function desktopInvoke(
+  target = window,
+  loadCore = () => import('@tauri-apps/api/core'),
+) {
   if (!tauriBridge(target)) return null
   const { invoke } = await loadCore()
   return invoke
