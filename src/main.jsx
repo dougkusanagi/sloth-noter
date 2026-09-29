@@ -14,6 +14,7 @@ import {
 } from './notes.js'
 import { openWorkspace } from './boot.js'
 import { createAppPersistence } from './persistence-runtime.js'
+import { VAULT_DISCONNECT, connectVault } from './persistence-vault.js'
 import { createWriteQueue } from './write-queue.js'
 import { VisualEditor } from './visual-editor.jsx'
 import { ConflictDialog, FindDialog, PaletteDialog, TrashDialog } from './components/dialogs.jsx'
@@ -94,6 +95,7 @@ function Workspace({ persistence, loaded }) {
   const [selected, setSelected] = useState(0)
   const [copyStatus, setCopyStatus] = useState('')
   const [importError, setImportError] = useState('')
+  const [folderError, setFolderError] = useState('')
   const [conflict, setConflict] = useState(null)
   const [trashOpen, setTrashOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -304,6 +306,30 @@ function Workspace({ persistence, loaded }) {
     } catch (cause) {
       setImportError(cause instanceof Error ? cause.message : 'Could not read file')
     }
+  }
+  async function switchFolder(change) {
+    setFolderError('')
+    try {
+      await writer.current.whenIdle()
+      if (await change()) window.location.reload()
+    } catch (cause) {
+      setFolderError(cause instanceof Error ? cause.message : String(cause))
+    }
+  }
+  function chooseFolder() {
+    return switchFolder(() =>
+      connectVault(persistence.invoke, (count) =>
+        window.confirm(
+          `The folder has no notes. Copy the ${count} note${count === 1 ? '' : 's'} from the app storage into it?`,
+        ),
+      ),
+    )
+  }
+  function useAppStorage() {
+    return switchFolder(async () => {
+      await persistence.invoke(VAULT_DISCONNECT)
+      return true
+    })
   }
   function downloadBackup() {
     download(
@@ -665,6 +691,16 @@ function Workspace({ persistence, loaded }) {
               >
                 Restore backup
               </button>
+              {persistence.invoke && (
+                <button role="menuitem" onClick={() => runMenu(chooseFolder, false)}>
+                  Choose notes folder…
+                </button>
+              )}
+              {persistence.vault && (
+                <button role="menuitem" onClick={() => runMenu(useAppStorage, false)}>
+                  Use app storage
+                </button>
+              )}
               <button role="menuitem" disabled={!active} onClick={() => runMenu(renameNote)}>
                 Rename note
               </button>
@@ -892,6 +928,20 @@ function Workspace({ persistence, loaded }) {
                 </>
               )}
             </div>
+          </div>
+        )}
+        {persistence.vaultProblem && (
+          <div className="save-error" role="alert">
+            {persistence.vaultProblem}. Using the app storage until you choose another folder.
+            <div>
+              <button onClick={chooseFolder}>Choose notes folder…</button>
+              <button onClick={useAppStorage}>Forget this folder</button>
+            </div>
+          </div>
+        )}
+        {folderError && (
+          <div className="save-error" role="alert">
+            Notes folder: {folderError}
           </div>
         )}
         {importError && (

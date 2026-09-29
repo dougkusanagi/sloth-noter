@@ -1,5 +1,6 @@
 import { createPersistence } from './persistence.js'
 import { PERSISTENCE_INFO, createDesktopAdapter, desktopInvoke } from './persistence-desktop.js'
+import { VAULT_STATUS, createVaultAdapter } from './persistence-vault.js'
 import { browserStorage, createWebAdapter } from './persistence-web.js'
 
 /**
@@ -9,6 +10,16 @@ import { browserStorage, createWebAdapter } from './persistence-web.js'
 export async function createAppPersistence(target = window, loadCore) {
   const invoke = await desktopInvoke(target, loadCore)
   if (!invoke) return createPersistence(createWebAdapter(browserStorage(target)))
+  let status = { path: null, available: false }
+  try {
+    status = (await invoke(VAULT_STATUS)) ?? status
+  } catch {
+    /* without a vault answer the app keeps its own state file */
+  }
+  if (status.path && status.available) {
+    const persistence = createPersistence(createVaultAdapter(invoke, status.path))
+    return Object.assign(persistence, { invoke, vault: { path: status.path } })
+  }
   const adapter = createDesktopAdapter(invoke)
   let label = adapter.label
   try {
@@ -17,5 +28,9 @@ export async function createAppPersistence(target = window, loadCore) {
   } catch {
     /* the default label is enough when the native side cannot answer */
   }
-  return createPersistence(adapter, label)
+  return Object.assign(createPersistence(adapter, label), {
+    invoke,
+    vault: null,
+    vaultProblem: status.path ? `Notes folder not found: ${status.path}` : null,
+  })
 }

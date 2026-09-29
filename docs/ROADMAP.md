@@ -13,22 +13,22 @@
 
 - **MVP web:** persistência versionada (v1→v3) com migração, bloqueio em dados corrompidos e fila de gravação; importação/exportação, backup, lixeira, busca, leitura, editor visual.
 - **Desktop, base:** projeto Tauri V2 com versões fixadas; estado em arquivo com gravação temporária e cópia `.previous`; capability sem plugin de filesystem.
+- **Pasta de notas:** `.md` como fonte de verdade, estado auxiliar no diretório de dados, comandos restritos à pasta escolhida no diálogo nativo, recusa de sobrescrever edições externas.
 
 ## Pendente
 
-### Pasta local (obrigatório para o desktop ser utilizável)
+### Pasta local: complementos
 
-- Escolher/criar a pasta por diálogo nativo; ler, criar, renomear, editar, buscar e exportar `.md` nela, preservando UTF-8, linhas vazias e texto não suportado.
-- Definir se subpastas entram e ignorar arquivos internos e temporários.
-- Migração explícita do armazenamento web/backup JSON para a pasta, com prévia e confirmação; nunca sobrescrever sem ação do usuário.
-- Paridade com os recursos do web, ou limitação documentada.
+A base está pronta (escolha da pasta, notas em `.md`, migração explícita, proteção contra sobrescrita). Falta:
 
-**Aceite:** uma nota criada no desktop permanece em um `.md` verificável fora do app; fechar, reiniciar e trocar de pasta preserva conteúdo e estado.
+- Decidir se subpastas entram.
+- Reabrir a pasta mostrando notas criadas fora do app sem reiniciar (depende da observação abaixo).
+- Traduzir o fluxo de escolha de pasta.
 
 ### Alterações externas e recuperação
 
 - Observar a pasta; recarregar automaticamente só sem edição local pendente.
-- Conflito visível: manter a local, aceitar a externa ou salvar ambas; nenhuma versão some.
+- Conflito visível: hoje o app apenas se recusa a sobrescrever e mostra o erro. Falta oferecer manter a local, aceitar a externa ou salvar ambas; nenhuma versão pode sumir.
 - Tratar pasta ausente, arquivo movido/removido, somente leitura, permissão revogada, disco cheio.
 - Escrita por arquivo temporário e substituição segura; não mostrar "salvo" antes da confirmação real.
 - Comportamento com duas janelas/processos e conflito de renomeação; scopes mínimos para a pasta escolhida.

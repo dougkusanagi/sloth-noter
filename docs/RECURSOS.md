@@ -23,3 +23,9 @@ Use Ctrl/Cmd+F ou “Find in note” no menu para localizar texto na nota atual.
 A leitura oferece um subconjunto de Markdown: títulos H1–H4, parágrafos, ênfase, links HTTP/HTTPS e `mailto:`, tags `#tag`, citações, listas, tabelas e cercas de código. HTML bruto permanece texto. A edição sempre usa o texto original.
 
 Se dados salvos estiverem corrompidos, a aplicação bloqueia novas gravações para não sobrescrevê-los. A mensagem de erro oferece um download dos dados originais e uma ação explícita para substituí-los. Se o armazenamento falhar, o texto continua em memória até a página ser fechada; baixe o backup completo antes de fechar. A restauração valida o backup e pede confirmação antes de substituir as notas atuais. Com armazenamento bloqueado, a restauração fica em memória até a substituição explícita do armazenamento.
+
+## Pasta de notas (desktop)
+
+**Choose notes folder…** no menu abre o diálogo nativo. Cada arquivo `.md` no nível superior da pasta é uma nota; subpastas, arquivos ocultos e arquivos que não são UTF-8 são ignorados e nunca alterados. Numa pasta vazia, o app oferece copiar as notas do armazenamento do app; numa pasta com notas, nada é copiado nem sobrescrito. **Use app storage** volta ao armazenamento do app, que continua intacto.
+
+O nome do arquivo segue o primeiro H1, como no resto do app. Excluir uma nota remove o arquivo da pasta e a guarda na lixeira do app até ser apagada em definitivo. As gravações usam um arquivo temporário oculto. Se um arquivo foi alterado fora do app depois de aberto, o app não o sobrescreve: mostra o erro e mantém o texto em memória. Alterações externas só são lidas ao iniciar o app; o recarregamento automático e a resolução de conflitos ainda não existem.

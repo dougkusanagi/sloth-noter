@@ -7,7 +7,7 @@ O produto final é um aplicativo desktop Tauri V2 que lê e grava arquivos `.md`
 ## Estado
 
 - **Web:** as notas são gravadas no armazenamento do navegador a cada alteração.
-- **Desktop:** o app abre offline e grava um arquivo de estado versionado (`state.v3.json`) no diretório de dados do aplicativo, sem `localStorage`. A pasta local com `.md` ainda não está conectada; veja o [roteiro](docs/ROADMAP.md).
+- **Desktop:** o app abre offline, sem `localStorage`. Por padrão grava um arquivo de estado versionado (`state.v3.json`) no diretório de dados do aplicativo. Em **Menu → Choose notes folder…** você escolhe uma pasta: cada nota vira um `.md` nela, e abas, preferências e lixeira ficam no diretório de dados do app. Veja o [roteiro](docs/ROADMAP.md) para o que falta (observação de alterações externas, subpastas).
 - **Em ambos:** falhas de gravação aparecem em um alerta; há importação/exportação `.md`, backup completo `.json`, lixeira persistente e renomeação. Faça exportações para manter uma cópia fora do aplicativo.
 
 Detalhes de comportamento, atalhos e limites do Markdown: [docs/RECURSOS.md](docs/RECURSOS.md).
