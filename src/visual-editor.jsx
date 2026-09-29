@@ -10,6 +10,7 @@ import { tableAddColumn, tableAddRow, tableCellRange, tableInsertColumn, tableIn
 import { wrapSelection } from './wrap-selection.js'
 import { activeFormats, formatSelection } from './format-selection.js'
 import { blockTemplate } from './insert-block.js'
+import { fencedPasteInEmptyBlock } from './fenced-paste.js'
 import { continueBlock } from './continue-block.js'
 import { safeHref } from './markdown.jsx'
 import { ArrowDownToLine, ArrowRightToLine, CodeXml, Heading1, Heading2, Heading3, Heading4, List, ListOrdered, Quote, Table as TableIcon, Trash2 } from 'lucide-react'
@@ -639,6 +640,15 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
           EditorView.contentAttributes.of({ 'aria-label': 'Editor Markdown visual', spellcheck: 'false' }),
           EditorView.domEventHandlers({
             keydown: wrapSelectedText,
+            paste: (event, view) => {
+              const selection = view.state.selection.main
+              const pasted = event.clipboardData?.getData('text/plain')
+              const replacement = pasted && fencedPasteInEmptyBlock(view.state.doc, selection.from, selection.to, pasted)
+              if (!replacement) return false
+              event.preventDefault()
+              view.dispatch({ changes: { from: replacement.from, to: replacement.to, insert: replacement.insert }, selection: EditorSelection.single(replacement.selection), userEvent: 'input.paste' })
+              return true
+            },
              mousedown: (event, view) => {
                const cell = event.target.closest?.('.cm-md-table-cell')
                if (cell?.dataset.cellEmpty === 'true') {
