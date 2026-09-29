@@ -1,68 +1,36 @@
 # Sloth Note
 
-Editor Markdown local com abas opcionais, busca de notas e de texto na nota, e três modos: Padrão, Código e Leitura.
+Editor Markdown local e offline, com abas opcionais, busca de notas e de texto, e três modos: Padrão (estilo ao vivo), Código (Markdown puro) e Leitura.
 
-O MVP web está concluído. A entrega final obrigatória é o aplicativo desktop nativo com Tauri V2; ela ainda está em desenvolvimento. A pasta local faz parte dessa entrega. Sincronização em nuvem permanece fora do escopo.
+O produto final é um aplicativo desktop Tauri V2 que lê e grava arquivos `.md` em uma pasta escolhida pelo usuário. A versão web é a base funcional e um fallback com importação e exportação. Sincronização em nuvem está fora do escopo.
 
-Base copiada de `../sloth-note-gpt`, commit `443d23c`, de 24/07/2026. `../sloth-note` foi consultado como referência complementar.
+## Estado
 
-**Estado atual:** no site, as notas são gravadas no armazenamento do navegador a cada alteração. A janela nativa Tauri V2 já abre offline e grava o documento em um arquivo de estado versionado na pasta de dados do aplicativo (`state.v3.json`), sem usar `localStorage`; a pasta local com arquivos `.md` ainda não está conectada. Em ambos, falhas de gravação aparecem em um alerta que informa onde as escritas acontecem; o estado também é anunciado a tecnologias assistivas. É possível importar e exportar `.md`, baixar e restaurar um backup completo `.json`, renomear notas, fechar abas sem apagar o texto e mover notas para uma lixeira que persiste após recarga. A lixeira permite restaurar ou apagar definitivamente. Faça exportações para manter uma cópia fora do aplicativo.
+- **Web:** as notas são gravadas no armazenamento do navegador a cada alteração.
+- **Desktop:** o app abre offline e grava um arquivo de estado versionado (`state.v3.json`) no diretório de dados do aplicativo, sem `localStorage`. A pasta local com `.md` ainda não está conectada; veja o [roteiro](docs/ROADMAP.md).
+- **Em ambos:** falhas de gravação aparecem em um alerta; há importação/exportação `.md`, backup completo `.json`, lixeira persistente e renomeação. Faça exportações para manter uma cópia fora do aplicativo.
 
-**Requisito de produto:** a versão completa será uma janela nativa Tauri V2, executável offline e capaz de ler e gravar arquivos `.md` em uma pasta escolhida pelo usuário. Os arquivos serão a fonte de verdade no desktop; abas, preferências, revisões, conflitos e lixeira serão estado auxiliar versionado. O web atual é uma base funcional e um fallback de importação/exportação, não o destino final do armazenamento.
+Detalhes de comportamento, atalhos e limites do Markdown: [docs/RECURSOS.md](docs/RECURSOS.md).
 
-O ícone ☰, o nome do app e as abas ficam na header. As abas rolam horizontalmente. O seletor de modos flutua no canto direito da área do editor; quando falta espaço na margem, mostra só os ícones e reserva espaço acima do texto. O menu reúne as ações de notas e aparência; use as setas para navegar e Escape para fechar.
+## Desenvolvimento
 
-**Padrão** mostra títulos, ênfase, citações, listas, links, tags `#tag` e código estilizados nas linhas fora do cursor; a linha em edição mostra a sintaxe Markdown original. **Código** mostra todo o Markdown sem estilos; **Leitura** mostra o documento sem cursor de edição. O seletor usa ícones, exibe o nome de cada modo em telas largas e aceita setas do teclado para alternar.
-
-Ao selecionar texto no modo Padrão, uma barra discreta oferece negrito, itálico, código em linha, link, título H2, citação e lista. O botão de link pede o endereço na própria barra. Novas instalações começam com `Welcome.md`, uma nota de exemplo com esses estilos, listas, tabela, tags e bloco de código; notas já salvas continuam intactas.
-
-A barra marca os estilos presentes na seleção; clicar em um botão ativo remove o estilo. Ao passar o ponteiro por uma linha vazia ou colocar o cursor nela, o botão `+` permite inserir títulos H2–H4, citação, listas, tabela e bloco de código. O menu principal mostra os atalhos das ações de criar e buscar notas.
-
-No modo Padrão, tabelas aparecem como células até o cursor entrar nelas. Entrar em um bloco de código revela as duas cercas Markdown para edição. Blocos com linguagem conhecida recebem realce de sintaxe também na Leitura. Trechos como `normal *itálico*` são Markdown válido; estilos separados e aninhados são renderizados fora da linha ativa.
-
-Enter no fim de uma lista continua o marcador ou a numeração; Enter em um item vazio encerra a lista. Isso também funciona para citações e no modo Código. No modo Padrão, as setas param nas cercas de um bloco de código antes de entrar no conteúdo. Clicar em uma célula da tabela revela o Markdown para editá-la. Links renderizados mostram a dica de abertura e abrem com Ctrl/Cmd + clique.
-
-Nos modos Padrão e Código, digitar `(`, `[`, `{`, aspas simples, aspas duplas ou crase com texto selecionado envolve a seleção com o par correspondente. O texto permanece selecionado dentro dos delimitadores.
-
-O primeiro H1 (`# Título`) define o nome da nota e do arquivo `.md` exportado. Alterá-lo renomeia a nota, inclusive com undo/redo. A importação e as notas já salvas também seguem essa regra. Caracteres proibidos em nomes de arquivo viram `-`; conflitos recebem um sufixo numérico. Sem H1, o nome atual permanece. A ação “Rename note” altera o H1 quando ele existe.
-
-Use Ctrl/Cmd+F ou “Find in note” no menu para localizar texto na nota atual. Enter avança entre ocorrências e Shift+Enter retorna.
-
-A leitura oferece um subconjunto de Markdown: títulos H1–H4, parágrafos, ênfase, links HTTP/HTTPS e `mailto:`, tags `#tag`, citações, listas, tabelas e cercas de código. HTML bruto permanece texto. A edição sempre usa o texto original.
-
-Se dados salvos estiverem corrompidos, a aplicação bloqueia novas gravações para não sobrescrevê-los. A mensagem de erro oferece um download dos dados originais e uma ação explícita para substituí-los. Se o armazenamento falhar, o texto continua em memória até a página ser fechada; baixe o backup completo antes de fechar. A restauração valida o backup e pede confirmação antes de substituir as notas atuais. Com armazenamento bloqueado, a restauração fica em memória até a substituição explícita do armazenamento.
-
-## Executar
-
-Ambiente verificado: Node.js 24.21.0, npm 11.19.0, Rust 1.96.0 e WebView2 153 no Windows.
-
-No navegador:
+Requisitos: [Bun](https://bun.sh) 1.4, Node.js 24 (executa os testes) e, para o desktop, Rust 1.82+ com as [dependências do Tauri](https://tauri.app/start/prerequisites/).
 
 ```sh
-npm ci
-npm run dev
+bun install
+bun run dev            # site em http://localhost:5173
+bun run test           # testes de domínio (Node)
+bun run build          # gera dist/, sem exigir Rust
+bun run desktop:dev    # janela Tauri
+bun run desktop:test   # testes Rust do armazenamento nativo
 ```
+
+## Release
+
+A versão fica em `package.json` (o `tauri.conf.json` a lê de lá) e deve coincidir com `src-tauri/Cargo.toml`; `bun run version:check` confere.
 
 ```sh
-npm run build
-npm run preview
+git tag vX.Y.Z && git push --tags
 ```
 
-Na janela nativa (Tauri V2):
-
-```sh
-npm run desktop:dev
-```
-
-```sh
-npm run desktop:build
-```
-
-`npm run desktop:test` roda os testes Rust do armazenamento nativo. O build do site continua independente do desktop: `npm run build` gera `dist/` sem exigir Rust.
-
-`npm test` verifica armazenamento, migrações, lixeira, backup, títulos, sintaxe visual, corrupção, falha de gravação, a fila de gravação e a mesma suíte de domínio contra o armazenamento do navegador e o arquivo de estado nativo. `npm run build` gera o site.
-
-## Documentação
-
-- [Relatório técnico e de produto](docs/RELATORIO.md): comparação das bases, problemas, melhorias e adições.
-- [Plano de implementação](docs/PLANO.md): sequência, limites e critérios de aceite. O [arquivo `IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) também fica em `docs`.
+O workflow de release gera um rascunho no GitHub com o instalador `.msi` (Windows) e o `.AppImage` (Linux). Os artefatos ainda não são assinados. O CI (`.github/workflows/ci.yml`) roda versão, testes e build a cada push e PR.

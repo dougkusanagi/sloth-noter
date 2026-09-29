@@ -1,8 +1,10 @@
 {
   "name": "sloth-note",
+  "version": "0.1.0",
+  "description": "Offline Markdown editor with notes in files the user controls",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
+  "packageManager": "bun@1.4.2",
   "scripts": {
     "dev": "vite --port 5173 --strictPort",
     "build": "vite build",
@@ -11,7 +13,9 @@
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
     "desktop:test": "cargo test --manifest-path src-tauri/Cargo.toml",
-    "desktop:check": "cargo check --manifest-path src-tauri/Cargo.toml"
+    "desktop:check": "cargo check --manifest-path src-tauri/Cargo.toml",
+    "tauri": "tauri",
+    "version:check": "node scripts/check-version.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "6.11.1",
