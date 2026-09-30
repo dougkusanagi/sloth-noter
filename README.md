@@ -24,6 +24,7 @@ bun run e2e            # Playwright: fluxos principais e acessibilidade (axe); 1
 bun run lint           # ESLint; `bun run format` aplica o Prettier
 bun run build          # gera dist/, sem exigir Rust
 bun run desktop:dev    # janela Tauri
+bun run desktop:build  # AppImage no Linux; MSI no Windows
 bun run desktop:test   # testes Rust do armazenamento nativo
 ```
 
