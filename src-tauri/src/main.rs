@@ -1,9 +1,17 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod images;
+mod migration;
 mod store;
 mod vault;
 
-use std::path::PathBuf;
+use std::{collections::HashSet, path::PathBuf, sync::Mutex};
+
+#[derive(Default)]
+struct DroppedImages(Mutex<HashSet<PathBuf>>);
+
+#[derive(Default)]
+struct PendingVault(Mutex<Option<PathBuf>>);
 
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
@@ -54,7 +62,8 @@ fn vault_config_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 fn configured_vault(app: &AppHandle) -> Result<Option<String>, String> {
-    let contents = store::read_state(&vault_config_path(app)?).map_err(|error| error.to_string())?;
+    let contents =
+        store::read_state(&vault_config_path(app)?).map_err(|error| error.to_string())?;
     Ok(contents
         .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
         .and_then(|value| value.get("path")?.as_str().map(String::from)))
@@ -73,30 +82,153 @@ fn vault_root(app: &AppHandle) -> Result<PathBuf, String> {
 #[tauri::command]
 fn vault_status(app: AppHandle) -> Result<VaultStatus, String> {
     let path = configured_vault(&app)?;
-    let available = path.as_deref().is_some_and(|path| PathBuf::from(path).is_dir());
+    let available = path
+        .as_deref()
+        .is_some_and(|path| PathBuf::from(path).is_dir());
     Ok(VaultStatus { path, available })
 }
 
 /// Only this dialog can point the vault somewhere: the webview never supplies a path.
 #[tauri::command]
-async fn vault_choose(app: AppHandle) -> Result<Option<String>, String> {
+async fn vault_choose(
+    app: AppHandle,
+    pending: tauri::State<'_, PendingVault>,
+) -> Result<Option<String>, String> {
     let Some(picked) = app.dialog().file().blocking_pick_folder() else {
         return Ok(None);
     };
     let path = picked.into_path().map_err(|error| error.to_string())?;
-    let path = path.to_string_lossy().into_owned();
-    let config = serde_json::json!({ "path": path }).to_string();
-    store::write_state(&vault_config_path(&app)?, &config).map_err(|error| error.to_string())?;
-    Ok(Some(path))
+    let path = path.canonicalize().map_err(|e| e.to_string())?;
+    *pending.0.lock().map_err(|e| e.to_string())? = Some(path.clone());
+    Ok(Some(path.to_string_lossy().into_owned()))
+}
+
+fn image_root(app: &AppHandle) -> Result<PathBuf, String> {
+    if configured_vault(app)?.is_some() {
+        vault_root(app)
+    } else {
+        app_data_dir(app)
+    }
+}
+#[tauri::command]
+fn image_list(app: AppHandle) -> Result<Vec<String>, String> {
+    images::list(&image_root(&app)?)
+}
+#[tauri::command]
+fn image_read(app: AppHandle, name: String) -> Result<Vec<u8>, String> {
+    let path = images::image_path(&image_root(&app)?, &name)?;
+    if std::fs::metadata(&path).map_err(|e| e.to_string())?.len() > 20 * 1024 * 1024 {
+        return Err("Image exceeds 20 MB".into());
+    }
+    std::fs::read(path).map_err(|e| e.to_string())
+}
+#[tauri::command]
+fn image_write(app: AppHandle, name: String, bytes: Vec<u8>) -> Result<(), String> {
+    if !name.starts_with("assets/") || bytes.len() > 20 * 1024 * 1024 {
+        return Err("Invalid image".into());
+    }
+    let root = image_root(&app)?;
+    images::image_path(&root, &name)?;
+    images::copy_files(&root, &[(name, bytes)])
+}
+#[tauri::command]
+fn image_import_drop(
+    app: AppHandle,
+    dropped: tauri::State<'_, DroppedImages>,
+    path: String,
+) -> Result<String, String> {
+    let source = std::fs::canonicalize(path).map_err(|e| e.to_string())?;
+    if !dropped.0.lock().map_err(|e| e.to_string())?.remove(&source) {
+        return Err("The file was not dropped into this window".into());
+    }
+    images::import_dropped(&image_root(&app)?, &source)
 }
 
 #[tauri::command]
-fn vault_disconnect(app: AppHandle) -> Result<(), String> {
-    match std::fs::remove_file(vault_config_path(&app)?) {
+fn image_delete(app: AppHandle, name: String) -> Result<(), String> {
+    if !name.starts_with("assets/") {
+        return Err("Only imported images can be deleted".into());
+    }
+    let root = image_root(&app)?;
+    let path = images::image_path(&root, &name)?;
+    // Protect references in notes on disk, including edits made outside the app.
+    if configured_vault(&app)?.is_some()
+        && vault::list(&root)
+            .map_err(|e| e.to_string())?
+            .iter()
+            .any(|note| note.contents.contains(&name))
+    {
+        return Err("The image is still referenced by a note".into());
+    }
+    match std::fs::remove_file(path) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
         Err(error) => Err(error.to_string()),
     }
+}
+
+#[tauri::command]
+fn vault_activate(
+    app: AppHandle,
+    pending: tauri::State<'_, PendingVault>,
+    document: Option<String>,
+) -> Result<(), String> {
+    let mut pending = pending.0.lock().map_err(|e| e.to_string())?;
+    let target = pending.as_ref().ok_or("Choose a folder first")?;
+    if !target.is_dir() {
+        return Err("Folder is unavailable".into());
+    }
+    let mut files = Vec::new();
+    let mut auxiliary = None;
+    if let Some(contents) = document {
+        let value: serde_json::Value =
+            serde_json::from_str(&contents).map_err(|e| e.to_string())?;
+        let notes = value["notes"].as_array().ok_or("Invalid notes")?;
+
+        let mut ids = serde_json::Map::new();
+        for note in notes {
+            let name = note["name"].as_str().ok_or("Invalid note name")?;
+            if !vault::valid_name(name) {
+                return Err("Invalid note name".into());
+            }
+            ids.insert(name.into(), note["id"].clone());
+            files.push((
+                name.into(),
+                note["body"]
+                    .as_str()
+                    .ok_or("Invalid note body")?
+                    .as_bytes()
+                    .to_vec(),
+            ));
+        }
+        let source = image_root(&app)?;
+        for name in images::list(&source)? {
+            let path = images::image_path(&source, &name)?;
+            images::image_path(target, &name)?;
+            files.push((name, std::fs::read(path).map_err(|e| e.to_string())?));
+        }
+
+        let aux = serde_json::json!({ "version": 1, "assets": value["assets"], "ids": ids, "openIds": value["openIds"], "activeId": value["activeId"], "preferences": value["preferences"], "trash": value["trash"] });
+        // Preserve existing folder metadata when merging into an existing workspace.
+        let aux_path = app_data_dir(&app)?.join(vault::aux_file_name(&target.to_string_lossy()));
+        auxiliary = Some((aux_path, aux.to_string()));
+    }
+    migration::activate(
+        &app_data_dir(&app)?.join("migration.json"),
+        &vault_config_path(&app)?,
+        target,
+        &files,
+        auxiliary
+            .as_ref()
+            .map(|(path, text)| (path.as_path(), text.as_str())),
+    )?;
+    *pending = None;
+    Ok(())
+}
+
+#[tauri::command]
+fn vault_disconnect(app: AppHandle) -> Result<(), String> {
+    store::remove_state(&vault_config_path(&app)?).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -131,6 +263,31 @@ fn vault_write_aux(app: AppHandle, contents: String) -> Result<(), String> {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
+        .setup(|app| {
+            migration::recover(&app.path().app_data_dir()?.join("migration.json"))
+                .map_err(std::io::Error::other)?;
+            Ok(())
+        })
+        .manage(PendingVault::default())
+        .manage(DroppedImages::default())
+        .on_webview_event(|webview, event| {
+            if let tauri::WebviewEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
+                if let Ok(mut allowed) = webview.state::<DroppedImages>().0.lock() {
+                    allowed.clear();
+                    for path in paths {
+                        if let Ok(path) = path.canonicalize() {
+                            allowed.insert(path);
+                        }
+                    }
+                }
+            }
+        })
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             read_state,
@@ -138,6 +295,12 @@ fn main() {
             persistence_info,
             vault_status,
             vault_choose,
+            vault_activate,
+            image_list,
+            image_read,
+            image_write,
+            image_import_drop,
+            image_delete,
             vault_disconnect,
             vault_list,
             vault_stamps,

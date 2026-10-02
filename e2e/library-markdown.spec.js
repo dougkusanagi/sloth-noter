@@ -1,0 +1,125 @@
+import { expect, test } from '@playwright/test'
+
+const png = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1Z0AAAAASUVORK5CYII=',
+  'base64',
+)
+async function source(page, body) {
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page.getByRole('textbox', { name: 'Editor Markdown em texto puro' }).fill(body)
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('.cm-content')).toBeVisible()
+})
+
+test('closed notes remain in the searchable library and visibility persists', async ({ page }) => {
+  await page
+    .getByRole('button', { name: 'Fechar aba: Welcome.md', exact: true })
+    .click({ force: true })
+  await expect(page.locator('.tabs')).toBeHidden()
+  await page.getByRole('button', { name: 'Welcome', exact: true }).click()
+  await expect(page.locator('.tab')).toContainText('Welcome.md')
+  await page.getByRole('button', { name: 'Mostrar/ocultar biblioteca' }).click()
+  await page.reload()
+  await expect(page.locator('.notes-sidebar')).toBeHidden()
+})
+
+test('CommonMark and GFM render with interactive round tasks', async ({ page }) => {
+  await source(
+    page,
+    '# Markdown completo\n\n- [ ] Pendente\n- [x] Concluída\n  - Item aninhado\n\n~~Riscado~~ e **forte** e *ênfase* e `inline`\n\n---\n\n##### Cinco\n###### Seis\n\n> Citação\n\n| Nome | Valor |\n| :--- | ---: |\n| teste | 42 |\n\n[referência][site]\n\n[site]: https://example.com\n\nNota[^1]\n\n[^1]: Rodapé\n\n```js\nconst answer = 42\n```',
+  )
+  await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
+  await expect(page.locator('.markdown input[type=checkbox]')).toHaveCount(2)
+  await expect(page.locator('.markdown del')).toHaveText('Riscado')
+  await expect(page.locator('.markdown h5')).toHaveText('Cinco')
+  await expect(page.locator('.markdown h6')).toHaveText('Seis')
+  await expect(page.locator('.markdown table')).toContainText('42')
+  await expect(page.locator('.markdown hr')).toBeVisible()
+  await expect(page.locator('.markdown ul ul')).toContainText('Item aninhado')
+  await expect(page.locator('.markdown a[href="https://example.com"]')).toHaveText('referência')
+  await expect(page.locator('.markdown [data-footnotes]')).toContainText('Rodapé')
+  await page.getByRole('checkbox', { name: 'Marcar como concluída' }).check()
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await expect(page.locator('textarea')).toHaveValue(/- \[x\] Pendente/)
+})
+
+test('live editor tasks update Markdown and imported images survive a reload', async ({ page }) => {
+  await source(page, '# Imagens e tarefas\n\n- [ ] Fazer\n\nFim')
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  await page.locator('.cm-content').click()
+  await page.keyboard.press('Control+End')
+  await expect(page.locator('.cm-task-checkbox')).toBeVisible()
+  await page.locator('.cm-task-checkbox').check()
+  await page.getByRole('button', { name: 'Imagens', exact: true }).click()
+  await page
+    .locator('input[type=file][accept^="image/png"]')
+    .setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: png })
+  await expect(page.locator('.image-item img')).toBeVisible()
+  await page.reload()
+  await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
+  await expect(page.locator('.markdown img')).toBeVisible()
+  await expect(page.locator('.markdown img')).toHaveJSProperty('naturalWidth', 1)
+  await expect(page.locator('.markdown input[type=checkbox]')).toBeChecked()
+})
+
+test('external images render and unsafe links do not execute', async ({ page }) => {
+  await page.route('https://example.com/photo.png', (route) =>
+    route.fulfill({ contentType: 'image/png', body: png }),
+  )
+  await source(
+    page,
+    '# Externas\n\n![Foto externa](https://example.com/photo.png)\n\n[Perigo](javascript:alert%281%29)',
+  )
+  await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
+  await expect(page.getByRole('img', { name: 'Foto externa' })).toHaveJSProperty('naturalWidth', 1)
+  await expect(page.locator('.markdown a')).not.toHaveAttribute('href', /^javascript:/)
+})
+
+test('long tab names are truncated, disclosed on hover, and can be closed', async ({ page }) => {
+  const title =
+    'Uma nota com um título muito longo para caber inteiramente na barra de abas do aplicativo'
+  await source(page, `# ${title}\n\nTexto`)
+  const tab = page.locator('.tab')
+  await expect(tab).toHaveAttribute('title', `${title}.md`)
+  expect(await tab.locator('span').evaluate((span) => span.scrollWidth > span.clientWidth)).toBe(
+    true,
+  )
+  const close = page.locator('.tab-close')
+  await expect(close).toHaveCSS('opacity', '0')
+  await tab.hover()
+  await expect(close).toHaveCSS('opacity', '1')
+  await close.click()
+  await expect(page.locator('.tabs')).toBeHidden()
+  await expect(page.locator('.sidebar-note')).toHaveText(title)
+})
+
+test('dropping an image inserts and renders it in the note', async ({ page }) => {
+  await source(page, '# Arrastar imagem')
+  const transfer = await page.evaluateHandle(
+    (bytes) => {
+      const transfer = new DataTransfer()
+      transfer.items.add(new File([new Uint8Array(bytes)], 'arrastada.png', { type: 'image/png' }))
+      return transfer
+    },
+    [...png],
+  )
+  await page.locator('.editor-shell').dispatchEvent('drop', { dataTransfer: transfer })
+  await expect(page.locator('textarea')).toHaveValue(/!\[arrastada.png\]\(data:image\/png;base64,/)
+  await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
+  await expect(page.getByRole('img', { name: 'arrastada.png' })).toHaveJSProperty('naturalWidth', 1)
+})
+
+test('a narrow viewport starts with the library hidden and note selection closes it', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.reload()
+  await expect(page.locator('.notes-sidebar')).toBeHidden()
+  await page.getByRole('button', { name: 'Mostrar/ocultar biblioteca' }).click()
+  await expect(page.locator('.notes-sidebar')).toBeVisible()
+  await page.getByRole('button', { name: 'Welcome', exact: true }).click()
+  await expect(page.locator('.notes-sidebar')).toBeHidden()
+})

@@ -1,7 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { listenNativeImageDrops, routeNativeImageDrop } from './native-image-drop.js'
+import { ensureTitle, ensureDocumentTitles } from './title.js'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Markdown } from './markdown.jsx'
-import { createBackup, readBackup } from './backup.js'
+import { createFullBackup, readBackupBundle, restoreBackupImages } from './backup.js'
+import { findNote, wikiParts, renameWikiReferences } from './markdown-model.js'
+import { MainMenu } from './components/main-menu.jsx'
+import { ImageLibrary } from './components/image-library.jsx'
+import { appShortcut } from './shortcuts.js'
 import { findMatches } from './find.js'
 import {
   headingFileName,
@@ -22,16 +28,27 @@ import {
   ConflictDialog,
   FindDialog,
   FolderDialog,
+  ShortcutsDialog,
   PaletteDialog,
   PromptDialog,
   SyncConflictDialog,
   TrashDialog,
 } from './components/dialogs.jsx'
-import { LANGUAGES, setLanguage, t } from './i18n.js'
+import { setLanguage, t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
 import { continueBlock } from './continue-block.js'
 import { restoreWindowState } from './window-state.js'
-import { BookOpen, Code, Eye } from 'lucide-react'
+import {
+  importImage,
+  noteImages,
+  resolveImage,
+  allNotes,
+  clearImageCache,
+  markdownImage,
+  replaceDocumentImage,
+  dataUrlBytes,
+} from './images.js'
+import { BookOpen, Code, Eye, PanelLeft, X, Plus, Menu, Image as ImageIcon } from 'lucide-react'
 import './styles.css'
 
 function download(name, body, type = 'text/markdown;charset=utf-8') {
@@ -99,6 +116,18 @@ function Workspace({ persistence, loaded }) {
   const [data, setData] = useState(loaded.document)
   const [error, setError] = useState(loaded.error)
   const [blocked, setBlocked] = useState(loaded.blocked)
+  const [sidebarQuery, setSidebarQuery] = useState('')
+  const [sidebarSection, setSidebarSection] = useState('notes')
+  const [diskImages, setDiskImages] = useState([])
+  const [imageVersion, setImageVersion] = useState(0)
+  const [imagesLoading, setImagesLoading] = useState(false)
+  const [selectedImage, setSelectedImage] = useState(null)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [switching, setSwitching] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [imageBusy, setImageBusy] = useState(false)
+  const imageInput = useRef(null)
+  const imagePoint = useRef(null)
   const [mode, setMode] = useState('visual')
   const [palette, setPalette] = useState(false)
   const [query, setQuery] = useState('')
@@ -119,7 +148,7 @@ function Workspace({ persistence, loaded }) {
   const damaged = useRef(loaded.raw)
   const writer = useRef(null)
   if (!writer.current)
-    writer.current = createWriteQueue((document) => persistence.save(document), setError)
+    writer.current = createWriteQueue((document) => persistence.save(document), setError, setSaving)
   const search = useRef(null)
   const conflictFirst = useRef(null)
   const importInput = useRef(null)
@@ -140,7 +169,21 @@ function Workspace({ persistence, loaded }) {
     note.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
   )
   const prefs = data.preferences
+  const sidebarVisible = prefs.sidebarVisible ?? !window.matchMedia('(max-width: 600px)').matches
   setLanguage(prefs.language)
+  const images = useMemo(() => {
+    const found = new Map(
+      noteImages([...data.notes, ...data.trash.map((entry) => entry.note)]).map((image) => [
+        image.src,
+        image,
+      ]),
+    )
+    for (const asset of [...diskImages, ...(data.assets ?? [])]) {
+      const previous = found.get(asset.src)
+      found.set(asset.src, { ...asset, noteIds: previous?.noteIds ?? [] })
+    }
+    return [...found.values()]
+  }, [data.notes, data.trash, data.assets, diskImages])
 
   useEffect(() => {
     let disposed = false
@@ -166,6 +209,7 @@ function Workspace({ persistence, loaded }) {
     setAsking(null)
   }
   function commit(next) {
+    next = ensureDocumentTitles(next)
     current.current = next
     setData(next)
     if (!blocked) writer.current.write(next)
@@ -183,12 +227,51 @@ function Workspace({ persistence, loaded }) {
       ...old,
       openIds: old.openIds.includes(id) ? old.openIds : [...old.openIds, id],
       activeId: id,
+      preferences: window.matchMedia('(max-width: 600px)').matches
+        ? { ...old.preferences, sidebarVisible: false }
+        : old.preferences,
     })
     if (mode === 'reading') setMode('visual')
     if (palette) closePalette()
     setTimeout(focusEditor, 0)
   }
+  async function openWiki(target) {
+    const parts = wikiParts(target)
+    const note = parts.name ? findNote(current.current.notes, target) : active
+    if (note) {
+      openNote(note.id)
+      if (parts.heading) {
+        const lines = note.body.split('\n')
+        let offset = 0
+        for (const line of lines) {
+          if (
+            line
+              .replace(/^#{1,6}\s+/, '')
+              .trim()
+              .toLocaleLowerCase() === parts.heading.toLocaleLowerCase()
+          ) {
+            setTimeout(() => {
+              visualRef.current?.dispatch({ selection: { anchor: offset }, scrollIntoView: true })
+              visualRef.current?.focus()
+            }, 0)
+            break
+          }
+          offset += line.length + 1
+        }
+      }
+      return
+    }
+    if (!parts.name) return
+    const accepted = await ask({
+      kind: 'confirm',
+      message: t('wiki.create', { name: parts.name }),
+      confirmLabel: t('wiki.createConfirm'),
+    })
+    if (accepted) createNote(parts.name, `# ${parts.name.replace(/\.md$/i, '')}\n\n`)
+  }
   function createNote(name = 'new note.md', body = '') {
+    const blank = !body
+    body = ensureTitle(body, name.replace(/\.md$/i, ''))
     const old = current.current
     const note = {
       id: crypto.randomUUID(),
@@ -204,19 +287,68 @@ function Workspace({ persistence, loaded }) {
     })
     if (mode === 'reading') setMode('visual')
     if (palette) closePalette()
-    setTimeout(focusEditor, 0)
+    setTimeout(() => {
+      focusEditor()
+      if (blank) {
+        const end = note.body.split('\n')[0].length
+        if (mode === 'source') editorRef.current?.setSelectionRange(2, end)
+        else visualRef.current?.dispatch({ selection: { anchor: 2, head: end } })
+      }
+    }, 0)
   }
   function updateBody(body) {
+    body = ensureTitle(body)
     const old = current.current
     const name = nameFromHeading(body, old.notes, old.activeId)
+    const previousName = old.notes.find((note) => note.id === old.activeId)?.name
+    const rewrite = (note) => {
+      const active = note.id === old.activeId
+      const content = active ? body : note.body
+      const nextBody =
+        name && previousName && name !== previousName
+          ? renameWikiReferences(content, previousName, name)
+          : content
+      return active || nextBody !== note.body
+        ? {
+            ...note,
+            name: active ? (name ?? note.name) : note.name,
+            body: nextBody,
+            revision: note.revision + 1,
+          }
+        : note
+    }
     commit({
       ...old,
-      notes: old.notes.map((note) =>
-        note.id === old.activeId
-          ? { ...note, name: name ?? note.name, body, revision: note.revision + 1 }
-          : note,
-      ),
+      notes: old.notes.map(rewrite),
+      trash: old.trash.map((entry) => ({ ...entry, note: rewrite(entry.note) })),
     })
+  }
+
+  useEffect(() => {
+    const field = editorRef.current
+    if (mode !== 'source' || !field) return
+    const clampSelection = () => {
+      if (document.activeElement === field && field.selectionStart < 2)
+        field.setSelectionRange(2, Math.max(2, field.selectionEnd), field.selectionDirection)
+    }
+    field.addEventListener('select', clampSelection)
+    field.addEventListener('focus', clampSelection)
+    document.addEventListener('selectionchange', clampSelection)
+    return () => {
+      field.removeEventListener('select', clampSelection)
+      field.removeEventListener('focus', clampSelection)
+      document.removeEventListener('selectionchange', clampSelection)
+    }
+  }, [mode, active?.id])
+  function changeSource(event) {
+    const field = event.target
+    const raw = field.value
+    const normalized = ensureTitle(raw)
+    const delta = normalized.length - raw.length
+    const from = Math.max(2, field.selectionStart + delta)
+    const to = Math.max(2, field.selectionEnd + delta)
+    updateBody(normalized)
+    if (delta) requestAnimationFrame(() => field.setSelectionRange(from, to))
   }
   function wrapSourceSelection(event) {
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return
@@ -290,8 +422,24 @@ function Workspace({ persistence, loaded }) {
     const body = note.body.replace(/^# [ \t]*(.+?)[ \t]*$/m, `# ${name.slice(0, -3)}`)
     commit({
       ...current.current,
+      trash: current.current.trash.map((entry) => {
+        const body = renameWikiReferences(entry.note.body, note.name, name)
+        return body === entry.note.body
+          ? entry
+          : { ...entry, note: { ...entry.note, body, revision: entry.note.revision + 1 } }
+      }),
       notes: current.current.notes.map((item) =>
-        item.id === id ? { ...item, name, body, revision: item.revision + 1 } : item,
+        (() => {
+          const nextBody = renameWikiReferences(item.id === id ? body : item.body, note.name, name)
+          return item.id === id || nextBody !== item.body
+            ? {
+                ...item,
+                name: item.id === id ? name : item.name,
+                body: nextBody,
+                revision: item.revision + 1,
+              }
+            : item
+        })(),
       ),
     })
   }
@@ -343,23 +491,33 @@ function Workspace({ persistence, loaded }) {
     }
   }
   async function switchFolder(change) {
+    if (switching || imageBusy) return
+    setSwitching(true)
     setFolderError('')
     try {
       await writer.current.whenIdle()
+      const failure = await persistence.save(current.current)
+      if (failure) throw new Error(failure)
       if (await change()) window.location.reload()
     } catch (cause) {
       setFolderError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setSwitching(false)
     }
   }
   function chooseFolder() {
     return switchFolder(() =>
-      connectVault(persistence.invoke, (count) =>
-        ask({
-          kind: 'confirm',
-          message: t('dialog.folderCopy', { count }),
-          confirmLabel: t('dialog.folderCopyConfirm'),
-          cancelLabel: t('dialog.folderCopyDecline'),
-        }),
+      connectVault(
+        persistence.invoke,
+        (count) =>
+          ask({
+            kind: 'confirm',
+            message: t('dialog.folderCopy', { count }),
+            confirmLabel: t('dialog.folderCopyConfirm'),
+            cancelLabel: t('dialog.folderCopyDecline'),
+            dismissLabel: t('dialog.cancel'),
+          }),
+        current.current,
       ),
     )
   }
@@ -369,23 +527,228 @@ function Workspace({ persistence, loaded }) {
       return true
     })
   }
+  function showImages() {
+    setSidebarSection('images')
+    updatePrefs({ sidebarVisible: true })
+  }
+  function refreshImages() {
+    clearImageCache()
+    setImageVersion((value) => value + 1)
+  }
+  const nativeDropHandler = useRef(null)
+  nativeDropHandler.current = (files, position) =>
+    routeNativeImageDrop(files, position, (files, point) =>
+      addImages(files, insertionPoint({ dataTransfer: true, clientX: point.x, clientY: point.y })),
+    )
+  useEffect(() => {
+    if (!persistence.invoke) return
+    let disposed = false
+    let unlisten = () => {}
+    listenNativeImageDrops((files, position) => nativeDropHandler.current(files, position))
+      .then((stop) => {
+        if (disposed) stop()
+        else unlisten = stop
+      })
+      .catch((cause) => setImportError(String(cause.message ?? cause)))
+    return () => {
+      disposed = true
+      unlisten()
+    }
+  }, [persistence.invoke])
+  function insertionPoint(event) {
+    if (mode === 'source' && editorRef.current)
+      return { from: editorRef.current.selectionStart, to: editorRef.current.selectionEnd }
+    if (mode === 'visual' && visualRef.current) {
+      const view = visualRef.current
+      const at = event?.dataTransfer
+        ? view.posAtCoords({ x: event.clientX, y: event.clientY })
+        : null
+      return at === null || at === undefined
+        ? { from: view.state.selection.main.from, to: view.state.selection.main.to }
+        : { from: at, to: at }
+    }
+    return { from: active?.body.length ?? 0, to: active?.body.length ?? 0 }
+  }
+  function pickImages() {
+    imagePoint.current = insertionPoint()
+    imageInput.current?.click()
+  }
+  function insertMarkdown(text, point = insertionPoint(), noteId = active?.id) {
+    const note = current.current.notes.find((item) => item.id === noteId)
+    if (!note) return
+    const titleEnd = note.body.indexOf('\n') < 0 ? note.body.length : note.body.indexOf('\n')
+    const from = Math.max(titleEnd, Math.min(point.from, note.body.length)),
+      to = Math.max(from, Math.min(point.to, note.body.length))
+    const insert = `${from && note.body[from - 1] !== '\n' ? '\n' : ''}${text}\n`
+    if (mode === 'visual' && current.current.activeId === noteId && visualRef.current) {
+      visualRef.current.dispatch({
+        changes: { from, to, insert },
+        selection: { anchor: from + insert.length },
+        userEvent: 'input.paste',
+        scrollIntoView: true,
+      })
+      visualRef.current.focus()
+    } else if (mode === 'source' && current.current.activeId === noteId && editorRef.current) {
+      const field = editorRef.current
+      field.focus()
+      field.setSelectionRange(from, to)
+      if (!document.execCommand('insertText', false, insert)) {
+        updateBody(note.body.slice(0, from) + insert + note.body.slice(to))
+      }
+    } else {
+      const next = note.body.slice(0, from) + insert + note.body.slice(to)
+      commit({
+        ...current.current,
+        notes: current.current.notes.map((item) =>
+          item.id === noteId ? { ...item, body: next, revision: item.revision + 1 } : item,
+        ),
+      })
+      if (mode === 'source')
+        setTimeout(() => {
+          editorRef.current?.focus()
+          editorRef.current?.setSelectionRange(from + insert.length, from + insert.length)
+        }, 0)
+    }
+    return { from: from + insert.length, to: from + insert.length }
+  }
+  async function addImages(files, point = insertionPoint()) {
+    if (imageBusy || blocked || switching) return
+    const noteId = active?.id
+    setImageBusy(true)
+    setImportError('')
+    try {
+      for (const file of files) {
+        const src = await importImage(file, persistence.invoke)
+        commit({
+          ...current.current,
+          assets: [...(current.current.assets ?? []), { name: file.name, src }],
+        })
+        if (noteId) {
+          point = insertMarkdown(markdownImage(file.name, src), point, noteId)
+          const note = current.current.notes.find((note) => note.id === noteId)
+          if (!note) break
+        }
+      }
+      refreshImages()
+    } catch (cause) {
+      setImportError(String(cause.message ?? cause))
+    } finally {
+      setImageBusy(false)
+    }
+  }
+  async function renameImage(image) {
+    const proposed = (
+      await ask({ kind: 'prompt', label: t('images.rename'), initial: image.name })
+    )?.trim()
+    if (!proposed || proposed === image.name) return
+    setImageBusy(true)
+    try {
+      let src = image.src
+      if (persistence.invoke && image.src.startsWith('assets/')) {
+        const extension = image.src.split('.').pop()
+        src = `assets/${crypto.randomUUID()}.${extension}`
+        const url = await resolveImage(image.src)
+        await persistence.invoke('image_write', { name: src, bytes: dataUrlBytes(url) })
+      }
+      const document = replaceDocumentImage(current.current, image.src, src)
+      const assets = (document.assets ?? []).filter((asset) => asset.src !== src)
+      commit({ ...document, assets: [...assets, { src, name: proposed }] })
+      setSelectedImage(src)
+      const failure = await writer.current.whenIdle()
+      if (failure) throw new Error(failure)
+      if (src !== image.src) await persistence.invoke('image_delete', { name: image.src })
+      refreshImages()
+    } catch (cause) {
+      setImportError(String(cause.message ?? cause))
+    } finally {
+      setImageBusy(false)
+    }
+  }
+
+  async function deleteImage(image) {
+    const referenced = noteImages(allNotes(current.current)).some(
+      (entry) => entry.src === image.src,
+    )
+    if (referenced) return
+    if (
+      !(await ask({
+        kind: 'confirm',
+        message: t('images.deleteConfirm', { name: image.name }),
+        confirmLabel: t('images.delete'),
+      }))
+    )
+      return
+    setImageBusy(true)
+    try {
+      await writer.current.whenIdle()
+      if (persistence.invoke) await persistence.invoke('image_delete', { name: image.src })
+      commit({
+        ...current.current,
+        assets: (current.current.assets ?? []).filter((asset) => asset.src !== image.src),
+      })
+      setSelectedImage(null)
+      refreshImages()
+    } catch (cause) {
+      setImportError(String(cause.message ?? cause))
+    } finally {
+      setImageBusy(false)
+    }
+  }
+  async function downloadImage(image) {
+    try {
+      const url = await resolveImage(image.src)
+      const response = await fetch(url)
+      if (!response.ok) throw new Error(t('images.unavailable'))
+      download(
+        image.name,
+        await response.blob(),
+        response.headers.get('content-type') ?? 'image/png',
+      )
+    } catch (cause) {
+      setImportError(String(cause.message ?? cause))
+    }
+  }
+  useEffect(() => {
+    if (sidebarSection !== 'images' || !persistence.invoke) return
+    let stopped = false
+    setImagesLoading(true)
+    persistence
+      .invoke('image_list')
+      .then((names) => {
+        if (!stopped) setDiskImages(names.map((src) => ({ src, name: src.split('/').at(-1) })))
+      })
+      .catch((cause) => {
+        if (!stopped) setImportError(String(cause))
+      })
+      .finally(() => {
+        if (!stopped) setImagesLoading(false)
+      })
+    return () => {
+      stopped = true
+    }
+  }, [sidebarSection, imageVersion, persistence])
   function resolveSync(choice) {
     const [conflict, ...rest] = syncConflicts
     setSyncConflicts(rest)
     commit(persistence.sync.resolve(current.current, conflict, choice))
   }
-  function downloadBackup() {
-    download(
-      'sloth-note-backup.json',
-      createBackup(current.current),
-      'application/json;charset=utf-8',
-    )
+  async function downloadBackup() {
+    try {
+      download(
+        'sloth-note-backup.json',
+        await createFullBackup(current.current, persistence.invoke),
+        'application/json;charset=utf-8',
+      )
+    } catch (cause) {
+      setImportError(String(cause.message ?? cause))
+    }
   }
   async function restoreBackup(file) {
     if (!file) return
     setImportError('')
     try {
-      const restored = readBackup(await file.text())
+      const bundle = readBackupBundle(await file.text())
+      let restored = bundle.document
       const confirmed = await ask({
         kind: 'confirm',
         message: t('dialog.backupReplace', {
@@ -395,7 +758,9 @@ function Workspace({ persistence, loaded }) {
         confirmLabel: t('dialog.backupReplaceConfirm'),
       })
       if (!confirmed) return
+      restored = await restoreBackupImages(bundle, persistence.invoke)
       commit(restored)
+      refreshImages()
       if (mode === 'reading') setMode('visual')
       setFindOpen(false)
       setTrashOpen(false)
@@ -502,7 +867,7 @@ function Workspace({ persistence, loaded }) {
     let stopped = false
     let running = false
     async function poll() {
-      if (running || stopped || document.visibilityState === 'hidden') return
+      if (running || stopped || switching || document.visibilityState === 'hidden') return
       running = true
       try {
         await writer.current.whenIdle()
@@ -527,7 +892,7 @@ function Workspace({ persistence, loaded }) {
     }
     // commit only touches refs and state setters, so it is stable enough to skip here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [persistence])
+  }, [persistence, switching])
   useEffect(() => {
     const theme =
       prefs.theme === 'system'
@@ -623,35 +988,14 @@ function Workspace({ persistence, loaded }) {
         closeMenu()
         return
       }
+      if (asking || folderOpen || shortcutsOpen || selectedImage || switching) return
       const modifier = event.ctrlKey || event.metaKey
       const key = event.key.toLowerCase()
-      if (modifier && key === 'p') {
+      const action = appShortcut(event)
+      if (action && menuActions[action]) {
         event.preventDefault()
-        setMenuOpen(false)
-        openPalette()
-      }
-      if (modifier && key === 'f') {
-        event.preventDefault()
-        openFind()
-      }
-      if (modifier && key === 't') {
-        event.preventDefault()
-        setMenuOpen(false)
-        createNote()
-      }
-      if (modifier && key === 'w') {
-        event.preventDefault()
-        setMenuOpen(false)
-        if (active) closeTab(active.id)
-      }
-      if (modifier && key === 'i') {
-        event.preventDefault()
-        setMenuOpen(false)
-        importInput.current?.click()
-      }
-      if (modifier && key === 'e') {
-        event.preventDefault()
-        if (active) download(active.name, active.body)
+        menuActions[action]()
+        return
       }
       if (modifier && (event.key === '+' || event.code === 'Equal')) {
         event.preventDefault()
@@ -671,9 +1015,43 @@ function Workspace({ persistence, loaded }) {
     return () => document.removeEventListener('keydown', onKey)
   })
 
+  const menuActions = {
+    newNote: () => runMenu(() => createNote(), false),
+    findNote: () => runMenu(openPalette, false),
+    findInNote: () => active && runMenu(openFind, false),
+    rename: () => active && runMenu(renameNote, false),
+    closeTab: () => active && runMenu(() => closeTab(active.id)),
+    trashMove: () => active && runMenu(deleteNote, false),
+    undoDelete: () =>
+      data.trash.length && runMenu(() => restoreNote(data.trash.at(-1).note.id), false),
+    images: () => runMenu(showImages, false),
+    addImage: () => runMenu(pickImages, false),
+    import: () => runMenu(() => importInput.current?.click(), false),
+    export: () => active && runMenu(() => download(active.name, active.body)),
+    backup: () => runMenu(downloadBackup),
+    restoreBackup: () => runMenu(() => backupInput.current?.click(), false),
+    folder: () => persistence.invoke && runMenu(() => setFolderOpen(true), false),
+    trash: () => runMenu(() => setTrashOpen(true), false),
+    sidebar: () => runMenu(() => updatePrefs({ sidebarVisible: !sidebarVisible })),
+    tabs: () => runMenu(() => updatePrefs({ tabsVisible: !prefs.tabsVisible })),
+    visual: () => changeMode('visual'),
+    source: () => changeMode('source'),
+    reading: () => changeMode('reading'),
+    theme: () =>
+      runMenu(() =>
+        updatePrefs({
+          theme: prefs.theme === 'system' ? 'light' : prefs.theme === 'light' ? 'dark' : 'system',
+        }),
+      ),
+    smaller: () => runMenu(() => updatePrefs({ fontSize: Math.max(14, prefs.fontSize - 1) })),
+    larger: () => runMenu(() => updatePrefs({ fontSize: Math.min(24, prefs.fontSize + 1) })),
+    language: () =>
+      runMenu(() => updatePrefs({ language: prefs.language === 'en' ? 'pt-BR' : 'en' })),
+    shortcuts: () => runMenu(() => setShortcutsOpen(true), false),
+  }
   return (
     <main className="app" style={{ '--editor-size': `${prefs.fontSize}px` }}>
-      <header className="app-header">
+      <header className="app-header" inert={switching ? true : undefined}>
         <div className="main-menu-wrap" ref={menuWrap}>
           <button
             ref={menuButton}
@@ -690,172 +1068,44 @@ function Workspace({ persistence, loaded }) {
               }
             }}
           >
-            ☰
+            <Menu size={18} aria-hidden="true" />
           </button>
           {menuOpen && (
-            <div
-              id="main-menu"
-              className="main-menu"
-              role="menu"
-              aria-label={t('menu.main')}
-              onKeyDown={(event) => {
-                const items = [
-                  ...event.currentTarget.querySelectorAll('[role="menuitem"]:not(:disabled)'),
-                ]
-                const index = items.indexOf(document.activeElement)
-                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                  event.preventDefault()
-                  items[
-                    (index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length
-                  ]?.focus()
-                }
-                if (event.key === 'Home') {
-                  event.preventDefault()
-                  items[0]?.focus()
-                }
-                if (event.key === 'End') {
-                  event.preventDefault()
-                  items.at(-1)?.focus()
-                }
-                if (event.key === 'Tab') {
-                  event.preventDefault()
-                  closeMenu()
-                }
-                if (event.key === 'Escape') {
-                  event.stopPropagation()
-                  closeMenu()
-                }
-              }}
-            >
-              <div className="menu-heading" role="presentation">
-                {t('menu.notes')}
-              </div>
-              <button
-                ref={menuFirst}
-                role="menuitem"
-                onClick={() => runMenu(() => createNote(), false)}
-              >
-                <span>{t('menu.newNote')}</span>
-                <Shortcut letter="T" />
-              </button>
-              <button role="menuitem" onClick={() => runMenu(openPalette, false)}>
-                <span>{t('menu.findNote')}</span>
-                <Shortcut letter="P" />
-              </button>
-              <button role="menuitem" disabled={!active} onClick={() => runMenu(openFind, false)}>
-                <span>{t('menu.findInNote')}</span>
-                <Shortcut letter="F" />
-              </button>
-              <button
-                role="menuitem"
-                onClick={() => runMenu(() => importInput.current?.click(), false)}
-              >
-                <span>{t('menu.import')}</span>
-                <Shortcut letter="I" />
-              </button>
-              <button
-                role="menuitem"
-                disabled={!active}
-                onClick={() => runMenu(() => download(active.name, active.body))}
-              >
-                <span>{t('menu.export')}</span>
-                <Shortcut letter="E" />
-              </button>
-              <button role="menuitem" onClick={() => runMenu(downloadBackup)}>
-                {t('menu.backupDownload')}
-              </button>
-              <button
-                role="menuitem"
-                onClick={() => runMenu(() => backupInput.current?.click(), false)}
-              >
-                {t('menu.backupRestore')}
-              </button>
-              {persistence.invoke && (
-                <button role="menuitem" onClick={() => runMenu(() => setFolderOpen(true), false)}>
-                  {t('menu.folder')}
-                </button>
-              )}
-              <button role="menuitem" disabled={!active} onClick={() => runMenu(renameNote)}>
-                {t('menu.rename')}
-              </button>
-              <button
-                role="menuitem"
-                disabled={!active}
-                onClick={() => runMenu(() => closeTab(active.id))}
-              >
-                <span>Close tab</span>
-                <Shortcut letter="W" />
-              </button>
-              <button role="menuitem" disabled={!active} onClick={() => runMenu(deleteNote)}>
-                {t('menu.trashMove')}
-              </button>
-              {data.trash.length > 0 && (
-                <button
-                  role="menuitem"
-                  onClick={() => runMenu(() => restoreNote(data.trash.at(-1).note.id))}
-                >
-                  {t('menu.undoDelete')}
-                </button>
-              )}
-              <button role="menuitem" onClick={() => runMenu(() => setTrashOpen(true), false)}>
-                {t('menu.trash', { count: data.trash.length })}
-              </button>
-              <div className="menu-heading" role="presentation">
-                {t('menu.view')}
-              </div>
-              <button
-                role="menuitem"
-                onClick={() => runMenu(() => updatePrefs({ tabsVisible: !prefs.tabsVisible }))}
-              >
-                {prefs.tabsVisible ? t('menu.tabsHide') : t('menu.tabsShow')}
-              </button>
-              <button
-                role="menuitem"
-                onClick={() =>
-                  runMenu(() =>
-                    updatePrefs({
-                      theme:
-                        prefs.theme === 'system'
-                          ? 'light'
-                          : prefs.theme === 'light'
-                            ? 'dark'
-                            : 'system',
-                    }),
-                  )
-                }
-              >
-                {t('menu.theme', { theme: t(`theme.${prefs.theme}`) })}
-              </button>
-              <button
-                role="menuitem"
-                onClick={() =>
-                  runMenu(() => updatePrefs({ fontSize: Math.max(14, prefs.fontSize - 1) }))
-                }
-              >
-                <span>{t('menu.smaller')}</span>
-                <Shortcut letter="-" />
-              </button>
-              <button
-                role="menuitem"
-                onClick={() =>
-                  runMenu(() => updatePrefs({ fontSize: Math.min(24, prefs.fontSize + 1) }))
-                }
-              >
-                <span>{t('menu.larger')}</span>
-                <Shortcut letter="+" />
-              </button>
-              <button
-                role="menuitem"
-                onClick={() =>
-                  runMenu(() => updatePrefs({ language: prefs.language === 'en' ? 'pt-BR' : 'en' }))
-                }
-              >
-                {t('menu.language', { language: LANGUAGES[prefs.language] ?? LANGUAGES['pt-BR'] })}
-              </button>
-            </div>
+            <MainMenu
+              firstRef={menuFirst}
+              active={active}
+              prefs={prefs}
+              mode={mode}
+              sidebarVisible={sidebarVisible}
+              trashCount={data.trash.length}
+              desktop={Boolean(persistence.invoke)}
+              actions={menuActions}
+              onClose={closeMenu}
+            />
           )}
         </div>
         <span className="app-title">Sloth Note</span>
+        <button
+          className="sidebar-toggle"
+          title={t('sidebar.toggle')}
+          aria-label={t('sidebar.toggle')}
+          aria-expanded={sidebarVisible}
+          aria-controls="notes-sidebar"
+          onClick={() => updatePrefs({ sidebarVisible: !sidebarVisible })}
+        >
+          <PanelLeft size={16} />
+        </button>
+        <input
+          ref={imageInput}
+          type="file"
+          accept="image/png,image/jpeg,image/gif,image/webp,image/avif,image/bmp"
+          multiple
+          hidden
+          onChange={(event) => {
+            addImages([...event.target.files], imagePoint.current ?? insertionPoint())
+            event.target.value = ''
+          }}
+        />
         {prefs.tabsVisible && data.openIds.length > 0 && (
           <nav className="tabs" aria-label={t('tabs.label')}>
             <div className="tab-list" ref={tabListRef}>
@@ -863,34 +1113,47 @@ function Workspace({ persistence, loaded }) {
                 const note = data.notes.find((item) => item.id === id)
                 return (
                   note && (
-                    <button
+                    <div
                       key={id}
                       ref={id === data.activeId ? activeTabRef : null}
-                      className={id === data.activeId ? 'tab active' : 'tab'}
-                      aria-haspopup="menu"
-                      aria-expanded={tabMenu?.id === id}
-                      onClick={() => openNote(id)}
-                      onAuxClick={(event) => {
-                        if (event.button === 1) {
-                          event.preventDefault()
-                          closeTab(id)
-                        }
-                      }}
-                      onContextMenu={(event) => openTabMenu(event, id)}
-                      onMouseDown={(event) => {
-                        if (event.button === 1) event.preventDefault()
-                      }}
+                      className={id === data.activeId ? 'tab-wrap active' : 'tab-wrap'}
                     >
-                      {note.name}
-                    </button>
+                      <button
+                        title={note.name}
+                        className={id === data.activeId ? 'tab active' : 'tab'}
+                        aria-haspopup="menu"
+                        aria-expanded={tabMenu?.id === id}
+                        onClick={() => openNote(id)}
+                        onAuxClick={(event) => {
+                          if (event.button === 1) {
+                            event.preventDefault()
+                            closeTab(id)
+                          }
+                        }}
+                        onContextMenu={(event) => openTabMenu(event, id)}
+                        onMouseDown={(event) => {
+                          if (event.button === 1) event.preventDefault()
+                        }}
+                      >
+                        <span>{note.name}</span>
+                      </button>
+                      <button
+                        className="tab-close"
+                        aria-label={`${t('tabs.close')}: ${note.name}`}
+                        title={t('tabs.close')}
+                        onClick={() => closeTab(id)}
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
                   )
                 )
               })}
             </div>
           </nav>
         )}
-        <span className="sr-only" role="status">
-          {error ? t('save.notSaved') : t('save.saved')}
+        <span className="save-status" role="status">
+          {error ? t('save.notSaved') : saving ? t('save.saving') : t('save.saved')}
         </span>
         <input
           ref={importInput}
@@ -963,104 +1226,233 @@ function Workspace({ persistence, loaded }) {
           </button>
         </div>
       )}
-      <section className="editor-shell">
-        <fieldset className="mode-switch">
-          <legend className="sr-only">{t('mode.legend')}</legend>
-          {[
-            ['visual', t('mode.visual')],
-            ['source', t('mode.source')],
-            ['reading', t('mode.reading')],
-          ].map(([value, label]) => (
-            <label key={value} title={label}>
-              <input
-                type="radio"
-                name="editor-mode"
-                value={value}
-                aria-label={label}
-                checked={mode === value}
-                onChange={() => changeMode(value)}
-              />
-              <ModeIcon mode={value} />
-              <span className="mode-label">{label}</span>
-            </label>
-          ))}
-        </fieldset>
-        {error && (
-          <div className="save-error" role="alert">
-            {t('error.storage', { error, label: persistence.label })}
-            <div>
-              <button onClick={downloadBackup}>{t('menu.backupDownload')}</button>
-              {blocked && (
-                <>
-                  {damaged.current !== null && (
+      <div className="workspace-layout" inert={switching ? true : undefined}>
+        {sidebarVisible && (
+          <aside id="notes-sidebar" className="notes-sidebar" aria-label={t('sidebar.title')}>
+            <div className="sidebar-heading">
+              <span>{t('sidebar.title')}</span>
+              <button
+                aria-label={t('menu.newNote')}
+                title={t('menu.newNote')}
+                onClick={() => createNote()}
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+            <div className="sidebar-sections">
+              <button
+                aria-pressed={sidebarSection === 'notes'}
+                onClick={() => setSidebarSection('notes')}
+              >
+                {t('menu.notes')} <span>{data.notes.length}</span>
+              </button>
+              <button
+                aria-pressed={sidebarSection === 'images'}
+                onClick={() => setSidebarSection('images')}
+              >
+                <ImageIcon size={14} />
+                {t('images.title')}
+              </button>
+            </div>
+            <input
+              className="sidebar-search"
+              aria-label={t('sidebar.search')}
+              placeholder={t('sidebar.search')}
+              value={sidebarQuery}
+              onChange={(event) => setSidebarQuery(event.target.value)}
+            />
+            <div className="sidebar-items">
+              {sidebarSection === 'notes' &&
+                !data.notes.some((note) =>
+                  note.name.toLocaleLowerCase().includes(sidebarQuery.toLocaleLowerCase()),
+                ) && <p className="sidebar-empty">{t('library.noResults')}</p>}
+              {sidebarSection === 'notes' ? (
+                data.notes
+                  .filter((note) =>
+                    note.name.toLocaleLowerCase().includes(sidebarQuery.toLocaleLowerCase()),
+                  )
+                  .map((note) => (
                     <button
-                      onClick={() =>
-                        download(
-                          'sloth-note-damaged.json',
-                          damaged.current,
-                          'application/json;charset=utf-8',
-                        )
-                      }
+                      key={note.id}
+                      className="sidebar-note"
+                      title={note.name}
+                      aria-current={note.id === active?.id ? 'page' : undefined}
+                      onClick={() => openNote(note.id)}
+                      onContextMenu={(event) => openTabMenu(event, note.id)}
                     >
-                      {t('error.downloadStored')}
+                      {note.name.replace(/\.md$/i, '')}
                     </button>
-                  )}
-                  <button onClick={resetDamagedStorage}>{t('error.replaceStorage')}</button>
-                </>
+                  ))
+              ) : (
+                <ImageLibrary
+                  images={images}
+                  query={sidebarQuery}
+                  busy={imageBusy}
+                  loading={imagesLoading}
+                  active={active}
+                  notes={data.notes}
+                  selected={selectedImage}
+                  onSelect={setSelectedImage}
+                  onImport={pickImages}
+                  onRefresh={refreshImages}
+                  onInsert={(image) => insertMarkdown(markdownImage(image.name, image.src))}
+                  onRename={renameImage}
+                  onDelete={deleteImage}
+                  onDownload={downloadImage}
+                  onOpenNote={openNote}
+                />
               )}
             </div>
-          </div>
+          </aside>
         )}
-        {persistence.vaultProblem && (
-          <div className="save-error" role="alert">
-            {t('error.vaultMissing', { path: persistence.vaultProblem.path })}
-            <div>
-              <button onClick={() => setFolderOpen(true)}>{t('menu.folder')}</button>
-              <button onClick={useAppStorage}>{t('folder.useAppStorage')}</button>
+        <section
+          className="editor-shell"
+          onDragOver={(event) => {
+            if (event.dataTransfer.types.includes('Files')) event.preventDefault()
+          }}
+          onDropCapture={(event) => {
+            if (event.target.closest?.('.image-insert')) return
+            if (event.dataTransfer.files.length) {
+              event.preventDefault()
+              event.stopPropagation()
+              addImages([...event.dataTransfer.files], insertionPoint(event))
+            }
+          }}
+          onPaste={(event) => {
+            const files = [...event.clipboardData.files].filter((file) =>
+              file.type.startsWith('image/'),
+            )
+            if (files.length) {
+              event.preventDefault()
+              addImages(files)
+            }
+          }}
+        >
+          <fieldset className="mode-switch">
+            <legend className="sr-only">{t('mode.legend')}</legend>
+            {[
+              ['visual', t('mode.visual')],
+              ['source', t('mode.source')],
+              ['reading', t('mode.reading')],
+            ].map(([value, label]) => (
+              <label key={value} title={label}>
+                <input
+                  type="radio"
+                  name="editor-mode"
+                  value={value}
+                  aria-label={label}
+                  checked={mode === value}
+                  onChange={() => changeMode(value)}
+                />
+                <ModeIcon mode={value} />
+                <span className="mode-label">{label}</span>
+              </label>
+            ))}
+          </fieldset>
+          {error && (
+            <div className="save-error" role="alert">
+              {t('error.storage', { error, label: persistence.label })}
+              <div>
+                <button onClick={downloadBackup}>{t('menu.backupDownload')}</button>
+                {blocked && (
+                  <>
+                    {damaged.current !== null && (
+                      <button
+                        onClick={() =>
+                          download(
+                            'sloth-note-damaged.json',
+                            damaged.current,
+                            'application/json;charset=utf-8',
+                          )
+                        }
+                      >
+                        {t('error.downloadStored')}
+                      </button>
+                    )}
+                    <button onClick={resetDamagedStorage}>{t('error.replaceStorage')}</button>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-        {folderError && (
-          <div className="save-error" role="alert">
-            {t('error.folder', { error: folderError })}
-          </div>
-        )}
-        {importError && (
-          <div className="save-error" role="alert">
-            {t('error.import', { error: importError })}
-          </div>
-        )}
-        {active ? (
-          mode === 'reading' ? (
-            <div className="reading">
-              <Markdown text={active.body} onCopy={copyCode} />
-              {copyStatus && <span role="status">{copyStatus}</span>}
+          )}
+          {persistence.vaultProblem && (
+            <div className="save-error" role="alert">
+              {t('error.vaultMissing', { path: persistence.vaultProblem.path })}
+              <div>
+                <button onClick={() => setFolderOpen(true)}>{t('menu.folder')}</button>
+                <button onClick={useAppStorage}>{t('folder.useAppStorage')}</button>
+              </div>
             </div>
-          ) : mode === 'source' ? (
-            <textarea
-              ref={editorRef}
-              key={active.id}
-              aria-label={t('mode.sourceEditor')}
-              spellCheck="false"
-              value={active.body}
-              onChange={(event) => updateBody(event.target.value)}
-              onKeyDown={wrapSourceSelection}
-            />
+          )}
+          {folderError && (
+            <div className="save-error" role="alert">
+              {t('error.folder', { error: folderError })}
+            </div>
+          )}
+          {importError && (
+            <div className="save-error" role="alert">
+              {t('error.import', { error: importError })}
+            </div>
+          )}
+          {active ? (
+            mode === 'reading' ? (
+              <div className="reading">
+                <Markdown
+                  text={active.body}
+                  onCopy={copyCode}
+                  onChange={updateBody}
+                  onOpenWiki={openWiki}
+                  notes={data.notes}
+                />
+                {copyStatus && <span role="status">{copyStatus}</span>}
+              </div>
+            ) : mode === 'source' ? (
+              <textarea
+                ref={editorRef}
+                key={active.id}
+                aria-label={t('mode.sourceEditor')}
+                spellCheck="false"
+                value={active.body}
+                onChange={changeSource}
+                onSelect={(event) => {
+                  const field = event.currentTarget
+                  if (field.selectionStart < 2)
+                    field.setSelectionRange(
+                      2,
+                      Math.max(2, field.selectionEnd),
+                      field.selectionDirection,
+                    )
+                }}
+                onKeyDown={wrapSourceSelection}
+              />
+            ) : (
+              <VisualEditor
+                imageBusy={imageBusy}
+                onImageFiles={addImages}
+                onImageUrl={(url, point) => insertMarkdown(markdownImage('Imagem', url), point)}
+                onOpenWiki={openWiki}
+                key={`${active.id}:${prefs.language}`}
+                noteId={active.id}
+                body={active.body}
+                onChange={updateBody}
+                onReady={(view) => {
+                  visualRef.current = view
+                }}
+              />
+            )
           ) : (
-            <VisualEditor
-              key={`${active.id}:${prefs.language}`}
-              noteId={active.id}
-              body={active.body}
-              onChange={updateBody}
-              onReady={(view) => {
-                visualRef.current = view
-              }}
-            />
-          )
-        ) : (
-          <div className="empty-note">{t('empty.note')}</div>
-        )}
-      </section>
+            <div className="empty-note">{t('empty.note')}</div>
+          )}
+        </section>
+      </div>
+      {shortcutsOpen && (
+        <ShortcutsDialog
+          onClose={() => {
+            setShortcutsOpen(false)
+            menuButton.current?.focus()
+          }}
+        />
+      )}
       {palette && (
         <PaletteDialog
           inputRef={search}
@@ -1125,6 +1517,7 @@ function Workspace({ persistence, loaded }) {
           message={asking.message}
           confirmLabel={asking.confirmLabel}
           cancelLabel={asking.cancelLabel}
+          dismissLabel={asking.dismissLabel}
           single={asking.single}
           onAnswer={answer}
         />

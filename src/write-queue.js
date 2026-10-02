@@ -3,7 +3,8 @@
  * in flight, so a slow disk neither delays typing nor writes an older document
  * after a newer one.
  */
-export function createWriteQueue(save, onResult = () => {}) {
+export function createWriteQueue(save, onResult = () => {}, onBusy = () => {}) {
+  let lastResult
   let pending = null
   let scheduled = false
   let tail = Promise.resolve()
@@ -21,7 +22,9 @@ export function createWriteQueue(save, onResult = () => {}) {
       } catch (cause) {
         error = cause instanceof Error ? cause.message : 'Storage is unavailable'
       }
+      lastResult = error
       onResult(error)
+      if (pending === null && !scheduled) onBusy(false)
     })
     return tail
   }
@@ -29,10 +32,16 @@ export function createWriteQueue(save, onResult = () => {}) {
   return {
     write(document) {
       pending = document
+      onBusy(true)
       return schedule()
     },
-    whenIdle() {
-      return tail
+    async whenIdle() {
+      let observed
+      do {
+        observed = tail
+        await observed
+      } while (observed !== tail)
+      return lastResult
     },
   }
 }

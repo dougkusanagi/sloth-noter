@@ -68,3 +68,16 @@ test('whenIdle resolves when nothing was requested', async () => {
   await queue.whenIdle()
   assert.equal(typeof queue.write, 'function')
 })
+
+test('idle waits for subsequent writes and exposes a failed save', async () => {
+  const busy = []
+  const queue = createWriteQueue(
+    async (document) => (document === 'bad' ? 'disk full' : undefined),
+    () => {},
+    (value) => busy.push(value),
+  )
+  queue.write('good')
+  queue.write('bad')
+  assert.equal(await queue.whenIdle(), 'disk full')
+  assert.equal(busy.at(-1), false)
+})

@@ -1,5 +1,11 @@
 export function isDiscardableEmptyNote(note) {
-  return note?.body === '' && note.revision === 0 && /^new note(?: \(\d+\))?\.md$/i.test(note.name)
+  return (
+    (note?.body === '' ||
+      note?.body === '# ' ||
+      note?.body === `# ${note?.name.replace(/\.md$/i, '')}`) &&
+    note.revision === 0 &&
+    /^new note(?: \(\d+\))?\.md$/i.test(note.name)
+  )
 }
 
 export function uniqueName(notes, proposed) {

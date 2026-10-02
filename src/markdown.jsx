@@ -1,8 +1,10 @@
-import React from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { t } from './i18n.js'
 import { codeTokens } from './syntax-highlight.js'
-import { tableGroup } from './markdown-table.js'
-import { inlineSyntax } from './live-markdown.js'
+import { remarkWikiLinks, findNote } from './markdown-model.js'
+import { resolveImage } from './images.js'
 
 function highlightedCode(tokens) {
   return tokens.map((token, index) =>
@@ -15,176 +17,138 @@ function highlightedCode(tokens) {
     ),
   )
 }
-
 export function safeHref(value) {
   const href = value.trim()
   if (/^(https?:|mailto:)/i.test(href) || /^(#|\/|\.\/|\.\.\/)/.test(href)) return href
   return null
 }
-
-export function Inline({ text }) {
-  const tokens = inlineSyntax(text)
-  function render(from, to) {
-    const pieces = []
-    let cursor = from
-    for (const token of tokens) {
-      if (token.start < cursor || token.end > to || token.start < from) continue
-      if (token.start > cursor) pieces.push(text.slice(cursor, token.start))
-      const content =
-        token.kind === 'code' || token.kind === 'tag'
-          ? text.slice(token.contentStart, token.contentEnd)
-          : render(token.contentStart, token.contentEnd)
-      if (token.kind === 'strong') pieces.push(<strong key={token.start}>{content}</strong>)
-      else if (token.kind === 'em') pieces.push(<em key={token.start}>{content}</em>)
-      else if (token.kind === 'code') pieces.push(<code key={token.start}>{content}</code>)
-      else if (token.kind === 'tag')
-        pieces.push(
-          <span key={token.start} className="markdown-tag">
-            {content}
-          </span>,
-        )
-      else if (token.kind === 'link') {
-        const href = safeHref(text.slice(token.contentEnd + 2, token.end - 1))
-        pieces.push(
-          href ? (
-            <a key={token.start} href={href} target="_blank" rel="noopener noreferrer">
-              {content}
-            </a>
-          ) : (
-            text.slice(token.start, token.end)
-          ),
-        )
-      }
-      cursor = token.end
+function Image({ src, alt, title }) {
+  const [resolved, setResolved] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    setResolved(null)
+    resolveImage(src)
+      .then((url) => {
+        if (!cancelled) setResolved(url)
+      })
+      .catch(() => {
+        if (!cancelled) setResolved(null)
+      })
+    return () => {
+      cancelled = true
     }
-    if (cursor < to) pieces.push(text.slice(cursor, to))
-    return pieces
-  }
-  return render(0, text.length)
+  }, [src])
+  return resolved ? (
+    <img
+      src={resolved}
+      alt={alt ?? ''}
+      title={title}
+      loading="lazy"
+      onError={() => setResolved(null)}
+    />
+  ) : (
+    <span className="image-missing">{alt || t('images.unavailable')}</span>
+  )
 }
 
-export function Markdown({ text, onCopy }) {
-  const lines = text.split('\n')
-  const blocks = []
-  let index = 0
-  const add = (element) => blocks.push(React.cloneElement(element, { key: blocks.length }))
-  while (index < lines.length) {
-    const line = lines[index]
-    if (!line.trim()) {
-      index++
-      continue
-    }
-    const fence = line.match(/^```(.*)$/)
-    if (fence) {
-      index++
-      const code = []
-      while (index < lines.length && !lines[index].startsWith('```')) code.push(lines[index++])
-      if (index < lines.length) index++
-      const source = code.join('\n')
-      add(
-        <pre>
-          <code>{highlightedCode(codeTokens(source, fence[1].trim()))}</code>
-          <button className="copy-code" onClick={() => onCopy(source)}>
-            {t('code.copy')}
-          </button>
-        </pre>,
-      )
-      continue
-    }
-    const heading = line.match(/^(#{1,4}) (.*)$/)
-    if (heading) {
-      const content = <Inline text={heading[2]} />
-      add(
-        heading[1].length === 1 ? (
-          <h1>{content}</h1>
-        ) : heading[1].length === 2 ? (
-          <h2>{content}</h2>
-        ) : heading[1].length === 3 ? (
-          <h3>{content}</h3>
-        ) : (
-          <h4>{content}</h4>
-        ),
-      )
-      index++
-      continue
-    }
-    const table = tableGroup(lines, index)
-    if (table) {
-      add(
-        <table>
-          <thead>
-            <tr>
-              {table.headers.map((cell, i) => (
-                <th key={i}>
-                  <Inline text={cell} />
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {table.rows.map((row, i) => (
-              <tr key={i}>
-                {table.headers.map((_, j) => (
-                  <td key={j}>
-                    <Inline text={row[j] ?? ''} />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>,
-      )
-      index = table.end
-      continue
-    }
-    const list = line.match(/^([-*+] |\d+\. )/)
-    if (list) {
-      const ordered = /^\d/.test(list[1])
-      const items = []
-      while (index < lines.length && (ordered ? /^\d+\. / : /^[-*+] /).test(lines[index])) {
-        items.push(
-          <li key={items.length}>
-            <Inline text={lines[index].replace(ordered ? /^\d+\. / : /^[-*+] /, '')} />
-          </li>,
-        )
-        index++
-      }
-      add(ordered ? <ol>{items}</ol> : <ul>{items}</ul>)
-      continue
-    }
-    if (line.startsWith('> ')) {
-      const quote = []
-      while (index < lines.length && lines[index].startsWith('> '))
-        quote.push(lines[index++].slice(2))
-      add(
-        <blockquote>
-          {quote.map((part, i) => (
-            <p key={i}>
-              <Inline text={part} />
-            </p>
-          ))}
-        </blockquote>,
-      )
-      continue
-    }
-    const paragraph = []
-    while (
-      index < lines.length &&
-      lines[index].trim() &&
-      !/^(#{1,4} |```|[-*+] |\d+\. |> )/.test(lines[index])
-    )
-      paragraph.push(lines[index++])
-    if (!paragraph.length) paragraph.push(lines[index++])
-    add(
-      <p>
-        {paragraph.map((part, i) => (
-          <React.Fragment key={i}>
-            {i > 0 && <br />}
-            <Inline text={part} />
-          </React.Fragment>
-        ))}
-      </p>,
+const MarkdownContext = createContext({})
+function Link({ children, href, title }) {
+  const { onOpenWiki, notes } = useContext(MarkdownContext)
+  if (href?.startsWith('#sloth-note/')) {
+    const target = decodeURIComponent(href.slice(12))
+    const exists = findNote(notes ?? [], target)
+    return (
+      <a
+        href={href}
+        className={`wiki-link${exists ? '' : ' missing'}`}
+        title={target}
+        onClick={(event) => {
+          event.preventDefault()
+          onOpenWiki?.(target)
+        }}
+      >
+        {children}
+      </a>
     )
   }
-  return <article className="markdown">{blocks}</article>
+  return (
+    <a
+      href={href}
+      title={title}
+      target={href?.startsWith('#') ? undefined : '_blank'}
+      rel="noopener noreferrer"
+    >
+      {children}
+    </a>
+  )
+}
+function taskInput(node) {
+  if (node.tagName === 'input') return node
+  for (const child of node.children ?? []) {
+    const input = taskInput(child)
+    if (input) return input
+  }
+  return null
+}
+function ListItem({ children, className, node }) {
+  const { text, onChange } = useContext(MarkdownContext)
+  const task = className?.includes('task-list-item')
+  const checked = task ? Boolean(taskInput(node)?.properties.checked) : false
+  const toggle = () => {
+    const offset = node.position.start.offset
+    const match = text.slice(offset).match(/^([-*+]\s+|\d+[.)]\s+)\[([ xX])\]/)
+    if (match && onChange) {
+      const at = offset + match[1].length + 1
+      onChange(text.slice(0, at) + (checked ? ' ' : 'x') + text.slice(at + 1))
+    }
+  }
+  return (
+    <li className={className}>
+      {task && (
+        <input
+          type="checkbox"
+          className="task-checkbox"
+          checked={checked}
+          disabled={!onChange}
+          aria-label={t(checked ? 'task.complete' : 'task.open')}
+          onChange={toggle}
+        />
+      )}
+      {children}
+    </li>
+  )
+}
+function CodeBlock({ children }) {
+  const { onCopy } = useContext(MarkdownContext)
+  const child = React.Children.toArray(children)[0]
+  const source = String(child?.props?.children ?? '').replace(/\n$/, '')
+  const language = child?.props?.className?.replace('language-', '') ?? ''
+  return (
+    <pre>
+      <code>{highlightedCode(codeTokens(source, language))}</code>
+      <button className="copy-code" onClick={() => onCopy?.(source)}>
+        {t('code.copy')}
+      </button>
+    </pre>
+  )
+}
+const components = { img: Image, a: Link, li: ListItem, input: () => null, pre: CodeBlock }
+export function Markdown({ text, onCopy, onChange, onOpenWiki, notes }) {
+  return (
+    <MarkdownContext.Provider value={{ text, onCopy, onChange, onOpenWiki, notes }}>
+      <article className="markdown">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkWikiLinks]}
+          urlTransform={(url, key) =>
+            key === 'src' && /^data:image\/(png|jpeg|gif|webp|avif|bmp);base64,/i.test(url)
+              ? url
+              : defaultUrlTransform(url)
+          }
+          components={components}
+        >
+          {text}
+        </ReactMarkdown>
+      </article>
+    </MarkdownContext.Provider>
+  )
 }

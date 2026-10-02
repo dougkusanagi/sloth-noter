@@ -1,3 +1,6 @@
+import { ImageInsert } from './components/image-insert.jsx'
+import { ensureTitle, mandatoryTitle } from './title.js'
+import { inlineSyntax } from './live-markdown.js'
 import { liveMarkdown } from './editor/live-decorations.js'
 import {
   insertTableColumnAt,
@@ -21,6 +24,7 @@ import {
   ArrowDownToLine,
   ArrowRightToLine,
   CodeXml,
+  ImagePlus,
   Heading1,
   Heading2,
   Heading3,
@@ -53,6 +57,7 @@ const blockButtons = [
   ['numbered', 'block.numbered'],
   ['table', 'block.table'],
   ['code', 'block.code'],
+  ['image', 'block.image'],
 ]
 
 function TableMenuIcon({ kind }) {
@@ -72,6 +77,7 @@ const blockIcons = {
   numbered: ListOrdered,
   table: TableIcon,
   code: CodeXml,
+  image: ImagePlus,
 }
 
 function BlockIcon({ action }) {
@@ -80,7 +86,16 @@ function BlockIcon({ action }) {
   return <Icon className="block-icon" aria-hidden="true" />
 }
 
-export function VisualEditor({ noteId, body, onChange, onReady }) {
+export function VisualEditor({
+  noteId,
+  body,
+  onChange,
+  onReady,
+  onOpenWiki,
+  onImageFiles,
+  onImageUrl,
+  imageBusy,
+}) {
   const host = useRef(null),
     viewRef = useRef(null),
     syncing = useRef(false)
@@ -88,13 +103,14 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
   const [insertAt, setInsertAt] = useState(null)
   const [blockMenu, setBlockMenu] = useState(false)
   const [tableMenu, setTableMenu] = useState(null)
+  const [imagePanel, setImagePanel] = useState(null)
   const blockMenuRef = useRef(false)
-  blockMenuRef.current = blockMenu
+  blockMenuRef.current = blockMenu || Boolean(imagePanel)
   const [linkEditing, setLinkEditing] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const linkInput = useRef(null)
-  const callbacks = useRef({ onChange, onReady })
-  callbacks.current = { onChange, onReady }
+  const callbacks = useRef({ onChange, onReady, onOpenWiki, onImageFiles, onImageUrl, imageBusy })
+  callbacks.current = { onChange, onReady, onOpenWiki }
 
   function positionToolbar(view) {
     const selection = view.state.selection.main
@@ -123,24 +139,23 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
     })
   }
 
-  function positionInsert(view, position = view.state.selection.main.head) {
+  function positionInsert(view) {
     if (blockMenuRef.current) return
-    if (!view.state.selection.main.empty) {
-      setInsertAt(null)
-      setBlockMenu(false)
-      return
-    }
-    const line = view.state.doc.lineAt(position)
-    if (line.text.trim()) {
-      if (!blockMenuRef.current) setInsertAt(null)
-      return
-    }
-    const coords = view.coordsAtPos(line.from)
-    if (!coords || coords.top < 48 || coords.top > window.innerHeight) {
-      if (!blockMenuRef.current) setInsertAt(null)
-      return
-    }
-    setInsertAt({ from: line.from, x: Math.max(5, coords.left - 34), y: coords.top })
+    view.requestMeasure({
+      key: 'insert-trigger',
+      read: () => {
+        if (!view.hasFocus || !view.state.selection.main.empty) return null
+        const line = view.state.doc.lineAt(view.state.selection.main.head)
+        if (line.text.trim()) return null
+        const coords = view.coordsAtPos(line.from)
+        if (!coords || coords.top < 48 || coords.top > window.innerHeight) return null
+        return { from: line.from, x: Math.max(5, coords.left - 34), y: coords.top }
+      },
+      write: (position) => {
+        if (blockMenuRef.current) return
+        setInsertAt(position)
+      },
+    })
   }
 
   function insertBlock(action) {
@@ -245,8 +260,10 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
   useEffect(() => {
     const view = new EditorView({
       state: EditorState.create({
-        doc: body,
+        doc: ensureTitle(body),
+        selection: { anchor: 2 },
         extensions: [
+          mandatoryTitle,
           history(),
           keymap.of([
             { key: 'Enter', run: (view) => moveTable(view, 'enter') },
@@ -273,7 +290,23 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
             spellcheck: 'false',
           }),
           EditorView.domEventHandlers({
-            keydown: wrapSelectedText,
+            keydown: (event, view) => {
+              if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                const line = view.state.doc.lineAt(view.state.selection.main.head)
+                const token = inlineSyntax(line.text).find(
+                  (token) =>
+                    token.kind === 'wiki' &&
+                    line.from + token.start <= view.state.selection.main.head &&
+                    line.from + token.end >= view.state.selection.main.head,
+                )
+                if (token) {
+                  event.preventDefault()
+                  callbacks.current.onOpenWiki?.(token.target)
+                  return true
+                }
+              }
+              return wrapSelectedText(event, view)
+            },
             paste: (event, view) => {
               const selection = view.state.selection.main
               const pasted = event.clipboardData?.getData('text/plain')
@@ -297,6 +330,13 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
                 const from = Number(cell.dataset.cellFrom)
                 view.focus()
                 view.dispatch({ selection: EditorSelection.single(from), scrollIntoView: true })
+                return true
+              }
+              const wiki = event.target.closest?.('[data-wiki]')
+              if (wiki) {
+                event.preventDefault()
+                event.stopPropagation()
+                callbacks.current.onOpenWiki?.(wiki.dataset.wiki)
                 return true
               }
               const link = event.target.closest?.('.cm-md-inline-link')
@@ -368,13 +408,6 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
               }
               return false
             },
-            mousemove: (event, view) => {
-              if (!blockMenuRef.current) {
-                const pos = view.posAtCoords({ x: event.clientX, y: event.clientY })
-                if (pos !== null) positionInsert(view, pos)
-              }
-              return false
-            },
           }),
           liveMarkdown,
           EditorView.updateListener.of((update) => {
@@ -403,15 +436,20 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
       view.focus()
       view.dispatch({ selection: EditorSelection.single(position) })
     }
-    view.scrollDOM.addEventListener('scroll', () => {
+    const reposition = () => {
       positionToolbar(view)
       positionInsert(view)
-    })
+    }
+    // Both the document and editor can scroll; the trigger uses viewport coordinates.
+    window.addEventListener('scroll', reposition, true)
+    window.addEventListener('resize', reposition)
     view.scrollDOM.addEventListener('mousedown', focusBlankArea)
     callbacks.current.onReady(view)
     return () => {
       callbacks.current.onReady(null)
       viewRef.current = null
+      window.removeEventListener('scroll', reposition, true)
+      window.removeEventListener('resize', reposition)
       view.scrollDOM.removeEventListener('mousedown', focusBlankArea)
       view.destroy()
     }
@@ -553,7 +591,13 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
                   key={action}
                   type="button"
                   role="menuitem"
-                  onClick={() => insertBlock(action)}
+                  onClick={() => {
+                    if (action === 'image') {
+                      const selection = viewRef.current.state.selection.main
+                      setImagePanel({ from: selection.from, to: selection.to })
+                      setBlockMenu(false)
+                    } else insertBlock(action)
+                  }}
                 >
                   <BlockIcon action={action} />
                   <span>{t(label)}</span>
@@ -562,6 +606,28 @@ export function VisualEditor({ noteId, body, onChange, onReady }) {
             </div>
           )}
         </>
+      )}
+      {imagePanel && (
+        <ImageInsert
+          position={{
+            left: Math.min(
+              insertAt?.x ?? 20,
+              window.innerWidth - Math.min(320, window.innerWidth - 24) - 12,
+            ),
+            top: Math.max(52, Math.min((insertAt?.y ?? 80) + 30, window.innerHeight - 320)),
+          }}
+          busy={imageBusy}
+          onFiles={(files) => onImageFiles(files, imagePanel)}
+          onUrl={(url) => onImageUrl(url, imagePanel)}
+          onClose={() => {
+            setImagePanel(null)
+            setInsertAt(null)
+            viewRef.current?.focus()
+            requestAnimationFrame(() => {
+              if (viewRef.current) positionInsert(viewRef.current)
+            })
+          }}
+        />
       )}
       {tableMenu && (
         <div

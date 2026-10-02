@@ -17,3 +17,16 @@ test('leaves middle of lines and fenced code alone', () => {
   assert.equal(continueBlock('- item', 3), null)
   assert.equal(continueBlock('```\n- item\n```', 10), null)
 })
+
+test('completed tasks continue with an unchecked task and an empty task exits the list', () => {
+  const body = '  - [x] feito'
+  assert.equal(continueBlock(body, body.length).insert, '\n  - [ ] ')
+  assert.equal(continueBlock('- [ ] ', 6).insert, '')
+})
+
+test('task continuation leaves tilde fences and indented code unchanged', () => {
+  const fenced = '~~~\n- [ ] literal\n~~~'
+  assert.equal(continueBlock(fenced, fenced.indexOf('\n~~~')), null)
+  const indented = '    - [ ] literal'
+  assert.equal(continueBlock(indented, indented.length), null)
+})

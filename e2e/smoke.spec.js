@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('a fresh install opens the welcome note', async ({ page }) => {
-  await expect(page.getByRole('button', { name: 'Welcome.md' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Welcome.md', exact: true })).toBeVisible()
 })
 
 test('typed text survives a reload', async ({ page }) => {
@@ -30,8 +30,9 @@ test('a new note is named after its first H1', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu principal' }).click()
   await page.getByRole('menuitem', { name: /Nova nota/ }).click()
   await editor(page).click()
-  await page.keyboard.type('# Diário')
-  await expect(page.getByRole('button', { name: 'Diário.md' })).toBeVisible()
+  await page.keyboard.press('Control+a')
+  await page.keyboard.type('Diário')
+  await expect(page.getByRole('button', { name: 'Diário.md', exact: true })).toBeVisible()
 })
 
 test('find in note reports matches and closes with Escape', async ({ page }) => {
@@ -53,7 +54,7 @@ test('the note palette opens another note with the keyboard', async ({ page }) =
   await dialog.getByLabel('Buscar notas').fill('Welcome')
   await page.keyboard.press('Enter')
   await expect(dialog).toBeHidden()
-  await expect(page.getByRole('button', { name: 'Welcome.md' })).toHaveClass(/active/)
+  await expect(page.getByRole('button', { name: 'Welcome.md', exact: true })).toHaveClass(/active/)
 })
 
 test('a deleted note goes to the trash and can be restored', async ({ page }) => {
@@ -65,7 +66,7 @@ test('a deleted note goes to the trash and can be restored', async ({ page }) =>
   const trash = page.getByRole('dialog', { name: 'Lixeira' })
   await trash.getByRole('button', { name: 'Restaurar' }).click()
   await expect(trash).toBeHidden()
-  await expect(page.getByRole('button', { name: 'Welcome.md' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Welcome.md', exact: true })).toBeVisible()
 })
 
 test('renaming uses an in-app dialog and the tab follows', async ({ page }) => {
@@ -75,7 +76,7 @@ test('renaming uses an in-app dialog and the tab follows', async ({ page }) => {
   await dialog.getByRole('textbox').fill('Ideias')
   await page.keyboard.press('Enter')
   await expect(dialog).toBeHidden()
-  await expect(page.getByRole('button', { name: 'Ideias.md' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Ideias.md', exact: true })).toBeVisible()
 })
 
 test('the language can be switched to English and is remembered', async ({ page }) => {

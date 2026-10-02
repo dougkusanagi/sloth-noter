@@ -106,6 +106,17 @@ export function validateDocument(value) {
     throw new Error('Invalid active note')
   if ((value.openIds.length === 0) !== (value.activeId === null))
     throw new Error('Invalid active note')
+  if (value.assets !== undefined) {
+    if (
+      !Array.isArray(value.assets) ||
+      new Set(value.assets.map((image) => image.src)).size !== value.assets.length ||
+      value.assets.some(
+        (image) =>
+          !image || typeof image.name !== 'string' || typeof image.src !== 'string' || !image.src,
+      )
+    )
+      throw new Error('Invalid image library')
+  }
   const prefs = value.preferences
   if (
     !prefs ||

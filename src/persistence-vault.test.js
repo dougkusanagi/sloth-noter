@@ -35,6 +35,17 @@ function fakeHost({ files = {}, aux = null, chosen = '/notes', state = null } = 
     }
     if (command === 'read_state') return host.state
     if (command === 'vault_choose') return host.chosen
+    if (command === 'vault_activate') {
+      if (args.document) {
+        const document = JSON.parse(args.document)
+        for (const note of document.notes)
+          if (host.files.has(note.name) && host.files.get(note.name) !== note.body)
+            throw new Error('A different file already exists')
+        for (const note of document.notes) host.files.set(note.name, note.body)
+      }
+      host.vault = host.chosen
+      return null
+    }
     if (command === 'vault_status')
       return { path: host.vault, available: host.vault !== null && !host.missing }
     if (command === 'vault_apply') {
@@ -174,11 +185,14 @@ test('connecting an empty folder offers to copy the current notes, only once acc
   assert.equal(accepted.files.get('Welcome.md'), newDocument().notes[0].body)
 })
 
-test('connecting a folder that already has notes never copies over them', async () => {
+test('opening an existing folder keeps its notes without copying', async () => {
   const host = fakeHost({ files: { 'x.md': 'X' }, state: JSON.stringify(newDocument()) })
   let asked = false
-  await connectVault(host.invoke, () => (asked = true))
-  assert.equal(asked, false)
+  await connectVault(host.invoke, async () => {
+    asked = true
+    return false
+  })
+  assert.equal(asked, true)
   assert.deepEqual([...host.files.keys()], ['x.md'])
 })
 
@@ -296,4 +310,32 @@ test('restoring a backup replaces same-named files and never deletes the others'
   }
   assert.equal(await persistence.save(backup), null)
   assert.deepEqual(Object.fromEntries(host.files), { 'a.md': 'A do backup', 'b.md': 'B' })
+})
+
+test('an asynchronous decline is awaited before activation', async () => {
+  const host = fakeHost({ state: JSON.stringify(newDocument()) })
+  await connectVault(host.invoke, async () => {
+    await Promise.resolve()
+    return false
+  })
+  assert.equal(host.files.size, 0)
+  assert.equal(host.calls.at(-1), 'vault_activate')
+})
+test('copying uses the current workspace and retains the old folder on conflict', async () => {
+  const document = newDocument()
+  document.notes[0].body = 'Latest text from the current vault'
+  const host = fakeHost({ files: { 'Welcome.md': 'Existing text' }, chosen: '/new' })
+  await assert.rejects(
+    connectVault(host.invoke, async () => true, document),
+    /different file/,
+  )
+  assert.equal(host.vault, '/notes')
+  assert.equal(host.files.get('Welcome.md'), 'Existing text')
+})
+
+test('cancelling the copy choice leaves the active folder untouched', async () => {
+  const host = fakeHost({ chosen: '/new', state: JSON.stringify(newDocument()) })
+  assert.equal(await connectVault(host.invoke, async () => null), false)
+  assert.equal(host.vault, '/notes')
+  assert.equal(host.calls.includes('vault_activate'), false)
 })

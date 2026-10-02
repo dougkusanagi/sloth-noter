@@ -8,7 +8,7 @@ O produto final é um aplicativo desktop Tauri V2 que lê e grava arquivos `.md`
 
 - **Web:** as notas são gravadas no armazenamento do navegador a cada alteração.
 - **Desktop:** o app abre offline, sem `localStorage`. Por padrão grava um arquivo de estado versionado (`state.v3.json`) no diretório de dados do aplicativo. Em **Menu → Choose notes folder…** você escolhe uma pasta: cada nota vira um `.md` nela, e abas, preferências e lixeira ficam no diretório de dados do app. Alterações feitas por fora na pasta são importadas automaticamente. Veja o [roteiro](docs/ROADMAP.md) para o que falta.
-- **Em ambos:** falhas de gravação aparecem em um alerta; há importação/exportação `.md`, backup completo `.json`, lixeira persistente e renomeação. Faça exportações para manter uma cópia fora do aplicativo.
+- **Em ambos:** falhas de gravação aparecem em um alerta; há importação/exportação `.md`, backup completo `.json` com imagens locais, lixeira persistente e renomeação. Links `[[Nota]]` conectam documentos; a biblioteca de imagens oferece busca, renomeação e exclusão de arquivos sem uso. Faça exportações para manter uma cópia fora do aplicativo.
 
 Detalhes de comportamento, atalhos e limites do Markdown: [docs/RECURSOS.md](docs/RECURSOS.md).
 
@@ -18,12 +18,12 @@ Requisitos: [Bun](https://bun.sh) 1.4, Node.js 24 (executa os testes) e, para o 
 
 ```sh
 bun install
-bun run dev            # site em http://localhost:5173
+bun run dev            # site: porta 5173 ou próxima livre
 bun run test           # testes de domínio (Node)
 bun run e2e            # Playwright: fluxos principais e acessibilidade (axe); 1ª vez: bunx playwright install chromium
 bun run lint           # ESLint; `bun run format` aplica o Prettier
 bun run build          # gera dist/, sem exigir Rust
-bun run desktop:dev    # janela Tauri
+bun run desktop:dev    # Vite em porta livre + janela Tauri no mesmo endereço
 bun run desktop:test   # testes Rust do armazenamento nativo
 ```
 

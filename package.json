@@ -6,11 +6,11 @@
   "type": "module",
   "packageManager": "bun@1.4.2",
   "scripts": {
-    "dev": "vite --port 5173 --strictPort",
+    "dev": "vite --port 5173",
     "build": "vite build",
     "test": "node --test src/*.test.js",
     "preview": "vite preview",
-    "desktop:dev": "tauri dev",
+    "desktop:dev": "bun scripts/desktop-dev.mjs",
     "desktop:build": "tauri build",
     "desktop:test": "cargo test --manifest-path src-tauri/Cargo.toml",
     "desktop:check": "cargo check --manifest-path src-tauri/Cargo.toml",
@@ -29,7 +29,11 @@
     "lucide-react": "^1.48.0",
     "prismjs": "^1.30.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

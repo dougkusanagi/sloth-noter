@@ -1,9 +1,10 @@
 import { Decoration } from '@codemirror/view'
 import { inlineSyntax } from '../live-markdown.js'
 import { safeHref } from '../markdown.jsx'
+import { t } from '../i18n.js'
 
 export function addInlineRangeDecorations(ranges, line, from, to, editing) {
-  for (const token of inlineSyntax(line.text.slice(from, to))) {
+  for (const token of inlineSyntax(line.text.slice(from, to), line.definitions ?? '')) {
     const start = line.from + from + token.start,
       end = line.from + from + token.end
     const contentStart = line.from + from + token.contentStart,
@@ -12,8 +13,16 @@ export function addInlineRangeDecorations(ranges, line, from, to, editing) {
       if (start < contentStart) ranges.push(Decoration.replace({}).range(start, contentStart))
       if (contentEnd < end) ranges.push(Decoration.replace({}).range(contentEnd, end))
     }
-    if (token.kind === 'link') {
-      const href = safeHref(line.text.slice(from + token.contentEnd + 2, from + token.end - 1))
+    if (contentEnd <= contentStart) continue
+    if (token.kind === 'wiki') {
+      ranges.push(
+        Decoration.mark({
+          class: 'cm-md-inline-link cm-md-wiki',
+          attributes: { 'data-wiki': token.target, title: t('wiki.open', { name: token.label }) },
+        }).range(contentStart, contentEnd),
+      )
+    } else if (token.kind === 'link') {
+      const href = safeHref(token.href ?? '')
       ranges.push(
         Decoration.mark({
           class: 'cm-md-inline-link',

@@ -1,3 +1,4 @@
+import { ensureDocumentTitles } from './title.js'
 import { reconcileHeadingNames } from './notes.js'
 
 /**
@@ -8,7 +9,8 @@ import { reconcileHeadingNames } from './notes.js'
 export async function openWorkspace(persistence) {
   const loaded = await persistence.load()
   if (loaded.blocked) return loaded
-  const document = reconcileHeadingNames(loaded.document)
+  const normalized = ensureDocumentTitles(loaded.document)
+  const document = reconcileHeadingNames(normalized)
   if (document === loaded.document) return loaded
   return { ...loaded, document, error: await persistence.save(document) }
 }

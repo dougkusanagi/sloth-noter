@@ -1,3 +1,5 @@
+import { SHORTCUTS } from '../shortcuts.js'
+import { Shortcut } from './main-menu.jsx'
 // Modal dialogs of the workspace. State lives in the parent; these only render and handle keys.
 import { useEffect, useRef } from 'react'
 import { t } from '../i18n.js'
@@ -181,9 +183,20 @@ export function FindDialog({ inputRef, query, matchCount, onQuery, onStep, onClo
 }
 
 /** In-app replacement for window.confirm/alert, which webviews do not reliably provide. */
-export function ConfirmDialog({ message, confirmLabel, cancelLabel, single, onAnswer }) {
+export function ConfirmDialog({
+  message,
+  confirmLabel,
+  cancelLabel,
+  dismissLabel,
+  single,
+  onAnswer,
+}) {
   return (
-    <Modal label={message} className="conflict" onEscape={() => onAnswer(false)}>
+    <Modal
+      label={message}
+      className="conflict"
+      onEscape={() => onAnswer(dismissLabel ? null : false)}
+    >
       <p>{message}</p>
       <button autoFocus onClick={() => onAnswer(true)}>
         {confirmLabel ?? t('dialog.ok')}
@@ -191,6 +204,7 @@ export function ConfirmDialog({ message, confirmLabel, cancelLabel, single, onAn
       {!single && (
         <button onClick={() => onAnswer(false)}>{cancelLabel ?? t('dialog.cancel')}</button>
       )}
+      {dismissLabel && <button onClick={() => onAnswer(null)}>{dismissLabel}</button>}
     </Modal>
   )
 }
@@ -261,6 +275,31 @@ export function FolderDialog({ path, onChoose, onUseAppStorage, onClose }) {
       </button>
       {path && <button onClick={onUseAppStorage}>{t('folder.useAppStorage')}</button>}
       <button className="dialog-close" onClick={onClose}>
+        {t('dialog.close')}
+      </button>
+    </Modal>
+  )
+}
+
+export function ShortcutsDialog({ onClose }) {
+  return (
+    <Modal
+      label={t('menu.shortcuts')}
+      className="shortcuts-dialog"
+      focusables={(dialog) => [...dialog.querySelectorAll('[tabindex="0"], button')]}
+      backdropClose={onClose}
+      onEscape={onClose}
+    >
+      <h2>{t('menu.shortcuts')}</h2>
+      <div className="shortcut-list" tabIndex={0} role="region" aria-label={t('menu.shortcuts')}>
+        {SHORTCUTS.map(([keys, label]) => (
+          <div key={keys}>
+            <span>{t(label)}</span>
+            <Shortcut keys={keys} />
+          </div>
+        ))}
+      </div>
+      <button autoFocus className="dialog-close" onClick={onClose}>
         {t('dialog.close')}
       </button>
     </Modal>

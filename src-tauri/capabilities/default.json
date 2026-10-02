@@ -1,8 +1,10 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Core APIs for the Sloth Note window. No filesystem plugin is granted: notes are read and written only by the app's own commands, inside the application data directory and the notes folder the user picked in the native dialog.",
-  "windows": ["main"],
+  "description": "Core APIs for the Sloth Note window. No filesystem plugin is granted: app commands manage notes and assets in app data or the selected notes folder, and can import only external image paths authorized by a native window drop.",
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-set-position",

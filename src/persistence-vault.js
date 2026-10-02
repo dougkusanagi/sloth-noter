@@ -69,6 +69,7 @@ export function createVaultAdapter(invoke, path) {
       const activeId = openIds.includes(aux.activeId) ? aux.activeId : (openIds.at(-1) ?? null)
       return JSON.stringify({
         version: 3,
+        ...(aux.assets ? { assets: aux.assets } : {}),
         notes,
         trash,
         openIds,
@@ -107,6 +108,7 @@ export function createVaultAdapter(invoke, path) {
       await invoke(VAULT_WRITE_AUX, {
         contents: JSON.stringify({
           version: AUX_VERSION,
+          assets: document.assets ?? [],
           ids: Object.fromEntries(document.notes.map((note) => [note.name, note.id])),
           openIds: document.openIds,
           activeId: document.activeId,
@@ -151,30 +153,25 @@ export function createVaultAdapter(invoke, path) {
 }
 
 /**
- * Lets the user pick a folder and, when it holds no notes yet, offers to copy the
- * notes from the application storage into it. Existing files are never touched.
+ * Pick a destination without activating it, then choose to open it or copy the
+ * current workspace. Native activation preflights conflicts and copies images
+ * before switching the saved path. Confirmation can be asynchronous.
  */
-export async function connectVault(invoke, confirm = () => false) {
+export async function connectVault(invoke, confirm = () => false, currentDocument = null) {
   const path = await invoke(VAULT_CHOOSE)
   if (!path) return false
-  const files = await invoke(VAULT_LIST)
-  if (files.length > 0 || (await invoke(VAULT_READ_AUX)) !== null) return true
-  const previous = await invoke('read_state')
-  let document = null
-  try {
-    document = previous === null ? null : validateDocument(JSON.parse(previous))
-  } catch {
-    document = null
+  let document = currentDocument
+  if (!document) {
+    try {
+      const previous = await invoke('read_state')
+      document = previous === null ? null : validateDocument(JSON.parse(previous))
+    } catch {
+      document = null
+    }
   }
   const count = document?.notes.length ?? 0
-  if (count > 0 && confirm(count)) {
-    const error = await createVaultAdapter(invoke, path)
-      .writeState(previous)
-      .then(
-        () => null,
-        (cause) => cause,
-      )
-    if (error) throw error
-  }
+  const copy = count > 0 && (await confirm(count))
+  if (copy === null) return false
+  await invoke('vault_activate', { document: copy ? JSON.stringify(document) : null })
   return true
 }
