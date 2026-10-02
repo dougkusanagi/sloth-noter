@@ -5,9 +5,10 @@ import { createRoot } from 'react-dom/client'
 import { Markdown } from './markdown.jsx'
 import { createFullBackup, readBackupBundle, restoreBackupImages } from './backup.js'
 import { findNote, wikiParts, renameWikiReferences } from './markdown-model.js'
+import { friendlyError } from './errors.js'
 import { MainMenu } from './components/main-menu.jsx'
+import { useTabs } from './components/tabs.jsx'
 import { ImageLibrary } from './components/image-library.jsx'
-import { moveTab, togglePinnedTab } from './tabs.js'
 import { appShortcut } from './shortcuts.js'
 import { findMatches } from './find.js'
 import {
@@ -49,17 +50,7 @@ import {
   replaceDocumentImage,
   dataUrlBytes,
 } from './images.js'
-import {
-  BookOpen,
-  Code,
-  Eye,
-  PanelLeft,
-  Pin,
-  X,
-  Plus,
-  Menu,
-  Image as ImageIcon,
-} from 'lucide-react'
+import { BookOpen, Code, Eye, PanelLeft, Plus, Menu, Image as ImageIcon } from 'lucide-react'
 import './styles.css'
 
 function download(name, body, type = 'text/markdown;charset=utf-8') {
@@ -76,17 +67,6 @@ function ModeIcon({ mode }) {
   if (mode === 'visual') return <Eye {...props} />
   if (mode === 'source') return <Code {...props} />
   return <BookOpen {...props} />
-}
-
-function Shortcut({ letter }) {
-  const modifier = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
-  return (
-    <span className="menu-shortcut" aria-label={`${modifier}+${letter}`}>
-      <kbd>{modifier}</kbd>
-      <span>+</span>
-      <kbd>{letter}</kbd>
-    </span>
-  )
 }
 
 function Opening({ failure }) {
@@ -110,8 +90,7 @@ function App() {
         if (!cancelled) setStarted(result)
       })
       .catch((cause) => {
-        if (!cancelled)
-          setFailure(cause instanceof Error ? cause.message : 'storage is unavailable')
+        if (!cancelled) setFailure(friendlyError(cause))
       })
     return () => {
       cancelled = true
@@ -152,11 +131,6 @@ function Workspace({ persistence, loaded }) {
   const [conflict, setConflict] = useState(null)
   const [trashOpen, setTrashOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [tabMenu, setTabMenu] = useState(null)
-  const tabDrag = useRef(null)
-  const suppressTabClick = useRef(false)
-  const [draggingTab, setDraggingTab] = useState(null)
-  const [tabDropIndex, setTabDropIndex] = useState(null)
   const [findOpen, setFindOpen] = useState(false)
   const [findQuery, setFindQuery] = useState('')
   const [findIndex, setFindIndex] = useState(0)
@@ -174,9 +148,6 @@ function Workspace({ persistence, loaded }) {
   const findInput = useRef(null)
   const editorRef = useRef(null)
   const visualRef = useRef(null)
-  const tabListRef = useRef(null)
-  const activeTabRef = useRef(null)
-  const tabMenuFirst = useRef(null)
   const trashFirst = useRef(null)
   const returnFocus = useRef(null)
   const active = data.notes.find((note) => note.id === data.activeId) ?? null
@@ -184,6 +155,16 @@ function Workspace({ persistence, loaded }) {
     note.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
   )
   const prefs = data.preferences
+  const { tabStrip, tabContextMenu, openTabMenu } = useTabs({
+    data,
+    current,
+    commit,
+    tabsVisible: prefs.tabsVisible,
+    open: openNote,
+    rename: renameNote,
+    close: closeTab,
+    trash: deleteNote,
+  })
   const sidebarVisible = prefs.sidebarVisible ?? !window.matchMedia('(max-width: 600px)').matches
   setLanguage(prefs.language)
   const images = useMemo(() => {
@@ -401,82 +382,6 @@ function Workspace({ persistence, loaded }) {
       activeId: old.activeId === id ? (openIds.at(-1) ?? null) : old.activeId,
     })
   }
-  function startTabDrag(event, id) {
-    if (event.button !== 0) return
-    suppressTabClick.current = false
-    tabDrag.current = { id, x: event.clientX, index: null }
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-  function moveTabDrag(event) {
-    const drag = tabDrag.current
-    if (!drag || (drag.index === null && Math.abs(event.clientX - drag.x) < 6)) return
-    suppressTabClick.current = true
-    setDraggingTab(drag.id)
-    setTabMenu(null)
-    const list = tabListRef.current
-    const box = list.getBoundingClientRect()
-    if (event.clientX < box.left + 24) list.scrollLeft -= 16
-    if (event.clientX > box.right - 24) list.scrollLeft += 16
-    const tabs = [...list.querySelectorAll('[data-tab-id]')].filter(
-      (tab) => tab.dataset.tabId !== drag.id,
-    )
-    let index = tabs.findIndex((tab) => {
-      const rect = tab.getBoundingClientRect()
-      return event.clientX < rect.left + rect.width / 2
-    })
-    if (index < 0) index = tabs.length
-    const next = moveTab(current.current, drag.id, index)
-    drag.index = next.openIds.indexOf(drag.id)
-    setTabDropIndex(drag.index)
-  }
-  function endTabDrag(event, cancelled = false) {
-    const drag = tabDrag.current
-    tabDrag.current = null
-    setDraggingTab(null)
-    setTabDropIndex(null)
-    if (event.currentTarget.hasPointerCapture(event.pointerId))
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    if (!cancelled && drag?.index !== null && drag?.index !== undefined) {
-      const next = moveTab(current.current, drag.id, drag.index)
-      if (next !== current.current) commit(next)
-    }
-  }
-  function openTabMenu(event, id) {
-    event.preventDefault()
-    event.stopPropagation()
-    setTabMenu({
-      id,
-      x: Math.max(8, Math.min(event.clientX, window.innerWidth - 230)),
-      y: Math.max(8, Math.min(event.clientY, window.innerHeight - 320)),
-    })
-  }
-  function runTabMenu(action) {
-    const menu = tabMenu
-    if (!menu || !current.current.notes.some((note) => note.id === menu.id)) return
-    setTabMenu(null)
-    if (action === 'open') openNote(menu.id)
-    if (action === 'rename') renameNote(menu.id)
-    if (action === 'pin') commit(togglePinnedTab(current.current, menu.id))
-    if (action === 'left' || action === 'right') {
-      commit(
-        moveTab(
-          current.current,
-          menu.id,
-          current.current.openIds.indexOf(menu.id) + (action === 'left' ? -1 : 1),
-        ),
-      )
-    }
-    if (action === 'close') closeTab(menu.id)
-    if (action === 'pin' || action === 'left' || action === 'right') {
-      requestAnimationFrame(() => {
-        ;[...(tabListRef.current?.querySelectorAll('[data-tab-id]') ?? [])]
-          .find((tab) => tab.dataset.tabId === menu.id)
-          ?.querySelector('.tab')
-          ?.focus()
-      })
-    }
-    if (action === 'trash') deleteNote(menu.id)
-  }
   async function renameNote(id = active?.id) {
     const note = data.notes.find((item) => item.id === id)
     if (!note) return
@@ -561,7 +466,7 @@ function Workspace({ persistence, loaded }) {
       if (existing) setConflict({ name, body, id: existing.id })
       else createNote(name, body)
     } catch (cause) {
-      setImportError(cause instanceof Error ? cause.message : t('error.readFile'))
+      setImportError(friendlyError(cause, t('error.readFile')))
     }
   }
   async function switchFolder(change) {
@@ -574,7 +479,7 @@ function Workspace({ persistence, loaded }) {
       if (failure) throw new Error(failure)
       if (await change()) window.location.reload()
     } catch (cause) {
-      setFolderError(cause instanceof Error ? cause.message : String(cause))
+      setFolderError(friendlyError(cause))
     } finally {
       setSwitching(false)
     }
@@ -839,7 +744,7 @@ function Workspace({ persistence, loaded }) {
       setFindOpen(false)
       setTrashOpen(false)
     } catch (cause) {
-      setImportError(cause instanceof Error ? cause.message : t('error.readBackup'))
+      setImportError(friendlyError(cause, t('error.readBackup')))
     }
   }
   function resolveConflict(replace) {
@@ -952,7 +857,7 @@ function Workspace({ persistence, loaded }) {
         setSyncConflicts(result.conflicts)
         setFolderError('')
       } catch (cause) {
-        setFolderError(cause instanceof Error ? cause.message : String(cause))
+        setFolderError(friendlyError(cause))
       } finally {
         running = false
       }
@@ -999,25 +904,6 @@ function Workspace({ persistence, loaded }) {
     if (trashOpen && document.activeElement === document.body) trashFirst.current?.focus()
   }, [trashOpen, data.trash.length])
   useEffect(() => {
-    const list = tabListRef.current,
-      tab = activeTabRef.current
-    if (!list || !tab) return
-    const showActiveTab = () => {
-      const listBox = list.getBoundingClientRect(),
-        tabBox = tab.getBoundingClientRect()
-      if (tabBox.left < listBox.left) list.scrollLeft += tabBox.left - listBox.left
-      else if (tabBox.right > listBox.right) list.scrollLeft += tabBox.right - listBox.right
-    }
-    showActiveTab()
-    const observer = new ResizeObserver(showActiveTab)
-    observer.observe(list)
-    window.addEventListener('resize', showActiveTab)
-    return () => {
-      observer.disconnect()
-      window.removeEventListener('resize', showActiveTab)
-    }
-  }, [data.activeId, data.openIds, prefs.tabsVisible])
-  useEffect(() => {
     if (menuOpen) menuFirst.current?.focus()
   }, [menuOpen])
   useEffect(() => {
@@ -1028,26 +914,6 @@ function Workspace({ persistence, loaded }) {
     document.addEventListener('pointerdown', onPointer)
     return () => document.removeEventListener('pointerdown', onPointer)
   }, [menuOpen])
-  useEffect(() => {
-    if (!tabMenu) return
-    const onPointer = (event) => {
-      if (!event.target.closest('.tab-context-menu')) setTabMenu(null)
-    }
-    const onKey = (event) => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        setTabMenu(null)
-      }
-    }
-    document.addEventListener('pointerdown', onPointer, true)
-    document.addEventListener('keydown', onKey, true)
-    const frame = requestAnimationFrame(() => tabMenuFirst.current?.focus())
-    return () => {
-      cancelAnimationFrame(frame)
-      document.removeEventListener('pointerdown', onPointer, true)
-      document.removeEventListener('keydown', onKey, true)
-    }
-  }, [tabMenu])
   useEffect(() => {
     const onKey = (event) => {
       if (conflict) {
@@ -1181,96 +1047,7 @@ function Workspace({ persistence, loaded }) {
             event.target.value = ''
           }}
         />
-        {prefs.tabsVisible && data.openIds.length > 0 && (
-          <nav className="tabs" aria-label={t('tabs.label')}>
-            <div className="tab-list" ref={tabListRef}>
-              {data.openIds.map((id, index) => {
-                const pinned = data.pinnedIds?.includes(id)
-                const note = data.notes.find((item) => item.id === id)
-                return (
-                  note && (
-                    <div
-                      key={id}
-                      ref={id === data.activeId ? activeTabRef : null}
-                      data-tab-id={id}
-                      className={[
-                        'tab-wrap',
-                        id === data.activeId && 'active',
-                        pinned && 'pinned',
-                        draggingTab === id && 'dragging',
-                        tabDropIndex === index &&
-                          draggingTab !== id &&
-                          (index < data.openIds.indexOf(draggingTab)
-                            ? 'drop-before'
-                            : 'drop-after'),
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    >
-                      <button
-                        title={pinned ? `${note.name} · ${t('tabs.pinned')}` : note.name}
-                        className={id === data.activeId ? 'tab active' : 'tab'}
-                        aria-haspopup="menu"
-                        aria-expanded={tabMenu?.id === id}
-                        onPointerDown={(event) => startTabDrag(event, id)}
-                        onPointerMove={moveTabDrag}
-                        onPointerUp={endTabDrag}
-                        onPointerCancel={(event) => endTabDrag(event, true)}
-                        onLostPointerCapture={(event) => {
-                          if (tabDrag.current) endTabDrag(event, true)
-                        }}
-                        onClick={() => {
-                          if (suppressTabClick.current) {
-                            suppressTabClick.current = false
-                            return
-                          }
-                          openNote(id)
-                        }}
-                        onAuxClick={(event) => {
-                          if (event.button === 1) {
-                            event.preventDefault()
-                            closeTab(id)
-                          }
-                        }}
-                        onContextMenu={(event) => openTabMenu(event, id)}
-                        onKeyDown={(event) => {
-                          if (
-                            event.key === 'ContextMenu' ||
-                            (event.shiftKey && event.key === 'F10')
-                          ) {
-                            const rect = event.currentTarget.getBoundingClientRect()
-                            event.preventDefault()
-                            setTabMenu({
-                              id,
-                              x: Math.max(8, Math.min(rect.left, window.innerWidth - 230)),
-                              y: rect.bottom,
-                            })
-                          }
-                        }}
-                        onMouseDown={(event) => {
-                          if (event.button === 1) event.preventDefault()
-                        }}
-                      >
-                        {pinned && <Pin size={12} className="tab-pin-icon" aria-hidden="true" />}
-                        <span>{note.name}</span>
-                      </button>
-                      {!pinned && (
-                        <button
-                          className="tab-close"
-                          aria-label={`${t('tabs.close')}: ${note.name}`}
-                          title={t('tabs.close')}
-                          onClick={() => closeTab(id)}
-                        >
-                          <X size={13} />
-                        </button>
-                      )}
-                    </div>
-                  )
-                )
-              })}
-            </div>
-          </nav>
-        )}
+        {tabStrip}
         <span className="save-status" role="status">
           {error ? t('save.notSaved') : saving ? t('save.saving') : t('save.saved')}
         </span>
@@ -1295,80 +1072,7 @@ function Workspace({ persistence, loaded }) {
           }}
         />
       </header>
-      {tabMenu && (
-        <div
-          className="tab-context-menu"
-          role="menu"
-          aria-label={t('tabs.menu')}
-          style={{ left: tabMenu.x, top: tabMenu.y }}
-          onKeyDown={(event) => {
-            const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')]
-            const index = buttons.indexOf(document.activeElement)
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-              event.preventDefault()
-              buttons[
-                (index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length
-              ]?.focus()
-            }
-            if (event.key === 'Home') {
-              event.preventDefault()
-              buttons[0]?.focus()
-            }
-            if (event.key === 'End') {
-              event.preventDefault()
-              buttons.at(-1)?.focus()
-            }
-            if (event.key === 'Escape') {
-              event.preventDefault()
-              setTabMenu(null)
-            }
-          }}
-        >
-          <button
-            ref={tabMenuFirst}
-            type="button"
-            role="menuitem"
-            onClick={() => runTabMenu('open')}
-          >
-            <span>{t('tabs.open')}</span>
-          </button>
-          <button type="button" role="menuitem" onClick={() => runTabMenu('rename')}>
-            <span>{t('tabs.rename')}</span>
-          </button>
-          <button type="button" role="menuitem" onClick={() => runTabMenu('pin')}>
-            <span>{t(data.pinnedIds?.includes(tabMenu.id) ? 'tabs.unpin' : 'tabs.pin')}</span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            disabled={moveTab(data, tabMenu.id, data.openIds.indexOf(tabMenu.id) - 1) === data}
-            onClick={() => runTabMenu('left')}
-          >
-            <span>{t('tabs.moveLeft')}</span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            disabled={moveTab(data, tabMenu.id, data.openIds.indexOf(tabMenu.id) + 1) === data}
-            onClick={() => runTabMenu('right')}
-          >
-            <span>{t('tabs.moveRight')}</span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            disabled={data.pinnedIds?.includes(tabMenu.id)}
-            onClick={() => runTabMenu('close')}
-          >
-            <span>{t('tabs.close')}</span>
-            <Shortcut letter="W" />
-          </button>
-          <div className="table-context-menu-separator" />
-          <button type="button" role="menuitem" onClick={() => runTabMenu('trash')}>
-            <span>{t('tabs.trash')}</span>
-          </button>
-        </div>
-      )}
+      {tabContextMenu}
       <div className="workspace-layout" inert={switching ? true : undefined}>
         {sidebarVisible && (
           <aside id="notes-sidebar" className="notes-sidebar" aria-label={t('sidebar.title')}>

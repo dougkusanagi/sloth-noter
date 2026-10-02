@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod errors;
 mod images;
 mod migration;
 mod store;
@@ -32,13 +33,14 @@ fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
 #[tauri::command]
 fn read_state(app: AppHandle) -> Result<Option<String>, String> {
     let directory = app_data_dir(&app)?;
-    store::read_state(&store::state_path(&directory)).map_err(|error| error.to_string())
+    store::read_state(&store::state_path(&directory)).map_err(|error| errors::describe(&error))
 }
 
 #[tauri::command]
 fn write_state(app: AppHandle, contents: String) -> Result<(), String> {
     let directory = app_data_dir(&app)?;
-    store::write_state(&store::state_path(&directory), &contents).map_err(|error| error.to_string())
+    store::write_state(&store::state_path(&directory), &contents)
+        .map_err(|error| errors::describe(&error))
 }
 
 #[tauri::command]
@@ -63,7 +65,7 @@ fn vault_config_path(app: &AppHandle) -> Result<PathBuf, String> {
 
 fn configured_vault(app: &AppHandle) -> Result<Option<String>, String> {
     let contents =
-        store::read_state(&vault_config_path(app)?).map_err(|error| error.to_string())?;
+        store::read_state(&vault_config_path(app)?).map_err(|error| errors::describe(&error))?;
     Ok(contents
         .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
         .and_then(|value| value.get("path")?.as_str().map(String::from)))
@@ -75,7 +77,7 @@ fn vault_root(app: &AppHandle) -> Result<PathBuf, String> {
     if root.is_dir() {
         Ok(root)
     } else {
-        Err(format!("Notes folder not found: {path}"))
+        Err(format!("[folder-missing] Notes folder not found: {path}"))
     }
 }
 
@@ -98,7 +100,7 @@ async fn vault_choose(
         return Ok(None);
     };
     let path = picked.into_path().map_err(|error| error.to_string())?;
-    let path = path.canonicalize().map_err(|e| e.to_string())?;
+    let path = path.canonicalize().map_err(|e| errors::describe(&e))?;
     *pending.0.lock().map_err(|e| e.to_string())? = Some(path.clone());
     Ok(Some(path.to_string_lossy().into_owned()))
 }
@@ -117,10 +119,14 @@ fn image_list(app: AppHandle) -> Result<Vec<String>, String> {
 #[tauri::command]
 fn image_read(app: AppHandle, name: String) -> Result<Vec<u8>, String> {
     let path = images::image_path(&image_root(&app)?, &name)?;
-    if std::fs::metadata(&path).map_err(|e| e.to_string())?.len() > 20 * 1024 * 1024 {
+    if std::fs::metadata(&path)
+        .map_err(|e| errors::describe(&e))?
+        .len()
+        > 20 * 1024 * 1024
+    {
         return Err("Image exceeds 20 MB".into());
     }
-    std::fs::read(path).map_err(|e| e.to_string())
+    std::fs::read(path).map_err(|e| errors::describe(&e))
 }
 #[tauri::command]
 fn image_write(app: AppHandle, name: String, bytes: Vec<u8>) -> Result<(), String> {
@@ -137,7 +143,7 @@ fn image_import_drop(
     dropped: tauri::State<'_, DroppedImages>,
     path: String,
 ) -> Result<String, String> {
-    let source = std::fs::canonicalize(path).map_err(|e| e.to_string())?;
+    let source = std::fs::canonicalize(path).map_err(|e| errors::describe(&e))?;
     if !dropped.0.lock().map_err(|e| e.to_string())?.remove(&source) {
         return Err("The file was not dropped into this window".into());
     }
@@ -163,7 +169,7 @@ fn image_delete(app: AppHandle, name: String) -> Result<(), String> {
     match std::fs::remove_file(path) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error.to_string()),
+        Err(error) => Err(errors::describe(&error)),
     }
 }
 
@@ -205,7 +211,7 @@ fn vault_activate(
         for name in images::list(&source)? {
             let path = images::image_path(&source, &name)?;
             images::image_path(target, &name)?;
-            files.push((name, std::fs::read(path).map_err(|e| e.to_string())?));
+            files.push((name, std::fs::read(path).map_err(|e| errors::describe(&e))?));
         }
 
         let aux = serde_json::json!({ "version": 1, "assets": value["assets"], "ids": ids, "openIds": value["openIds"], "activeId": value["activeId"], "preferences": value["preferences"], "trash": value["trash"] });
@@ -228,17 +234,17 @@ fn vault_activate(
 
 #[tauri::command]
 fn vault_disconnect(app: AppHandle) -> Result<(), String> {
-    store::remove_state(&vault_config_path(&app)?).map_err(|error| error.to_string())
+    store::remove_state(&vault_config_path(&app)?).map_err(|error| errors::describe(&error))
 }
 
 #[tauri::command]
 fn vault_list(app: AppHandle) -> Result<Vec<vault::VaultFile>, String> {
-    vault::list(&vault_root(&app)?).map_err(|error| error.to_string())
+    vault::list(&vault_root(&app)?).map_err(|error| errors::describe(&error))
 }
 
 #[tauri::command]
 fn vault_stamps(app: AppHandle) -> Result<Vec<vault::VaultStamp>, String> {
-    vault::stamps(&vault_root(&app)?).map_err(|error| error.to_string())
+    vault::stamps(&vault_root(&app)?).map_err(|error| errors::describe(&error))
 }
 
 #[tauri::command]
@@ -253,12 +259,12 @@ fn vault_aux_path(app: &AppHandle) -> Result<PathBuf, String> {
 
 #[tauri::command]
 fn vault_read_aux(app: AppHandle) -> Result<Option<String>, String> {
-    store::read_state(&vault_aux_path(&app)?).map_err(|error| error.to_string())
+    store::read_state(&vault_aux_path(&app)?).map_err(|error| errors::describe(&error))
 }
 
 #[tauri::command]
 fn vault_write_aux(app: AppHandle, contents: String) -> Result<(), String> {
-    store::write_state(&vault_aux_path(&app)?, &contents).map_err(|error| error.to_string())
+    store::write_state(&vault_aux_path(&app)?, &contents).map_err(|error| errors::describe(&error))
 }
 
 fn main() {

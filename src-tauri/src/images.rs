@@ -34,9 +34,9 @@ pub fn list(root: &Path) -> Result<Vec<String>, String> {
         if depth > 8 || !dir.exists() {
             return Ok(());
         }
-        for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
-            let entry = entry.map_err(|e| e.to_string())?;
-            let kind = entry.file_type().map_err(|e| e.to_string())?;
+        for entry in fs::read_dir(dir).map_err(|e| crate::errors::describe(&e))? {
+            let entry = entry.map_err(|e| crate::errors::describe(&e))?;
+            let kind = entry.file_type().map_err(|e| crate::errors::describe(&e))?;
             if kind.is_symlink() || entry.file_name().to_string_lossy().starts_with('.') {
                 continue;
             }
@@ -76,7 +76,7 @@ pub fn copy_files(target: &Path, files: &[(String, Vec<u8>)]) -> Result<(), Stri
             }
             ancestor = part.parent();
         }
-        if path.exists() && fs::read(&path).map_err(|e| e.to_string())? != *bytes {
+        if path.exists() && fs::read(&path).map_err(|e| crate::errors::describe(&e))? != *bytes {
             return Err(format!("A different file already exists: {name}"));
         }
     }
@@ -87,17 +87,17 @@ pub fn copy_files(target: &Path, files: &[(String, Vec<u8>)]) -> Result<(), Stri
             if path.exists() {
                 continue;
             }
-            fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
+            fs::create_dir_all(path.parent().unwrap()).map_err(|e| crate::errors::describe(&e))?;
             use std::io::Write;
             let mut file = fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
                 .open(&path)
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| crate::errors::describe(&e))?;
             created.push(path);
             file.write_all(bytes)
                 .and_then(|_| file.sync_all())
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| crate::errors::describe(&e))?;
         }
         Ok(())
     })();
@@ -110,7 +110,7 @@ pub fn copy_files(target: &Path, files: &[(String, Vec<u8>)]) -> Result<(), Stri
     Ok(())
 }
 pub fn import_dropped(root: &Path, source: &Path) -> Result<String, String> {
-    let metadata = fs::metadata(source).map_err(|e| e.to_string())?;
+    let metadata = fs::metadata(source).map_err(|e| crate::errors::describe(&e))?;
     if !metadata.is_file() || metadata.len() > 20 * 1024 * 1024 {
         return Err("Invalid image size or file".into());
     }
@@ -134,7 +134,7 @@ pub fn import_dropped(root: &Path, source: &Path) -> Result<String, String> {
         .as_nanos();
     let name = format!("assets/{id:x}-{readable}");
     image_path(root, &name)?;
-    let bytes = fs::read(source).map_err(|e| e.to_string())?;
+    let bytes = fs::read(source).map_err(|e| crate::errors::describe(&e))?;
     let valid = bytes.starts_with(b"\x89PNG\r\n\x1a\n")
         || bytes.starts_with(b"\xff\xd8\xff")
         || bytes.starts_with(b"GIF87a")

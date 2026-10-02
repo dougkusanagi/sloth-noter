@@ -32,9 +32,19 @@ pub struct VaultStamp {
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum VaultOp {
     /// `expected` is the content last seen; `None` means the file must not exist yet.
-    Write { name: String, contents: String, expected: Option<String> },
-    Rename { from: String, to: String },
-    Remove { name: String, expected: String },
+    Write {
+        name: String,
+        contents: String,
+        expected: Option<String>,
+    },
+    Rename {
+        from: String,
+        to: String,
+    },
+    Remove {
+        name: String,
+        expected: String,
+    },
 }
 
 pub fn valid_name(name: &str) -> bool {
@@ -68,7 +78,9 @@ pub fn list(root: &Path) -> io::Result<Vec<VaultFile>> {
     let mut files = Vec::new();
     for entry in fs::read_dir(root)? {
         let entry = entry?;
-        let Ok(name) = entry.file_name().into_string() else { continue };
+        let Ok(name) = entry.file_name().into_string() else {
+            continue;
+        };
         if !valid_name(&name) || !entry.file_type()?.is_file() {
             continue;
         }
@@ -84,7 +96,9 @@ pub fn stamps(root: &Path) -> io::Result<Vec<VaultStamp>> {
     let mut stamps = Vec::new();
     for entry in fs::read_dir(root)? {
         let entry = entry?;
-        let Ok(name) = entry.file_name().into_string() else { continue };
+        let Ok(name) = entry.file_name().into_string() else {
+            continue;
+        };
         if !valid_name(&name) || !entry.file_type()?.is_file() {
             continue;
         }
@@ -94,7 +108,11 @@ pub fn stamps(root: &Path) -> io::Result<Vec<VaultStamp>> {
             .ok()
             .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
             .map_or(0, |elapsed| elapsed.as_millis());
-        stamps.push(VaultStamp { name, len: metadata.len(), modified_ms });
+        stamps.push(VaultStamp {
+            name,
+            len: metadata.len(),
+            modified_ms,
+        });
     }
     stamps.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(stamps)
@@ -105,9 +123,13 @@ fn changed_outside(name: &str) -> String {
 }
 
 pub fn apply(root: &Path, op: &VaultOp) -> Result<(), String> {
-    let failed = |error: io::Error| error.to_string();
+    let failed = |error: io::Error| crate::errors::describe(&error);
     match op {
-        VaultOp::Write { name, contents, expected } => {
+        VaultOp::Write {
+            name,
+            contents,
+            expected,
+        } => {
             let path = root.join(checked(name)?);
             if read_optional(&path).map_err(failed)?.as_deref() != expected.as_deref() {
                 return Err(changed_outside(name));
@@ -158,7 +180,8 @@ mod tests {
     use std::path::PathBuf;
 
     fn folder(name: &str) -> PathBuf {
-        let directory = std::env::temp_dir().join(format!("sloth-vault-{}-{}", name, std::process::id()));
+        let directory =
+            std::env::temp_dir().join(format!("sloth-vault-{}-{}", name, std::process::id()));
         let _ = fs::remove_dir_all(&directory);
         fs::create_dir_all(&directory).unwrap();
         directory
@@ -177,7 +200,16 @@ mod tests {
         for name in ["a.md", "Olá 🦥.MD", "with space.md"] {
             assert!(valid_name(name), "{name}");
         }
-        for name in ["", ".md", "a.txt", "../a.md", "dir/a.md", "dir\\a.md", ".hidden.md", "a\0.md"] {
+        for name in [
+            "",
+            ".md",
+            "a.txt",
+            "../a.md",
+            "dir/a.md",
+            "dir\\a.md",
+            ".hidden.md",
+            "a\0.md",
+        ] {
             assert!(!valid_name(name), "{name:?}");
         }
     }
@@ -191,7 +223,11 @@ mod tests {
         fs::write(root.join(".a.md.sloth-tmp"), "x").unwrap();
         fs::write(root.join("binary.md"), [0xff, 0xfe, 0x00]).unwrap();
         fs::create_dir(root.join("sub.md")).unwrap();
-        let names: Vec<_> = list(&root).unwrap().into_iter().map(|file| file.name).collect();
+        let names: Vec<_> = list(&root)
+            .unwrap()
+            .into_iter()
+            .map(|file| file.name)
+            .collect();
         assert_eq!(names, ["A.md", "b.md"]);
         assert_eq!(list(&root).unwrap()[0].contents, "olá\n\n");
         fs::remove_dir_all(&root).unwrap();
@@ -219,7 +255,9 @@ mod tests {
         let root = folder("create");
         apply(&root, &write("a.md", "one", None)).unwrap();
         assert_eq!(fs::read_to_string(root.join("a.md")).unwrap(), "one");
-        assert!(apply(&root, &write("a.md", "two", None)).unwrap_err().contains("outside"));
+        assert!(apply(&root, &write("a.md", "two", None))
+            .unwrap_err()
+            .contains("outside"));
         assert_eq!(fs::read_to_string(root.join("a.md")).unwrap(), "one");
         assert_eq!(fs::read_dir(&root).unwrap().count(), 1);
         fs::remove_dir_all(&root).unwrap();
@@ -231,7 +269,10 @@ mod tests {
         apply(&root, &write("a.md", "one", None)).unwrap();
         fs::write(root.join("a.md"), "edited elsewhere").unwrap();
         assert!(apply(&root, &write("a.md", "two", Some("one"))).is_err());
-        assert_eq!(fs::read_to_string(root.join("a.md")).unwrap(), "edited elsewhere");
+        assert_eq!(
+            fs::read_to_string(root.join("a.md")).unwrap(),
+            "edited elsewhere"
+        );
         apply(&root, &write("a.md", "two", Some("edited elsewhere"))).unwrap();
         assert_eq!(fs::read_to_string(root.join("a.md")).unwrap(), "two");
         fs::remove_dir_all(&root).unwrap();
@@ -242,9 +283,15 @@ mod tests {
         let root = folder("rename");
         fs::write(root.join("a.md"), "A").unwrap();
         fs::write(root.join("b.md"), "B").unwrap();
-        let clash = VaultOp::Rename { from: "a.md".into(), to: "b.md".into() };
+        let clash = VaultOp::Rename {
+            from: "a.md".into(),
+            to: "b.md".into(),
+        };
         assert!(apply(&root, &clash).is_err());
-        let free = VaultOp::Rename { from: "a.md".into(), to: "c.md".into() };
+        let free = VaultOp::Rename {
+            from: "a.md".into(),
+            to: "c.md".into(),
+        };
         apply(&root, &free).unwrap();
         assert_eq!(fs::read_to_string(root.join("c.md")).unwrap(), "A");
         assert_eq!(fs::read_to_string(root.join("b.md")).unwrap(), "B");
@@ -255,10 +302,16 @@ mod tests {
     fn removing_requires_the_content_the_app_last_saw() {
         let root = folder("remove");
         fs::write(root.join("a.md"), "A").unwrap();
-        let stale = VaultOp::Remove { name: "a.md".into(), expected: "old".into() };
+        let stale = VaultOp::Remove {
+            name: "a.md".into(),
+            expected: "old".into(),
+        };
         assert!(apply(&root, &stale).is_err());
         assert!(root.join("a.md").exists());
-        let current = VaultOp::Remove { name: "a.md".into(), expected: "A".into() };
+        let current = VaultOp::Remove {
+            name: "a.md".into(),
+            expected: "A".into(),
+        };
         apply(&root, &current).unwrap();
         assert!(!root.join("a.md").exists());
         apply(&root, &current).unwrap();

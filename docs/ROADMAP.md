@@ -14,6 +14,7 @@
 - **MVP web:** persistência versionada (v1→v3) com migração, bloqueio em dados corrompidos e fila de gravação; importação/exportação, backup, lixeira, busca, leitura, editor visual.
 - **Desktop, base:** projeto Tauri V2 com versões fixadas; estado em arquivo com gravação temporária e cópia `.previous`; capability sem plugin de filesystem.
 - **Pasta de notas:** `.md` como fonte de verdade, estado auxiliar no diretório de dados, comandos restritos à pasta escolhida no diálogo nativo, importação de alterações externas com resolução de conflitos.
+- **Erros de disco:** pasta ausente, permissão negada, somente leitura e disco cheio têm mensagens próprias (código estável vindo do Rust, texto no idioma da interface). Uma instância por vez cobre o caso de duas janelas na mesma pasta.
 - **Interface:** pt-BR por padrão, English opcional; confirmações e renomeação em diálogos próprios do app.
 
 ## Pendente
@@ -22,12 +23,11 @@
 
 - Decidir se subpastas entram.
 - Trocar a verificação periódica por eventos do sistema de arquivos, se o custo de ler o carimbo da pasta a cada poucos segundos incomodar em pastas muito grandes.
-- Tratar pasta ausente durante a sessão, arquivo somente leitura, permissão revogada e disco cheio com mensagens próprias (hoje aparece o erro do sistema).
-- Comportamento com duas janelas/processos na mesma pasta.
 
 ### Distribuição
 
-- CI/CD gera `.msi` e `.AppImage` (feito). Falta: assinatura dos artefatos, política de atualização e validação de upgrade/desinstalação preservando as notas.
+- CI/CD gera `.msi` e `.AppImage` (feito). Falta: política de atualização e validação manual de upgrade/desinstalação preservando as notas.
+- **Decisão:** os artefatos não serão assinados (fora de escopo, sem previsão de mudar).
 - Rodada de uso real: edição longa, IME, zoom 200%, teclado, leitor de tela, nomes Unicode, pasta grande.
 
 ## Verificação

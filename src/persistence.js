@@ -1,7 +1,8 @@
+import { friendlyError } from './errors.js'
 import { newDocument, readStoredDocument, serializeDocument } from './storage.js'
 
 function message(error) {
-  return error instanceof Error ? error.message : 'Storage is unavailable'
+  return friendlyError(error)
 }
 
 /**

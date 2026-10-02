@@ -15,7 +15,7 @@ const messages = {
     'block.image': 'Imagem',
     'images.dialogTitle': 'Inserir imagem',
     'images.url': 'URL da imagem',
-    'images.urlInvalid': 'Use um endereço HTTP ou HTTPS válido.',
+    'images.urlInvalid': 'Use um endereço HTTPS válido.',
     'images.insertUrl': 'Inserir URL',
     'images.uploadDrop': 'Escolher ou arrastar imagens aqui',
     'images.insert': 'Inserir na nota',
@@ -104,6 +104,13 @@ const messages = {
     'error.readBackup': 'Não foi possível ler o backup',
     'error.vaultMissing':
       'Pasta de notas não encontrada: {path}. Usando o armazenamento do app até você escolher outra pasta.',
+    'disk.not-found':
+      'O arquivo ou a pasta não existe mais. Verifique se a pasta de notas continua conectada.',
+    'disk.denied': 'Sem permissão para gravar. Verifique as permissões da pasta de notas.',
+    'disk.read-only': 'A pasta está em um local somente leitura.',
+    'disk.disk-full': 'Sem espaço em disco. Libere espaço para continuar gravando.',
+    'disk.folder-missing':
+      'A pasta de notas não foi encontrada. Reconecte a unidade ou escolha outra pasta.',
     'error.nameExists': 'Já existe uma nota com esse nome.',
 
     'code.copy': 'Copiar',
@@ -209,7 +216,7 @@ const messages = {
     'block.image': 'Image',
     'images.dialogTitle': 'Insert image',
     'images.url': 'Image URL',
-    'images.urlInvalid': 'Use a valid HTTP or HTTPS address.',
+    'images.urlInvalid': 'Use a valid HTTPS address.',
     'images.insertUrl': 'Insert URL',
     'images.uploadDrop': 'Choose or drop images here',
     'images.insert': 'Insert into note',
@@ -296,6 +303,13 @@ const messages = {
     'error.readBackup': 'Could not read backup',
     'error.vaultMissing':
       'Notes folder not found: {path}. Using the app storage until you choose another folder.',
+    'disk.not-found':
+      'The file or folder no longer exists. Check that the notes folder is still connected.',
+    'disk.denied': 'Permission denied. Check the permissions of the notes folder.',
+    'disk.read-only': 'The folder is on a read-only location.',
+    'disk.disk-full': 'The disk is full. Free some space to keep saving.',
+    'disk.folder-missing':
+      'The notes folder was not found. Reconnect the drive or choose another folder.',
     'error.nameExists': 'A note with that name already exists.',
 
     'code.copy': 'Copy',

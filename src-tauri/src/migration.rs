@@ -20,30 +20,32 @@ fn hash(bytes: &[u8]) -> u64 {
 // Recover only files created by this migration. Files subsequently edited outside
 // the app are retained. The original library is never modified.
 pub fn recover(journal_path: &Path) -> Result<(), String> {
-    let Some(contents) = store::read_state(journal_path).map_err(|e| e.to_string())? else {
+    let Some(contents) =
+        store::read_state(journal_path).map_err(|e| crate::errors::describe(&e))?
+    else {
         return Ok(());
     };
     let journal: Journal = serde_json::from_str(&contents).map_err(|e| e.to_string())?;
     let committed = store::read_state(&journal.config)
-        .map_err(|e| e.to_string())?
+        .map_err(|e| crate::errors::describe(&e))?
         .and_then(|contents| serde_json::from_str::<serde_json::Value>(&contents).ok())
         .is_some_and(|value| value["path"].as_str() == Some(&journal.destination));
     if !committed {
         for (path, expected) in journal.created {
             match fs::read(&path) {
                 Ok(bytes) if hash(&bytes) == expected => {
-                    fs::remove_file(&path).map_err(|e| e.to_string())?
+                    fs::remove_file(&path).map_err(|e| crate::errors::describe(&e))?
                 }
                 Ok(_) => {}
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-                Err(error) => return Err(error.to_string()),
+                Err(error) => return Err(crate::errors::describe(&error)),
             }
         }
         if let Some(aux) = journal.aux {
-            store::remove_state(&aux).map_err(|e| e.to_string())?;
+            store::remove_state(&aux).map_err(|e| crate::errors::describe(&e))?;
         }
     }
-    store::remove_state(journal_path).map_err(|e| e.to_string())
+    store::remove_state(journal_path).map_err(|e| crate::errors::describe(&e))
 }
 pub fn activate(
     journal_path: &Path,
@@ -70,19 +72,19 @@ pub fn activate(
         journal_path,
         &serde_json::to_string(&journal).map_err(|e| e.to_string())?,
     )
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| crate::errors::describe(&e))?;
     let result = (|| {
         images::copy_files(target, files)?;
         if let Some((path, contents)) = aux {
             if !path.exists() {
-                store::write_state(path, contents).map_err(|e| e.to_string())?;
+                store::write_state(path, contents).map_err(|e| crate::errors::describe(&e))?;
             }
         }
         store::write_state(
             config,
             &serde_json::json!({"path": destination}).to_string(),
         )
-        .map_err(|e| e.to_string())
+        .map_err(|e| crate::errors::describe(&e))
     })();
     if let Err(error) = result {
         recover(journal_path).map_err(|recovery| format!("{error}; recovery: {recovery}"))?;

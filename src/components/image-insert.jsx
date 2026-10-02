@@ -45,7 +45,7 @@ export function ImageInsert({ position, busy, onFiles, onUrl, onClose }) {
           event.preventDefault()
           try {
             const parsed = new URL(url)
-            if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error()
+            if (parsed.protocol !== 'https:') throw new Error()
             onUrl(parsed.href)
             onClose()
           } catch {

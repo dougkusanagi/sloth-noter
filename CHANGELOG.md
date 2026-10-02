@@ -12,6 +12,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Corrigido
 
+- Falhas de disco no desktop apareciam como "Storage is unavailable"; agora mostram o erro real e, para pasta ausente, permissão negada, somente leitura e disco cheio, uma mensagem própria.
 - Contraste de tags e realce de código no tema claro; papéis ARIA de tabela inválidos dentro do editor.
 
 ### Adicionado (desktop)
@@ -21,6 +22,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Alterado
 
+- Imagens externas só carregam por HTTPS (CSP e campo de URL); endereços HTTP deixam de carregar no app desktop.
+- Abas e menu de contexto das abas extraídos de `main.jsx` para `components/tabs.jsx`.
 - Interface em português (Brasil) por padrão, com English opcional no menu; confirmações e renomeação agora são diálogos do app (`window.prompt` não existe nos webviews do Tauri).
 - Bun como gerenciador de pacotes; a versão vive em `package.json`.
 - `visual-editor.jsx` e `main.jsx` divididos em módulos (`src/editor/`, `src/components/`).
