@@ -70,6 +70,9 @@ export function moveToTrash(document, id, deletedAt) {
     notes: document.notes.filter((item) => item.id !== id),
     trash: [...document.trash, { note, index, deletedAt }],
     openIds,
+    ...(document.pinnedIds
+      ? { pinnedIds: document.pinnedIds.filter((pinnedId) => pinnedId !== id) }
+      : {}),
     activeId: document.activeId === id ? (openIds.at(-1) ?? null) : document.activeId,
   }
 }

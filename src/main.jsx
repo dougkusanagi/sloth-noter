@@ -7,6 +7,7 @@ import { createFullBackup, readBackupBundle, restoreBackupImages } from './backu
 import { findNote, wikiParts, renameWikiReferences } from './markdown-model.js'
 import { MainMenu } from './components/main-menu.jsx'
 import { ImageLibrary } from './components/image-library.jsx'
+import { moveTab, togglePinnedTab } from './tabs.js'
 import { appShortcut } from './shortcuts.js'
 import { findMatches } from './find.js'
 import {
@@ -48,7 +49,17 @@ import {
   replaceDocumentImage,
   dataUrlBytes,
 } from './images.js'
-import { BookOpen, Code, Eye, PanelLeft, X, Plus, Menu, Image as ImageIcon } from 'lucide-react'
+import {
+  BookOpen,
+  Code,
+  Eye,
+  PanelLeft,
+  Pin,
+  X,
+  Plus,
+  Menu,
+  Image as ImageIcon,
+} from 'lucide-react'
 import './styles.css'
 
 function download(name, body, type = 'text/markdown;charset=utf-8') {
@@ -142,6 +153,10 @@ function Workspace({ persistence, loaded }) {
   const [trashOpen, setTrashOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [tabMenu, setTabMenu] = useState(null)
+  const tabDrag = useRef(null)
+  const suppressTabClick = useRef(false)
+  const [draggingTab, setDraggingTab] = useState(null)
+  const [tabDropIndex, setTabDropIndex] = useState(null)
   const [findOpen, setFindOpen] = useState(false)
   const [findQuery, setFindQuery] = useState('')
   const [findIndex, setFindIndex] = useState(0)
@@ -374,6 +389,7 @@ function Workspace({ persistence, loaded }) {
   }
   function closeTab(id) {
     const old = current.current
+    if (old.pinnedIds?.includes(id)) return
     const note = old.notes.find((item) => item.id === id)
     const openIds = old.openIds.filter((item) => item !== id)
     const notes =
@@ -385,13 +401,53 @@ function Workspace({ persistence, loaded }) {
       activeId: old.activeId === id ? (openIds.at(-1) ?? null) : old.activeId,
     })
   }
+  function startTabDrag(event, id) {
+    if (event.button !== 0) return
+    suppressTabClick.current = false
+    tabDrag.current = { id, x: event.clientX, index: null }
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+  function moveTabDrag(event) {
+    const drag = tabDrag.current
+    if (!drag || (drag.index === null && Math.abs(event.clientX - drag.x) < 6)) return
+    suppressTabClick.current = true
+    setDraggingTab(drag.id)
+    setTabMenu(null)
+    const list = tabListRef.current
+    const box = list.getBoundingClientRect()
+    if (event.clientX < box.left + 24) list.scrollLeft -= 16
+    if (event.clientX > box.right - 24) list.scrollLeft += 16
+    const tabs = [...list.querySelectorAll('[data-tab-id]')].filter(
+      (tab) => tab.dataset.tabId !== drag.id,
+    )
+    let index = tabs.findIndex((tab) => {
+      const rect = tab.getBoundingClientRect()
+      return event.clientX < rect.left + rect.width / 2
+    })
+    if (index < 0) index = tabs.length
+    const next = moveTab(current.current, drag.id, index)
+    drag.index = next.openIds.indexOf(drag.id)
+    setTabDropIndex(drag.index)
+  }
+  function endTabDrag(event, cancelled = false) {
+    const drag = tabDrag.current
+    tabDrag.current = null
+    setDraggingTab(null)
+    setTabDropIndex(null)
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    if (!cancelled && drag?.index !== null && drag?.index !== undefined) {
+      const next = moveTab(current.current, drag.id, drag.index)
+      if (next !== current.current) commit(next)
+    }
+  }
   function openTabMenu(event, id) {
     event.preventDefault()
     event.stopPropagation()
     setTabMenu({
       id,
       x: Math.max(8, Math.min(event.clientX, window.innerWidth - 230)),
-      y: Math.max(8, Math.min(event.clientY, window.innerHeight - 220)),
+      y: Math.max(8, Math.min(event.clientY, window.innerHeight - 320)),
     })
   }
   function runTabMenu(action) {
@@ -400,7 +456,25 @@ function Workspace({ persistence, loaded }) {
     setTabMenu(null)
     if (action === 'open') openNote(menu.id)
     if (action === 'rename') renameNote(menu.id)
+    if (action === 'pin') commit(togglePinnedTab(current.current, menu.id))
+    if (action === 'left' || action === 'right') {
+      commit(
+        moveTab(
+          current.current,
+          menu.id,
+          current.current.openIds.indexOf(menu.id) + (action === 'left' ? -1 : 1),
+        ),
+      )
+    }
     if (action === 'close') closeTab(menu.id)
+    if (action === 'pin' || action === 'left' || action === 'right') {
+      requestAnimationFrame(() => {
+        ;[...(tabListRef.current?.querySelectorAll('[data-tab-id]') ?? [])]
+          .find((tab) => tab.dataset.tabId === menu.id)
+          ?.querySelector('.tab')
+          ?.focus()
+      })
+    }
     if (action === 'trash') deleteNote(menu.id)
   }
   async function renameNote(id = active?.id) {
@@ -1074,6 +1148,7 @@ function Workspace({ persistence, loaded }) {
             <MainMenu
               firstRef={menuFirst}
               active={active}
+              activePinned={data.pinnedIds?.includes(data.activeId)}
               prefs={prefs}
               mode={mode}
               sidebarVisible={sidebarVisible}
@@ -1109,21 +1184,48 @@ function Workspace({ persistence, loaded }) {
         {prefs.tabsVisible && data.openIds.length > 0 && (
           <nav className="tabs" aria-label={t('tabs.label')}>
             <div className="tab-list" ref={tabListRef}>
-              {data.openIds.map((id) => {
+              {data.openIds.map((id, index) => {
+                const pinned = data.pinnedIds?.includes(id)
                 const note = data.notes.find((item) => item.id === id)
                 return (
                   note && (
                     <div
                       key={id}
                       ref={id === data.activeId ? activeTabRef : null}
-                      className={id === data.activeId ? 'tab-wrap active' : 'tab-wrap'}
+                      data-tab-id={id}
+                      className={[
+                        'tab-wrap',
+                        id === data.activeId && 'active',
+                        pinned && 'pinned',
+                        draggingTab === id && 'dragging',
+                        tabDropIndex === index &&
+                          draggingTab !== id &&
+                          (index < data.openIds.indexOf(draggingTab)
+                            ? 'drop-before'
+                            : 'drop-after'),
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
                     >
                       <button
-                        title={note.name}
+                        title={pinned ? `${note.name} · ${t('tabs.pinned')}` : note.name}
                         className={id === data.activeId ? 'tab active' : 'tab'}
                         aria-haspopup="menu"
                         aria-expanded={tabMenu?.id === id}
-                        onClick={() => openNote(id)}
+                        onPointerDown={(event) => startTabDrag(event, id)}
+                        onPointerMove={moveTabDrag}
+                        onPointerUp={endTabDrag}
+                        onPointerCancel={(event) => endTabDrag(event, true)}
+                        onLostPointerCapture={(event) => {
+                          if (tabDrag.current) endTabDrag(event, true)
+                        }}
+                        onClick={() => {
+                          if (suppressTabClick.current) {
+                            suppressTabClick.current = false
+                            return
+                          }
+                          openNote(id)
+                        }}
                         onAuxClick={(event) => {
                           if (event.button === 1) {
                             event.preventDefault()
@@ -1131,20 +1233,37 @@ function Workspace({ persistence, loaded }) {
                           }
                         }}
                         onContextMenu={(event) => openTabMenu(event, id)}
+                        onKeyDown={(event) => {
+                          if (
+                            event.key === 'ContextMenu' ||
+                            (event.shiftKey && event.key === 'F10')
+                          ) {
+                            const rect = event.currentTarget.getBoundingClientRect()
+                            event.preventDefault()
+                            setTabMenu({
+                              id,
+                              x: Math.max(8, Math.min(rect.left, window.innerWidth - 230)),
+                              y: rect.bottom,
+                            })
+                          }
+                        }}
                         onMouseDown={(event) => {
                           if (event.button === 1) event.preventDefault()
                         }}
                       >
+                        {pinned && <Pin size={12} className="tab-pin-icon" aria-hidden="true" />}
                         <span>{note.name}</span>
                       </button>
-                      <button
-                        className="tab-close"
-                        aria-label={`${t('tabs.close')}: ${note.name}`}
-                        title={t('tabs.close')}
-                        onClick={() => closeTab(id)}
-                      >
-                        <X size={13} />
-                      </button>
+                      {!pinned && (
+                        <button
+                          className="tab-close"
+                          aria-label={`${t('tabs.close')}: ${note.name}`}
+                          title={t('tabs.close')}
+                          onClick={() => closeTab(id)}
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
                     </div>
                   )
                 )
@@ -1216,7 +1335,31 @@ function Workspace({ persistence, loaded }) {
           <button type="button" role="menuitem" onClick={() => runTabMenu('rename')}>
             <span>{t('tabs.rename')}</span>
           </button>
-          <button type="button" role="menuitem" onClick={() => runTabMenu('close')}>
+          <button type="button" role="menuitem" onClick={() => runTabMenu('pin')}>
+            <span>{t(data.pinnedIds?.includes(tabMenu.id) ? 'tabs.unpin' : 'tabs.pin')}</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={moveTab(data, tabMenu.id, data.openIds.indexOf(tabMenu.id) - 1) === data}
+            onClick={() => runTabMenu('left')}
+          >
+            <span>{t('tabs.moveLeft')}</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={moveTab(data, tabMenu.id, data.openIds.indexOf(tabMenu.id) + 1) === data}
+            onClick={() => runTabMenu('right')}
+          >
+            <span>{t('tabs.moveRight')}</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={data.pinnedIds?.includes(tabMenu.id)}
+            onClick={() => runTabMenu('close')}
+          >
             <span>{t('tabs.close')}</span>
             <Shortcut letter="W" />
           </button>
@@ -1290,6 +1433,7 @@ function Workspace({ persistence, loaded }) {
                   busy={imageBusy}
                   loading={imagesLoading}
                   active={active}
+                  activePinned={data.pinnedIds?.includes(data.activeId)}
                   notes={data.notes}
                   selected={selectedImage}
                   onSelect={setSelectedImage}

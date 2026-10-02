@@ -73,6 +73,9 @@ export function createVaultAdapter(invoke, path) {
         notes,
         trash,
         openIds,
+        pinnedIds: Array.isArray(aux.pinnedIds)
+          ? aux.pinnedIds.filter((id) => openIds.includes(id))
+          : [],
         activeId,
         preferences: aux.preferences ?? newDocument().preferences,
       })
@@ -111,6 +114,7 @@ export function createVaultAdapter(invoke, path) {
           assets: document.assets ?? [],
           ids: Object.fromEntries(document.notes.map((note) => [note.name, note.id])),
           openIds: document.openIds,
+          pinnedIds: document.pinnedIds ?? [],
           activeId: document.activeId,
           preferences: document.preferences,
           trash: document.trash,

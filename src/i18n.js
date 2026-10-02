@@ -78,6 +78,11 @@ const messages = {
 
     'tabs.label': 'Notas abertas',
     'tabs.menu': 'Ações da aba',
+    'tabs.pin': 'Fixar aba',
+    'tabs.unpin': 'Desafixar aba',
+    'tabs.pinned': 'Aba fixada',
+    'tabs.moveLeft': 'Mover aba para a esquerda',
+    'tabs.moveRight': 'Mover aba para a direita',
     'tabs.open': 'Abrir nota',
     'tabs.rename': 'Renomear nota',
     'tabs.close': 'Fechar aba',
@@ -265,6 +270,11 @@ const messages = {
 
     'tabs.label': 'Open notes',
     'tabs.menu': 'Tab actions',
+    'tabs.pin': 'Pin tab',
+    'tabs.unpin': 'Unpin tab',
+    'tabs.pinned': 'Pinned tab',
+    'tabs.moveLeft': 'Move tab left',
+    'tabs.moveRight': 'Move tab right',
     'tabs.open': 'Open note',
     'tabs.rename': 'Rename note',
     'tabs.close': 'Close tab',

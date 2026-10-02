@@ -41,6 +41,7 @@ export function Shortcut({ keys }) {
 export function MainMenu({
   firstRef,
   active,
+  activePinned,
   prefs,
   mode,
   sidebarVisible,
@@ -58,7 +59,7 @@ export function MainMenu({
         ['findNote', 'menu.findNote', Search, 'P'],
         ['findInNote', 'menu.findInNote', ScanSearch, 'F', !active],
         ['rename', 'menu.rename', Pencil, 'Shift+R', !active],
-        ['closeTab', 'tabs.close', X, 'W', !active],
+        ['closeTab', 'tabs.close', X, 'W', !active || activePinned],
         ['trashMove', 'menu.trashMove', Trash2, 'Shift+Delete', !active],
         ['undoDelete', 'menu.undoDelete', Undo2, undefined, !trashCount],
       ],

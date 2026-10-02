@@ -10,6 +10,9 @@ function withoutNote(document, id) {
     ...document,
     notes: document.notes.filter((note) => note.id !== id),
     openIds,
+    ...(document.pinnedIds
+      ? { pinnedIds: document.pinnedIds.filter((pinnedId) => pinnedId !== id) }
+      : {}),
     activeId: document.activeId === id ? (openIds.at(-1) ?? null) : document.activeId,
   }
 }

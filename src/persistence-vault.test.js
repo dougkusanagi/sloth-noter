@@ -99,7 +99,8 @@ test('edits, new notes and renames reach the files; tabs survive a restart', asy
   const next = {
     ...document,
     notes: [{ ...note, name: 'renomeada.md', body: 'A editada' }, created],
-    openIds: [note.id, 'n1'],
+    openIds: ['n1', note.id],
+    pinnedIds: ['n1'],
     activeId: 'n1',
   }
   assert.equal(await persistence.save(next), null)
@@ -112,7 +113,8 @@ test('edits, new notes and renames reach the files; tabs survive a restart', asy
   )
   const restarted = await start(host).load()
   assert.equal(restarted.document.activeId, 'n1')
-  assert.equal(restarted.document.openIds.length, 2)
+  assert.deepEqual(restarted.document.openIds, next.openIds)
+  assert.deepEqual(restarted.document.pinnedIds, next.pinnedIds)
   assert.equal(restarted.document.notes.length, 2)
 })
 

@@ -100,6 +100,13 @@ export function validateDocument(value) {
   )
     throw new Error('Invalid open tabs')
   if (
+    value.pinnedIds !== undefined &&
+    (!Array.isArray(value.pinnedIds) ||
+      new Set(value.pinnedIds).size !== value.pinnedIds.length ||
+      value.pinnedIds.some((id) => !value.openIds.includes(id)))
+  )
+    throw new Error('Invalid pinned tabs')
+  if (
     value.activeId !== null &&
     (!activeIds.has(value.activeId) || !value.openIds.includes(value.activeId))
   )
