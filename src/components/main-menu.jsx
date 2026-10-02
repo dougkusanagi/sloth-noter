@@ -1,39 +1,16 @@
-import { useState } from 'react'
-import {
-  FilePlus,
-  Search,
-  ScanSearch,
-  Pencil,
-  X,
-  Trash2,
-  Undo2,
-  Image,
-  Upload,
-  Download,
-  FolderOpen,
-  Archive,
-  PanelLeft,
-  PanelsTopLeft,
-  SunMoon,
-  Globe,
-  Minus,
-  Plus,
-  Eye,
-  Code,
-  BookOpen,
-  Keyboard,
-} from 'lucide-react'
-import { t, LANGUAGES } from '../i18n.js'
+import { t } from '../i18n.js'
+import { buildCommands } from '../commands.js'
+
+const KEY_LABELS = { Shift: '⇧', Delete: 'Del' }
 
 export function Shortcut({ keys }) {
   const modifier = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
+  const parts = keys === '+' ? ['+'] : keys.split('+')
+  const bare = /^F\d+$/.test(keys) // function keys need no modifier
   return (
-    <span className="menu-shortcut" aria-label={`${modifier}+${keys}`}>
-      <kbd>{modifier}</kbd>
-      {(keys === '+' ? ['+'] : keys.split('+')).map((key, index) => (
-        <span key={index}>
-          + <kbd>{key}</kbd>
-        </span>
+    <span className="menu-shortcut" aria-label={bare ? keys : `${modifier}+${keys}`}>
+      {(bare ? parts : [modifier, ...parts]).map((key, index) => (
+        <kbd key={index}>{KEY_LABELS[key] ?? key}</kbd>
       ))}
     </span>
   )
@@ -50,53 +27,9 @@ export function MainMenu({
   actions,
   onClose,
 }) {
-  const [query, setQuery] = useState('')
-  const groups = [
-    [
-      'menu.notes',
-      [
-        ['newNote', 'menu.newNote', FilePlus, 'T'],
-        ['findNote', 'menu.findNote', Search, 'P'],
-        ['findInNote', 'menu.findInNote', ScanSearch, 'F', !active],
-        ['rename', 'menu.rename', Pencil, 'Shift+R', !active],
-        ['closeTab', 'tabs.close', X, 'W', !active || activePinned],
-        ['trashMove', 'menu.trashMove', Trash2, 'Shift+Delete', !active],
-        ['undoDelete', 'menu.undoDelete', Undo2, undefined, !trashCount],
-      ],
-    ],
-    [
-      'menu.files',
-      [
-        ['images', 'images.title', Image, 'Shift+I'],
-        ['addImage', 'images.import', Plus, 'Alt+I'],
-        ['import', 'menu.import', Upload, 'I'],
-        ['export', 'menu.export', Download, 'E', !active],
-        ['backup', 'menu.backupDownload', Archive, 'Shift+S'],
-        ['restoreBackup', 'menu.backupRestore', Upload],
-        ...(desktop ? [['folder', 'menu.folder', FolderOpen, 'Shift+O']] : []),
-        ['trash', t('menu.trash', { count: trashCount }), Trash2],
-      ],
-    ],
-    [
-      'menu.view',
-      [
-        ['sidebar', 'sidebar.toggle', PanelLeft, '\\'],
-        ['tabs', prefs.tabsVisible ? 'menu.tabsHide' : 'menu.tabsShow', PanelsTopLeft],
-        ['visual', 'mode.visual', Eye, 'Alt+1'],
-        ['source', 'mode.source', Code, 'Alt+2'],
-        ['reading', 'mode.reading', BookOpen, 'Alt+3'],
-        ['theme', t('menu.theme', { theme: t(`theme.${prefs.theme}`) }), SunMoon],
-        ['smaller', 'menu.smaller', Minus, '-'],
-        ['larger', 'menu.larger', Plus, '+'],
-        [
-          'language',
-          t('menu.language', { language: LANGUAGES[prefs.language] ?? LANGUAGES['pt-BR'] }),
-          Globe,
-        ],
-        ['shortcuts', 'menu.shortcuts', Keyboard, 'Shift+/'],
-      ],
-    ],
-  ]
+  const groups = buildCommands({ active, activePinned, prefs, trashCount, desktop }).map(
+    ([group, entries]) => [group, entries.filter((entry) => entry[5])],
+  )
   return (
     <div
       id="main-menu"
@@ -127,51 +60,31 @@ export function MainMenu({
         if (event.key === 'Tab') onClose(false)
       }}
     >
-      <div className="menu-search">
-        <Search size={14} aria-hidden="true" />
-        <input
-          aria-label={t('menu.search')}
-          placeholder={t('menu.search')}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </div>
       <div role="menu" aria-label={t('menu.main')}>
-        {groups.map(([group, entries]) => {
-          const matching = entries.filter(([, label]) =>
-            t(label).toLocaleLowerCase().includes(query.toLocaleLowerCase()),
-          )
-          if (!matching.length) return null
-          return (
-            <div className="menu-group" key={group} role="group" aria-label={t(group)}>
-              <div className="menu-heading" role="presentation">
-                {t(group)}
-              </div>
-              {matching.map(([id, label, Icon, keys, disabled]) => (
-                <button
-                  key={id}
-                  ref={id === 'newNote' ? firstRef : null}
-                  role="menuitem"
-                  disabled={disabled}
-                  className={
-                    id === mode || (id === 'sidebar' && sidebarVisible) ? 'menu-active' : undefined
-                  }
-                  onClick={actions[id]}
-                >
-                  <Icon size={15} aria-hidden="true" />
-                  <span className="menu-item-label">{t(label)}</span>
-                  {keys && <Shortcut keys={keys} />}
-                </button>
-              ))}
+        {groups.map(([group, entries]) => (
+          <div className="menu-group" key={group} role="group" aria-label={t(group)}>
+            <div className="menu-heading" role="presentation">
+              {t(group)}
             </div>
-          )
-        })}
+            {entries.map(([id, label, Icon, keys, disabled]) => (
+              <button
+                key={id}
+                ref={id === 'newNote' ? firstRef : null}
+                role="menuitem"
+                disabled={disabled}
+                className={
+                  id === mode || (id === 'sidebar' && sidebarVisible) ? 'menu-active' : undefined
+                }
+                onClick={actions[id]}
+              >
+                <Icon size={15} aria-hidden="true" />
+                <span className="menu-item-label">{t(label)}</span>
+                {keys && <Shortcut keys={keys} />}
+              </button>
+            ))}
+          </div>
+        ))}
       </div>
-      {!groups.some(([, entries]) =>
-        entries.some(([, label]) =>
-          t(label).toLocaleLowerCase().includes(query.toLocaleLowerCase()),
-        ),
-      ) && <p className="sidebar-empty">{t('library.noResults')}</p>}
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Pin, X } from 'lucide-react'
 import { moveTab, togglePinnedTab } from '../tabs.js'
 import { t } from '../i18n.js'
+import { displayName } from '../note-title.js'
 import { Shortcut } from './main-menu.jsx'
 
 /**
@@ -200,7 +201,7 @@ export function useTabs({ data, current, commit, tabsVisible, open, rename, clos
                   }}
                 >
                   {pinned && <Pin size={12} className="tab-pin-icon" aria-hidden="true" />}
-                  <span>{note.name}</span>
+                  <span>{displayName(note.name, true)}</span>
                 </button>
                 {!pinned && (
                   <button

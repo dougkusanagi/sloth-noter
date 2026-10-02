@@ -53,7 +53,7 @@ test('image insertion respects the cursor and undo retains an unused manageable 
   await page.keyboard.press('Control+z')
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(page.locator('textarea')).toHaveValue('# Imagem\n\nAntes\n\nDepois')
-  await page.keyboard.press('Control+Shift+i')
+  await page.keyboard.press('Control+Shift+l')
   await page.locator('.image-item').click()
   await expect(page.getByRole('button', { name: 'Excluir imagem', exact: true })).toBeEnabled()
   await page.getByRole('button', { name: 'Renomear imagem', exact: true }).click()
@@ -73,7 +73,7 @@ test('used images are protected and the library and shortcut dialog are accessib
   await page
     .locator('input[type=file][accept^="image/png"]')
     .setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: png })
-  await page.keyboard.press('Control+Shift+i')
+  await page.keyboard.press('Control+Shift+l')
   await page.locator('.image-item').click()
   await expect(page.getByRole('button', { name: 'Excluir imagem', exact: true })).toBeDisabled()
   expect(
@@ -94,11 +94,7 @@ test('used images are protected and the library and shortcut dialog are accessib
     ).violations,
   ).toEqual([])
 })
-test('main menu search filters actions and shortcuts switch editor modes', async ({ page }) => {
-  await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
-  await page.getByRole('textbox', { name: 'Buscar ação…' }).fill('backup')
-  await expect(page.getByRole('menuitem')).toHaveCount(2)
-  await page.keyboard.press('Escape')
+test('shortcuts switch editor modes', async ({ page }) => {
   await page.keyboard.press('Control+Alt+2')
   await expect(page.locator('textarea')).toBeVisible()
   await page.keyboard.press('Control+Alt+3')
@@ -121,7 +117,7 @@ test('source image insertion can be undone and renamed notes preserve incoming w
   await page.keyboard.press('Control+t')
   await source(page, '# Referências\n\n[[Welcome|Boas-vindas]]')
   await page.getByRole('button', { name: 'Welcome', exact: true }).click()
-  await page.keyboard.press('Control+Shift+r')
+  await page.keyboard.press('F2')
   await page.getByRole('textbox', { name: 'Nome da nota' }).fill('Renomeada.md')
   await page.getByRole('button', { name: 'OK', exact: true }).click()
   await page.getByRole('button', { name: 'Referências', exact: true }).click()

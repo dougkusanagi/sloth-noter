@@ -2,6 +2,8 @@ import { SHORTCUTS } from '../shortcuts.js'
 import { Shortcut } from './main-menu.jsx'
 // Modal dialogs of the workspace. State lives in the parent; these only render and handle keys.
 import { useEffect, useRef } from 'react'
+import { Search } from 'lucide-react'
+import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
 
 function trapTab(event, focusable) {
@@ -20,7 +22,7 @@ function trapTab(event, focusable) {
 const buttonsOf = (dialog, selector = 'button') => [...dialog.querySelectorAll(selector)]
 
 /** Backdrop plus dialog section with Tab kept inside; `focusables` lists the tab stops. */
-function Modal({
+export function Modal({
   label,
   className = '',
   backdropClose,
@@ -68,24 +70,27 @@ export function PaletteDialog({
       backdropClose={onClose}
       focusables={(dialog) => [inputRef.current, ...buttonsOf(dialog)]}
     >
-      <input
-        ref={inputRef}
-        aria-label={t('palette.search')}
-        value={query}
-        onChange={(event) => onQuery(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'ArrowDown') {
-            event.preventDefault()
-            onSelect((index) => Math.min(choices.length - 1, index + 1))
-          }
-          if (event.key === 'ArrowUp') {
-            event.preventDefault()
-            onSelect((index) => Math.max(0, index - 1))
-          }
-          if (event.key === 'Enter' && choices[selected]) onOpen(choices[selected].id)
-        }}
-        placeholder={t('palette.placeholder')}
-      />
+      <div className="palette-field">
+        <Search size={16} aria-hidden="true" />
+        <input
+          ref={inputRef}
+          aria-label={t('palette.search')}
+          value={query}
+          onChange={(event) => onQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowDown') {
+              event.preventDefault()
+              onSelect((index) => Math.min(choices.length - 1, index + 1))
+            }
+            if (event.key === 'ArrowUp') {
+              event.preventDefault()
+              onSelect((index) => Math.max(0, index - 1))
+            }
+            if (event.key === 'Enter' && choices[selected]) onOpen(choices[selected].id)
+          }}
+          placeholder={t('palette.placeholder')}
+        />
+      </div>
       <div className="results">
         {choices.length ? (
           choices.map((note, index) => (
@@ -95,7 +100,7 @@ export function PaletteDialog({
               aria-current={index === selected ? 'true' : undefined}
               onClick={() => onOpen(note.id)}
             >
-              {note.name}
+              {displayName(note.name)}
             </button>
           ))
         ) : (
@@ -281,6 +286,19 @@ export function FolderDialog({ path, onChoose, onUseAppStorage, onClose }) {
   )
 }
 
+export function ShortcutList() {
+  return (
+    <div className="shortcut-list" tabIndex={0} role="region" aria-label={t('menu.shortcuts')}>
+      {SHORTCUTS.map(([keys, label]) => (
+        <div key={keys}>
+          <span>{t(label)}</span>
+          <Shortcut keys={keys} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function ShortcutsDialog({ onClose }) {
   return (
     <Modal
@@ -291,14 +309,7 @@ export function ShortcutsDialog({ onClose }) {
       onEscape={onClose}
     >
       <h2>{t('menu.shortcuts')}</h2>
-      <div className="shortcut-list" tabIndex={0} role="region" aria-label={t('menu.shortcuts')}>
-        {SHORTCUTS.map(([keys, label]) => (
-          <div key={keys}>
-            <span>{t(label)}</span>
-            <Shortcut keys={keys} />
-          </div>
-        ))}
-      </div>
+      <ShortcutList />
       <button autoFocus className="dialog-close" onClick={onClose}>
         {t('dialog.close')}
       </button>

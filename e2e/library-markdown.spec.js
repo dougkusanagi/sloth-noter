@@ -93,7 +93,7 @@ test('long tab names are truncated, disclosed on hover, and can be closed', asyn
   await expect(close).toHaveCSS('opacity', '1')
   await close.click()
   await expect(page.locator('.tabs')).toBeHidden()
-  await expect(page.locator('.sidebar-note')).toHaveText(title)
+  await expect(page.locator('.note-item .note-title')).toHaveText(title)
 })
 
 test('dropping an image inserts and renders it in the note', async ({ page }) => {
@@ -122,4 +122,17 @@ test('a narrow viewport starts with the library hidden and note selection closes
   await expect(page.locator('.notes-sidebar')).toBeVisible()
   await page.getByRole('button', { name: 'Welcome', exact: true }).click()
   await expect(page.locator('.notes-sidebar')).toBeHidden()
+})
+
+test('dropping Markdown files imports them as notes, even over the sidebar', async ({ page }) => {
+  const transfer = await page.evaluateHandle(() => {
+    const data = new DataTransfer()
+    data.items.add(new File(['# Solta A\n\ntexto'], 'a.md', { type: 'text/markdown' }))
+    data.items.add(new File(['sem titulo'], 'b.txt', { type: 'text/plain' }))
+    return data
+  })
+  await page.locator('.notes-sidebar').dispatchEvent('drop', { dataTransfer: transfer })
+  await expect(page.locator('.notes-sidebar')).toContainText('Solta A')
+  await expect(page.locator('.notes-sidebar')).toContainText('b')
+  await expect(page.locator('[data-sonner-toast]')).toHaveCount(0)
 })

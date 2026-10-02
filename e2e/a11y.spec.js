@@ -37,3 +37,13 @@ test('reading mode has no detectable violations', async ({ page }) => {
   await expect(page.locator('.reading')).toBeVisible()
   expect(await violations(page)).toEqual([])
 })
+
+test('settings and the command palette have no detectable violations', async ({ page }) => {
+  await page.keyboard.press('Control+,')
+  await expect(page.getByRole('dialog', { name: 'Configurações' })).toBeVisible()
+  expect(await violations(page)).toEqual([])
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Control+k')
+  await expect(page.getByRole('dialog', { name: 'Paleta de comandos' })).toBeVisible()
+  expect(await violations(page)).toEqual([])
+})

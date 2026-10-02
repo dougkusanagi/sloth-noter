@@ -2,13 +2,21 @@ import { listenNativeImageDrops, routeNativeImageDrop } from './native-image-dro
 import { ensureTitle, ensureDocumentTitles } from './title.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import { Toaster, toast } from 'sonner'
 import { Markdown } from './markdown.jsx'
 import { createFullBackup, readBackupBundle, restoreBackupImages } from './backup.js'
 import { findNote, wikiParts, renameWikiReferences } from './markdown-model.js'
+import { FONT_SIZE } from './storage.js'
+import { NoteList } from './components/note-list.jsx'
 import { friendlyError } from './errors.js'
+import { ToastButtons } from './components/toast-buttons.jsx'
+import { CommandPalette } from './components/command-palette.jsx'
+import { SettingsDialog } from './components/settings-dialog.jsx'
+import { buildCommands } from './commands.js'
 import { MainMenu } from './components/main-menu.jsx'
 import { useTabs } from './components/tabs.jsx'
 import { ImageLibrary } from './components/image-library.jsx'
+import { readNoteFile, splitDrop } from './note-drop.js'
 import { appShortcut } from './shortcuts.js'
 import { findMatches } from './find.js'
 import {
@@ -50,8 +58,18 @@ import {
   replaceDocumentImage,
   dataUrlBytes,
 } from './images.js'
-import { BookOpen, Code, Eye, PanelLeft, Plus, Menu, Image as ImageIcon } from 'lucide-react'
+import {
+  BookOpen,
+  Code,
+  Eye,
+  PanelLeft,
+  Plus,
+  Menu,
+  Search,
+  Image as ImageIcon,
+} from 'lucide-react'
 import './styles.css'
+import './ui.css'
 
 function download(name, body, type = 'text/markdown;charset=utf-8') {
   const url = URL.createObjectURL(new Blob([body], { type }))
@@ -113,6 +131,8 @@ function Workspace({ persistence, loaded }) {
   const [imagesLoading, setImagesLoading] = useState(false)
   const [selectedImage, setSelectedImage] = useState(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [commandsOpen, setCommandsOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
   const [saving, setSaving] = useState(false)
   const [imageBusy, setImageBusy] = useState(false)
@@ -122,13 +142,14 @@ function Workspace({ persistence, loaded }) {
   const [palette, setPalette] = useState(false)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(0)
-  const [copyStatus, setCopyStatus] = useState('')
   const [importError, setImportError] = useState('')
   const [folderError, setFolderError] = useState('')
   const [folderOpen, setFolderOpen] = useState(false)
   const [asking, setAsking] = useState(null)
   const [syncConflicts, setSyncConflicts] = useState([])
   const [conflict, setConflict] = useState(null)
+  const conflictRef = useRef(null)
+  const conflictQueue = useRef([])
   const [trashOpen, setTrashOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [findOpen, setFindOpen] = useState(false)
@@ -452,22 +473,28 @@ function Workspace({ persistence, loaded }) {
     setTrashOpen(false)
     setTimeout(() => menuButton.current?.focus(), 0)
   }
-  async function importFile(file) {
-    if (!file) return
+  async function importFiles(files) {
     setImportError('')
-    try {
-      const body = await file.text()
-      const name =
-        headingFileName(body) ??
-        (file.name.toLowerCase().endsWith('.md') ? file.name : `${file.name}.md`)
-      const existing = current.current.notes.find(
-        (note) => note.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
-      )
-      if (existing) setConflict({ name, body, id: existing.id })
-      else createNote(name, body)
-    } catch (cause) {
-      setImportError(friendlyError(cause, t('error.readFile')))
+    for (const file of files) {
+      try {
+        const body = await readNoteFile(file, persistence.invoke)
+        const name =
+          headingFileName(body) ??
+          (file.name.toLowerCase().endsWith('.md') ? file.name : `${file.name}.md`)
+        const existing = current.current.notes.find(
+          (note) => note.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
+        )
+        if (!existing) createNote(name, body)
+        else if (conflictRef.current) conflictQueue.current.push({ name, body, id: existing.id })
+        else openConflict({ name, body, id: existing.id })
+      } catch (cause) {
+        setImportError(friendlyError(cause, t('error.readFile')))
+      }
     }
+  }
+  function openConflict(next) {
+    conflictRef.current = next
+    setConflict(next)
   }
   async function switchFolder(change) {
     if (switching || imageBusy) return
@@ -515,10 +542,17 @@ function Workspace({ persistence, loaded }) {
     setImageVersion((value) => value + 1)
   }
   const nativeDropHandler = useRef(null)
-  nativeDropHandler.current = (files, position) =>
-    routeNativeImageDrop(files, position, (files, point) =>
-      addImages(files, insertionPoint({ dataTransfer: true, clientX: point.x, clientY: point.y })),
-    )
+  nativeDropHandler.current = (dropped, position) => {
+    const { notes, others } = splitDrop(dropped)
+    if (notes.length && !blocked && !switching) importFiles(notes)
+    if (others.length)
+      routeNativeImageDrop(others, position, (files, point) =>
+        addImages(
+          files,
+          insertionPoint({ dataTransfer: true, clientX: point.x, clientY: point.y }),
+        ),
+      )
+  }
   useEffect(() => {
     if (!persistence.invoke) return
     let disposed = false
@@ -766,15 +800,18 @@ function Workspace({ persistence, loaded }) {
     closeConflict()
   }
   function closeConflict() {
-    setConflict(null)
+    const next = conflictQueue.current.shift() ?? null
+    conflictRef.current = next
+    setConflict(next)
+    if (next) return
     setTimeout(() => menuButton.current?.focus(), 0)
   }
   async function copyCode(source) {
     try {
       await navigator.clipboard.writeText(source)
-      setCopyStatus(t('code.copied'))
+      toast.success(t('code.copied'), { id: 'copy', duration: 1800 })
     } catch {
-      setCopyStatus(t('code.copyFailed'))
+      toast.error(t('code.copyFailed'), { id: 'copy' })
     }
   }
   function openPalette() {
@@ -785,6 +822,13 @@ function Workspace({ persistence, loaded }) {
   }
   function closePalette() {
     setPalette(false)
+    setTimeout(
+      () => (returnFocus.current?.isConnected ? returnFocus.current : menuButton.current)?.focus(),
+      0,
+    )
+  }
+  function closeCommands() {
+    setCommandsOpen(false)
     setTimeout(
       () => (returnFocus.current?.isConnected ? returnFocus.current : menuButton.current)?.focus(),
       0,
@@ -872,6 +916,64 @@ function Workspace({ persistence, loaded }) {
     // commit only touches refs and state setters, so it is stable enough to skip here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [persistence, switching])
+  const toastActions = useRef({})
+  toastActions.current = {
+    downloadBackup,
+    downloadDamaged: () =>
+      download('sloth-note-damaged.json', damaged.current, 'application/json;charset=utf-8'),
+    resetDamagedStorage,
+    openFolder: () => setFolderOpen(true),
+    useAppStorage,
+  }
+  useEffect(() => {
+    if (!error) {
+      toast.dismiss('storage')
+      return
+    }
+    const run = (name) => () => toastActions.current[name]()
+    toast.error(t('error.storage', { error, label: persistence.label }), {
+      id: 'storage',
+      duration: Infinity,
+      description: (
+        <ToastButtons
+          items={[
+            [t('menu.backupDownload'), run('downloadBackup')],
+            ...(blocked && damaged.current !== null
+              ? [[t('error.downloadStored'), run('downloadDamaged')]]
+              : []),
+            ...(blocked ? [[t('error.replaceStorage'), run('resetDamagedStorage')]] : []),
+          ]}
+        />
+      ),
+    })
+  }, [error, blocked, persistence.label])
+  useEffect(() => {
+    const problem = persistence.vaultProblem
+    if (!problem) return
+    const run = (name) => () => toastActions.current[name]()
+    toast.error(t('error.vaultMissing', { path: problem.path }), {
+      id: 'vault',
+      duration: Infinity,
+      description: (
+        <ToastButtons
+          items={[
+            [t('menu.folder'), run('openFolder')],
+            [t('folder.useAppStorage'), run('useAppStorage')],
+          ]}
+        />
+      ),
+    })
+  }, [persistence.vaultProblem])
+  useEffect(() => {
+    if (folderError)
+      toast.error(t('error.folder', { error: folderError }), { id: 'folder', duration: 10000 })
+    else toast.dismiss('folder')
+  }, [folderError])
+  useEffect(() => {
+    if (importError)
+      toast.error(t('error.import', { error: importError }), { id: 'import', duration: 10000 })
+    else toast.dismiss('import')
+  }, [importError])
   useEffect(() => {
     const theme =
       prefs.theme === 'system'
@@ -928,7 +1030,16 @@ function Workspace({ persistence, loaded }) {
         closeMenu()
         return
       }
-      if (asking || folderOpen || shortcutsOpen || selectedImage || switching) return
+      if (
+        asking ||
+        folderOpen ||
+        shortcutsOpen ||
+        settingsOpen ||
+        commandsOpen ||
+        selectedImage ||
+        switching
+      )
+        return
       const modifier = event.ctrlKey || event.metaKey
       const key = event.key.toLowerCase()
       const action = appShortcut(event)
@@ -939,15 +1050,15 @@ function Workspace({ persistence, loaded }) {
       }
       if (modifier && (event.key === '+' || event.code === 'Equal')) {
         event.preventDefault()
-        updatePrefs({ fontSize: Math.min(24, prefs.fontSize + 1) })
+        updatePrefs({ fontSize: Math.min(FONT_SIZE.max, prefs.fontSize + 1) })
       }
       if (modifier && (event.key === '-' || event.code === 'Minus')) {
         event.preventDefault()
-        updatePrefs({ fontSize: Math.max(14, prefs.fontSize - 1) })
+        updatePrefs({ fontSize: Math.max(FONT_SIZE.min, prefs.fontSize - 1) })
       }
       if (modifier && key === '0') {
         event.preventDefault()
-        updatePrefs({ fontSize: 18 })
+        updatePrefs({ fontSize: FONT_SIZE.default })
       }
       if (event.key === 'Escape' && palette) closePalette()
     }
@@ -983,19 +1094,42 @@ function Workspace({ persistence, loaded }) {
           theme: prefs.theme === 'system' ? 'light' : prefs.theme === 'light' ? 'dark' : 'system',
         }),
       ),
-    smaller: () => runMenu(() => updatePrefs({ fontSize: Math.max(14, prefs.fontSize - 1) })),
-    larger: () => runMenu(() => updatePrefs({ fontSize: Math.min(24, prefs.fontSize + 1) })),
+    smaller: () =>
+      runMenu(() => updatePrefs({ fontSize: Math.max(FONT_SIZE.min, prefs.fontSize - 1) })),
+    larger: () =>
+      runMenu(() => updatePrefs({ fontSize: Math.min(FONT_SIZE.max, prefs.fontSize + 1) })),
     language: () =>
       runMenu(() => updatePrefs({ language: prefs.language === 'en' ? 'pt-BR' : 'en' })),
     shortcuts: () => runMenu(() => setShortcutsOpen(true), false),
+    settings: () => runMenu(() => setSettingsOpen(true), false),
+    commands: () =>
+      runMenu(() => {
+        returnFocus.current = document.activeElement
+        setCommandsOpen(true)
+      }, false),
   }
   return (
-    <main className="app" style={{ '--editor-size': `${prefs.fontSize}px` }}>
+    <main
+      className="app"
+      style={{ '--editor-size': `${prefs.fontSize}px` }}
+      onDragOver={(event) => {
+        if (event.dataTransfer.types.includes('Files')) event.preventDefault()
+      }}
+      onDropCapture={(event) => {
+        if (event.target.closest?.('.image-insert') || !event.dataTransfer.files.length) return
+        event.preventDefault()
+        event.stopPropagation()
+        const { notes, others } = splitDrop([...event.dataTransfer.files])
+        if (notes.length && !blocked && !switching) importFiles(notes)
+        if (others.length && event.target.closest?.('.editor-shell'))
+          addImages(others, insertionPoint(event))
+      }}
+    >
       <header className="app-header" inert={switching ? true : undefined}>
         <div className="main-menu-wrap" ref={menuWrap}>
           <button
             ref={menuButton}
-            className="menu-trigger"
+            className="icon-button menu-trigger"
             aria-label={t('menu.main')}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
@@ -1027,7 +1161,7 @@ function Workspace({ persistence, loaded }) {
         </div>
         <span className="app-title">Sloth Note</span>
         <button
-          className="sidebar-toggle"
+          className="icon-button sidebar-toggle"
           title={t('sidebar.toggle')}
           aria-label={t('sidebar.toggle')}
           aria-expanded={sidebarVisible}
@@ -1048,7 +1182,11 @@ function Workspace({ persistence, loaded }) {
           }}
         />
         {tabStrip}
-        <span className="save-status" role="status">
+        <span
+          className="save-status"
+          role="status"
+          data-state={error ? 'error' : saving ? 'saving' : 'saved'}
+        >
           {error ? t('save.notSaved') : saving ? t('save.saving') : t('save.saved')}
         </span>
         <input
@@ -1057,7 +1195,7 @@ function Workspace({ persistence, loaded }) {
           accept=".md,.markdown,text/markdown,text/plain"
           hidden
           onChange={(event) => {
-            importFile(event.target.files?.[0])
+            importFiles([...event.target.files])
             event.target.value = ''
           }}
         />
@@ -1079,6 +1217,7 @@ function Workspace({ persistence, loaded }) {
             <div className="sidebar-heading">
               <span>{t('sidebar.title')}</span>
               <button
+                className="icon-button"
                 aria-label={t('menu.newNote')}
                 title={t('menu.newNote')}
                 onClick={() => createNote()}
@@ -1086,12 +1225,12 @@ function Workspace({ persistence, loaded }) {
                 <Plus size={16} />
               </button>
             </div>
-            <div className="sidebar-sections">
+            <div className="segmented">
               <button
                 aria-pressed={sidebarSection === 'notes'}
                 onClick={() => setSidebarSection('notes')}
               >
-                {t('menu.notes')} <span>{data.notes.length}</span>
+                {t('menu.notes')} <span className="count">{data.notes.length}</span>
               </button>
               <button
                 aria-pressed={sidebarSection === 'images'}
@@ -1101,35 +1240,25 @@ function Workspace({ persistence, loaded }) {
                 {t('images.title')}
               </button>
             </div>
-            <input
-              className="sidebar-search"
-              aria-label={t('sidebar.search')}
-              placeholder={t('sidebar.search')}
-              value={sidebarQuery}
-              onChange={(event) => setSidebarQuery(event.target.value)}
-            />
+            <div className="search-field">
+              <Search size={14} aria-hidden="true" />
+              <input
+                aria-label={t('sidebar.search')}
+                placeholder={t('sidebar.search')}
+                value={sidebarQuery}
+                onChange={(event) => setSidebarQuery(event.target.value)}
+              />
+            </div>
             <div className="sidebar-items">
-              {sidebarSection === 'notes' &&
-                !data.notes.some((note) =>
-                  note.name.toLocaleLowerCase().includes(sidebarQuery.toLocaleLowerCase()),
-                ) && <p className="sidebar-empty">{t('library.noResults')}</p>}
               {sidebarSection === 'notes' ? (
-                data.notes
-                  .filter((note) =>
-                    note.name.toLocaleLowerCase().includes(sidebarQuery.toLocaleLowerCase()),
-                  )
-                  .map((note) => (
-                    <button
-                      key={note.id}
-                      className="sidebar-note"
-                      title={note.name}
-                      aria-current={note.id === active?.id ? 'page' : undefined}
-                      onClick={() => openNote(note.id)}
-                      onContextMenu={(event) => openTabMenu(event, note.id)}
-                    >
-                      {note.name.replace(/\.md$/i, '')}
-                    </button>
-                  ))
+                <NoteList
+                  notes={data.notes}
+                  query={sidebarQuery}
+                  activeId={active?.id}
+                  openIds={data.openIds}
+                  onOpen={openNote}
+                  onMenu={openTabMenu}
+                />
               ) : (
                 <ImageLibrary
                   images={images}
@@ -1155,17 +1284,6 @@ function Workspace({ persistence, loaded }) {
         )}
         <section
           className="editor-shell"
-          onDragOver={(event) => {
-            if (event.dataTransfer.types.includes('Files')) event.preventDefault()
-          }}
-          onDropCapture={(event) => {
-            if (event.target.closest?.('.image-insert')) return
-            if (event.dataTransfer.files.length) {
-              event.preventDefault()
-              event.stopPropagation()
-              addImages([...event.dataTransfer.files], insertionPoint(event))
-            }
-          }}
           onPaste={(event) => {
             const files = [...event.clipboardData.files].filter((file) =>
               file.type.startsWith('image/'),
@@ -1197,51 +1315,6 @@ function Workspace({ persistence, loaded }) {
               </label>
             ))}
           </fieldset>
-          {error && (
-            <div className="save-error" role="alert">
-              {t('error.storage', { error, label: persistence.label })}
-              <div>
-                <button onClick={downloadBackup}>{t('menu.backupDownload')}</button>
-                {blocked && (
-                  <>
-                    {damaged.current !== null && (
-                      <button
-                        onClick={() =>
-                          download(
-                            'sloth-note-damaged.json',
-                            damaged.current,
-                            'application/json;charset=utf-8',
-                          )
-                        }
-                      >
-                        {t('error.downloadStored')}
-                      </button>
-                    )}
-                    <button onClick={resetDamagedStorage}>{t('error.replaceStorage')}</button>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-          {persistence.vaultProblem && (
-            <div className="save-error" role="alert">
-              {t('error.vaultMissing', { path: persistence.vaultProblem.path })}
-              <div>
-                <button onClick={() => setFolderOpen(true)}>{t('menu.folder')}</button>
-                <button onClick={useAppStorage}>{t('folder.useAppStorage')}</button>
-              </div>
-            </div>
-          )}
-          {folderError && (
-            <div className="save-error" role="alert">
-              {t('error.folder', { error: folderError })}
-            </div>
-          )}
-          {importError && (
-            <div className="save-error" role="alert">
-              {t('error.import', { error: importError })}
-            </div>
-          )}
           {active ? (
             mode === 'reading' ? (
               <div className="reading">
@@ -1252,7 +1325,6 @@ function Workspace({ persistence, loaded }) {
                   onOpenWiki={openWiki}
                   notes={data.notes}
                 />
-                {copyStatus && <span role="status">{copyStatus}</span>}
               </div>
             ) : mode === 'source' ? (
               <textarea
@@ -1297,6 +1369,48 @@ function Workspace({ persistence, loaded }) {
         <ShortcutsDialog
           onClose={() => {
             setShortcutsOpen(false)
+            menuButton.current?.focus()
+          }}
+        />
+      )}
+      {commandsOpen && (
+        <CommandPalette
+          commands={buildCommands({
+            active,
+            activePinned: data.pinnedIds?.includes(data.activeId),
+            prefs,
+            trashCount: data.trash.length,
+            desktop: Boolean(persistence.invoke),
+          })
+            .flatMap(([, entries]) => entries)
+            .filter(([id]) => id !== 'commands')
+            .map(([id, label, Icon, keys, disabled]) => ({
+              id,
+              label: t(label),
+              Icon,
+              keys,
+              disabled: Boolean(disabled),
+            }))}
+          onRun={(id) => {
+            setCommandsOpen(false)
+            menuActions[id]?.()
+          }}
+          onClose={closeCommands}
+        />
+      )}
+      {settingsOpen && (
+        <SettingsDialog
+          prefs={prefs}
+          sidebarVisible={sidebarVisible}
+          folder={persistence.kind === 'vault' ? persistence.label : ''}
+          desktop={Boolean(persistence.invoke)}
+          onChange={updatePrefs}
+          onRun={(id) => {
+            setSettingsOpen(false)
+            menuActions[id]?.()
+          }}
+          onClose={() => {
+            setSettingsOpen(false)
             menuButton.current?.focus()
           }}
         />
@@ -1373,6 +1487,14 @@ function Workspace({ persistence, loaded }) {
       {asking?.kind === 'prompt' && (
         <PromptDialog label={asking.label} initial={asking.initial} onAnswer={answer} />
       )}
+      <Toaster
+        position="top-right"
+        theme={prefs.theme}
+        offset={{ top: 58, right: 16 }}
+        visibleToasts={4}
+        closeButton
+        toastOptions={{ classNames: { toast: 'app-toast' } }}
+      />
     </main>
   )
 }

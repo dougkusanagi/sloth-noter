@@ -5,12 +5,13 @@ export const SHORTCUTS = [
   ['W', 'tabs.close'],
   ['I', 'menu.import'],
   ['E', 'menu.export'],
-  ['Shift+R', 'menu.rename'],
+  ['F2', 'menu.rename'],
   ['Shift+Delete', 'menu.trashMove'],
-  ['Shift+I', 'images.title'],
-  ['Alt+I', 'images.import'],
+  ['Shift+L', 'images.title'],
   ['Shift+S', 'menu.backupDownload'],
   ['Shift+O', 'menu.folder'],
+  ['K', 'menu.commands'],
+  [',', 'menu.settings'],
   ['\\', 'sidebar.toggle'],
   ['Alt+1', 'mode.visual'],
   ['Alt+2', 'mode.source'],
@@ -18,16 +19,17 @@ export const SHORTCUTS = [
   ['Shift+/', 'menu.shortcuts'],
 ]
 export function appShortcut(event) {
+  if (event.key === 'F2' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey)
+    return 'rename'
   if (!(event.ctrlKey || event.metaKey) || event.isComposing) return null
   const key = event.key.toLowerCase()
   if (event.altKey && !event.shiftKey)
-    return { 1: 'visual', 2: 'source', 3: 'reading', i: 'addImage' }[key] ?? null
+    return { 1: 'visual', 2: 'source', 3: 'reading' }[key] ?? null
   if (event.shiftKey && !event.altKey)
     return (
       {
-        r: 'rename',
         delete: 'trashMove',
-        i: 'images',
+        l: 'images',
         s: 'backup',
         o: 'folder',
         '?': 'shortcuts',
@@ -43,6 +45,8 @@ export function appShortcut(event) {
       w: 'closeTab',
       i: 'import',
       e: 'export',
+      k: 'commands',
+      ',': 'settings',
       '\\': 'sidebar',
     }[key] ?? null
   )

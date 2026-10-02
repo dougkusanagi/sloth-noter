@@ -92,6 +92,28 @@ pub fn list(root: &Path) -> io::Result<Vec<VaultFile>> {
     Ok(files)
 }
 
+const MAX_DROPPED_NOTE: u64 = 5 * 1024 * 1024;
+
+/// Reads a Markdown or text file the user dropped on the window. The caller has
+/// already checked that the path came from a native drop.
+pub fn read_dropped(source: &Path) -> Result<String, String> {
+    let extension = source
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(str::to_lowercase);
+    if !matches!(extension.as_deref(), Some("md" | "markdown" | "txt")) {
+        return Err("Only Markdown or text files can be imported as notes".into());
+    }
+    let metadata = fs::metadata(source).map_err(|error| crate::errors::describe(&error))?;
+    if !metadata.is_file() || metadata.len() > MAX_DROPPED_NOTE {
+        return Err("The file is not a regular file under 5 MB".into());
+    }
+    fs::read_to_string(source).map_err(|error| match error.kind() {
+        io::ErrorKind::InvalidData => "The file is not valid UTF-8 text".to_string(),
+        _ => crate::errors::describe(&error),
+    })
+}
+
 pub fn stamps(root: &Path) -> io::Result<Vec<VaultStamp>> {
     let mut stamps = Vec::new();
     for entry in fs::read_dir(root)? {
@@ -231,6 +253,18 @@ mod tests {
         assert_eq!(names, ["A.md", "b.md"]);
         assert_eq!(list(&root).unwrap()[0].contents, "olá\n\n");
         fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn dropped_notes_must_be_small_utf8_markdown_or_text() {
+        let root = folder("dropped");
+        fs::write(root.join("a.md"), "# A").unwrap();
+        fs::write(root.join("b.png"), "x").unwrap();
+        fs::write(root.join("bad.txt"), [0xff, 0xfe, 0x00]).unwrap();
+        assert_eq!(read_dropped(&root.join("a.md")).unwrap(), "# A");
+        assert!(read_dropped(&root.join("b.png")).is_err());
+        assert!(read_dropped(&root.join("bad.txt")).is_err());
+        assert!(read_dropped(&root).is_err());
     }
 
     #[test]

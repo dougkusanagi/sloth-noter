@@ -81,11 +81,46 @@ test('renaming uses an in-app dialog and the tab follows', async ({ page }) => {
 
 test('the language can be switched to English and is remembered', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR')
-  await page.getByRole('button', { name: 'Menu principal' }).click()
-  await page.getByRole('menuitem', { name: /Idioma/ }).click()
+  await page.keyboard.press('Control+,')
+  const settings = page.getByRole('dialog', { name: 'Configurações' })
+  await settings.getByRole('radio', { name: 'English' }).check({ force: true })
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await page.keyboard.press('Escape')
+  await expect(settings).toBeHidden()
   await page.getByRole('button', { name: 'Main menu' }).click()
   await expect(page.getByRole('menuitem', { name: /New note/ })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('button', { name: 'Main menu' })).toBeVisible()
+})
+
+test('settings change the theme, font size and tabs immediately', async ({ page }) => {
+  await page.keyboard.press('Control+,')
+  const settings = page.getByRole('dialog', { name: 'Configurações' })
+  await settings.getByRole('radio', { name: 'Escuro' }).check({ force: true })
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await settings.getByRole('switch', { name: 'Mostrar abas' }).uncheck()
+  await expect(page.locator('.tabs')).toBeHidden()
+  await settings.getByRole('button', { name: 'Editor' }).click()
+  await settings.getByLabel('Tamanho do texto').fill('20')
+  await expect(page.locator('.app')).toHaveCSS('--editor-size', '20px')
+  await settings.getByRole('button', { name: 'Restaurar' }).click()
+  await expect(page.locator('.app')).toHaveCSS('--editor-size', '16px')
+  await settings.getByRole('button', { name: 'Atalhos' }).click()
+  await expect(settings).toContainText('Renomear nota')
+})
+
+test('the command palette runs any action and is separate from the note finder', async ({
+  page,
+}) => {
+  await page.keyboard.press('Control+k')
+  const commands = page.getByRole('dialog', { name: 'Paleta de comandos' })
+  await commands.getByRole('combobox').fill('backup')
+  await expect(commands.getByRole('option')).toHaveCount(2)
+  await commands.getByRole('combobox').fill('configura')
+  await expect(commands.getByRole('option')).toHaveText(/Configurações/)
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('dialog', { name: 'Configurações' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Control+p')
+  await expect(page.getByRole('dialog', { name: 'Buscar nota' })).toBeVisible()
 })

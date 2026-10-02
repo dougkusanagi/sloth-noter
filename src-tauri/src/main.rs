@@ -151,6 +151,18 @@ fn image_import_drop(
 }
 
 #[tauri::command]
+fn note_read_dropped(
+    dropped: tauri::State<'_, DroppedImages>,
+    path: String,
+) -> Result<String, String> {
+    let source = std::fs::canonicalize(path).map_err(|e| errors::describe(&e))?;
+    if !dropped.0.lock().map_err(|e| e.to_string())?.remove(&source) {
+        return Err("The file was not dropped into this window".into());
+    }
+    vault::read_dropped(&source)
+}
+
+#[tauri::command]
 fn image_delete(app: AppHandle, name: String) -> Result<(), String> {
     if !name.starts_with("assets/") {
         return Err("Only imported images can be deleted".into());
@@ -306,6 +318,7 @@ fn main() {
             image_read,
             image_write,
             image_import_drop,
+            note_read_dropped,
             image_delete,
             vault_disconnect,
             vault_list,

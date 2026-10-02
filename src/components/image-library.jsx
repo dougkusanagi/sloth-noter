@@ -9,6 +9,7 @@ import {
   ArrowLeft,
 } from 'lucide-react'
 import { resolveImage } from '../images.js'
+import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
 
 export function ImageThumbnail({ src, alt = '' }) {
@@ -85,26 +86,35 @@ export function ImageLibrary({
     return (
       <div className="image-details">
         <button className="image-back" onClick={() => onSelect(null)}>
-          <ArrowLeft size={14} />
+          <ArrowLeft size={14} aria-hidden="true" />
           {t('images.back')}
         </button>
         <ImageThumbnail src={image.src} alt={image.name} />
         <h3>{image.name}</h3>
+        <p className="image-usage" data-used={image.noteIds.length > 0 || undefined}>
+          {image.noteIds.length
+            ? t('images.used', { count: image.noteIds.length })
+            : t('images.unused')}
+        </p>
         <div className="image-detail-actions">
-          <button disabled={!active || busy} onClick={() => onInsert(image)}>
-            <Plus size={14} />
+          <button
+            className="button primary"
+            disabled={!active || busy}
+            onClick={() => onInsert(image)}
+          >
+            <Plus size={14} aria-hidden="true" />
             {t('images.insert')}
           </button>
-          <button disabled={busy} onClick={() => onRename(image)}>
-            <Pencil size={14} />
+          <button className="button" disabled={busy} onClick={() => onRename(image)}>
+            <Pencil size={14} aria-hidden="true" />
             {t('images.rename')}
           </button>
-          <button disabled={busy} onClick={() => onDownload(image)}>
-            <Download size={14} />
+          <button className="button" disabled={busy} onClick={() => onDownload(image)}>
+            <Download size={14} aria-hidden="true" />
             {t('images.download')}
           </button>
           <button
-            className="danger-action"
+            className="button danger"
             disabled={
               busy ||
               image.noteIds.length > 0 ||
@@ -114,20 +124,15 @@ export function ImageLibrary({
             title={image.noteIds.length ? t('images.protected') : t('images.delete')}
             onClick={() => onDelete(image)}
           >
-            <Trash2 size={14} />
+            <Trash2 size={14} aria-hidden="true" />
             {t('images.delete')}
           </button>
         </div>
-        <p>
-          {image.noteIds.length
-            ? t('images.used', { count: image.noteIds.length })
-            : t('images.unused')}
-        </p>
         {image.noteIds.map((id) => {
           const note = notes.find((note) => note.id === id)
           return note ? (
             <button className="image-reference" key={id} onClick={() => onOpenNote(id)}>
-              {note.name}
+              {displayName(note.name)}
             </button>
           ) : (
             <p key={id} className="dialog-hint">
@@ -141,20 +146,21 @@ export function ImageLibrary({
   return (
     <>
       <div className="image-library-actions">
-        <button disabled={busy} onClick={onImport}>
-          <Plus size={14} />
+        <button className="button primary" disabled={busy} onClick={onImport}>
+          <Plus size={14} aria-hidden="true" />
           {busy ? t('images.importing') : t('images.import')}
         </button>
         <button
+          className="icon-button"
           title={t('images.refresh')}
           aria-label={t('images.refresh')}
           onClick={onRefresh}
           disabled={busy}
         >
-          <RefreshCw size={14} />
+          <RefreshCw size={14} aria-hidden="true" />
         </button>
       </div>
-      <div className="image-filter">
+      <div className="segmented small">
         <button aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
           {t('images.all')}
         </button>
@@ -163,26 +169,29 @@ export function ImageLibrary({
         </button>
       </div>
       {loading && <p role="status">{t('images.loading')}</p>}
-      {visible.map((image) => (
-        <button
-          className="image-item"
-          key={image.src}
-          title={image.name}
-          onClick={() => onSelect(image.src)}
-        >
-          <ImageThumbnail src={image.src} />
-          <span>{image.name}</span>
-          <small>
-            {image.noteIds.length
-              ? t('images.used', { count: image.noteIds.length })
-              : t('images.unused')}
-          </small>
-        </button>
-      ))}
+      <div className="image-grid">
+        {visible.map((image) => (
+          <button
+            className="image-item"
+            key={image.src}
+            title={image.name}
+            onClick={() => onSelect(image.src)}
+          >
+            <ImageThumbnail src={image.src} />
+            <span className="image-name">{image.name}</span>
+            <small data-used={image.noteIds.length > 0 || undefined}>
+              {image.noteIds.length
+                ? t('images.usedShort', { count: image.noteIds.length })
+                : t('images.unused')}
+            </small>
+          </button>
+        ))}
+      </div>
       {!loading && !visible.length && (
-        <p className="sidebar-empty">
-          {query || filter !== 'all' ? t('library.noResults') : t('images.empty')}
-        </p>
+        <div className="empty-state">
+          <ImageIcon size={22} aria-hidden="true" />
+          <p>{query || filter !== 'all' ? t('library.noResults') : t('images.empty')}</p>
+        </div>
       )}
     </>
   )

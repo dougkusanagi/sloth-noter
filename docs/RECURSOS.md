@@ -2,6 +2,10 @@
 
 Comportamento atual do editor. O resumo do produto está no [README](../README.md).
 
+**Ctrl+K** abre a paleta de comandos: todas as ações do app em uma lista pesquisável (as indisponíveis ficam ocultas), com os atalhos ao lado. **Ctrl+P** continua sendo a busca de notas. **Ctrl+,** abre as Configurações (tema, idioma, tamanho do texto, abas, biblioteca, pasta de notas, backup e atalhos); as mudanças valem na hora. Alertas aparecem como toasts empilhados no canto superior direito; o de falha de gravação continua visível até o problema sumir e traz as ações de backup.
+
+A biblioteca mostra o título e uma prévia de uma linha de cada nota, e a busca procura no nome e no texto. Nomes que começam com sintaxe Markdown (`- [ ]`, `![[`) aparecem sem ela; o arquivo não muda. Na aba de imagens, as miniaturas aparecem em grade com a situação de uso.
+
 O ícone ☰, o nome do app e as abas ficam no cabeçalho. As abas rolam horizontalmente, limitam títulos longos com reticências e revelam o nome completo e um botão de fechar ao passar o mouse. O botão de fechar também aparece com foco de teclado. O seletor compacto de modos flutua no canto inferior direito. A biblioteca à esquerda lista todas as notas, mesmo as que estão sem aba aberta, permite buscar por nome e pode ser ocultada pelo botão no cabeçalho. Em telas estreitas começa recolhida. O menu organiza notas, arquivos e exibição em grupos, permite buscar ações e mostra os atalhos. Use as setas para navegar e Escape para fechar. O cabeçalho informa quando há gravações em andamento.
 
 **Padrão** mostra títulos, ênfase, citações, listas, links, tags `#tag` e código estilizados nas linhas fora do cursor; a linha em edição mostra a sintaxe Markdown original. **Código** mostra todo o Markdown sem estilos; **Leitura** mostra o documento sem cursor de edição. O seletor usa ícones, mostra o nome do modo ao passar o mouse e aceita setas do teclado para alternar.
@@ -21,6 +25,10 @@ A primeira linha é sempre o título H1 (`# Título`): o app adiciona e preserva
 Use Ctrl/Cmd+F ou “Find in note” no menu para localizar texto na nota atual. Enter avança entre ocorrências e Shift+Enter retorna.
 
 A Leitura usa `react-markdown` com `remark-gfm`: CommonMark, títulos H1–H6, listas aninhadas, tarefas, tabelas com alinhamento, texto riscado, links automáticos e de referência, notas de rodapé, imagens, separadores e blocos de código. HTML bruto não é executado. A edição sempre usa o texto original. Tarefas `- [ ]` e `- [x]` aparecem como checkboxes redondos e interativos na Leitura e nas linhas fora do cursor do modo Padrão.
+
+### Importar notas arrastando
+
+Soltar arquivos `.md`, `.markdown` ou `.txt` (UTF-8, até 5 MB) em qualquer ponto da janela os importa como notas, como o item **Importar** do menu: o nome segue o primeiro H1 e um nome já existente abre o diálogo de conflito, um arquivo por vez. Imagens soltas continuam seguindo o fluxo de imagens abaixo; uma seleção mista faz as duas coisas.
 
 ### Imagens
 
@@ -55,16 +63,17 @@ O idioma padrão é português (Brasil); **Menu → Idioma** alterna para Englis
 
 ## Atalhos
 
-O menu **Atalhos de teclado** lista as combinações. Use Ctrl no Windows/Linux ou Cmd no macOS.
+O menu **Atalhos de teclado** (e **Configurações → Atalhos**) lista as combinações. Nenhum atalho usa combinações reservadas por navegadores e webviews (Ctrl+Shift+I e Ctrl+Alt+I abrem as ferramentas de desenvolvimento; Ctrl+Shift+R recarrega sem cache), por isso renomear é F2 e a biblioteca de imagens é Ctrl+Shift+L. Ctrl+T, Ctrl+W e Ctrl+N pertencem ao navegador e só funcionam no app desktop. Use Ctrl no Windows/Linux ou Cmd no macOS.
 
-| Ação                                              | Atalho                                    |
-| ------------------------------------------------- | ----------------------------------------- |
-| Nova nota / buscar nota / buscar texto            | Ctrl+T / Ctrl+P / Ctrl+F                  |
-| Fechar aba / renomear / mover para lixeira        | Ctrl+W / Ctrl+Shift+R / Ctrl+Shift+Delete |
-| Importar / exportar Markdown                      | Ctrl+I / Ctrl+E                           |
-| Biblioteca de imagens / adicionar imagens         | Ctrl+Shift+I / Ctrl+Alt+I                 |
-| Backup / pasta de notas (desktop)                 | Ctrl+Shift+S / Ctrl+Shift+O               |
-| Mostrar ou ocultar biblioteca                     | Ctrl+\\                                   |
-| Padrão / Código / Leitura                         | Ctrl+Alt+1 / Ctrl+Alt+2 / Ctrl+Alt+3      |
-| Ajuda de atalhos                                  | Ctrl+Shift+/                              |
-| Tamanho de texto: aumentar / diminuir / restaurar | Ctrl++ / Ctrl+- / Ctrl+0                  |
+| Ação                                              | Atalho                               |
+| ------------------------------------------------- | ------------------------------------ |
+| Nova nota / buscar nota / buscar texto            | Ctrl+T / Ctrl+P / Ctrl+F             |
+| Fechar aba / renomear / mover para lixeira        | Ctrl+W / F2 / Ctrl+Shift+Delete      |
+| Importar / exportar Markdown                      | Ctrl+I / Ctrl+E                      |
+| Biblioteca de imagens                             | Ctrl+Shift+L                         |
+| Paleta de comandos / configurações                | Ctrl+K / Ctrl+,                      |
+| Backup / pasta de notas (desktop)                 | Ctrl+Shift+S / Ctrl+Shift+O          |
+| Mostrar ou ocultar biblioteca                     | Ctrl+\\                              |
+| Padrão / Código / Leitura                         | Ctrl+Alt+1 / Ctrl+Alt+2 / Ctrl+Alt+3 |
+| Ajuda de atalhos                                  | Ctrl+Shift+/                         |
+| Tamanho de texto: aumentar / diminuir / restaurar | Ctrl++ / Ctrl+- / Ctrl+0             |

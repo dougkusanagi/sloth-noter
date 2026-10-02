@@ -1,5 +1,8 @@
 import { DEFAULT_LANGUAGE, isLanguage } from './i18n.js'
 
+/** Editor text size in px. 16 keeps a page dense, closer to a plain-text editor. */
+export const FONT_SIZE = { min: 12, max: 24, default: 16 }
+
 export const STORAGE_KEY = 'sloth-note:v3'
 export const V2_KEY = 'sloth-note:v2'
 export const LEGACY_KEY = 'sloth-note:v1'
@@ -51,7 +54,12 @@ export function newDocument() {
     trash: [],
     openIds: ['welcome'],
     activeId: 'welcome',
-    preferences: { tabsVisible: true, theme: 'system', fontSize: 18, language: DEFAULT_LANGUAGE },
+    preferences: {
+      tabsVisible: true,
+      theme: 'system',
+      fontSize: FONT_SIZE.default,
+      language: DEFAULT_LANGUAGE,
+    },
   }
 }
 
@@ -130,8 +138,8 @@ export function validateDocument(value) {
     typeof prefs.tabsVisible !== 'boolean' ||
     !['system', 'light', 'dark'].includes(prefs.theme) ||
     !Number.isInteger(prefs.fontSize) ||
-    prefs.fontSize < 14 ||
-    prefs.fontSize > 24 ||
+    prefs.fontSize < FONT_SIZE.min ||
+    prefs.fontSize > FONT_SIZE.max ||
     (prefs.language !== undefined && !isLanguage(prefs.language))
   )
     throw new Error('Invalid preferences')
@@ -147,7 +155,12 @@ function migrateV1(value) {
     trash: [],
     openIds: value.notes.map((note) => note.id),
     activeId: value.activeId,
-    preferences: { tabsVisible: true, theme: 'system', fontSize: 18, language: DEFAULT_LANGUAGE },
+    preferences: {
+      tabsVisible: true,
+      theme: 'system',
+      fontSize: FONT_SIZE.default,
+      language: DEFAULT_LANGUAGE,
+    },
   }
   return validateDocument(migrated)
 }

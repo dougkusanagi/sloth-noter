@@ -6,7 +6,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'github' : 'list',
-  use: { baseURL: 'http://localhost:5199', trace: 'retain-on-failure' },
+  // Reduced motion keeps axe from measuring contrast in the middle of a transition.
+  use: { baseURL: 'http://localhost:5199', trace: 'retain-on-failure', reducedMotion: 'reduce' },
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
   webServer: {
     command: 'bunx vite --port 5199 --strictPort',

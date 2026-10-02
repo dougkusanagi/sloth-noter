@@ -2,13 +2,17 @@
 
 Editor Markdown local e offline, em português (Brasil) ou inglês, com abas opcionais, busca de notas e de texto, e três modos: Padrão (estilo ao vivo), Código (Markdown puro) e Leitura.
 
+## Ideia
+
+Um **bloco de notas com Markdown**: o fluxo simples do Notepad do Windows — criar uma nota, escrever, fechar sem pensar em salvar — mas com compatibilidade real com Markdown, que é justamente o que o Notepad faz mal. Sem contas, sem nuvem, sem plugins. Cada decisão de produto passa por esta pergunta: isso deixa a nota mais rápida de criar e de fechar?
+
 O produto final é um aplicativo desktop Tauri V2 que lê e grava arquivos `.md` em uma pasta escolhida pelo usuário. A versão web é a base funcional e um fallback com importação e exportação. Sincronização em nuvem está fora do escopo.
 
 ## Estado
 
 - **Web:** as notas são gravadas no armazenamento do navegador a cada alteração.
-- **Desktop:** o app abre offline, sem `localStorage`. Por padrão grava um arquivo de estado versionado (`state.v3.json`) no diretório de dados do aplicativo. Em **Menu → Choose notes folder…** você escolhe uma pasta: cada nota vira um `.md` nela, e abas, preferências e lixeira ficam no diretório de dados do app. Alterações feitas por fora na pasta são importadas automaticamente. Veja o [roteiro](docs/ROADMAP.md) para o que falta.
-- **Em ambos:** falhas de gravação aparecem em um alerta; há importação/exportação `.md`, backup completo `.json` com imagens locais, lixeira persistente e renomeação. Links `[[Nota]]` conectam documentos; a biblioteca de imagens oferece busca, renomeação e exclusão de arquivos sem uso. Faça exportações para manter uma cópia fora do aplicativo.
+- **Desktop:** o app abre offline, sem `localStorage`. Por padrão grava um arquivo de estado versionado (`state.v3.json`) no diretório de dados do aplicativo. Em **Configurações → Dados** (Ctrl+,) você escolhe uma pasta: cada nota vira um `.md` nela, e abas, preferências e lixeira ficam no diretório de dados do app. Alterações feitas por fora na pasta são importadas automaticamente. Veja o [roteiro](docs/ROADMAP.md) para o que falta.
+- **Em ambos:** falhas de gravação aparecem como alertas empilháveis (toasts) com as ações possíveis; há importação/exportação `.md`, backup completo `.json` com imagens locais, lixeira persistente e renomeação. Links `[[Nota]]` conectam documentos; a biblioteca de imagens oferece busca, renomeação e exclusão de arquivos sem uso. Faça exportações para manter uma cópia fora do aplicativo.
 
 Detalhes de comportamento, atalhos e limites do Markdown: [docs/RECURSOS.md](docs/RECURSOS.md).
 
