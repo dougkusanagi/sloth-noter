@@ -124,3 +124,18 @@ test('the command palette runs any action and is separate from the note finder',
   await page.keyboard.press('Control+p')
   await expect(page.getByRole('dialog', { name: 'Buscar nota' })).toBeVisible()
 })
+
+test('the shortcut list can be searched by action or by key', async ({ page }) => {
+  await page.keyboard.press('Control+,')
+  const settings = page.getByRole('dialog', { name: 'Configurações' })
+  await settings.getByRole('button', { name: 'Atalhos' }).click()
+  const search = settings.getByRole('textbox', { name: 'Buscar função ou atalho…' })
+  await search.fill('ctrl')
+  await expect(settings.getByRole('listitem').first()).toBeVisible()
+  await search.fill('ctrl + shift + l')
+  await expect(settings.getByRole('listitem')).toHaveCount(1)
+  await search.fill('renomear')
+  await expect(settings.getByRole('listitem')).toContainText('F2')
+  await search.fill('zzz')
+  await expect(settings.getByRole('listitem')).toHaveCount(0)
+})

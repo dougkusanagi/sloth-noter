@@ -7,6 +7,7 @@ test('app shortcuts respect modifiers and composition', () => {
   assert.equal(appShortcut({ key: 'F2', ctrlKey: true }), null)
   assert.equal(appShortcut({ key: '2', metaKey: true, altKey: true }), 'source')
   assert.equal(appShortcut({ key: '?', ctrlKey: true, shiftKey: true }), 'shortcuts')
+  assert.equal(appShortcut({ key: 'b', ctrlKey: true }), 'sidebar')
   assert.equal(appShortcut({ key: 'k', ctrlKey: true }), 'commands')
   assert.equal(appShortcut({ key: ',', metaKey: true }), 'settings')
   assert.equal(appShortcut({ key: 'k', ctrlKey: true, shiftKey: true }), null)

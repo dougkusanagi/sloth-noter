@@ -1,3 +1,4 @@
+import { isDiscardableEmptyNote } from './notes.js'
 import { newDocument, validateDocument } from './storage.js'
 import { mergeExternal, resolveConflict } from './vault-sync.js'
 
@@ -123,9 +124,12 @@ export function createVaultAdapter(invoke, path) {
 
       // Only a note moved to the trash deletes its file. A note that merely left the
       // document (a restored backup) keeps its file, which is picked up again later.
+      // An untouched blank note discarded on close leaves nothing worth keeping, and its
+      // file would otherwise block the next "new note.md".
       for (const [name, entry] of [...known]) {
         if (kept.has(entry.id)) continue
-        if (trashed.has(entry.id))
+        const blank = isDiscardableEmptyNote({ name, body: entry.body, revision: 0 })
+        if (trashed.has(entry.id) || blank)
           await invoke(VAULT_APPLY, { op: { kind: 'remove', name, expected: entry.body } })
         known.delete(name)
       }
@@ -142,8 +146,23 @@ export function createVaultAdapter(invoke, path) {
           known.set(item.note.name, known.get(item.from))
           known.delete(item.from)
         }
-        if (blocked.length === pending.length)
-          throw new Error(`'${blocked[0].note.name}' already exists`)
+        if (blocked.length === pending.length) {
+          const sources = new Set(blocked.map((item) => item.from))
+          const occupied = blocked.find((item) => !sources.has(item.note.name))
+          if (occupied) throw new Error(`'${occupied.note.name}' already exists`)
+
+          // A cycle (a -> b -> a) has no free destination. Move one source aside
+          // to break it, keeping its identity and expected text for writes/retries.
+          const item = blocked[0]
+          let temporary
+          do {
+            temporary = `sloth-rename-${newId()}.md`
+          } while (known.has(temporary) || document.notes.some((note) => note.name === temporary))
+          await invoke(VAULT_APPLY, { op: { kind: 'rename', from: item.from, to: temporary } })
+          known.set(temporary, known.get(item.from))
+          known.delete(item.from)
+          item.from = temporary
+        }
         pending = blocked
       }
       for (const { note, expected } of writes) {

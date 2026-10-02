@@ -53,3 +53,29 @@ test('reconciles saved notes with their headings without changing bodies', () =>
   assert.strictEqual(reconcileHeadingNames(next), next)
   assert.equal(headingFileName('# A/B'), 'A-B.md')
 })
+
+test('reconciliation preserves existing duplicate-heading names regardless of file order', () => {
+  const document = {
+    notes: [
+      { id: 'b', name: 'new note (2).md', body: '# new note\nsecond', revision: 0 },
+      { id: 'a', name: 'new note.md', body: '# new note\nfirst', revision: 0 },
+      { id: 'c', name: 'new note (10).md', body: '# new note\nthird', revision: 0 },
+    ],
+  }
+  assert.strictEqual(reconcileHeadingNames(document), document)
+})
+
+test('reconciliation reserves valid heading names before naming other notes', () => {
+  const document = {
+    notes: [
+      { id: 'a', name: 'old.md', body: '# Plano\nfirst', revision: 0 },
+      { id: 'b', name: 'Plano.md', body: '# Plano\nsecond', revision: 0 },
+      { id: 'c', name: 'Plano (2).md', body: '# Plano\nthird', revision: 0 },
+    ],
+  }
+  const next = reconcileHeadingNames(document)
+  assert.equal(next.notes[0].name, 'Plano (3).md')
+  assert.strictEqual(next.notes[1], document.notes[1])
+  assert.strictEqual(next.notes[2], document.notes[2])
+  assert.strictEqual(reconcileHeadingNames(next), next)
+})

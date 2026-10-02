@@ -3,18 +3,26 @@ import { buildCommands } from '../commands.js'
 
 const KEY_LABELS = { Shift: '⇧', Delete: 'Del' }
 
+const modifierKey = () => (/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl')
+const isBare = (keys) => /^F\d+$/.test(keys) // function keys need no modifier
+
+/** Plain text of a shortcut as the user reads it, for searching: "ctrl+shift+l". */
+export function shortcutText(keys) {
+  return (isBare(keys) ? keys : `${modifierKey()}+${keys}`).toLowerCase()
+}
+
 export function Shortcut({ keys }) {
-  const modifier = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
   const parts = keys === '+' ? ['+'] : keys.split('+')
-  const bare = /^F\d+$/.test(keys) // function keys need no modifier
+  const bare = isBare(keys)
   return (
-    <span className="menu-shortcut" aria-label={bare ? keys : `${modifier}+${keys}`}>
-      {(bare ? parts : [modifier, ...parts]).map((key, index) => (
+    <span className="menu-shortcut" aria-label={shortcutText(keys)}>
+      {(bare ? parts : [modifierKey(), ...parts]).map((key, index) => (
         <kbd key={index}>{KEY_LABELS[key] ?? key}</kbd>
       ))}
     </span>
   )
 }
+
 export function MainMenu({
   firstRef,
   active,

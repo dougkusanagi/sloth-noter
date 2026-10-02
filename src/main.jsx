@@ -1083,7 +1083,11 @@ function Workspace({ persistence, loaded }) {
     restoreBackup: () => runMenu(() => backupInput.current?.click(), false),
     folder: () => persistence.invoke && runMenu(() => setFolderOpen(true), false),
     trash: () => runMenu(() => setTrashOpen(true), false),
-    sidebar: () => runMenu(() => updatePrefs({ sidebarVisible: !sidebarVisible })),
+    sidebar: () =>
+      runMenu(
+        () => updatePrefs({ sidebarVisible: !sidebarVisible }),
+        menuOpen || commandsOpen || settingsOpen,
+      ),
     tabs: () => runMenu(() => updatePrefs({ tabsVisible: !prefs.tabsVisible })),
     visual: () => changeMode('visual'),
     source: () => changeMode('source'),

@@ -73,7 +73,7 @@ O menu **Atalhos de teclado** (e **Configurações → Atalhos**) lista as combi
 | Biblioteca de imagens                             | Ctrl+Shift+L                         |
 | Paleta de comandos / configurações                | Ctrl+K / Ctrl+,                      |
 | Backup / pasta de notas (desktop)                 | Ctrl+Shift+S / Ctrl+Shift+O          |
-| Mostrar ou ocultar biblioteca                     | Ctrl+\\                              |
+| Mostrar ou ocultar biblioteca                     | Ctrl+B                               |
 | Padrão / Código / Leitura                         | Ctrl+Alt+1 / Ctrl+Alt+2 / Ctrl+Alt+3 |
 | Ajuda de atalhos                                  | Ctrl+Shift+/                         |
 | Tamanho de texto: aumentar / diminuir / restaurar | Ctrl++ / Ctrl+- / Ctrl+0             |

@@ -12,7 +12,7 @@ export const SHORTCUTS = [
   ['Shift+O', 'menu.folder'],
   ['K', 'menu.commands'],
   [',', 'menu.settings'],
-  ['\\', 'sidebar.toggle'],
+  ['B', 'sidebar.toggle'],
   ['Alt+1', 'mode.visual'],
   ['Alt+2', 'mode.source'],
   ['Alt+3', 'mode.reading'],
@@ -47,7 +47,7 @@ export function appShortcut(event) {
       e: 'export',
       k: 'commands',
       ',': 'settings',
-      '\\': 'sidebar',
+      b: 'sidebar',
     }[key] ?? null
   )
 }

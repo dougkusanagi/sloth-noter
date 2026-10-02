@@ -45,13 +45,29 @@ export function nameFromHeading(body, notes, currentId) {
 }
 
 export function reconcileHeadingNames(document) {
-  const reserved = document.notes.filter((note) => !headingFileName(note.body))
+  // Numbered names already resolve duplicate headings. Keep them stable even
+  // when the folder lists "Title (2).md" before "Title.md" on the next launch.
+  const proposed = new Map(
+    document.notes.map((note) => {
+      const heading = headingFileName(note.body)
+      return [note, heading ? uniqueName([], heading) : null]
+    }),
+  )
+  const reserved = document.notes.filter((note) => {
+    const name = proposed.get(note)
+    if (!name || name === note.name) return true
+    const stem = name.slice(0, -3)
+    return (
+      note.name.startsWith(stem) &&
+      /^ \((?:[2-9]|[1-9]\d+)\)\.md$/.test(note.name.slice(stem.length))
+    )
+  })
+  const preserved = new Set(reserved)
   const assigned = []
   let changed = false
   const notes = document.notes.map((note) => {
-    const proposed = headingFileName(note.body)
-    if (!proposed) return note
-    const name = uniqueName([...reserved, ...assigned], proposed)
+    if (preserved.has(note)) return note
+    const name = uniqueName([...reserved, ...assigned], proposed.get(note))
     const next = name === note.name ? note : { ...note, name, revision: note.revision + 1 }
     if (next !== note) changed = true
     assigned.push(next)

@@ -5,6 +5,7 @@ import { connectVault, createVaultAdapter } from './persistence-vault.js'
 import { createAppPersistence } from './persistence-runtime.js'
 import { moveToTrash, restoreFromTrash } from './notes.js'
 import { newDocument } from './storage.js'
+import { openWorkspace } from './boot.js'
 
 /** In-memory stand-in for the native commands, with the same refusal rules. */
 function fakeHost({ files = {}, aux = null, chosen = '/notes', state = null } = {}) {
@@ -133,6 +134,19 @@ test('a deleted note leaves the folder but stays recoverable from the trash', as
   assert.equal(host.files.get('a.md'), 'A')
 })
 
+test('a blank new note discarded on close does not block the next one', async () => {
+  const host = fakeHost({ files: { 'a.md': 'A' } })
+  const persistence = start(host)
+  const { document } = await persistence.load()
+  const blank = { id: 'n1', name: 'new note.md', body: '# new note', revision: 0 }
+  const open = { ...document, notes: [...document.notes, blank], openIds: ['n1'], activeId: 'n1' }
+  assert.equal(await persistence.save(open), null)
+  assert.ok(host.files.has('new note.md'))
+  assert.equal(await persistence.save(document), null)
+  assert.equal(host.files.has('new note.md'), false)
+  assert.equal(await persistence.save(open), null)
+})
+
 test('an edit made outside the app is not overwritten and the text stays in memory', async () => {
   const host = fakeHost({ files: { 'a.md': 'A' } })
   const persistence = start(host)
@@ -158,6 +172,100 @@ test('swapping two names in one save does not deadlock or overwrite', async () =
   })
   assert.equal(error, null)
   assert.deepEqual(Object.fromEntries(host.files), { 'd.md': 'A', 'a.md': 'B', 'c.md': 'C' })
+})
+
+test('opening repeated new-note headings keeps filenames and note identities stable', async () => {
+  const host = fakeHost({
+    files: { 'new note.md': '# new note\nfirst', 'new note (2).md': '# new note\nsecond' },
+    aux: JSON.stringify({
+      ids: { 'new note.md': 'a', 'new note (2).md': 'b' },
+      openIds: ['a', 'b'],
+      activeId: 'b',
+    }),
+  })
+  const loaded = await openWorkspace(start(host))
+  assert.equal(loaded.error, null)
+  assert.equal(loaded.document.activeId, 'b')
+  assert.equal(loaded.document.notes.find((note) => note.id === 'b').name, 'new note (2).md')
+  assert.equal(host.calls.includes('vault_apply'), false)
+})
+
+test('rename cycles preserve every body and identity through a restart', async () => {
+  for (const size of [2, 3]) {
+    const host = fakeHost({ files: { 'a.md': 'A', 'b.md': 'B', 'c.md': 'C' } })
+    const persistence = start(host)
+    const { document } = await persistence.load()
+    const next = {
+      ...document,
+      notes: document.notes.map((note, index) =>
+        index < size
+          ? { ...note, name: document.notes[(index + 1) % size].name, body: `${note.body} edited` }
+          : note,
+      ),
+    }
+    assert.equal(await persistence.save(next), null)
+    assert.equal(host.files.size, 3)
+    for (const note of next.notes) assert.equal(host.files.get(note.name), note.body)
+    const restarted = await start(host).load()
+    for (const note of next.notes)
+      assert.deepEqual(
+        restarted.document.notes.find((item) => item.id === note.id),
+        note,
+      )
+  }
+})
+
+test('a rename cycle interrupted after staging can be retried without losing text', async () => {
+  const host = fakeHost({ files: { 'a.md': 'A', 'b.md': 'B' } })
+  const invoke = host.invoke
+  let renames = 0
+  host.invoke = async (command, args) => {
+    if (command === 'vault_apply' && args.op.kind === 'rename' && ++renames === 2)
+      throw new Error('disk unavailable')
+    return invoke(command, args)
+  }
+  const persistence = start(host)
+  const { document } = await persistence.load()
+  const next = {
+    ...document,
+    notes: document.notes.map((note, index) => ({
+      ...note,
+      name: document.notes[1 - index].name,
+      body: `${note.body} edited`,
+    })),
+  }
+  assert.equal(await persistence.save(next), 'disk unavailable')
+  assert.deepEqual([...host.files.values()].sort(), ['A', 'B'])
+  assert.equal(await persistence.save(next), null)
+  assert.deepEqual(Object.fromEntries(host.files), { 'a.md': 'B edited', 'b.md': 'A edited' })
+})
+
+test('rename cycles retain protection against edits made outside the app', async () => {
+  const host = fakeHost({ files: { 'a.md': 'A', 'b.md': 'B' } })
+  const persistence = start(host)
+  const { document } = await persistence.load()
+  host.files.set('a.md', 'A external')
+  const next = {
+    ...document,
+    notes: document.notes.map((note, index) => ({
+      ...note,
+      name: document.notes[1 - index].name,
+      body: `${note.body} local`,
+    })),
+  }
+  assert.match(await persistence.save(next), /outside Sloth Note/)
+  assert.equal(host.files.get('b.md'), 'A external')
+  assert.equal(host.files.get('a.md'), 'B')
+  assert.equal(host.files.size, 2)
+})
+
+test('a rename never overwrites an unrelated file at its destination', async () => {
+  const host = fakeHost({ files: { 'a.md': 'A', 'b.md': 'B' } })
+  const persistence = start(host)
+  const { document } = await persistence.load()
+  const next = { ...document, notes: [{ ...document.notes[0], name: 'b.md' }] }
+  assert.match(await persistence.save(next), /already exists|outside Sloth Note/)
+  assert.deepEqual(Object.fromEntries(host.files), { 'a.md': 'A', 'b.md': 'B' })
 })
 
 test('the runtime picks the folder when one is connected and reports a missing one', async () => {

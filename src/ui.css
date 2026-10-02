@@ -781,6 +781,7 @@ kbd {
 .image-library-actions {
   display: flex;
   gap: 6px;
+  margin-bottom: 10px;
 }
 .image-library-actions .primary {
   flex: 1;
@@ -1149,9 +1150,22 @@ kbd {
 .shortcuts-dialog > button {
   margin-top: 12px;
 }
+.shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
 .shortcut-list {
-  max-height: 60vh;
+  max-height: min(52vh, 420px);
+  padding-right: 10px;
   overflow: auto;
+  scrollbar-gutter: stable;
+}
+.settings-panel .shortcut-list {
+  max-height: none;
+  padding-right: 0;
+  overflow: visible;
 }
 .shortcut-list > div {
   display: flex;
@@ -1230,8 +1244,9 @@ kbd {
 }
 .settings-panel {
   min-width: 0;
-  padding: 6px 28px 24px;
+  padding: 6px 20px 24px 28px;
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 .settings-panel h3 {
   margin: 20px 0 4px;

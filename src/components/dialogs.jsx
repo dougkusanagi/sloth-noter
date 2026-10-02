@@ -1,7 +1,7 @@
 import { SHORTCUTS } from '../shortcuts.js'
-import { Shortcut } from './main-menu.jsx'
+import { Shortcut, shortcutText } from './main-menu.jsx'
 // Modal dialogs of the workspace. State lives in the parent; these only render and handle keys.
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
@@ -287,14 +287,32 @@ export function FolderDialog({ path, onChoose, onUseAppStorage, onClose }) {
 }
 
 export function ShortcutList() {
+  const [query, setQuery] = useState('')
+  const squash = (text) => text.toLocaleLowerCase().replace(/[\s+]/g, '')
+  const needle = squash(query)
+  const shown = SHORTCUTS.filter(
+    ([keys, label]) => !needle || squash(`${t(label)} ${shortcutText(keys)}`).includes(needle),
+  )
   return (
-    <div className="shortcut-list" tabIndex={0} role="region" aria-label={t('menu.shortcuts')}>
-      {SHORTCUTS.map(([keys, label]) => (
-        <div key={keys}>
-          <span>{t(label)}</span>
-          <Shortcut keys={keys} />
-        </div>
-      ))}
+    <div className="shortcuts">
+      <div className="search-field">
+        <Search size={14} aria-hidden="true" />
+        <input
+          aria-label={t('shortcuts.search')}
+          placeholder={t('shortcuts.search')}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </div>
+      <div className="shortcut-list" role="list" tabIndex={0} aria-label={t('menu.shortcuts')}>
+        {shown.map(([keys, label]) => (
+          <div key={keys} role="listitem">
+            <span>{t(label)}</span>
+            <Shortcut keys={keys} />
+          </div>
+        ))}
+        {!shown.length && <p className="sidebar-empty">{t('library.noResults')}</p>}
+      </div>
     </div>
   )
 }
@@ -304,7 +322,7 @@ export function ShortcutsDialog({ onClose }) {
     <Modal
       label={t('menu.shortcuts')}
       className="shortcuts-dialog"
-      focusables={(dialog) => [...dialog.querySelectorAll('[tabindex="0"], button')]}
+      focusables={(dialog) => [...dialog.querySelectorAll('input, button')]}
       backdropClose={onClose}
       onEscape={onClose}
     >
