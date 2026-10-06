@@ -1,5 +1,6 @@
+import { clipboardImageFiles } from './clipboard.js'
 import { ImageInsert } from './components/image-insert.jsx'
-import { ensureTitle, mandatoryTitle } from './title.js'
+import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
 import { liveMarkdown } from './editor/live-decorations.js'
 import {
@@ -110,7 +111,7 @@ export function VisualEditor({
   const [linkUrl, setLinkUrl] = useState('')
   const linkInput = useRef(null)
   const callbacks = useRef({ onChange, onReady, onOpenWiki, onImageFiles, onImageUrl, imageBusy })
-  callbacks.current = { onChange, onReady, onOpenWiki }
+  callbacks.current = { onChange, onReady, onOpenWiki, onImageFiles, onImageUrl, imageBusy }
 
   function positionToolbar(view) {
     const selection = view.state.selection.main
@@ -268,6 +269,8 @@ export function VisualEditor({
           keymap.of([
             { key: 'Enter', run: (view) => moveTable(view, 'enter') },
             { key: 'Shift-Enter', run: (view) => moveTable(view, 'shift-enter') },
+            { key: 'Tab', run: (view) => navigateTitle(view) },
+            { key: 'Shift-Tab', run: (view) => navigateTitle(view, true) },
             { key: 'Tab', run: (view) => moveTable(view, 'tab') },
             { key: 'Shift-Tab', run: (view) => moveTable(view, 'shift-tab') },
             { key: 'ArrowUp', run: (view) => moveTable(view, 'up') },
@@ -309,6 +312,13 @@ export function VisualEditor({
             },
             paste: (event, view) => {
               const selection = view.state.selection.main
+              const files = clipboardImageFiles(event.clipboardData)
+              if (files.length) {
+                event.preventDefault()
+                event.stopPropagation()
+                callbacks.current.onImageFiles?.(files, { from: selection.from, to: selection.to })
+                return true
+              }
               const pasted = event.clipboardData?.getData('text/plain')
               const replacement =
                 pasted &&

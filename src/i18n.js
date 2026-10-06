@@ -41,6 +41,10 @@ const messages = {
     'menu.shortcuts': 'Atalhos de teclado',
     'library.noResults': 'Nenhum resultado encontrado',
     'images.back': 'Todas as imagens',
+    'images.manage': 'Gerenciar imagem',
+    'images.manageName': 'Gerenciar imagem: {name}',
+    'images.libraryHint':
+      'Arraste para inserir na nota. Clique com o botão direito para gerenciar.',
     'block.image': 'Imagem',
     'images.dialogTitle': 'Inserir imagem',
     'images.url': 'URL da imagem',
@@ -51,6 +55,9 @@ const messages = {
     'images.rename': 'Renomear imagem',
     'images.download': 'Baixar imagem',
     'images.delete': 'Excluir imagem',
+    'images.deleteFailed': 'Não foi possível excluir a imagem: {error}',
+    'images.inUseOnDisk':
+      'A imagem ainda é usada em: {notes}. Remova essas referências antes de excluir.',
     'images.deleteConfirm':
       'Excluir “{name}”? Essa imagem não está em uso. Esta ação não pode ser desfeita.',
     'images.protected': 'Remova as referências nas notas e na lixeira antes de excluir.',
@@ -117,6 +124,9 @@ const messages = {
     'tabs.open': 'Abrir nota',
     'tabs.rename': 'Renomear nota',
     'tabs.close': 'Fechar aba',
+    'tabs.reopen': 'Reabrir última nota fechada',
+    'tabs.previous': 'Selecionar aba anterior',
+    'tabs.next': 'Selecionar próxima aba',
     'tabs.trash': 'Mover para a lixeira',
 
     'mode.legend': 'Modo de visualização',
@@ -274,6 +284,9 @@ const messages = {
     'menu.shortcuts': 'Keyboard shortcuts',
     'library.noResults': 'No results found',
     'images.back': 'All images',
+    'images.manage': 'Manage image',
+    'images.manageName': 'Manage image: {name}',
+    'images.libraryHint': 'Drag to insert in a note. Right-click to manage.',
     'block.image': 'Image',
     'images.dialogTitle': 'Insert image',
     'images.url': 'Image URL',
@@ -284,6 +297,9 @@ const messages = {
     'images.rename': 'Rename image',
     'images.download': 'Download image',
     'images.delete': 'Delete image',
+    'images.deleteFailed': 'Could not delete image: {error}',
+    'images.inUseOnDisk':
+      'The image is still used in: {notes}. Remove those references before deleting.',
     'images.deleteConfirm': 'Delete “{name}”? This image is unused. This action cannot be undone.',
     'images.protected': 'Remove references in notes and trash before deleting.',
     'images.used': 'Used in {count} note(s)',
@@ -348,6 +364,9 @@ const messages = {
     'tabs.open': 'Open note',
     'tabs.rename': 'Rename note',
     'tabs.close': 'Close tab',
+    'tabs.reopen': 'Reopen last closed note',
+    'tabs.previous': 'Select previous tab',
+    'tabs.next': 'Select next tab',
     'tabs.trash': 'Move to Trash',
 
     'mode.legend': 'View mode',

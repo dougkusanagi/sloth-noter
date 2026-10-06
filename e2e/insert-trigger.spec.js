@@ -34,7 +34,8 @@ test('the insert button follows only the typing cursor, including mouse movement
 test('the insert button hides on selection, typing and blur, and inserts at the active blank line', async ({
   page,
 }) => {
-  await openNote(page)
+  await openNote(page, '# Inserção\n\n\nPrimeiro parágrafo\n\nÚltimo parágrafo\n\n')
+  await page.keyboard.press('ArrowDown')
   await page.keyboard.press('ArrowDown')
   await expect(trigger(page)).toBeVisible()
   await page.keyboard.press('Shift+ArrowDown')
@@ -45,6 +46,7 @@ test('the insert button hides on selection, typing and blur, and inserts at the 
   await expect(trigger(page)).toBeHidden()
   await page.keyboard.press('Control+Home')
   await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('ArrowDown')
   await page.keyboard.press('End')
   for (let index = 0; index < 5; index++) await page.keyboard.press('Backspace')
   await expect(trigger(page)).toBeVisible()
@@ -54,10 +56,11 @@ test('the insert button hides on selection, typing and blur, and inserts at the 
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+Home')
   await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('ArrowDown')
   await trigger(page).click()
   await page.getByRole('menuitem', { name: 'Título 2', exact: true }).click()
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
-  await expect(page.locator('textarea')).toHaveValue(/^# Inserção\n## .*\nPrimeiro parágrafo/)
+  await expect(page.locator('textarea')).toHaveValue(/^# Inserção\n\n## .*\nPrimeiro parágrafo/)
 })
 
 test('the fixed insert button tracks document scrolling', async ({ page }) => {

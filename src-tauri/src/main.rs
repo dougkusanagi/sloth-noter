@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod clipboard;
 mod errors;
 mod images;
 mod migration;
@@ -9,7 +10,32 @@ mod vault;
 use std::{collections::HashSet, path::PathBuf, sync::Mutex};
 
 #[derive(Default)]
-struct DroppedImages(Mutex<HashSet<PathBuf>>);
+struct DroppedFiles(Mutex<HashSet<PathBuf>>);
+
+impl DroppedFiles {
+    fn on_window_event(&self, event: &tauri::WindowEvent) {
+        // Tauri delivers drops on a WebviewWindow as window events, rather than
+        // webview events. Record the paths before the frontend requests a read.
+        if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
+            if let Ok(mut allowed) = self.0.lock() {
+                allowed.clear();
+                for path in paths {
+                    if let Ok(path) = path.canonicalize() {
+                        allowed.insert(path);
+                    }
+                }
+            }
+        }
+    }
+
+    fn take(&self, path: &str) -> Result<PathBuf, String> {
+        let source = std::fs::canonicalize(path).map_err(|e| errors::describe(&e))?;
+        if !self.0.lock().map_err(|e| e.to_string())?.remove(&source) {
+            return Err("The file was not dropped into this window".into());
+        }
+        Ok(source)
+    }
+}
 
 #[derive(Default)]
 struct PendingVault(Mutex<Option<PathBuf>>);
@@ -113,6 +139,13 @@ fn image_root(app: &AppHandle) -> Result<PathBuf, String> {
     }
 }
 #[tauri::command]
+async fn clipboard_read() -> Result<Option<clipboard::Contents>, String> {
+    tauri::async_runtime::spawn_blocking(clipboard::read)
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 fn image_list(app: AppHandle) -> Result<Vec<String>, String> {
     images::list(&image_root(&app)?)
 }
@@ -140,49 +173,39 @@ fn image_write(app: AppHandle, name: String, bytes: Vec<u8>) -> Result<(), Strin
 #[tauri::command]
 fn image_import_drop(
     app: AppHandle,
-    dropped: tauri::State<'_, DroppedImages>,
+    dropped: tauri::State<'_, DroppedFiles>,
     path: String,
 ) -> Result<String, String> {
-    let source = std::fs::canonicalize(path).map_err(|e| errors::describe(&e))?;
-    if !dropped.0.lock().map_err(|e| e.to_string())?.remove(&source) {
-        return Err("The file was not dropped into this window".into());
-    }
+    let source = dropped.take(&path)?;
     images::import_dropped(&image_root(&app)?, &source)
 }
 
 #[tauri::command]
 fn note_read_dropped(
-    dropped: tauri::State<'_, DroppedImages>,
+    dropped: tauri::State<'_, DroppedFiles>,
     path: String,
 ) -> Result<String, String> {
-    let source = std::fs::canonicalize(path).map_err(|e| errors::describe(&e))?;
-    if !dropped.0.lock().map_err(|e| e.to_string())?.remove(&source) {
-        return Err("The file was not dropped into this window".into());
-    }
+    let source = dropped.take(&path)?;
     vault::read_dropped(&source)
 }
 
 #[tauri::command]
 fn image_delete(app: AppHandle, name: String) -> Result<(), String> {
-    if !name.starts_with("assets/") {
-        return Err("Only imported images can be deleted".into());
-    }
     let root = image_root(&app)?;
-    let path = images::image_path(&root, &name)?;
-    // Protect references in notes on disk, including edits made outside the app.
-    if configured_vault(&app)?.is_some()
-        && vault::list(&root)
-            .map_err(|e| e.to_string())?
-            .iter()
-            .any(|note| note.contents.contains(&name))
-    {
-        return Err("The image is still referenced by a note".into());
+    images::image_path(&root, &name)?;
+    // Protect actual image references in notes edited outside the app as well.
+    if configured_vault(&app)?.is_some() {
+        let references: Vec<String> = vault::list(&root)
+            .map_err(|e| errors::describe(&e))?
+            .into_iter()
+            .filter(|note| images::references_image(&note.contents, &name))
+            .map(|note| note.name)
+            .collect();
+        if !references.is_empty() {
+            return Err(format!("[image-in-use] {}", references.join(", ")));
+        }
     }
-    match std::fs::remove_file(path) {
-        Ok(()) => Ok(()),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(errors::describe(&error)),
-    }
+    images::delete(&root, &name)
 }
 
 #[tauri::command]
@@ -293,18 +316,9 @@ fn main() {
             Ok(())
         })
         .manage(PendingVault::default())
-        .manage(DroppedImages::default())
-        .on_webview_event(|webview, event| {
-            if let tauri::WebviewEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
-                if let Ok(mut allowed) = webview.state::<DroppedImages>().0.lock() {
-                    allowed.clear();
-                    for path in paths {
-                        if let Ok(path) = path.canonicalize() {
-                            allowed.insert(path);
-                        }
-                    }
-                }
-            }
+        .manage(DroppedFiles::default())
+        .on_window_event(|window, event| {
+            window.state::<DroppedFiles>().on_window_event(event);
         })
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
@@ -314,6 +328,7 @@ fn main() {
             vault_status,
             vault_choose,
             vault_activate,
+            clipboard_read,
             image_list,
             image_read,
             image_write,
@@ -329,4 +344,106 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("Sloth Note could not start");
+}
+
+#[cfg(test)]
+mod drop_tests {
+    use super::*;
+    use std::fs;
+
+    struct Fixture(PathBuf);
+
+    impl Fixture {
+        fn new() -> Self {
+            let id = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let root = std::env::temp_dir().join(format!("sloth-drop-{}-{id}", std::process::id()));
+            fs::create_dir_all(&root).unwrap();
+            Self(root)
+        }
+
+        fn file(&self, name: &str, contents: &[u8]) -> PathBuf {
+            let path = self.0.join(name);
+            fs::write(&path, contents).unwrap();
+            path
+        }
+    }
+
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn window_drop(paths: Vec<PathBuf>) -> tauri::WindowEvent {
+        tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop {
+            paths,
+            position: tauri::PhysicalPosition::new(200.0, 300.0),
+        })
+    }
+
+    #[test]
+    fn window_drop_allows_note_and_image_imports_once() {
+        let fixture = Fixture::new();
+        let note = fixture.file("Nota com espaços.md", "# Olá 🦥\n\ntexto".as_bytes());
+        let image = fixture.file("imagem.png", b"\x89PNG\r\n\x1a\n");
+        let unrelated = fixture.file("outra.md", b"not dropped");
+        let dropped = DroppedFiles::default();
+        assert!(dropped.take(note.to_str().unwrap()).is_err());
+
+        dropped.on_window_event(&window_drop(vec![
+            note.clone(),
+            image.clone(),
+            note.clone(),
+        ]));
+        let source = dropped
+            .take(
+                fixture
+                    .0
+                    .join(".")
+                    .join("Nota com espaços.md")
+                    .to_str()
+                    .unwrap(),
+            )
+            .unwrap();
+        assert_eq!(vault::read_dropped(&source).unwrap(), "# Olá 🦥\n\ntexto");
+        assert!(dropped.take(note.to_str().unwrap()).is_err());
+        assert!(dropped.take(unrelated.to_str().unwrap()).is_err());
+
+        let source = dropped.take(image.to_str().unwrap()).unwrap();
+        let imported = images::import_dropped(&fixture.0, &source).unwrap();
+        assert_eq!(
+            fs::read(fixture.0.join(imported)).unwrap(),
+            b"\x89PNG\r\n\x1a\n"
+        );
+        assert!(dropped.take(image.to_str().unwrap()).is_err());
+    }
+
+    #[test]
+    fn entering_or_leaving_the_window_does_not_authorize_a_file() {
+        let fixture = Fixture::new();
+        let note = fixture.file("a.txt", b"text");
+        let dropped = DroppedFiles::default();
+        dropped.on_window_event(&tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Enter {
+            paths: vec![note.clone()],
+            position: tauri::PhysicalPosition::new(200.0, 300.0),
+        }));
+        dropped.on_window_event(&tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Leave));
+        assert!(dropped.take(note.to_str().unwrap()).is_err());
+    }
+
+    #[test]
+    fn a_new_drop_replaces_unconsumed_paths_from_the_previous_drop() {
+        let fixture = Fixture::new();
+        let previous = fixture.file("previous.md", b"previous");
+        let current = fixture.file("current.markdown", b"current");
+        let dropped = DroppedFiles::default();
+        dropped.on_window_event(&window_drop(vec![previous.clone()]));
+        dropped.on_window_event(&window_drop(vec![current.clone()]));
+        assert!(dropped.take(previous.to_str().unwrap()).is_err());
+        let source = dropped.take(current.to_str().unwrap()).unwrap();
+        assert_eq!(vault::read_dropped(&source).unwrap(), "current");
+    }
 }

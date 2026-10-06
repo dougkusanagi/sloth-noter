@@ -12,6 +12,7 @@ export function friendlyError(cause, fallback = 'Storage is unavailable') {
   if (!raw) return fallback
   const code = CODED.exec(raw)?.[1]
   if (!code) return raw
+  if (code === 'image-in-use') return t('images.inUseOnDisk', { notes: raw.replace(CODED, '') })
   const key = `disk.${code}`
   const message = t(key)
   return message === key ? raw.replace(CODED, '') : message

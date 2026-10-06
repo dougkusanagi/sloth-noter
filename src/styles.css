@@ -259,7 +259,6 @@ textarea:focus-visible {
 .visual-editor .cm-md-h1 {
   --md-prefix-width: 0.82em;
   font-size: 1.6em;
-  line-height: 1.25;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
@@ -285,7 +284,7 @@ textarea:focus-visible {
   color: var(--muted);
 }
 .visual-editor .cm-md-bullet {
-  --md-prefix-width: 2.12em;
+  --md-prefix-width: 0px;
   padding-left: 1.5em;
   position: relative;
 }
@@ -297,6 +296,19 @@ textarea:focus-visible {
 }
 .visual-editor .cm-md-bullet.cm-md-editing::before {
   content: none;
+}
+.visual-editor .cm-md-list-marker {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 1.5em;
+  margin-left: -1.5em;
+  padding-right: 0.5em;
+  text-align: right;
+}
+.visual-editor .cm-md-link-source {
+  color: inherit;
+  text-decoration: none;
+  cursor: text;
 }
 .visual-editor .cm-md-ordered {
   padding-left: 0.5em;

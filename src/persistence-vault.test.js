@@ -3,9 +3,10 @@ import assert from 'node:assert/strict'
 import { createPersistence } from './persistence.js'
 import { connectVault, createVaultAdapter } from './persistence-vault.js'
 import { createAppPersistence } from './persistence-runtime.js'
-import { moveToTrash, restoreFromTrash } from './notes.js'
+import { headingFileName, moveToTrash, restoreFromTrash, uniqueName } from './notes.js'
 import { newDocument } from './storage.js'
 import { openWorkspace } from './boot.js'
+import { ensureTitle } from './title.js'
 
 /** In-memory stand-in for the native commands, with the same refusal rules. */
 function fakeHost({ files = {}, aux = null, chosen = '/notes', state = null } = {}) {
@@ -51,7 +52,11 @@ function fakeHost({ files = {}, aux = null, chosen = '/notes', state = null } = 
       return { path: host.vault, available: host.vault !== null && !host.missing }
     if (command === 'vault_apply') {
       const { op } = args
+      for (const name of op.kind === 'rename' ? [op.from, op.to] : [op.name])
+        if (Buffer.byteLength(name, 'utf8') > 255) throw new Error('Invalid note filename')
       if (op.kind === 'write') {
+        if (Buffer.byteLength(`.${op.name}.sloth-tmp`, 'utf8') > 255)
+          throw new Error('Temporary filename is too long')
         const current = host.files.has(op.name) ? host.files.get(op.name) : null
         if (current !== op.expected) throw new Error(`'${op.name}' was changed outside Sloth Note`)
         host.files.set(op.name, op.contents)
@@ -117,6 +122,33 @@ test('edits, new notes and renames reach the files; tabs survive a restart', asy
   assert.deepEqual(restarted.document.openIds, next.openIds)
   assert.deepEqual(restarted.document.pinnedIds, next.pinnedIds)
   assert.equal(restarted.document.notes.length, 2)
+})
+
+test('importing long first lines saves the full text and survives a restart', async () => {
+  const host = fakeHost({ files: { 'a.md': '# A' } })
+  const persistence = start(host)
+  const { document } = await persistence.load()
+  const body = ensureTitle(`${'Bem-vindo! A transição será tranquila. 🦥 '.repeat(15)}\n\nConteúdo`)
+  const notes = [...document.notes]
+  for (const id of ['imported-a', 'imported-b'])
+    notes.push({ id, name: uniqueName(notes, headingFileName(body)), body, revision: 0 })
+  const next = { ...document, notes, openIds: ['imported-a'], activeId: 'imported-a' }
+  assert.equal(await persistence.save(next), null)
+  for (const note of notes.slice(1)) assert.equal(host.files.get(note.name), body)
+  const reopened = await openWorkspace(start(host))
+  assert.equal(reopened.error, null)
+  assert.deepEqual(
+    reopened.document.notes
+      .filter((note) => note.id.startsWith('imported'))
+      .map((note) => note.name)
+      .sort(),
+    notes
+      .slice(1)
+      .map((note) => note.name)
+      .sort(),
+  )
+  for (const note of reopened.document.notes.filter((note) => note.id.startsWith('imported')))
+    assert.equal(note.body, body)
 })
 
 test('a deleted note leaves the folder but stays recoverable from the trash', async () => {

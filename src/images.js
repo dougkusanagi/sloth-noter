@@ -99,6 +99,15 @@ export function noteImages(notes) {
     }
   return [...found.values()]
 }
+export function libraryImages(document, diskImages = []) {
+  const found = new Map(noteImages(allNotes(document)).map((image) => [image.src, image]))
+  for (const asset of [...diskImages, ...(document.assets ?? [])]) {
+    const src = normalizeImageSource(asset.src)
+    const previous = found.get(src)
+    found.set(src, { ...asset, src, noteIds: previous?.noteIds ?? [] })
+  }
+  return [...found.values()]
+}
 export function replaceDocumentImage(document, source, target) {
   const replace = (note) => {
     const body = replaceImageSource(note.body, source, target)

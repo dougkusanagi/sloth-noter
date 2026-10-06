@@ -136,3 +136,26 @@ test('dropping Markdown files imports them as notes, even over the sidebar', asy
   await expect(page.locator('.notes-sidebar')).toContainText('b')
   await expect(page.locator('[data-sonner-toast]')).toHaveCount(0)
 })
+
+test('dropping a long first paragraph preserves the text with a bounded filename', async ({
+  page,
+}) => {
+  const paragraph = 'Seja bem-vindo ao macOS! A transição será tranquila. 🦥 '.repeat(12)
+  const contents = `${paragraph}\n\nConteúdo completo da nota.`
+  const transfer = await page.evaluateHandle((contents) => {
+    const data = new DataTransfer()
+    data.items.add(new File([contents], 'macos.md', { type: 'text/markdown' }))
+    return data
+  }, contents)
+  await page.locator('.editor-shell').dispatchEvent('drop', { dataTransfer: transfer })
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await expect(page.locator('textarea')).toHaveValue(`# ${contents}`)
+  const imported = await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem('sloth-note:v3'))
+    return state.notes.find((note) => note.id === state.activeId)
+  })
+  expect(new TextEncoder().encode(`.${imported.name}.sloth-tmp`).length).toBeLessThanOrEqual(255)
+  await page.reload()
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await expect(page.locator('textarea')).toHaveValue(`# ${contents}`)
+})

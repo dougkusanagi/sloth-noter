@@ -3,6 +3,9 @@ export const SHORTCUTS = [
   ['P', 'menu.findNote'],
   ['F', 'menu.findInNote'],
   ['W', 'tabs.close'],
+  ['Shift+T', 'tabs.reopen'],
+  ['PageUp', 'tabs.previous'],
+  ['PageDown', 'tabs.next'],
   ['I', 'menu.import'],
   ['E', 'menu.export'],
   ['F2', 'menu.rename'],
@@ -28,6 +31,7 @@ export function appShortcut(event) {
   if (event.shiftKey && !event.altKey)
     return (
       {
+        t: 'reopenTab',
         delete: 'trashMove',
         l: 'images',
         s: 'backup',
@@ -39,6 +43,8 @@ export function appShortcut(event) {
   if (event.altKey || event.shiftKey) return null
   return (
     {
+      pageup: 'previousTab',
+      pagedown: 'nextTab',
       t: 'newNote',
       p: 'findNote',
       f: 'findInNote',

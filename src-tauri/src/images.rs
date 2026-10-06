@@ -29,6 +29,34 @@ pub fn image_path(root: &Path, name: &str) -> Result<PathBuf, String> {
     }
     Ok(path)
 }
+pub fn references_image(markdown: &str, name: &str) -> bool {
+    use pulldown_cmark::{Event, Options, Parser, Tag};
+    fn normalize(source: &str) -> String {
+        let source = source.strip_prefix("./").unwrap_or(source);
+        percent_encoding::percent_decode_str(source)
+            .decode_utf8_lossy()
+            .into_owned()
+    }
+    let name = normalize(name);
+    let options = Options::ENABLE_TABLES
+        | Options::ENABLE_FOOTNOTES
+        | Options::ENABLE_STRIKETHROUGH
+        | Options::ENABLE_TASKLISTS;
+    Parser::new_ext(markdown, options).any(|event| match event {
+        Event::Start(Tag::Image { dest_url, .. }) => normalize(&dest_url) == name,
+        _ => false,
+    })
+}
+
+pub fn delete(root: &Path, name: &str) -> Result<(), String> {
+    let path = image_path(root, name)?;
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(crate::errors::describe(&error)),
+    }
+}
+
 pub fn list(root: &Path) -> Result<Vec<String>, String> {
     fn visit(root: &Path, dir: &Path, depth: usize, found: &mut Vec<String>) -> Result<(), String> {
         if depth > 8 || !dir.exists() {
@@ -153,6 +181,52 @@ pub fn import_dropped(root: &Path, source: &Path) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn deletion_checks_real_markdown_images_instead_of_filename_mentions() {
+        for text in [
+            "photo.png is an unused file",
+            "`![Photo](photo.png)`",
+            "```md\n![Photo](photo.png)\n```",
+            "\\![Photo](photo.png)",
+            "[Download](photo.png)",
+            "![Other](old-photo.png)",
+            "![Other](photos/photo.png)",
+            "[unused]: photo.png",
+        ] {
+            assert!(!references_image(text, "photo.png"), "{text}");
+        }
+        for text in [
+            "![Photo](photo.png)",
+            "![Photo](./photo.png)",
+            "![Photo](<photo.png> \"Title\")",
+            "![Photo][ref]\n\n[ref]: photo.png",
+            "![ref]\n\n[ref]: photo.png",
+            "| Photo |\n| --- |\n| ![Photo](photo.png) |",
+            "[^note]: ![Photo](photo.png)",
+        ] {
+            assert!(references_image(text, "photo.png"), "{text}");
+        }
+        assert!(references_image(
+            "![Photo](./photos/Pasted%20image.png)",
+            "photos/Pasted image.png"
+        ));
+    }
+    #[test]
+    fn unused_library_images_can_be_deleted_from_root_or_subfolders() {
+        let root = std::env::temp_dir().join(format!("sloth-image-delete-{}", std::process::id()));
+        fs::create_dir_all(root.join("photos")).unwrap();
+        fs::write(root.join("keep.md"), "note").unwrap();
+        for name in ["Pasted image.png", "photos/a.png"] {
+            fs::write(root.join(name), b"image").unwrap();
+            delete(&root, name).unwrap();
+            assert!(!root.join(name).exists());
+            delete(&root, name).unwrap();
+        }
+        assert!(delete(&root, "keep.md").is_err());
+        assert!(delete(&root, "../outside.png").is_err());
+        assert!(root.join("keep.md").exists());
+        fs::remove_dir_all(root).unwrap();
+    }
     #[test]
     fn dropped_files_are_copied_to_assets_with_valid_markdown_paths() {
         let root = std::env::temp_dir().join(format!("sloth-native-drop-{}", std::process::id()));

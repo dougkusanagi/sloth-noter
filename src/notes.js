@@ -8,12 +8,29 @@ export function isDiscardableEmptyNote(note) {
   )
 }
 
+// Leave room under the 255-byte filesystem limit for .<name>.sloth-tmp.
+const MAX_NOTE_NAME_BYTES = 244
+const utf8 = new TextEncoder()
+
+function boundedFileName(stem, suffix = '', extension = '.md') {
+  const available = MAX_NOTE_NAME_BYTES - utf8.encode(`${suffix}${extension}`).length
+  let shortened = '',
+    bytes = 0
+  for (const character of stem) {
+    const size = utf8.encode(character).length
+    if (bytes + size > available) break
+    shortened += character
+    bytes += size
+  }
+  return `${shortened}${suffix}${extension}`
+}
+
 export function uniqueName(notes, proposed) {
   const stem = proposed.toLocaleLowerCase().endsWith('.md') ? proposed.slice(0, -3) : proposed
-  let name = `${stem}.md`,
+  let name = boundedFileName(stem),
     number = 2
   while (notes.some((note) => note.name.toLocaleLowerCase() === name.toLocaleLowerCase()))
-    name = `${stem} (${number++}).md`
+    name = boundedFileName(stem, ` (${number++})`)
   return name
 }
 
@@ -30,8 +47,10 @@ export function headingFileName(body) {
     .replace(/[. ]+$/, '')
     .trim()
   if (!title) return null
-  if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(title)) return `_${title}.md`
-  return title.toLocaleLowerCase().endsWith('.md') ? title : `${title}.md`
+  if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(title)) return boundedFileName(`_${title}`)
+  return title.toLocaleLowerCase().endsWith('.md')
+    ? boundedFileName(title.slice(0, -3), '', title.slice(-3))
+    : boundedFileName(title)
 }
 
 export function nameFromHeading(body, notes, currentId) {
@@ -56,11 +75,8 @@ export function reconcileHeadingNames(document) {
   const reserved = document.notes.filter((note) => {
     const name = proposed.get(note)
     if (!name || name === note.name) return true
-    const stem = name.slice(0, -3)
-    return (
-      note.name.startsWith(stem) &&
-      /^ \((?:[2-9]|[1-9]\d+)\)\.md$/.test(note.name.slice(stem.length))
-    )
+    const suffix = / \((?:[2-9]|[1-9]\d+)\)(?=\.md$)/.exec(note.name)?.[0]
+    return Boolean(suffix && note.name === boundedFileName(name.slice(0, -3), suffix))
   })
   const preserved = new Set(reserved)
   const assigned = []

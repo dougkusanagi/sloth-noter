@@ -16,3 +16,14 @@ test('unknown codes and plain messages keep the original text', () => {
   assert.equal(friendlyError(new Error('boom')), 'boom')
   assert.equal(friendlyError(undefined), 'Storage is unavailable')
 })
+
+test('image deletion errors name the notes that still reference the image', () => {
+  setLanguage('pt-BR')
+  assert.equal(
+    friendlyError('[image-in-use] Fotos.md, Trabalho.md'),
+    'A imagem ainda é usada em: Fotos.md, Trabalho.md. Remova essas referências antes de excluir.',
+  )
+  setLanguage('en')
+  assert.match(friendlyError('[image-in-use] Photos.md'), /still used in: Photos.md/)
+  setLanguage('pt-BR')
+})

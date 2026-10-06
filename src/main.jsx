@@ -1,11 +1,17 @@
+import { clipboardImageFiles, readNativeClipboard } from './clipboard.js'
 import { listenNativeImageDrops, routeNativeImageDrop } from './native-image-drop.js'
-import { ensureTitle, ensureDocumentTitles } from './title.js'
+import { ensureTitle, ensureDocumentTitles, titlePosition, titleNavigationTarget } from './title.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Toaster, toast } from 'sonner'
 import { Markdown } from './markdown.jsx'
 import { createFullBackup, readBackupBundle, restoreBackupImages } from './backup.js'
-import { findNote, wikiParts, renameWikiReferences } from './markdown-model.js'
+import {
+  findNote,
+  wikiParts,
+  renameWikiReferences,
+  normalizeImageSource,
+} from './markdown-model.js'
 import { FONT_SIZE } from './storage.js'
 import { NoteList } from './components/note-list.jsx'
 import { friendlyError } from './errors.js'
@@ -51,6 +57,7 @@ import { restoreWindowState } from './window-state.js'
 import {
   importImage,
   noteImages,
+  libraryImages,
   resolveImage,
   allNotes,
   clearImageCache,
@@ -169,6 +176,8 @@ function Workspace({ persistence, loaded }) {
   const findInput = useRef(null)
   const editorRef = useRef(null)
   const visualRef = useRef(null)
+  const closedTabs = useRef([])
+  const clipboardBusy = useRef(false)
   const trashFirst = useRef(null)
   const returnFocus = useRef(null)
   const active = data.notes.find((note) => note.id === data.activeId) ?? null
@@ -188,19 +197,7 @@ function Workspace({ persistence, loaded }) {
   })
   const sidebarVisible = prefs.sidebarVisible ?? !window.matchMedia('(max-width: 600px)').matches
   setLanguage(prefs.language)
-  const images = useMemo(() => {
-    const found = new Map(
-      noteImages([...data.notes, ...data.trash.map((entry) => entry.note)]).map((image) => [
-        image.src,
-        image,
-      ]),
-    )
-    for (const asset of [...diskImages, ...(data.assets ?? [])]) {
-      const previous = found.get(asset.src)
-      found.set(asset.src, { ...asset, noteIds: previous?.noteIds ?? [] })
-    }
-    return [...found.values()]
-  }, [data.notes, data.trash, data.assets, diskImages])
+  const images = useMemo(() => libraryImages(data, diskImages), [data, diskImages])
 
   useEffect(() => {
     let disposed = false
@@ -361,15 +358,26 @@ function Workspace({ persistence, loaded }) {
     const field = event.target
     const raw = field.value
     const normalized = ensureTitle(raw)
-    const delta = normalized.length - raw.length
-    const from = Math.max(2, field.selectionStart + delta)
-    const to = Math.max(2, field.selectionEnd + delta)
+    const from = titlePosition(raw, normalized, field.selectionStart)
+    const to = titlePosition(raw, normalized, field.selectionEnd)
     updateBody(normalized)
-    if (delta) requestAnimationFrame(() => field.setSelectionRange(from, to))
+    if (raw !== normalized) requestAnimationFrame(() => field.setSelectionRange(from, to))
   }
   function wrapSourceSelection(event) {
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return
     const field = event.currentTarget
+    if (event.key === 'Tab') {
+      const target = titleNavigationTarget(field.value, field.selectionStart, event.shiftKey)
+      if (target !== null) {
+        event.preventDefault()
+        if (target > field.value.length) {
+          field.setRangeText('\n', field.value.length, field.value.length, 'end')
+          updateBody(field.value)
+        }
+        field.setSelectionRange(target, target)
+        return
+      }
+    }
     if (event.key === 'Enter' && !event.shiftKey && field.selectionStart === field.selectionEnd) {
       const continued = continueBlock(field.value, field.selectionStart)
       if (continued) {
@@ -391,17 +399,51 @@ function Workspace({ persistence, loaded }) {
   }
   function closeTab(id) {
     const old = current.current
-    if (old.pinnedIds?.includes(id)) return
+    if (!old.openIds.includes(id) || old.pinnedIds?.includes(id)) return
     const note = old.notes.find((item) => item.id === id)
     const openIds = old.openIds.filter((item) => item !== id)
     const notes =
       note && isDiscardableEmptyNote(note) ? old.notes.filter((item) => item.id !== id) : old.notes
+    if (note)
+      closedTabs.current.push({
+        id,
+        index: old.openIds.indexOf(id),
+        discarded: notes.includes(note) ? null : note,
+      })
     commit({
       ...old,
       notes,
       openIds,
       activeId: old.activeId === id ? (openIds.at(-1) ?? null) : old.activeId,
     })
+  }
+  function reopenTab() {
+    while (closedTabs.current.length) {
+      const entry = closedTabs.current.pop()
+      const old = current.current
+      if (old.openIds.includes(entry.id) || old.trash.some(({ note }) => note.id === entry.id))
+        continue
+      const note = old.notes.find((note) => note.id === entry.id) ?? entry.discarded
+      if (!note) continue
+      const openIds = [...old.openIds]
+      openIds.splice(Math.max(old.pinnedIds?.length ?? 0, entry.index), 0, note.id)
+      commit({
+        ...old,
+        notes: old.notes.some((item) => item.id === note.id)
+          ? old.notes
+          : [...old.notes, { ...note, name: uniqueName(old.notes, note.name) }],
+        openIds,
+        activeId: note.id,
+      })
+      setTimeout(focusEditor, 0)
+      return
+    }
+  }
+  function selectAdjacentTab(direction) {
+    const { openIds, activeId } = current.current
+    if (!openIds.length) return
+    const index = openIds.indexOf(activeId)
+    openNote(openIds[(index + direction + openIds.length) % openIds.length])
   }
   async function renameNote(id = active?.id) {
     const note = data.notes.find((item) => item.id === id)
@@ -624,9 +666,8 @@ function Workspace({ persistence, loaded }) {
     }
     return { from: from + insert.length, to: from + insert.length }
   }
-  async function addImages(files, point = insertionPoint()) {
+  async function addImages(files, point = insertionPoint(), noteId = active?.id) {
     if (imageBusy || blocked || switching) return
-    const noteId = active?.id
     setImageBusy(true)
     setImportError('')
     try {
@@ -647,6 +688,43 @@ function Workspace({ persistence, loaded }) {
       setImportError(String(cause.message ?? cause))
     } finally {
       setImageBusy(false)
+    }
+  }
+  async function pasteNativeClipboard() {
+    if (clipboardBusy.current || imageBusy || blocked || switching || !active) return
+    const point = insertionPoint()
+    const noteId = active.id
+    const editorMode = mode
+    const view = visualRef.current
+    const field = editorRef.current
+    clipboardBusy.current = true
+    setImportError('')
+    try {
+      const contents = await readNativeClipboard(persistence.invoke)
+      if (contents?.kind === 'image') {
+        await addImages(contents.files, point, noteId)
+      } else if (contents?.kind === 'text' && current.current.activeId === noteId) {
+        if (editorMode === 'visual' && view === visualRef.current) {
+          view.focus()
+          view.dispatch({ selection: { anchor: point.from, head: point.to } })
+          const clipboardData = new DataTransfer()
+          clipboardData.setData('text/plain', contents.text)
+          view.contentDOM.dispatchEvent(
+            new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }),
+          )
+        } else if (editorMode === 'source' && field === editorRef.current && field) {
+          field.focus()
+          field.setSelectionRange(point.from, point.to)
+          if (!document.execCommand('insertText', false, contents.text)) {
+            field.setRangeText(contents.text, point.from, point.to, 'end')
+            updateBody(field.value)
+          }
+        }
+      }
+    } catch (cause) {
+      setImportError(String(cause.message ?? cause))
+    } finally {
+      clipboardBusy.current = false
     }
   }
   async function renameImage(image) {
@@ -692,17 +770,28 @@ function Workspace({ persistence, loaded }) {
     )
       return
     setImageBusy(true)
+    setImportError('')
+    toast.dismiss('image-delete')
     try {
-      await writer.current.whenIdle()
-      if (persistence.invoke) await persistence.invoke('image_delete', { name: image.src })
+      const failure = await writer.current.whenIdle()
+      if (failure) throw new Error(failure)
+      if (noteImages(allNotes(current.current)).some((entry) => entry.src === image.src))
+        throw new Error(t('images.protected'))
+      if (persistence.invoke && !/^(data:|https?:)/i.test(image.src))
+        await persistence.invoke('image_delete', { name: normalizeImageSource(image.src) })
       commit({
         ...current.current,
-        assets: (current.current.assets ?? []).filter((asset) => asset.src !== image.src),
+        assets: (current.current.assets ?? []).filter(
+          (asset) => normalizeImageSource(asset.src) !== image.src,
+        ),
       })
       setSelectedImage(null)
       refreshImages()
     } catch (cause) {
-      setImportError(String(cause.message ?? cause))
+      toast.error(t('images.deleteFailed', { error: friendlyError(cause) }), {
+        id: 'image-delete',
+        duration: 10000,
+      })
     } finally {
       setImageBusy(false)
     }
@@ -1030,21 +1119,13 @@ function Workspace({ persistence, loaded }) {
         closeMenu()
         return
       }
-      if (
-        asking ||
-        folderOpen ||
-        shortcutsOpen ||
-        settingsOpen ||
-        commandsOpen ||
-        selectedImage ||
-        switching
-      )
-        return
+      if (asking || folderOpen || shortcutsOpen || settingsOpen || commandsOpen || switching) return
       const modifier = event.ctrlKey || event.metaKey
       const key = event.key.toLowerCase()
       const action = appShortcut(event)
       if (action && menuActions[action]) {
         event.preventDefault()
+        event.stopPropagation()
         menuActions[action]()
         return
       }
@@ -1062,8 +1143,8 @@ function Workspace({ persistence, loaded }) {
       }
       if (event.key === 'Escape' && palette) closePalette()
     }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    document.addEventListener('keydown', onKey, true)
+    return () => document.removeEventListener('keydown', onKey, true)
   })
 
   const menuActions = {
@@ -1071,6 +1152,9 @@ function Workspace({ persistence, loaded }) {
     findNote: () => runMenu(openPalette, false),
     findInNote: () => active && runMenu(openFind, false),
     rename: () => active && runMenu(renameNote, false),
+    reopenTab: () => runMenu(reopenTab, false),
+    previousTab: () => runMenu(() => selectAdjacentTab(-1), false),
+    nextTab: () => runMenu(() => selectAdjacentTab(1), false),
     closeTab: () => active && runMenu(() => closeTab(active.id)),
     trashMove: () => active && runMenu(deleteNote, false),
     undoDelete: () =>
@@ -1281,6 +1365,19 @@ function Workspace({ persistence, loaded }) {
                   onDelete={deleteImage}
                   onDownload={downloadImage}
                   onOpenNote={openNote}
+                  onDropImage={(image, position) => {
+                    if (blocked || switching || imageBusy || !active) return
+                    const target = document.elementFromPoint(position.x, position.y)
+                    if (!target?.closest('.editor-shell') || target.closest('.mode-switch')) return
+                    insertMarkdown(
+                      markdownImage(image.name, image.src),
+                      insertionPoint({
+                        dataTransfer: true,
+                        clientX: position.x,
+                        clientY: position.y,
+                      }),
+                    )
+                  }}
                 />
               )}
             </div>
@@ -1288,10 +1385,37 @@ function Workspace({ persistence, loaded }) {
         )}
         <section
           className="editor-shell"
+          onKeyDownCapture={(event) => {
+            if (
+              persistence.invoke &&
+              (event.ctrlKey || event.metaKey) &&
+              !event.shiftKey &&
+              !event.altKey &&
+              !event.isComposing &&
+              event.key.toLowerCase() === 'v' &&
+              event.target.closest?.('.cm-content, textarea')
+            ) {
+              event.preventDefault()
+              event.stopPropagation()
+              pasteNativeClipboard()
+            }
+          }}
+          onPasteCapture={(event) => {
+            if (
+              persistence.invoke &&
+              !clipboardBusy.current &&
+              event.target.closest?.('.cm-content, textarea') &&
+              !clipboardImageFiles(event.clipboardData).length &&
+              !event.clipboardData.getData('text/plain')
+            ) {
+              event.preventDefault()
+              event.stopPropagation()
+              pasteNativeClipboard()
+            }
+          }}
           onPaste={(event) => {
-            const files = [...event.clipboardData.files].filter((file) =>
-              file.type.startsWith('image/'),
-            )
+            if (event.defaultPrevented) return
+            const files = clipboardImageFiles(event.clipboardData)
             if (files.length) {
               event.preventDefault()
               addImages(files)

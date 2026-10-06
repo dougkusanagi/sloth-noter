@@ -2,6 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { SHORTCUTS, appShortcut } from './shortcuts.js'
 test('app shortcuts respect modifiers and composition', () => {
+  assert.equal(appShortcut({ key: 'T', ctrlKey: true, shiftKey: true }), 'reopenTab')
+  assert.equal(appShortcut({ key: 'PageUp', ctrlKey: true }), 'previousTab')
+  assert.equal(appShortcut({ key: 'PageDown', metaKey: true }), 'nextTab')
+  assert.equal(appShortcut({ key: 'PageDown', ctrlKey: true, shiftKey: true }), null)
   assert.equal(appShortcut({ key: 'L', ctrlKey: true, shiftKey: true }), 'images')
   assert.equal(appShortcut({ key: 'F2' }), 'rename')
   assert.equal(appShortcut({ key: 'F2', ctrlKey: true }), null)

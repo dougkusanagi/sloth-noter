@@ -197,6 +197,16 @@ export function decorationsFor(view) {
         if (fenceEnds.has(number)) attrs.class += ' cm-md-fence-end'
       }
       if (active) {
+        if (shape.kind === 'bullet') {
+          const indent = line.text.match(/^\s*/)[0].length
+          if (indent) ranges.push(Decoration.replace({}).range(line.from, line.from + indent))
+          ranges.push(
+            Decoration.mark({ class: 'cm-md-list-marker' }).range(
+              line.from + indent,
+              line.from + shape.prefix,
+            ),
+          )
+        }
         if (number === 1) ranges.push(Decoration.replace({}).range(line.from, line.from + 2))
         ranges.push(Decoration.line({ attributes: attrs }).range(line.from))
         if (shape.kind !== 'fence' && shape.kind !== 'table')

@@ -796,6 +796,39 @@ kbd {
   gap: 8px;
   margin-top: 10px;
 }
+.image-card {
+  min-width: 0;
+}
+.image-card .image-item {
+  width: 100%;
+  touch-action: none;
+}
+.image-context-menu .dialog-hint {
+  margin: 8px 10px;
+}
+.image-library-hint {
+  margin-top: 10px;
+}
+.image-drag-preview {
+  position: fixed;
+  z-index: 100;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 200px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 15%);
+}
+.image-drag-preview span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .image-item {
   display: flex;
   flex-direction: column;

@@ -285,6 +285,25 @@ mod tests {
     }
 
     #[test]
+    fn generated_filename_limit_leaves_room_for_atomic_writes() {
+        let root = folder("long-generated-names");
+        for stem in ["a".repeat(241), format!("{}a", "á🦥".repeat(40))] {
+            let name = format!("{stem}.md");
+            assert_eq!(name.len(), 244);
+            assert_eq!(format!(".{name}{TEMPORARY_SUFFIX}").len(), 255);
+            apply(&root, &write(&name, "full title and body", None)).unwrap();
+            apply(
+                &root,
+                &write(&name, "edited body", Some("full title and body")),
+            )
+            .unwrap();
+            assert_eq!(fs::read_to_string(root.join(&name)).unwrap(), "edited body");
+        }
+        assert_eq!(list(&root).unwrap().len(), 2);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn a_new_file_is_created_but_never_over_an_existing_one() {
         let root = folder("create");
         apply(&root, &write("a.md", "one", None)).unwrap();

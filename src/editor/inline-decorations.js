@@ -14,7 +14,9 @@ export function addInlineRangeDecorations(ranges, line, from, to, editing) {
       if (contentEnd < end) ranges.push(Decoration.replace({}).range(contentEnd, end))
     }
     if (contentEnd <= contentStart) continue
-    if (token.kind === 'wiki') {
+    if (editing && (token.kind === 'wiki' || token.kind === 'link')) {
+      ranges.push(Decoration.mark({ class: 'cm-md-link-source' }).range(contentStart, contentEnd))
+    } else if (token.kind === 'wiki') {
       ranges.push(
         Decoration.mark({
           class: 'cm-md-inline-link cm-md-wiki',

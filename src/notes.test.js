@@ -5,6 +5,7 @@ import {
   isDiscardableEmptyNote,
   nameFromHeading,
   reconcileHeadingNames,
+  uniqueName,
 } from './notes.js'
 
 test('identifies untouched new notes that can be discarded', () => {
@@ -78,4 +79,46 @@ test('reconciliation reserves valid heading names before naming other notes', ()
   assert.strictEqual(next.notes[1], document.notes[1])
   assert.strictEqual(next.notes[2], document.notes[2])
   assert.strictEqual(reconcileHeadingNames(next), next)
+})
+
+test('long heading filenames fit the native temporary-file limit without splitting Unicode', () => {
+  for (const title of ['a'.repeat(600), 'á'.repeat(300), '🦥漢字'.repeat(100)]) {
+    const name = headingFileName(`# ${title}`)
+    assert.ok(Buffer.byteLength(`.${name}.sloth-tmp`, 'utf8') <= 255)
+    assert.ok(name.endsWith('.md'))
+    assert.ok(name.isWellFormed())
+    assert.ok(title.startsWith(name.slice(0, -3)))
+  }
+  assert.equal(headingFileName(`# ${'a'.repeat(241)}`), `${'a'.repeat(241)}.md`)
+})
+
+test('long duplicate filenames leave room for numbered suffixes', () => {
+  for (const title of ['a'.repeat(600), 'á🦥'.repeat(100)]) {
+    const notes = []
+    for (let number = 1; number <= 12; number++) {
+      const name = uniqueName(notes, `${title}.md`)
+      assert.ok(Buffer.byteLength(`.${name}.sloth-tmp`, 'utf8') <= 255)
+      if (number > 1) assert.ok(name.endsWith(` (${number}).md`))
+      assert.ok(!notes.some((note) => note.name === name))
+      notes.push({ name })
+    }
+  }
+})
+
+test('reconciling long duplicate headings preserves names, titles and bodies after reordering', () => {
+  const body = `# ${'á🦥'.repeat(100)}\n\ntexto completo`
+  const document = {
+    notes: [
+      { id: 'a', name: 'old.md', body, revision: 0 },
+      { id: 'b', name: 'other.md', body, revision: 0 },
+    ],
+  }
+  const next = reconcileHeadingNames(document)
+  assert.notEqual(next.notes[0].name, next.notes[1].name)
+  for (const note of next.notes) {
+    assert.equal(note.body, body)
+    assert.ok(Buffer.byteLength(`.${note.name}.sloth-tmp`, 'utf8') <= 255)
+  }
+  const reordered = { ...next, notes: [...next.notes].reverse() }
+  assert.strictEqual(reconcileHeadingNames(reordered), reordered)
 })
