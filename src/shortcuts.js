@@ -6,6 +6,8 @@ export const SHORTCUTS = [
   ['Shift+T', 'tabs.reopen'],
   ['PageUp', 'tabs.previous'],
   ['PageDown', 'tabs.next'],
+  ['Shift+Tab', 'tabs.previous'],
+  ['Tab', 'tabs.next'],
   ['I', 'menu.import'],
   ['E', 'menu.export'],
   ['F2', 'menu.rename'],
@@ -32,6 +34,7 @@ export function appShortcut(event) {
     return (
       {
         t: 'reopenTab',
+        tab: 'previousTab',
         delete: 'trashMove',
         l: 'images',
         s: 'backup',
@@ -45,6 +48,7 @@ export function appShortcut(event) {
     {
       pageup: 'previousTab',
       pagedown: 'nextTab',
+      tab: 'nextTab',
       t: 'newNote',
       p: 'findNote',
       f: 'findInNote',

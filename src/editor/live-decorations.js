@@ -102,6 +102,8 @@ export function decorationsFor(view) {
   const blockShapes = new Map()
   const fenceStarts = new Set(),
     fenceEnds = new Set()
+  const codeBlocks = new Map()
+  const codeRangesByLine = new Map()
   walk(tree, (node) => {
     if (node.type === 'code') {
       const first = node.position.start.line,
@@ -113,6 +115,26 @@ export function decorationsFor(view) {
         new RegExp('^\\s{0,3}' + opening[1][0] + '{' + opening[1].length + ',}\\s*$').test(
           doc.line(last).text,
         )
+      const contentFrom = opening ? doc.line(first).to + 1 : doc.line(first).from
+      const contentTo = closing ? doc.line(last).from : doc.line(last).to
+      if (contentFrom < contentTo) {
+        const tokens = syntaxRanges(
+          codeTokens(doc.sliceString(contentFrom, contentTo), node.lang ?? ''),
+          contentFrom,
+        ).ranges
+        for (const token of tokens) {
+          const startLine = doc.lineAt(token.from).number
+          const endLine = doc.lineAt(token.to - 1).number
+          for (let number = startLine; number <= endLine; number++) {
+            const line = doc.line(number)
+            const from = Math.max(token.from, line.from)
+            const to = Math.min(token.to, line.to)
+            if (from >= to) continue
+            if (!codeRangesByLine.has(number)) codeRangesByLine.set(number, [])
+            codeRangesByLine.get(number).push({ ...token, from, to })
+          }
+        }
+      }
       for (let number = first; number <= last; number++)
         blockShapes.set(number, {
           kind: (opening && number === first) || (closing && number === last) ? 'fence' : 'code',
@@ -124,7 +146,10 @@ export function decorationsFor(view) {
                 : 0,
           language: node.lang ?? '',
         })
-      if (opening) fenceStarts.add(first)
+      if (opening) {
+        fenceStarts.add(first)
+        codeBlocks.set(first, { source: node.value, language: node.lang ?? '' })
+      }
       if (closing) fenceEnds.add(last)
       if (selectedLines.some((range) => range.first <= last && range.last >= first)) {
         editing.add(first)
@@ -149,11 +174,11 @@ export function decorationsFor(view) {
         shape = blockShapes.get(number) ?? classifyLine(line.text, false)
       if (shape.kind === 'code') {
         ranges.push(Decoration.line({ attributes: { class: 'cm-md-code' } }).range(line.from))
-        for (const token of syntaxRanges(codeTokens(line.text, shape.language ?? '')).ranges) {
+        for (const token of codeRangesByLine.get(number) ?? []) {
           ranges.push(
             Decoration.mark({ class: token.types.map((type) => `syntax-${type}`).join(' ') }).range(
-              line.from + token.from,
-              line.from + token.to,
+              token.from,
+              token.to,
             ),
           )
         }
@@ -192,6 +217,10 @@ export function decorationsFor(view) {
         continue
       }
       const attrs = lineAttributes(line, shape, active)
+      const block = codeBlocks.get(number)
+      if (block) {
+        attrs.class += ' cm-code-copy-anchor'
+      }
       if (shape.kind === 'fence') {
         if (fenceStarts.has(number)) attrs.class += ' cm-md-fence-start'
         if (fenceEnds.has(number)) attrs.class += ' cm-md-fence-end'

@@ -35,3 +35,19 @@ test('finds inline styles while leaving unsafe links literal', () => {
     ['strong', 'em'],
   )
 })
+
+test('automatic and bracketed links use their actual label ranges', () => {
+  for (const [text, label] of [
+    ['user@example.com', 'user@example.com'],
+    ['https://example.com', 'https://example.com'],
+    ['<https://example.com>', 'https://example.com'],
+    ['[**name**](https://example.com)', '**name**'],
+    ['[a \\] b](https://example.com)', 'a \\] b'],
+  ]) {
+    const link = inlineSyntax(text).find((token) => token.kind === 'link')
+    assert.equal(text.slice(link.contentStart, link.contentEnd), label)
+    assert.ok(link.start <= link.contentStart)
+    assert.ok(link.contentStart <= link.contentEnd)
+    assert.ok(link.contentEnd <= link.end)
+  }
+})

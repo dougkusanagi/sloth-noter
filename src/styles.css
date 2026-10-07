@@ -513,6 +513,51 @@ textarea:focus-visible {
 :root[data-theme='dark'] .token.function {
   color: #9ac3e7;
 }
+.syntax-title,
+.token.title {
+  color: #416987;
+  font-weight: 700;
+}
+.syntax-bold,
+.token.bold {
+  font-weight: 700;
+}
+.syntax-italic,
+.token.italic {
+  font-style: italic;
+}
+.syntax-list,
+.token.list,
+.syntax-blockquote,
+.token.blockquote {
+  color: #904e87;
+}
+.syntax-url,
+.token.url,
+.syntax-code-snippet,
+.token.code-snippet {
+  color: #3c6f4e;
+}
+.syntax-strike,
+.token.strike {
+  text-decoration: line-through;
+}
+:root[data-theme='dark'] .syntax-title,
+:root[data-theme='dark'] .token.title {
+  color: #9ac3e7;
+}
+:root[data-theme='dark'] .syntax-list,
+:root[data-theme='dark'] .token.list,
+:root[data-theme='dark'] .syntax-blockquote,
+:root[data-theme='dark'] .token.blockquote {
+  color: #d5a0d0;
+}
+:root[data-theme='dark'] .syntax-url,
+:root[data-theme='dark'] .token.url,
+:root[data-theme='dark'] .syntax-code-snippet,
+:root[data-theme='dark'] .token.code-snippet {
+  color: #9bcca5;
+}
 .visual-editor .cm-md-inline-strong {
   font-weight: 700;
 }
@@ -622,11 +667,30 @@ textarea:focus-visible {
 .markdown pre {
   background: var(--paper);
   border: 1px solid var(--soft);
-  padding: 16px;
+  padding: 42px 16px 16px;
   overflow: auto;
-  margin: 1.3em 0;
+  margin: 0;
   position: relative;
   border-radius: var(--radius);
+}
+.code-block {
+  position: relative;
+  margin: 1.3em 0;
+}
+.code-block-tools {
+  position: sticky;
+  top: 48px;
+  height: 38px;
+  margin-bottom: -38px;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+}
+.code-block-tools .copy-code {
+  position: relative;
+  top: 12px;
+  right: 10px;
+  align-self: flex-start;
 }
 .markdown pre code {
   display: block;
@@ -638,15 +702,39 @@ textarea:focus-visible {
   position: absolute;
   top: 9px;
   right: 10px;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
   font: 12px var(--ui);
   cursor: pointer;
-  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 .copy-code:hover {
-  color: var(--ink);
+  background: var(--hover);
+}
+.visual-editor .cm-code-copy-anchor {
+  position: relative;
+  min-height: 44px;
+}
+.code-copy-layer .copy-code {
+  position: fixed;
+  z-index: 2;
+}
+.copy-code[hidden] {
+  display: none;
+}
+.visual-editor .cm-code-copy-anchor.cm-md-editing {
+  padding-right: 120px;
+}
+.copy-code:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 @media (max-width: 1000px) {
   textarea {

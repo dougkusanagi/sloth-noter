@@ -272,7 +272,7 @@ export function tableDecorations(ranges, view, line, number, table) {
       )
     cursor = cell.rawTo
   }
-  if (cursor < line.length)
+  if (cursor < line.text.length)
     ranges.push(Decoration.mark({ class: 'cm-md-table-source' }).range(line.from + cursor, line.to))
 }
 

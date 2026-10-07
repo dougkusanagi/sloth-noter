@@ -1475,6 +1475,7 @@ function Workspace({ persistence, loaded }) {
               />
             ) : (
               <VisualEditor
+                onCopy={copyCode}
                 imageBusy={imageBusy}
                 onImageFiles={addImages}
                 onImageUrl={(url, point) => insertMarkdown(markdownImage('Imagem', url), point)}

@@ -2,7 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { t } from './i18n.js'
-import { codeTokens } from './syntax-highlight.js'
+import { codeTokens, codeLanguageName } from './syntax-highlight.js'
+import { Copy } from 'lucide-react'
 import { remarkWikiLinks, findNote } from './markdown-model.js'
 import { resolveImage } from './images.js'
 
@@ -123,13 +124,24 @@ function CodeBlock({ children }) {
   const child = React.Children.toArray(children)[0]
   const source = String(child?.props?.children ?? '').replace(/\n$/, '')
   const language = child?.props?.className?.replace('language-', '') ?? ''
+  const label = codeLanguageName(language)
   return (
-    <pre>
-      <code>{highlightedCode(codeTokens(source, language))}</code>
-      <button className="copy-code" onClick={() => onCopy?.(source)}>
-        {t('code.copy')}
-      </button>
-    </pre>
+    <div className="code-block">
+      <div className="code-block-tools">
+        <button
+          type="button"
+          className="copy-code"
+          aria-label={`${t('code.copy')}${label ? ` ${label}` : ''}`}
+          onClick={() => onCopy?.(source)}
+        >
+          <Copy size={14} aria-hidden="true" />
+          <span>{label || t('code.copy')}</span>
+        </button>
+      </div>
+      <pre>
+        <code>{highlightedCode(codeTokens(source, language))}</code>
+      </pre>
+    </div>
   )
 }
 const components = { img: Image, a: Link, li: ListItem, input: () => null, pre: CodeBlock }

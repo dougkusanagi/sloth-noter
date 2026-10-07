@@ -38,6 +38,13 @@ const aliases = {
   rb: 'ruby',
 }
 
+export function codeLanguageName(language = '') {
+  const name = language.trim().toLowerCase().split(/\s+/)[0]
+  if (!name || ['txt', 'text', 'plaintext', 'plain'].includes(name)) return ''
+  if (['html', 'xml', 'svg'].includes(name)) return name
+  return aliases[name] ?? name
+}
+
 export function codeTokens(text, language = '') {
   const requested = language.trim().toLowerCase()
   const name = aliases[requested] ?? requested

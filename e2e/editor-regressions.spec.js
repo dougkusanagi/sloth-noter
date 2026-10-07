@@ -33,6 +33,14 @@ for (const mode of ['visual', 'source', 'reading']) {
       await page.keyboard.press('Control+PageDown')
       await expect(page.locator('.tab.active')).toHaveText(`${title}.md`)
     }
+    for (const title of ['Beta', 'Gamma', 'Alpha']) {
+      await page.keyboard.press('Control+Tab')
+      await expect(page.locator('.tab.active')).toHaveText(`${title}.md`)
+    }
+    await page.keyboard.press('Control+Shift+Tab')
+    await expect(page.locator('.tab.active')).toHaveText('Gamma.md')
+    await page.keyboard.press('Control+Tab')
+    await expect(page.locator('.tab.active')).toHaveText('Alpha.md')
     await page.keyboard.press('Control+PageUp')
     await expect(page.locator('.tab.active')).toHaveText('Gamma.md')
     await page.keyboard.press('Control+w')

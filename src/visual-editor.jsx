@@ -3,6 +3,7 @@ import { ImageInsert } from './components/image-insert.jsx'
 import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
 import { liveMarkdown } from './editor/live-decorations.js'
+import { codeCopyHandler, stickyCodeCopy } from './editor/code-copy.js'
 import {
   insertTableColumnAt,
   insertTableRowAt,
@@ -95,6 +96,7 @@ export function VisualEditor({
   onOpenWiki,
   onImageFiles,
   onImageUrl,
+  onCopy,
   imageBusy,
 }) {
   const host = useRef(null),
@@ -110,8 +112,16 @@ export function VisualEditor({
   const [linkEditing, setLinkEditing] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const linkInput = useRef(null)
-  const callbacks = useRef({ onChange, onReady, onOpenWiki, onImageFiles, onImageUrl, imageBusy })
-  callbacks.current = { onChange, onReady, onOpenWiki, onImageFiles, onImageUrl, imageBusy }
+  const callbacks = useRef({
+    onChange,
+    onReady,
+    onOpenWiki,
+    onImageFiles,
+    onImageUrl,
+    imageBusy,
+    onCopy,
+  })
+  callbacks.current = { onChange, onReady, onOpenWiki, onImageFiles, onImageUrl, imageBusy, onCopy }
 
   function positionToolbar(view) {
     const selection = view.state.selection.main
@@ -420,6 +430,8 @@ export function VisualEditor({
             },
           }),
           liveMarkdown,
+          stickyCodeCopy,
+          codeCopyHandler.of((source) => callbacks.current.onCopy?.(source)),
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !syncing.current)
               callbacks.current.onChange(update.state.doc.toString())

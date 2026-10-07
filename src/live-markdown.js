@@ -11,7 +11,7 @@ export function classifyLine(text, inFence) {
   const bullet = text.match(/^\s*[-*+] +/)
   if (bullet) return { kind: 'bullet', prefix: bullet[0].length, nextFence: false }
   if (/^\d+\. +/.test(text)) return { kind: 'ordered', prefix: 0, nextFence: false }
-  if (/^\|.*\|$/.test(text)) return { kind: 'table', prefix: 0, nextFence: false }
+  if (/^[ \t]*\|.*\|[ \t]*$/.test(text)) return { kind: 'table', prefix: 0, nextFence: false }
   return { kind: 'paragraph', prefix: 0, nextFence: false }
 }
 
@@ -42,8 +42,8 @@ export function inlineSyntax(text, definitions = '') {
       } else if (kind === 'link') {
         const href = node.url ?? definitionMap(tree).get(node.identifier)
         if (!href || !/^(https?:|mailto:|#|\/|\.\/|\.\.\/)/i.test(href)) return
-        contentStart++
-        contentEnd = start + raw.indexOf(']')
+        contentStart = node.children?.[0]?.position?.start.offset ?? start
+        contentEnd = node.children?.at(-1)?.position?.end.offset ?? contentStart
         result.push({ kind, start, end, contentStart, contentEnd, href })
         for (const child of node.children ?? []) collect(child, true)
         return

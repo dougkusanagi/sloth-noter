@@ -14,6 +14,39 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.cm-content')).toBeVisible()
 })
 
+test('visual tables hide trailing delimiters without adding grid rows and remain editable', async ({
+  page,
+}) => {
+  const body =
+    '# Tabela\n\n| Recurso | Como usar |\n| --- | --- |\n| Barra de texto | Selecione **palavras** |  \n| Inserir bloco | Clique em + numa linha vazia |'
+  await source(page, body)
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  const rows = page.locator('.cm-md-table-row:not(.cm-md-table-divider)')
+  await expect(rows).toHaveCount(3)
+  const layout = await rows.evaluateAll((rows) =>
+    rows.map((row) => ({
+      rawText: [...row.childNodes]
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent)
+        .join('')
+        .trim(),
+      height: row.getBoundingClientRect().height,
+      cellHeight: row.querySelector('.cm-md-table-cell').getBoundingClientRect().height,
+    })),
+  )
+  for (const row of layout) {
+    expect(row.rawText).toBe('')
+    expect(row.height).toBeCloseTo(row.cellHeight, 1)
+  }
+  await rows.nth(2).locator('.cm-md-table-cell-first').click()
+  await page.keyboard.press('End')
+  await page.keyboard.type('!')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await expect(page.locator('textarea')).toHaveValue(
+    body.replace('Clique em + numa linha vazia', '!'),
+  )
+})
+
 test('closed notes remain in the searchable library and visibility persists', async ({ page }) => {
   await page
     .getByRole('button', { name: 'Fechar aba: Welcome.md', exact: true })
