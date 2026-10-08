@@ -8,7 +8,7 @@ export function isDiscardableEmptyNote(note) {
   )
 }
 
-// Leave room under the 255-byte filesystem limit for .<name>.sloth-tmp.
+// Leave room under the 255-byte filesystem limit for .<name>.sloth.tmp.
 const MAX_NOTE_NAME_BYTES = 244
 const utf8 = new TextEncoder()
 

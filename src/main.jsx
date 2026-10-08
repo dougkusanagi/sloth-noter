@@ -1,4 +1,5 @@
 import { clipboardImageFiles, readNativeClipboard } from './clipboard.js'
+import { createMiddleClickPasteGuard } from './middle-click-paste.js'
 import { listenNativeImageDrops, routeNativeImageDrop } from './native-image-drop.js'
 import { ensureTitle, ensureDocumentTitles, titlePosition, titleNavigationTarget } from './title.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -178,6 +179,7 @@ function Workspace({ persistence, loaded }) {
   const visualRef = useRef(null)
   const closedTabs = useRef([])
   const clipboardBusy = useRef(false)
+  const [middleClickPasteGuard] = useState(createMiddleClickPasteGuard)
   const trashFirst = useRef(null)
   const returnFocus = useRef(null)
   const active = data.notes.find((note) => note.id === data.activeId) ?? null
@@ -1385,7 +1387,11 @@ function Workspace({ persistence, loaded }) {
         )}
         <section
           className="editor-shell"
+          onMouseDownCapture={middleClickPasteGuard.mouse}
+          onMouseUpCapture={middleClickPasteGuard.mouse}
+          onAuxClickCapture={middleClickPasteGuard.mouse}
           onKeyDownCapture={(event) => {
+            middleClickPasteGuard.keyboard()
             if (
               persistence.invoke &&
               (event.ctrlKey || event.metaKey) &&
@@ -1401,6 +1407,7 @@ function Workspace({ persistence, loaded }) {
             }
           }}
           onPasteCapture={(event) => {
+            if (middleClickPasteGuard.paste(event)) return
             if (
               persistence.invoke &&
               !clipboardBusy.current &&

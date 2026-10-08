@@ -720,7 +720,6 @@ textarea:focus-visible {
 }
 .visual-editor .cm-code-copy-anchor {
   position: relative;
-  min-height: 44px;
 }
 .code-copy-layer .copy-code {
   position: fixed;

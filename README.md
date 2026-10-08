@@ -30,7 +30,10 @@ bun run build          # gera dist/, sem exigir Rust
 bun run desktop:dev    # Vite em porta livre + janela Tauri no mesmo endereço
 bun run desktop:build  # AppImage no Linux; MSI no Windows
 bun run desktop:test   # testes Rust do armazenamento nativo
+bun run desktop:update # compila e substitui o AppImage instalado pelo Gear Lever
 ```
+
+O comando `desktop:update` encontra o Sloth Note pelo `TryExec` do atalho `.desktop` (respeitando `XDG_DATA_HOME`), independentemente da pasta escolhida no Gear Lever. Ele preserva o atalho, guarda o binário anterior em `.previous` e substitui o arquivo de forma atômica. Feche e reabra o app após atualizar. Use `bun run desktop:update --dry-run` para conferir os caminhos ou `bun run desktop:update --skip-build` para instalar o AppImage já compilado.
 
 ## Release
 

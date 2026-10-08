@@ -56,6 +56,45 @@ test.beforeEach(async ({ page }) => {
 })
 
 for (const mode of ['visual', 'source']) {
+  test(`middle-click paste cannot import native images or selection text in ${mode}`, async ({
+    page,
+  }) => {
+    if (mode === 'source')
+      await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    const editor = page.locator(mode === 'visual' ? '.cm-content' : 'textarea')
+    await editor.click({ button: 'middle' })
+    const allowed = await editor.evaluate((element) => {
+      const clipboardData = new DataTransfer()
+      // WebKit can emit an empty payload; the native fallback must stay blocked.
+      const emptyAllowed = element.dispatchEvent(
+        new ClipboardEvent('paste', {
+          clipboardData,
+          bubbles: true,
+          cancelable: true,
+        }),
+      )
+      clipboardData.setData('text/plain', 'unwanted selection')
+      const textAllowed = element.dispatchEvent(
+        new ClipboardEvent('paste', {
+          clipboardData,
+          bubbles: true,
+          cancelable: true,
+        }),
+      )
+      return { emptyAllowed, textAllowed }
+    })
+    expect(allowed).toEqual({ emptyAllowed: false, textAllowed: false })
+    expect(await page.evaluate(() => window.nativeClipboardReads)).toBe(0)
+    expect(await page.evaluate(() => window.nativeDocument.notes[0].body)).toBe(
+      '# Clipboard\n\nAntes\n\nDepois',
+    )
+    await editor.focus()
+    await page.keyboard.press('Control+End')
+    await page.keyboard.press('Control+v')
+    await expect.poll(() => page.evaluate(() => window.nativeClipboardReads)).toBe(1)
+    await expect.poll(() => page.evaluate(() => Object.keys(window.nativeImages).length)).toBe(1)
+  })
+
   test(`desktop Ctrl+V imports native images at the ${mode} cursor and supports undo`, async ({
     page,
   }) => {

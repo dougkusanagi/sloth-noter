@@ -11,7 +11,9 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-const TEMPORARY_SUFFIX: &str = ".sloth-tmp";
+// Cloud clients such as OneDrive exclude *.tmp by default. Keep staging files
+// out of their upload/move queue while preserving the atomic replacement.
+const TEMPORARY_SUFFIX: &str = ".sloth.tmp";
 
 #[derive(Serialize, Debug, PartialEq)]
 pub struct VaultFile {
@@ -242,7 +244,7 @@ mod tests {
         fs::write(root.join("b.md"), "B").unwrap();
         fs::write(root.join("A.md"), "olá\n\n").unwrap();
         fs::write(root.join("notes.txt"), "x").unwrap();
-        fs::write(root.join(".a.md.sloth-tmp"), "x").unwrap();
+        fs::write(root.join(".a.md.sloth.tmp"), "x").unwrap();
         fs::write(root.join("binary.md"), [0xff, 0xfe, 0x00]).unwrap();
         fs::create_dir(root.join("sub.md")).unwrap();
         let names: Vec<_> = list(&root)
@@ -300,6 +302,20 @@ mod tests {
             assert_eq!(fs::read_to_string(root.join(&name)).unwrap(), "edited body");
         }
         assert_eq!(list(&root).unwrap().len(), 2);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn staging_files_use_the_cloud_clients_temporary_extension() {
+        let root = folder("cloud-staging");
+        let temporary = root.join(format!(".a.md{TEMPORARY_SUFFIX}"));
+        assert_eq!(temporary.extension().unwrap(), "tmp");
+        fs::write(&temporary, "incomplete").unwrap();
+        assert!(list(&root).unwrap().is_empty());
+        assert!(stamps(&root).unwrap().is_empty());
+        apply(&root, &write("a.md", "complete", None)).unwrap();
+        assert!(!temporary.exists());
+        assert_eq!(fs::read_to_string(root.join("a.md")).unwrap(), "complete");
         fs::remove_dir_all(root).unwrap();
     }
 

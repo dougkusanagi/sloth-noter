@@ -84,7 +84,7 @@ test('reconciliation reserves valid heading names before naming other notes', ()
 test('long heading filenames fit the native temporary-file limit without splitting Unicode', () => {
   for (const title of ['a'.repeat(600), 'á'.repeat(300), '🦥漢字'.repeat(100)]) {
     const name = headingFileName(`# ${title}`)
-    assert.ok(Buffer.byteLength(`.${name}.sloth-tmp`, 'utf8') <= 255)
+    assert.ok(Buffer.byteLength(`.${name}.sloth.tmp`, 'utf8') <= 255)
     assert.ok(name.endsWith('.md'))
     assert.ok(name.isWellFormed())
     assert.ok(title.startsWith(name.slice(0, -3)))
@@ -97,7 +97,7 @@ test('long duplicate filenames leave room for numbered suffixes', () => {
     const notes = []
     for (let number = 1; number <= 12; number++) {
       const name = uniqueName(notes, `${title}.md`)
-      assert.ok(Buffer.byteLength(`.${name}.sloth-tmp`, 'utf8') <= 255)
+      assert.ok(Buffer.byteLength(`.${name}.sloth.tmp`, 'utf8') <= 255)
       if (number > 1) assert.ok(name.endsWith(` (${number}).md`))
       assert.ok(!notes.some((note) => note.name === name))
       notes.push({ name })
@@ -117,7 +117,7 @@ test('reconciling long duplicate headings preserves names, titles and bodies aft
   assert.notEqual(next.notes[0].name, next.notes[1].name)
   for (const note of next.notes) {
     assert.equal(note.body, body)
-    assert.ok(Buffer.byteLength(`.${note.name}.sloth-tmp`, 'utf8') <= 255)
+    assert.ok(Buffer.byteLength(`.${note.name}.sloth.tmp`, 'utf8') <= 255)
   }
   const reordered = { ...next, notes: [...next.notes].reverse() }
   assert.strictEqual(reconcileHeadingNames(reordered), reordered)
