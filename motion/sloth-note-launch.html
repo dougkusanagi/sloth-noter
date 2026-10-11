@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lento — Launch Motion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#000;overflow:hidden}
+  #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:#000;overflow:hidden;
+    font-family:Inter,"Helvetica Neue",Arial,sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
+  .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+
+  /* ---------- headline (word reveal) ---------- */
+  .h{font-weight:700;letter-spacing:-.045em;line-height:1}
+  .w{display:inline-block;overflow:hidden;vertical-align:top;padding:.08em .06em .2em 0;margin:-.08em 0 -.2em 0}
+  .wi{display:inline-block;will-change:transform}
+  .dim{color:#5c5c5c}
+  .scene{position:absolute;inset:0}
+  .head{position:absolute;top:0;height:1080px;width:740px;display:flex;flex-direction:column;justify-content:center}
+  .head .h{font-size:124px}
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-size:22px;letter-spacing:.22em;text-transform:uppercase;color:#8a8a8a;margin-bottom:40px;display:flex;align-items:center;gap:18px}
+  .eyebrow i{display:block;width:56px;height:2px;background:#8a8a8a;transform-origin:0 50%}
+
+  /* ---------- window mock ---------- */
+  .win{position:absolute;top:220px;width:880px;height:640px;border:2px solid #2b2b2b;border-radius:28px;background:#070707;overflow:hidden}
+  .win .tb{position:absolute;left:0;right:0;top:0;height:64px;border-bottom:2px solid #1c1c1c;display:flex;align-items:center;padding:0 26px;gap:10px}
+  .dotc{width:14px;height:14px;border-radius:50%;border:2px solid #444}
+  .tb .ttl{position:absolute;left:0;right:0;text-align:center;font-family:"JetBrains Mono",monospace;font-size:17px;color:#6b6b6b;letter-spacing:.04em}
+  .body{position:absolute;left:0;right:0;top:64px;bottom:0}
+
+  /* scene 1 */
+  .side{position:absolute;left:0;top:0;bottom:0;width:310px;border-right:2px solid #1c1c1c}
+  .sh{height:96px;display:flex;align-items:center;justify-content:space-between;padding:0 22px 0 26px;border-bottom:2px solid #1c1c1c}
+  .sh span{font-size:26px;font-weight:700;letter-spacing:-.02em}
+  .btn{background:#fff;color:#000;font-weight:700;font-size:19px;padding:12px 18px;border-radius:14px;display:inline-block;white-space:nowrap}
+  .row{height:86px;padding:0 26px;border-bottom:1px solid #1c1c1c;display:flex;flex-direction:column;justify-content:center;gap:6px;overflow:hidden}
+  .row b{font-size:22px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+  .row s{text-decoration:none;font-family:"JetBrains Mono",monospace;font-size:15px;color:#6b6b6b}
+  .row.newrow{height:0;opacity:0;background:#fff;color:#000}
+  .row.newrow s{color:#555}
+  .ed{position:absolute;left:310px;right:0;top:0;bottom:0;padding:64px 56px}
+  .etitle{font-size:52px;font-weight:700;letter-spacing:-.03em;height:64px;display:flex;align-items:center}
+  .caret{display:inline-block;width:4px;height:50px;background:#fff;margin-left:4px}
+  .sk{height:16px;border-radius:8px;background:#1d1d1d;margin-top:26px;transform-origin:0 50%}
+  .cur{position:absolute;width:40px;height:40px;z-index:5;left:0;top:0;opacity:0;filter:drop-shadow(0 4px 10px rgba(0,0,0,.6))}
+  .ring{position:absolute;width:90px;height:90px;border-radius:50%;border:3px solid #fff;opacity:0;z-index:4}
+
+  /* scene 2 */
+  .seg{position:absolute;left:56px;top:36px;display:flex;gap:8px;padding:6px;border:2px solid #222;border-radius:18px}
+  .seg span{font-size:18px;font-weight:600;padding:10px 20px;border-radius:12px;color:#777}
+  .seg span.on{background:#fff;color:#000}
+  .ln{position:absolute;left:56px;right:40px;height:78px;display:flex;align-items:center}
+  .ln .raw{font-family:"JetBrains Mono",monospace;font-size:32px;color:#9a9a9a;white-space:pre}
+  .ln .out{position:absolute;left:0;display:flex;align-items:center;gap:20px;opacity:0;white-space:nowrap}
+  .o1{font-size:62px;font-weight:700;letter-spacing:-.035em}
+  .o2,.o3{font-size:40px;font-weight:500;letter-spacing:-.02em}
+  .o2 i.bl{width:12px;height:12px;border-radius:50%;background:#fff;margin:0 8px}
+  .cb{width:34px;height:34px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center}
+  .o4{font-size:38px;color:#9a9a9a;border-left:5px solid #fff;padding-left:24px;font-style:italic}
+  .o5{font-family:"JetBrains Mono",monospace;font-size:32px;background:#1a1a1a;border:2px solid #2d2d2d;border-radius:12px;padding:8px 20px}
+
+  /* scene 3 */
+  .note{position:absolute;left:44px;right:44px;top:30px;height:70px;border:2px solid #1f1f1f;border-radius:18px;display:flex;align-items:center;padding:0 28px;font-size:25px;color:#8a8a8a;gap:10px}
+  .note .lnk{color:#000;background:#fff;padding:4px 12px;border-radius:9px;font-family:"JetBrains Mono",monospace;font-size:23px;font-weight:500}
+  .gsvg{position:absolute;left:0;top:104px;width:880px;height:472px}
+  .gsvg text{font-family:Inter,sans-serif;font-weight:600;font-size:24px;text-anchor:middle;dominant-baseline:central}
+
+  /* scene 4 */
+  .bgrow{position:absolute;left:44px;right:44px;height:46px;border-radius:12px;background:#111}
+  .pal{position:absolute;left:62px;top:36px;width:756px;border:2px solid #3a3a3a;border-radius:26px;background:#0d0d0d;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.8)}
+  .pin{height:84px;border-bottom:2px solid #222;display:flex;align-items:center;gap:20px;padding:0 30px;font-size:36px;font-weight:500;letter-spacing:-.02em}
+  .pin .kbd{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:16px;color:#777;border:2px solid #2a2a2a;border-radius:10px;padding:6px 12px}
+  .pin .caret{height:40px;width:3px;margin-left:2px}
+  .res{height:88px;padding:0 30px;display:flex;align-items:center;gap:22px;border-bottom:1px solid #1a1a1a}
+  .res .ic{width:48px;height:48px;border:2px solid currentColor;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;font-size:14px;opacity:.8}
+  .res .tx{flex:1;min-width:0}
+  .res b{display:block;font-size:28px;font-weight:600;letter-spacing:-.02em;white-space:nowrap}
+  .res em{display:block;font-style:normal;font-family:"JetBrains Mono",monospace;font-size:16px;color:#6b6b6b;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .res .tag{font-family:"JetBrains Mono",monospace;font-size:14px;color:#6b6b6b;letter-spacing:.1em}
+  mark{background:transparent;color:inherit;box-shadow:inset 0 -.4em 0 rgba(255,255,255,.28)}
+  .res.sel mark{box-shadow:inset 0 -.4em 0 rgba(0,0,0,.22)}
+  .pfoot{height:48px;display:flex;align-items:center;padding:0 30px;font-family:"JetBrains Mono",monospace;font-size:15px;color:#666}
+
+  /* scene 5 */
+  .files{position:absolute;left:0;top:0;bottom:0;width:490px;border-right:2px solid #1c1c1c;padding-top:10px}
+  .fr5{height:100px;padding:0 30px;display:flex;align-items:center;gap:22px;border-bottom:1px solid #151515}
+  .fr5 .ic{width:50px;height:58px;border:2px solid #fff;border-radius:11px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:7px;font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:500}
+  .fr5 .nm{font-family:"JetBrains Mono",monospace;font-size:25px;flex:1}
+  .fr5 .sz{font-family:"JetBrains Mono",monospace;font-size:16px;color:#666}
+  .off{position:absolute;left:490px;right:0;top:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px}
+  .off svg{width:230px;height:230px;overflow:visible}
+  .off svg path{fill:none;stroke:#fff;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1}
+  .off .t{font-size:34px;font-weight:700;letter-spacing:-.03em;text-align:center;line-height:1.25}
+  .pill{position:absolute;right:26px;top:26px;border:2px solid #2b2b2b;border-radius:99px;padding:8px 18px;font-family:"JetBrains Mono",monospace;font-size:15px;display:flex;align-items:center;gap:10px;color:#bbb}
+  .pill i{width:10px;height:10px;border-radius:50%;background:#fff}
+
+  /* ---------- logo ---------- */
+  .logo{position:absolute;width:360px;height:360px}
+  .logo .fr{position:absolute;inset:0;overflow:visible}
+  .logo .fr rect{fill:none;stroke:#fff;stroke-width:4;stroke-dasharray:1;stroke-dashoffset:1}
+  .logo .fill{position:absolute;inset:0;border-radius:80px;background:#fff;clip-path:circle(0% at 50% 50%)}
+  .logo .pc{position:absolute;background:#fff;display:block}
+  .logo .pe{width:103px;height:65px;border-radius:50%;top:137px}
+  .logo .arc{position:absolute;left:50%;top:50%;overflow:visible}
+  .logo .arc path{fill:none;stroke:#000;stroke-width:7;stroke-linecap:round}
+  .logo .pn{width:28px;height:28px;border-radius:50%;left:166px;top:187px}
+  .logo .ps{left:153px;top:211px;width:54px;height:24px;background:none}
+  .logo .ps path{fill:none;stroke:#fff;stroke-width:7;stroke-linecap:round}
+  #logoA{left:780px;top:260px}
+  #logoB{left:780px;top:220px}
+  .center{position:absolute;left:0;width:1920px;text-align:center}
+  .center .h{display:inline-block}
+
+  /* ---------- misc ---------- */
+  .ghost{position:absolute;visibility:hidden;border:2px solid #fff;pointer-events:none}
+  .ghost.fill{border:0;background:#fff}
+  .frag{position:absolute;opacity:0}
+  .frag.o{border:2px solid #fff}.frag.f{background:#fff}.frag.g{background:#333}
+  #hud .cnt{position:absolute;right:90px;top:78px;font-family:"JetBrains Mono",monospace;font-size:20px;letter-spacing:.2em;color:#777}
+  #hud .cnt b{color:#fff;font-weight:500}
+  #prog{position:absolute;left:0;bottom:0;height:3px;width:1920px;background:#fff;transform-origin:0 50%;transform:scaleX(0)}
+  #progbg{position:absolute;left:0;bottom:0;height:3px;width:1920px;background:#161616}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <div id="hud">
+    <div id="progbg"></div><div id="prog"></div>
+    <span class="cnt" data-i="0"><b>01</b> / 05</span>
+    <span class="cnt" data-i="1"><b>02</b> / 05</span>
+    <span class="cnt" data-i="2"><b>03</b> / 05</span>
+    <span class="cnt" data-i="3"><b>04</b> / 05</span>
+    <span class="cnt" data-i="4"><b>05</b> / 05</span>
+  </div>
+
+  <!-- ============ INTRO ============ -->
+  <div id="intro" style="position:absolute;inset:0">
+    <div class="logo" id="logoA">
+      <svg class="fr" viewBox="0 0 360 360"><rect x="2" y="2" width="356" height="356" rx="80" pathLength="1"/></svg>
+      <div class="fill"></div>
+    </div>
+    <div class="center" style="top:664px"><div class="h" id="wordmark" style="font-size:120px"></div></div>
+  </div>
+
+  <!-- ============ SCENE 1 — criar ============ -->
+  <section class="scene" id="s1">
+    <div class="head" style="left:120px">
+      <div class="eyebrow"><i></i><span>01 — Criar</span></div>
+      <div class="h" data-text="Nova nota|em um clique."></div>
+    </div>
+    <div class="win" style="left:920px">
+      <div class="tb"><span class="dotc"></span><span class="dotc"></span><span class="dotc"></span><span class="ttl">Lento</span></div>
+      <div class="body">
+        <div class="side">
+          <div class="sh"><span>Notas</span><span class="btn" id="newBtn">+ Nova nota</span></div>
+          <div class="rows">
+            <div class="row newrow"><b>Nova nota</b><s>agora</s></div>
+            <div class="row"><b>Ideias de produto</b><s>ontem</s></div>
+            <div class="row"><b>Reunião de segunda</b><s>seg</s></div>
+            <div class="row"><b>Lista de compras</b><s>dom</s></div>
+            <div class="row"><b>Receita de pão</b><s>sáb</s></div>
+          </div>
+        </div>
+        <div class="ed">
+          <div class="etitle"><span id="t1"></span><i class="caret" id="c1"></i></div>
+          <div class="sk" style="width:92%"></div><div class="sk" style="width:78%"></div><div class="sk" style="width:86%"></div><div class="sk" style="width:44%"></div>
+        </div>
+      </div>
+      <div class="ring" id="ring1"></div>
+      <svg class="cur" id="cur1" viewBox="0 0 24 24"><path d="M3 2l7 19 3-8 8-3z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+    </div>
+  </section>
+
+  <!-- ============ SCENE 2 — markdown ============ -->
+  <section class="scene" id="s2">
+    <div class="win" style="left:120px">
+      <div class="tb"><span class="dotc"></span><span class="dotc"></span><span class="dotc"></span><span class="ttl">semana.md</span></div>
+      <div class="body">
+        <div class="seg"><span class="on">Padrão</span><span>Código</span><span>Leitura</span></div>
+        <div class="ln" style="top:122px"><span class="raw"></span><div class="out o1">Plano da semana</div></div>
+        <div class="ln" style="top:216px"><span class="raw"></span><div class="out o2"><i class="bl"></i><span><b>Escrever</b> o roteiro</span></div></div>
+        <div class="ln" style="top:300px"><span class="raw"></span><div class="out o3"><span class="cb"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></span><span>Revisar <i>rascunho</i></span></div></div>
+        <div class="ln" style="top:392px"><span class="raw"></span><div class="out o4">Simples é rápido.</div></div>
+        <div class="ln" style="top:482px"><span class="raw"></span><div class="out o5">bun run build</div></div>
+      </div>
+    </div>
+    <div class="head" style="left:1060px">
+      <div class="eyebrow"><i></i><span>02 — Escrever</span></div>
+      <div class="h" data-text="Escreva em|Markdown de verdade."></div>
+    </div>
+  </section>
+
+  <!-- ============ SCENE 3 — links ============ -->
+  <section class="scene" id="s3">
+    <div class="head" style="left:120px">
+      <div class="eyebrow"><i></i><span>03 — Conectar</span></div>
+      <div class="h" data-text="Conecte ideias|com links."></div>
+    </div>
+    <div class="win" style="left:920px">
+      <div class="tb"><span class="dotc"></span><span class="dotc"></span><span class="dotc"></span><span class="ttl">Ideias.md</span></div>
+      <div class="body">
+        <div class="note" id="note3"><span>…veja o plano em</span><span class="lnk" id="lnk3">[[Projeto]]</span></div>
+        <svg class="gsvg" id="g3" viewBox="0 0 880 472"></svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SCENE 4 — buscar ============ -->
+  <section class="scene" id="s4">
+    <div class="win" style="left:120px">
+      <div class="tb"><span class="dotc"></span><span class="dotc"></span><span class="dotc"></span><span class="ttl">Buscar</span></div>
+      <div class="body">
+        <div class="bgrow" style="top:150px"></div><div class="bgrow" style="top:220px;right:140px"></div>
+        <div class="bgrow" style="top:290px"></div><div class="bgrow" style="top:360px;right:200px"></div>
+        <div class="bgrow" style="top:430px"></div><div class="bgrow" style="top:500px;right:120px"></div>
+        <div class="pal" id="pal">
+          <div class="pin">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+            <span id="q4"></span><i class="caret" id="c4"></i><span class="kbd">Ctrl K</span>
+          </div>
+          <div class="res sel" id="r0"><span class="ic">md</span><div class="tx"><b><mark>Reunião</mark> de segunda</b><em>pauta, decisões e próximos passos</em></div><span class="tag">NOTA</span></div>
+          <div class="res"><span class="ic">md</span><div class="tx"><b>Pauta da <mark>reunião</mark> semanal</b><em>temas fixos de toda segunda-feira</em></div><span class="tag">NOTA</span></div>
+          <div class="res"><span class="ic">md</span><div class="tx"><b>Ata — produto</b><em>…na <mark>reunião</mark> decidimos adiar o lançamento…</em></div><span class="tag">TEXTO</span></div>
+          <div class="res"><span class="ic">md</span><div class="tx"><b>Ideias de produto</b><em>…levar para a <mark>reunião</mark> de sexta…</em></div><span class="tag">TEXTO</span></div>
+          <div class="pfoot" id="pf4">4 resultados · 12 ms</div>
+        </div>
+      </div>
+    </div>
+    <div class="head" style="left:1060px">
+      <div class="eyebrow"><i></i><span>04 — Buscar</span></div>
+      <div class="h" data-text="Encontre tudo|num instante."></div>
+    </div>
+  </section>
+
+  <!-- ============ SCENE 5 — offline ============ -->
+  <section class="scene" id="s5">
+    <div class="head" style="left:120px">
+      <div class="eyebrow"><i></i><span>05 — Possuir</span></div>
+      <div class="h" data-text="Tudo offline.|Tudo seu."></div>
+    </div>
+    <div class="win" style="left:920px">
+      <div class="tb"><span class="dotc"></span><span class="dotc"></span><span class="dotc"></span><span class="ttl">~/Notas</span></div>
+      <div class="body">
+        <div class="files">
+          <div class="fr5"><span class="ic">.md</span><span class="nm">ideias.md</span><span class="sz">2,1 KB</span></div>
+          <div class="fr5"><span class="ic">.md</span><span class="nm">reuniao.md</span><span class="sz">4,8 KB</span></div>
+          <div class="fr5"><span class="ic">.md</span><span class="nm">diario.md</span><span class="sz">12 KB</span></div>
+          <div class="fr5"><span class="ic">.md</span><span class="nm">projeto.md</span><span class="sz">6,3 KB</span></div>
+          <div class="fr5"><span class="ic">.md</span><span class="nm">leituras.md</span><span class="sz">3,9 KB</span></div>
+        </div>
+        <div class="off">
+          <svg viewBox="0 0 24 24"><path id="cloud5" pathLength="1" d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><path id="slash5" pathLength="1" d="M3 3l18 18"/></svg>
+          <div class="t" id="t5">Sem conta.<br><span style="color:#5c5c5c">Sem nuvem.</span></div>
+        </div>
+        <div class="pill" id="pill5"><i></i>offline</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ASSEMBLY / FINAL ============ -->
+  <div id="final" style="position:absolute;inset:0;pointer-events:none">
+    <div id="pattern" style="position:absolute;inset:0;opacity:0;background:url(assets/sloth-pattern-tile.png);background-size:384px"></div>
+    <div id="frags"></div>
+    <div class="logo" id="logoB">
+      <svg class="fr" viewBox="0 0 360 360"><rect x="2" y="2" width="356" height="356" rx="80" pathLength="1"/></svg>
+      <div class="fill"></div>
+    </div>
+    <div class="center" style="top:640px"><div class="h" id="tagline" style="font-size:112px"></div></div>
+    <div class="center mono" id="foot" style="top:900px;font-size:22px;letter-spacing:.5em;color:#6b6b6b">LENTO</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+/* =========================================================
+   CONFIG — troque aqui marca, frases e tagline
+   (as frases também estão em data-text nas <section>;
+    "|" quebra linha e deixa a parte seguinte cinza, "^" só alterna a cor)
+   ========================================================= */
+const BRAND = { name:"Lento", tagline:"Anote ^sem pressa." };
+
+const FACE = `
+  <i class="pc pe pl" style="left:62px"><svg class="arc" width="44" height="18" viewBox="0 0 44 18" style="margin:-9px 0 0 -22px;transform:translate(-4px,3px) rotate(35deg)"><path d="M4 4 Q22 20 40 4"/></svg></i>
+  <i class="pc pe pr" style="left:181px"><svg class="arc" width="44" height="18" viewBox="0 0 44 18" style="margin:-9px 0 0 -22px;transform:translate(4px,3px) rotate(-35deg)"><path d="M4 4 Q22 20 40 4"/></svg></i>
+  <i class="pc pn"></i>
+  <svg class="pc ps" viewBox="0 0 54 24"><path d="M4 4 Q27 24 50 4"/></svg>`;
+document.querySelectorAll('.logo').forEach(l=>l.insertAdjacentHTML('beforeend',FACE));
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const stage = $('#stage');
+
+function fit(){
+  const s = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*s)/2}px,${(innerHeight-1080*s)/2}px) scale(${s})`;
+  return s;
+}
+addEventListener('resize',fit); let SCALE = fit();
+
+/* ---------- split text into masked words ---------- */
+function splitWords(el, text){
+  el.innerHTML=''; let dim=false;
+  text.split(/([|^])/).forEach(tok=>{
+    if(tok==='|'){ el.appendChild(document.createElement('br')); dim=!dim; return; }
+    if(tok==='^'){ dim=!dim; return; }
+    tok.split(' ').filter(Boolean).forEach(w=>{
+      const s=document.createElement('span'); s.className='w'+(dim?' dim':'');
+      s.innerHTML=`<span class="wi">${w}</span>`;
+      el.appendChild(s); el.appendChild(document.createTextNode(' '));
+    });
+  });
+  return $$('.wi',el);
+}
+
+Promise.race([document.fonts.ready, new Promise(r=>setTimeout(r,1800))]).then(build);
+
+function build(){
+SCALE = fit();
+const tl = gsap.timeline({paused:true, defaults:{ease:'power3.out'}});
+window.tl = tl;
+
+/* ---------- helpers ---------- */
+function echo(parent, geo, from, to, at, dur, ease, o={}){
+  const n=o.n??4, step=o.step??.05, ops=o.ops??[.5,.34,.2,.1];
+  for(let i=0;i<n;i++){
+    const g=document.createElement('div'); g.className='ghost'+(o.fill?' fill':'');
+    Object.assign(g.style,{left:geo.l+'px',top:geo.t+'px',width:geo.w+'px',height:geo.h+'px',borderRadius:geo.r+'px'});
+    o.before ? parent.insertBefore(g,o.before) : parent.appendChild(g);
+    const s=at+(i+1)*step;
+    tl.set(g,{visibility:'visible',immediateRender:false},s);
+    tl.fromTo(g,{...from,opacity:ops[i]??.05},{...to,opacity:0,duration:dur,ease,immediateRender:false},s);
+    tl.set(g,{visibility:'hidden',immediateRender:false},s+dur);
+  }
+}
+function typeText(el, text, at, dur){
+  const o={n:0}; el.textContent='';
+  tl.to(o,{n:text.length,duration:dur,ease:'none',onUpdate(){ el.textContent=text.slice(0,Math.round(o.n)); }},at);
+}
+const WIN={w:880,h:640,t:220,r:28};
+function cardIn(card,E){
+  const L=card.offsetLeft, dx=1920-L+80;
+  echo(card.parentNode,{l:L,t:WIN.t,w:WIN.w,h:WIN.h,r:WIN.r},{x:dx},{x:0},E,.95,'expo.out',{before:card});
+  tl.fromTo(card,{x:dx},{x:0,duration:.95,ease:'expo.out'},E);
+  tl.fromTo(card,{autoAlpha:0},{autoAlpha:1,duration:.2,ease:'none'},E);
+}
+function cardOut(card,X){
+  const L=card.offsetLeft, dx=-(L+WIN.w+80);
+  echo(card.parentNode,{l:L,t:WIN.t,w:WIN.w,h:WIN.h,r:WIN.r},{x:0},{x:dx},X,.6,'power3.in',{before:card});
+  tl.to(card,{x:dx,duration:.6,ease:'power3.in'},X);
+  tl.to(card,{autoAlpha:0,duration:.1,ease:'none'},X+.5);
+}
+function headIn(scene,E){
+  const words=$$('.wi',scene);
+  gsap.set(words,{yPercent:140,skewY:7});
+  const ey=$('.eyebrow',scene), bar=$('.eyebrow i',scene);
+  gsap.set(ey,{autoAlpha:0,y:20}); gsap.set(bar,{scaleX:0});
+  tl.to(ey,{autoAlpha:1,y:0,duration:.6},E+.15);
+  tl.to(bar,{scaleX:1,duration:.7,ease:'expo.out'},E+.2);
+  tl.to(words,{yPercent:0,skewY:0,duration:.95,ease:'expo.out',stagger:.09},E+.3);
+}
+function headOut(scene,X){
+  tl.to($$('.wi',scene),{yPercent:-140,skewY:-5,duration:.5,ease:'power3.in',stagger:.04},X);
+  tl.to($('.eyebrow',scene),{autoAlpha:0,y:-16,duration:.35,ease:'power2.in'},X);
+}
+const E=i=>3.6+4*i, X=i=>E(i)+4-.45;
+
+/* ---------- build headlines ---------- */
+$$('.h[data-text]').forEach(h=>splitWords(h,h.dataset.text));
+const wmWords = splitWords($('#wordmark'),BRAND.name);
+const tgWords = splitWords($('#tagline'),BRAND.tagline);
+gsap.set([wmWords,tgWords],{yPercent:140,skewY:7});
+
+/* ---------- HUD ---------- */
+gsap.set('.cnt',{autoAlpha:0});
+tl.fromTo('#prog',{scaleX:0},{scaleX:1,duration:30,ease:'none'},0);
+for(let i=0;i<5;i++){
+  tl.to(`.cnt[data-i="${i}"]`,{autoAlpha:1,duration:.35,ease:'none'},E(i)+.25);
+  tl.to(`.cnt[data-i="${i}"]`,{autoAlpha:0,duration:.25,ease:'none'},X(i)+.1);
+}
+
+/* ---------- logo build (shared) ---------- */
+function buildLogo(logo,t){
+  const bars=$$('.pe,.pn',logo), arcs=$$('.arc path',logo), smile=$('.ps path',logo), fr=$('.fr rect',logo), fill=$('.fill',logo);
+  tl.fromTo(fr,{strokeDashoffset:1},{strokeDashoffset:0,duration:.9,ease:'power2.inOut'},t+.4);
+  tl.fromTo(fill,{clipPath:'circle(0% at 50% 50%)'},{clipPath:'circle(75% at 50% 50%)',duration:.7,ease:'expo.out'},t+1.0);
+  tl.to(bars,{backgroundColor:'#000',duration:.35,ease:'power1.out'},t+1.0);
+  tl.to(arcs,{stroke:'#fff',duration:.35},t+1.0);
+  tl.to(smile,{stroke:'#000',duration:.35},t+1.0);
+  tl.to(fr,{opacity:0,duration:.2},t+1.5);
+}
+
+/* =================== INTRO (0 → 3.75) =================== */
+const logoA=$('#logoA');
+const PIECES=l=>[$('.pl',l),$('.pr',l),$('.pn',l),$('.ps',l)], REST=[-35,35,0,0];
+gsap.set(PIECES(logoA),{scale:0,rotation:i=>REST[i]});
+tl.to(PIECES(logoA),{scale:1,duration:.7,ease:'back.out(2.2)',stagger:.12},.15);
+buildLogo(logoA,.15);
+tl.to(wmWords,{yPercent:0,skewY:0,duration:.95,ease:'expo.out',stagger:.1},1.35);
+// wordmark out
+tl.to(wmWords,{yPercent:-140,skewY:-5,duration:.5,ease:'power3.in',stagger:.05},2.95);
+// logo flies to HUD corner with echo trail
+echo($('#intro'),{l:780,t:260,w:360,h:360,r:80},{x:0,y:0,scale:1},{x:-860,y:-340,scale:.14},2.95,.8,'power3.inOut',{fill:true,n:5,step:.045,ops:[.32,.24,.17,.11,.06],before:logoA});
+tl.to(logoA,{x:-860,y:-340,scale:.14,duration:.8,ease:'power3.inOut'},2.95);
+
+/* =================== SCENE 1 — criar =================== */
+(function(){
+  const sc=$('#s1'), card=$('.win',sc), t0=E(0);
+  gsap.set(card,{autoAlpha:0});
+  headIn(sc,t0); cardIn(card,t0);
+  const rows=$$('.row:not(.newrow)',sc);
+  gsap.set(rows,{opacity:0,x:-24});
+  tl.to(rows,{opacity:1,x:0,duration:.55,stagger:.08},t0+.75);
+  // cursor target (in window-local px)
+  const btn=$('#newBtn'), w=card.getBoundingClientRect(), b=btn.getBoundingClientRect();
+  const bx=(b.left-w.left)/SCALE+b.width*.55-5, by=(b.top-w.top)/SCALE+b.height*.5-3;
+  const cur=$('#cur1'), ring=$('#ring1');
+  gsap.set(cur,{x:820,y:620,opacity:0});
+  gsap.set(ring,{x:bx-45+5,y:by-45+3,scale:.2});
+  tl.to(cur,{opacity:1,duration:.2,ease:'none'},t0+1.0);
+  tl.to(cur,{x:bx,y:by,duration:.95,ease:'power3.inOut'},t0+1.0);
+  const tp=t0+2.0;
+  tl.to(btn,{scale:.9,duration:.08,ease:'power2.in'},tp);
+  tl.to(btn,{scale:1,duration:.35,ease:'back.out(3)'},tp+.08);
+  tl.to(cur,{scale:.85,duration:.08},tp); tl.to(cur,{scale:1,duration:.2},tp+.08);
+  tl.fromTo(ring,{scale:.2,opacity:.8},{scale:1.5,opacity:0,duration:.7,ease:'power2.out'},tp);
+  tl.to(cur,{x:bx+120,y:by+260,opacity:0,duration:.8,ease:'power2.inOut'},tp+.35);
+  tl.to($('.newrow',sc),{height:86,opacity:1,duration:.5,ease:'power3.out'},tp+.05);
+  typeText($('#t1'),'Nova nota',tp+.4,.55);
+  tl.to($$('.sk',sc),{scaleX:1,duration:.6,stagger:.1,ease:'expo.out'},tp+1.0);
+  gsap.set($$('.sk',sc),{scaleX:0});
+  tl.to($('#c1'),{opacity:0,duration:.4,repeat:5,yoyo:true,ease:'steps(1)'},tp+.2);
+  cardOut(card,X(0)); headOut(sc,X(0));
+})();
+
+/* =================== SCENE 2 — markdown =================== */
+(function(){
+  const sc=$('#s2'), card=$('.win',sc), t0=E(1);
+  gsap.set(card,{autoAlpha:0});
+  headIn(sc,t0); cardIn(card,t0);
+  const seg=$$('.seg span',sc);
+  gsap.set(seg,{opacity:0,y:10});
+  tl.to(seg,{opacity:1,y:0,duration:.5,stagger:.08},t0+.7);
+  const raws=['# Plano da semana','- **Escrever** o roteiro','- [x] Revisar *rascunho*','> Simples é rápido.','`bun run build`'];
+  $$('.ln',sc).forEach((ln,i)=>{
+    const raw=$('.raw',ln), out=$('.out',ln), ts=t0+1.0+i*.44;
+    typeText(raw,raws[i],ts,.34);
+    gsap.set(out,{y:8,filter:'blur(6px)'});
+    tl.to(raw,{opacity:0,filter:'blur(6px)',duration:.25,ease:'power2.in'},ts+.42);
+    tl.to(out,{opacity:1,y:0,filter:'blur(0px)',duration:.4},ts+.42);
+  });
+  cardOut(card,X(1)); headOut(sc,X(1));
+})();
+
+/* =================== SCENE 3 — links =================== */
+(function(){
+  const sc=$('#s3'), card=$('.win',sc), t0=E(2), svg=$('#g3'), NS='http://www.w3.org/2000/svg';
+  gsap.set(card,{autoAlpha:0});
+  headIn(sc,t0); cardIn(card,t0);
+  const C={x:440,y:250}, N=[
+    {k:'Ideias',x:150,y:96},{k:'Reunião',x:730,y:96},{k:'Metas',x:120,y:380},{k:'Leituras',x:740,y:384},{k:'Diário',x:440,y:430}];
+  const mk=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+  const edgesG=mk('g',{}), nodesG=mk('g',{}); svg.append(edgesG,nodesG);
+  const edge=(a,b)=>{const l=mk('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#fff','stroke-width':2.5,'stroke-linecap':'round',pathLength:1,'stroke-dasharray':1,'stroke-dashoffset':1,opacity:.7});edgesG.append(l);return l;};
+  const E1=edge(N[0],C), others=[edge(N[1],C),edge(N[2],C),edge(N[3],C),edge(N[4],C)], cross=[edge(N[0],N[2]),edge(N[1],N[3])];
+  cross.forEach(l=>l.setAttribute('opacity',.3));
+  const node=(n,main)=>{
+    const w=main?190:Math.max(130,n.k.length*17+56), h=main?72:58;
+    const g=mk('g',{transform:`translate(${n.x} ${n.y})`}); const inner=mk('g',{}); g.append(inner);
+    inner.append(mk('rect',{x:-w/2,y:-h/2,width:w,height:h,rx:h/2,fill:main?'#fff':'#0a0a0a',stroke:main?'#fff':'#444','stroke-width':2}));
+    const t=mk('text',{x:0,y:1,fill:main?'#000':'#fff'}); t.textContent=main?'Projeto':n.k; inner.append(t);
+    nodesG.append(g); return inner;
+  };
+  const nodes=N.map(n=>node(n,false)), main=node({...C,k:'Projeto'},true);
+  gsap.set([...nodes,main],{scale:0,transformOrigin:'50% 50%',svgOrigin:undefined});
+  // svg scale origin: use transform-box
+  [...nodes,main].forEach(g=>{g.style.transformBox='fill-box';g.style.transformOrigin='center';});
+  gsap.set($('#note3'),{opacity:0,y:14});
+  tl.to($('#note3'),{opacity:1,y:0,duration:.6},t0+.8);
+  tl.to($('#lnk3'),{scale:1.12,duration:.2,yoyo:true,repeat:1,ease:'power2.inOut'},t0+1.25);
+  tl.to(main,{scale:1,duration:.7,ease:'back.out(2)'},t0+1.3);
+  tl.to(nodes[0],{scale:1,duration:.6,ease:'back.out(2)'},t0+1.45);
+  tl.to(E1,{strokeDashoffset:0,duration:.6,ease:'power2.inOut'},t0+1.5);
+  tl.to(nodes.slice(1),{scale:1,duration:.6,ease:'back.out(2)',stagger:.1},t0+1.85);
+  tl.to(others,{strokeDashoffset:0,duration:.6,ease:'power2.inOut',stagger:.1},t0+1.95);
+  tl.to(cross,{strokeDashoffset:0,duration:.7,ease:'power2.inOut',stagger:.15},t0+2.5);
+  cardOut(card,X(2)); headOut(sc,X(2));
+})();
+
+/* =================== SCENE 4 — buscar =================== */
+(function(){
+  const sc=$('#s4'), card=$('.win',sc), t0=E(3);
+  gsap.set(card,{autoAlpha:0});
+  headIn(sc,t0); cardIn(card,t0);
+  const pal=$('#pal'), res=$$('.res',pal), bg=$$('.bgrow',sc);
+  gsap.set(pal,{opacity:0,scale:.94,y:20}); gsap.set(bg,{opacity:0});
+  tl.to(bg,{opacity:1,duration:.5,stagger:.05},t0+.7);
+  tl.to(pal,{opacity:1,scale:1,y:0,duration:.7,ease:'expo.out'},t0+.85);
+  typeText($('#q4'),'reunião',t0+1.3,.75);
+  tl.to($('#c4'),{opacity:0,duration:.35,repeat:5,yoyo:true,ease:'steps(1)'},t0+1.3);
+  gsap.set(res,{opacity:0,y:18}); gsap.set($('#pf4'),{opacity:0});
+  tl.to(res,{opacity:1,y:0,duration:.5,stagger:.1},t0+2.1);
+  tl.to($('#pf4'),{opacity:1,duration:.4},t0+2.5);
+  // first result becomes selected (inverted)
+  const r0=res[0]; r0.classList.remove('sel');
+  tl.to(r0,{backgroundColor:'#fff',color:'#000',duration:.3,ease:'power2.out'},t0+2.6);
+  tl.set(r0,{className:'res sel'},t0+2.6);
+  tl.to($('em',r0),{color:'#444',duration:.3},t0+2.6);
+  tl.to(r0,{scale:1.015,duration:.18,yoyo:true,repeat:1},t0+2.65);
+  cardOut(card,X(3)); headOut(sc,X(3));
+})();
+
+/* =================== SCENE 5 — offline =================== */
+(function(){
+  const sc=$('#s5'), card=$('.win',sc), t0=E(4);
+  gsap.set(card,{autoAlpha:0});
+  headIn(sc,t0); cardIn(card,t0);
+  const rows=$$('.fr5',sc);
+  gsap.set(rows,{opacity:0,x:-30});
+  tl.to(rows,{opacity:1,x:0,duration:.55,stagger:.09},t0+.75);
+  gsap.set('#pill5',{opacity:0,y:-10});
+  tl.to('#pill5',{opacity:1,y:0,duration:.5},t0+1.0);
+  tl.to('#cloud5',{strokeDashoffset:0,duration:.95,ease:'power2.inOut'},t0+1.2);
+  tl.to('#slash5',{strokeDashoffset:0,duration:.5,ease:'power3.inOut'},t0+2.0);
+  gsap.set('#t5',{opacity:0,y:20});
+  tl.to('#t5',{opacity:1,y:0,duration:.6},t0+2.3);
+  cardOut(card,X(4)); headOut(sc,X(4));
+})();
+
+/* =================== ASSEMBLY (23.3 → 26.5) =================== */
+const A=X(4)+.15;
+const fin=$('#final'), logoB=$('#logoB'), frags=$('#frags');
+tl.to(logoA,{autoAlpha:0,duration:.3,ease:'none'},A-.1);
+tl.to('#prog',{opacity:0,duration:.4},A+1.5);
+tl.to('#progbg',{opacity:0,duration:.4},A+1.5);
+
+const CX=960, CY=400;
+const FR=[
+ {w:240,h:64,r:32,c:'o',x:-820,y:-300,rot:-8},
+ {w:130,h:50,r:25,c:'f',x:760,y:-340,rot:10},
+ {w:64, h:64,r:16,c:'o',x:-700,y:330,rot:14},
+ {w:8,  h:76,r:4, c:'f',x:820,y:280,rot:0},
+ {w:300,h:70,r:35,c:'o',x:700,y:90,rot:-5},
+ {w:70, h:70,r:35,c:'o',x:-880,y:20,rot:0},
+ {w:110,h:44,r:12,c:'g',x:260,y:-470,rot:-12},
+ {w:180,h:54,r:27,c:'f',x:-300,y:470,rot:6},
+];
+FR.forEach((f,i)=>{
+  const d=document.createElement('div'); d.className='frag '+f.c;
+  Object.assign(d.style,{left:(CX-f.w/2)+'px',top:(CY-f.h/2)+'px',width:f.w+'px',height:f.h+'px',borderRadius:f.r+'px'});
+  frags.appendChild(d);
+  const t=A+i*.06, dur=1.25;
+  gsap.set(d,{x:f.x,y:f.y,rotation:f.rot,opacity:0});
+  echo(frags,{l:CX-f.w/2,t:CY-f.h/2,w:f.w,h:f.h,r:f.r},{x:f.x,y:f.y,rotation:f.rot,scale:1},{x:0,y:0,rotation:0,scale:.1},t+.05,dur,'power4.in',{fill:f.c!=='o',n:3,step:.05,ops:[.3,.18,.08],before:d});
+  tl.to(d,{opacity:1,duration:.15,ease:'none'},t);
+  tl.to(d,{x:0,y:0,rotation:0,scale:.1,duration:dur,ease:'power4.in'},t+.05);
+  tl.to(d,{opacity:0,duration:.12,ease:'none'},t+.05+dur-.1);
+});
+
+// the three bars fly in from outside and snap into the logo
+const barsB=PIECES(logoB), fromB=[{x:-1100,y:-320,rotation:-24},{x:1180,y:140,rotation:16},{x:-240,y:760,rotation:38},{x:420,y:-700,rotation:-30}];
+const barGeo=[{l:62,t:137,w:103,h:65,r:33},{l:181,t:137,w:103,h:65,r:33},{l:166,t:187,w:28,h:28,r:14},{l:153,t:211,w:54,h:24,r:12}];
+gsap.set(barsB,{opacity:0});
+barsB.forEach((b,i)=>{
+  const t=A+.15+i*.1, dur=1.45, f=fromB[i], rest=REST[i];
+  gsap.set(b,{...f,rotation:f.rotation+rest});
+  echo(logoB,barGeo[i],{...f,rotation:f.rotation+rest},{x:0,y:0,rotation:rest},t,dur,'expo.out',{fill:true,n:5,step:.045,ops:[.4,.3,.2,.12,.06],before:b});
+  tl.to(b,{opacity:1,duration:.1,ease:'none'},t);
+  tl.to(b,{x:0,y:0,rotation:rest,duration:dur,ease:'expo.out'},t);
+});
+buildLogo(logoB,A+1.25);       // frame draws, fill floods, bars turn black
+const tF=A+1.25+1.0;            // ≈ 25.55 — logo complete
+// pulse rings (echo of the final shape)
+echo(fin,{l:780,t:220,w:360,h:360,r:80},{scale:1},{scale:1.55},tF-.1,.9,'power2.out',{n:3,step:.12,ops:[.5,.35,.2],before:logoB});
+tl.fromTo(logoB,{scale:.94},{scale:1,duration:.8,ease:'elastic.out(1,.6)',immediateRender:false},tF-.1);
+
+// logo rises, tagline reveals
+tl.to(logoB,{y:-60,duration:.9,ease:'expo.inOut'},tF+.55);
+tl.to(tgWords,{yPercent:0,skewY:0,duration:1,ease:'expo.out',stagger:.12},tF+.95);
+tl.to('#pattern',{opacity:.55,duration:1.6,ease:'power2.out'},tF+.3);
+gsap.set('#foot',{opacity:0,y:14});
+tl.to('#foot',{opacity:1,y:0,duration:.8},tF+1.9);
+// slow hold drift so the end frame is never static
+tl.to(logoB,{scale:1.035,duration:2.6,ease:'sine.inOut'},tF+1.5);
+
+tl.set({},{},30); // timeline length = 30s
+
+/* ---------- playback + controls ---------- */
+const q=new URLSearchParams(location.search), t0=parseFloat(q.get('t'));
+if(!isNaN(t0)){ tl.seek(t0,false).pause(); } else { tl.play(0); }
+addEventListener('keydown',e=>{
+  if(e.code==='Space'){ e.preventDefault(); tl.paused()?tl.play():tl.pause(); }
+  if(e.code==='ArrowRight') tl.seek(Math.min(30,tl.time()+1),false);
+  if(e.code==='ArrowLeft')  tl.seek(Math.max(0,tl.time()-1),false);
+  if(e.key==='r'||e.key==='R'){ tl.restart(); }
+});
+window.__ready=true;
+}
+</script>
+</body>
+</html>
