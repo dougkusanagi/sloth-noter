@@ -55,6 +55,7 @@ import { setLanguage, t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
 import { continueBlock } from './continue-block.js'
 import { restoreWindowState } from './window-state.js'
+import { protectPendingSaves } from './save-lifecycle.js'
 import {
   importImage,
   noteImages,
@@ -166,7 +167,12 @@ function Workspace({ persistence, loaded }) {
   const damaged = useRef(loaded.raw)
   const writer = useRef(null)
   if (!writer.current)
-    writer.current = createWriteQueue((document) => persistence.save(document), setError, setSaving)
+    writer.current = createWriteQueue(
+      (document) => persistence.save(document),
+      setError,
+      setSaving,
+      { debounceMs: persistence.kind === 'vault' ? 1200 : 0 },
+    )
   const search = useRef(null)
   const conflictFirst = useRef(null)
   const importInput = useRef(null)
@@ -200,6 +206,21 @@ function Workspace({ persistence, loaded }) {
   const sidebarVisible = prefs.sidebarVisible ?? !window.matchMedia('(max-width: 600px)').matches
   setLanguage(prefs.language)
   const images = useMemo(() => libraryImages(data, diskImages), [data, diskImages])
+
+  useEffect(() => {
+    let disposed = false
+    let cleanup = () => {}
+    protectPendingSaves(writer.current, persistence.kind !== 'web')
+      .then((stop) => {
+        if (disposed) stop()
+        else cleanup = stop
+      })
+      .catch((cause) => setError(friendlyError(cause)))
+    return () => {
+      disposed = true
+      cleanup()
+    }
+  }, [persistence])
 
   useEffect(() => {
     let disposed = false
@@ -984,7 +1005,7 @@ function Workspace({ persistence, loaded }) {
       if (running || stopped || switching || document.visibilityState === 'hidden') return
       running = true
       try {
-        await writer.current.whenIdle()
+        await writer.current.whenIdle({ flush: false })
         const files = await sync.scan()
         if (files === null || stopped) return
         const result = sync.merge(current.current, files)

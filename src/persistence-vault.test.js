@@ -481,3 +481,36 @@ test('cancelling the copy choice leaves the active folder untouched', async () =
   assert.equal(host.vault, '/notes')
   assert.equal(host.calls.includes('vault_activate'), false)
 })
+
+test('a burst of title edits renames the vault file once, directly to the final title', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const { createWriteQueue } = await import('./write-queue.js')
+  const host = fakeHost({ files: { 'Original.md': '# Original\n\nText' } })
+  const operations = []
+  const invoke = async (command, args) => {
+    if (command === 'vault_apply') operations.push(args.op)
+    return host.invoke(command, args)
+  }
+  const persistence = createPersistence(createVaultAdapter(invoke, '/notes'))
+  const { document } = await persistence.load()
+  const queue = createWriteQueue((next) => persistence.save(next), undefined, undefined, {
+    debounceMs: 1200,
+  })
+  for (const title of ['N', 'No', 'Nova nota']) {
+    queue.write({
+      ...document,
+      notes: [{ ...document.notes[0], name: `${title}.md`, body: `# ${title}\n\nText` }],
+    })
+    t.mock.timers.tick(300)
+    await new Promise((resolve) => setImmediate(resolve))
+  }
+  assert.deepEqual(operations, [])
+  t.mock.timers.tick(1200)
+  assert.equal(await queue.whenIdle({ flush: false }), null)
+  assert.deepEqual(
+    operations.map((op) => op.kind),
+    ['rename', 'write'],
+  )
+  assert.deepEqual(operations[0], { kind: 'rename', from: 'Original.md', to: 'Nova nota.md' })
+  assert.deepEqual([...host.files], [['Nova nota.md', '# Nova nota\n\nText']])
+})

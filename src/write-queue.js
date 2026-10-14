@@ -1,47 +1,75 @@
-/**
- * Serializes document writes and keeps only the newest state while a write is
- * in flight, so a slow disk neither delays typing nor writes an older document
- * after a newer one.
- */
-export function createWriteQueue(save, onResult = () => {}, onBusy = () => {}) {
+/** Serialize saves, coalescing edits until typing pauses or maxWait is reached. */
+export function createWriteQueue(
+  save,
+  onResult = () => {},
+  onBusy = () => {},
+  { debounceMs = 0, maxWaitMs = 5000 } = {},
+) {
   let lastResult
   let pending = null
-  let scheduled = false
-  let tail = Promise.resolve()
+  let running = false
+  let ready = false
+  let timer = null
+  let deadline = null
+  const waiters = []
 
-  function schedule() {
-    if (scheduled || pending === null) return tail
-    scheduled = true
-    tail = tail.then(async () => {
-      scheduled = false
-      const document = pending
-      pending = null
-      let error
-      try {
-        error = await save(document)
-      } catch (cause) {
-        error = cause instanceof Error ? cause.message : 'Storage is unavailable'
-      }
-      lastResult = error
-      onResult(error)
-      if (pending === null && !scheduled) onBusy(false)
-    })
-    return tail
+  function clearTimers() {
+    clearTimeout(timer)
+    clearTimeout(deadline)
+    timer = deadline = null
+  }
+
+  async function drain() {
+    if (running || !ready || pending === null) return
+    clearTimers()
+    running = true
+    ready = false
+    const document = pending
+    pending = null
+    try {
+      lastResult = await save(document)
+    } catch (cause) {
+      lastResult = cause instanceof Error ? cause.message : 'Storage is unavailable'
+    }
+    onResult(lastResult)
+    running = false
+    if (pending !== null) {
+      void drain()
+    } else {
+      onBusy(false)
+      for (const resolve of waiters.splice(0)) resolve(lastResult)
+    }
+  }
+
+  function release() {
+    clearTimers()
+    ready = true
+    void drain()
+  }
+
+  function whenIdle({ flush = true } = {}) {
+    if (!running && pending === null) return Promise.resolve(lastResult)
+    const idle = new Promise((resolve) => waiters.push(resolve))
+    if (flush && pending !== null) release()
+    return idle
   }
 
   return {
     write(document) {
       pending = document
       onBusy(true)
-      return schedule()
+      if (debounceMs === 0) {
+        ready = true
+        queueMicrotask(drain)
+      } else {
+        ready = false
+        clearTimeout(timer)
+        timer = setTimeout(release, debounceMs)
+        if (deadline === null) deadline = setTimeout(release, maxWaitMs)
+      }
+      return whenIdle({ flush: false })
     },
-    async whenIdle() {
-      let observed
-      do {
-        observed = tail
-        await observed
-      } while (observed !== tail)
-      return lastResult
-    },
+    // Explicit actions flush immediately; background scans only wait for autosave.
+    whenIdle,
   }
 }
