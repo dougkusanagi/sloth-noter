@@ -79,3 +79,12 @@ test('renumbering follows a moved selection and keeps the cursor with its text',
   assert.equal(applyChanges(text, changes), '1. a\n    1. b\n    3. c')
   assert.equal(mapPosition(10, changes), 18)
 })
+
+test('Shift+Tab removes one quote level around lists without losing their markers', () => {
+  const text = '> - 1. Comprar\n> - 2. Finalizar'
+  assert.equal(run(text, 0, text.length, true), '- 1. Comprar\n- 2. Finalizar')
+  assert.equal(run('> > - item', 8, 8, true), '> - item')
+  assert.equal(run('  > 1. item', 8, 8, true), '1. item')
+  assert.equal(listIndentChanges('```\n> - literal\n```', 8, 8, true), null)
+  assert.equal(run('> texto', 5, 5, true), 'texto')
+})

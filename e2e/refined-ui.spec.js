@@ -84,7 +84,15 @@ test('the tasks view lists open tasks across notes, toggles and jumps to them', 
   await expect(tasks.locator('.task-row')).toHaveCount(4)
   await sidebar.getByRole('textbox').fill('sub')
   await expect(tasks.locator('.task-row')).toHaveCount(1)
-  await tasks.getByRole('button', { name: 'Subtarefa', exact: true }).click()
+  const accordion = tasks.locator('.task-group-title').first()
+  await accordion.click()
+  await expect(accordion).toHaveAttribute('aria-expanded', 'false')
+  await expect(tasks.locator('.task-row').first()).toBeHidden()
+  await accordion.click()
+  await expect(accordion).toHaveAttribute('aria-expanded', 'true')
+  await expect(tasks.locator('.task-row').first()).toBeVisible()
+  await expect(tasks.getByRole('button', { name: /^Abrir nota:/ })).toBeVisible()
+  await tasks.getByRole('button', { name: 'Abrir tarefa na nota: Subtarefa', exact: true }).click()
   await expect(page.locator('.cm-content')).toBeFocused()
   expect(
     await page.evaluate(() => {

@@ -101,3 +101,15 @@ test('Shift+Tab on a list item at the margin does nothing in Padrão too', async
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(box(page)).toHaveValue(LIST.replace('- b', '- bX'))
 })
+
+test('Shift+Tab removes quote indentation around the first two list items', async ({ page }) => {
+  const source = '# Fluxo\n\n> - 1. Comprar\n> - 2. Finalizar\n\n- Nome'
+  await box(page).fill(source)
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  await page.locator('.cm-line', { hasText: '1. Comprar' }).click()
+  await page.keyboard.press('Shift+Tab')
+  await page.locator('.cm-line', { hasText: '2. Finalizar' }).click()
+  await page.keyboard.press('Shift+Tab')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await expect(box(page)).toHaveValue(source.replaceAll('> ', ''))
+})

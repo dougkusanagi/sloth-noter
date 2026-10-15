@@ -39,7 +39,13 @@ export function listIndentChanges(text, from, to, outdent = false) {
   const isList = (index) =>
     LIST_LINE.test(lines[index]) && !code.some(([start, end]) => index >= start && index <= end)
   const touched = []
-  for (let index = first; index <= last; index++) if (isList(index)) touched.push(index)
+  for (let index = first; index <= last; index++) {
+    const quoted =
+      outdent &&
+      /^[ \t]*>/.test(lines[index]) &&
+      !code.some(([start, end]) => index >= start && index <= end)
+    if (isList(index) || quoted) touched.push(index)
+  }
   if (!touched.length) return null
 
   // Indentation after the edit, so a moved block keeps its shape.
@@ -61,6 +67,13 @@ export function listIndentChanges(text, from, to, outdent = false) {
   for (const index of touched) {
     const space = lines[index].match(/^[ \t]*/)[0]
     if (outdent) {
+      // Quotes carry their own indentation marker, hidden in the visual editor.
+      // Remove one quote level while retaining the list marker and its text.
+      const quote = lines[index].match(/^[ \t]*> ?/)
+      if (quote) {
+        changes.push({ from: starts[index], to: starts[index] + quote[0].length, insert: '' })
+        continue
+      }
       if (!space) continue
       const remove = space.startsWith('\t') ? 1 : Math.min(INDENT.length, space.length)
       changes.push({ from: starts[index], to: starts[index] + remove, insert: '' })

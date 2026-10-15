@@ -1254,11 +1254,17 @@ html:has(
   margin-bottom: 12px;
   animation: rise-in var(--medium) var(--ease) both;
 }
+.task-group-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 .task-group-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 6px 6px 4px;
   border: 0;
   border-radius: var(--radius-sm);
@@ -1270,7 +1276,7 @@ html:has(
   text-transform: uppercase;
   cursor: pointer;
 }
-.task-group-title span:first-child {
+.task-group-title > span:not(.count) {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -1279,6 +1285,32 @@ html:has(
 }
 .task-group-title:hover {
   color: var(--ink);
+}
+.task-group-title > svg {
+  flex: none;
+  transition: transform var(--fast) var(--ease);
+}
+.task-group-title[aria-expanded='false'] > svg {
+  transform: rotate(-90deg);
+}
+.task-open-note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.task-open-note:hover {
+  color: var(--ink);
+  background: var(--hover);
 }
 .task-group ul {
   margin: 0;
@@ -1310,7 +1342,6 @@ html:has(
   font: 13px/1.45 var(--ui);
   text-align: left;
   overflow-wrap: anywhere;
-  cursor: pointer;
   transition:
     color var(--medium) var(--ease),
     opacity var(--medium) var(--ease);

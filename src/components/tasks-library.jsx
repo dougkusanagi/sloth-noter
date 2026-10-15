@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { CircleCheck } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ChevronDown, CircleCheck, ExternalLink } from 'lucide-react'
 import { noteTasks } from '../tasks.js'
 import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
@@ -15,9 +15,10 @@ function plain(text) {
 
 /**
  * Every task across the notes, grouped by note. Checking one edits its note; the text
- * jumps to the task in place.
+ * is plain text; dedicated buttons open the note or jump to a task.
  */
 export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJump }) {
+  const [collapsed, setCollapsed] = useState(new Set())
   const groups = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase()
     return notes
@@ -51,11 +52,36 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
       {groups.length ? (
         groups.map(({ note, open, tasks }) => (
           <div className="task-group" key={note.id} role="group" aria-label={note.name}>
-            <button className="task-group-title" onClick={() => onJump(note.id, null)}>
-              <span>{displayName(note.name)}</span>
-              {open > 0 && <span className="count">{open}</span>}
-            </button>
-            <ul>
+            <div className="task-group-header">
+              <button
+                type="button"
+                className="task-group-title"
+                aria-expanded={!collapsed.has(note.id)}
+                aria-controls={`tasks-${note.id}`}
+                onClick={() =>
+                  setCollapsed((previous) => {
+                    const next = new Set(previous)
+                    if (next.has(note.id)) next.delete(note.id)
+                    else next.add(note.id)
+                    return next
+                  })
+                }
+              >
+                <ChevronDown size={14} aria-hidden="true" />
+                <span>{displayName(note.name)}</span>
+                {open > 0 && <span className="count">{open}</span>}
+              </button>
+              <button
+                type="button"
+                className="task-open-note"
+                aria-label={`${t('tasks.openNote')}: ${displayName(note.name)}`}
+                title={t('tasks.openNote')}
+                onClick={() => onJump(note.id, null)}
+              >
+                <ExternalLink size={14} aria-hidden="true" />
+              </button>
+            </div>
+            <ul id={`tasks-${note.id}`} hidden={collapsed.has(note.id)}>
               {tasks.map((task) => (
                 <li
                   key={task.mark}
@@ -70,8 +96,15 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
                     aria-label={plain(task.text) || t('task.open')}
                     onChange={() => onToggle(note.id, task.mark)}
                   />
-                  <button className="task-text" onClick={() => onJump(note.id, task.offset)}>
-                    {plain(task.text) || '—'}
+                  <span className="task-text">{plain(task.text) || '—'}</span>
+                  <button
+                    type="button"
+                    className="task-open-note"
+                    aria-label={`${t('tasks.openTask')}: ${plain(task.text) || '—'}`}
+                    title={t('tasks.openTask')}
+                    onClick={() => onJump(note.id, task.offset)}
+                  >
+                    <ExternalLink size={14} aria-hidden="true" />
                   </button>
                 </li>
               ))}
