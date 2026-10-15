@@ -3,6 +3,7 @@
   --bg: #f7f6f2;
   --ink: #23221e;
   --muted: #67645d;
+  --rail: color-mix(in srgb, var(--muted) 45%, transparent);
   --soft: #e8e5de;
   --paper: #fcfbf8;
   --raised: #ffffff;
@@ -248,19 +249,6 @@ textarea:focus-visible {
 }
 .visual-editor .cm-line {
   padding: 0;
-  /* Section indent: purely visual, the Markdown text is untouched. */
-  margin-left: calc(var(--md-section, 0) * var(--section-step, 0px));
-}
-.app.section-indent {
-  --section-step: calc(var(--editor-size) * 1.5);
-}
-@media (max-width: 600px) {
-  .app.section-indent {
-    --section-step: calc(var(--editor-size) * 0.75);
-  }
-}
-.markdown .md-section {
-  margin-left: var(--section-step, 0px);
 }
 .visual-editor .cm-md-prefix:not(.cm-md-editing),
 .visual-editor .cm-md-syntax:not(.cm-md-editing) {
@@ -298,7 +286,7 @@ textarea:focus-visible {
 }
 .visual-editor .cm-md-quote-nested {
   --md-prefix-width: 4.02em;
-  padding-left: 2em;
+  padding-left: calc(2em + 2px);
   background: linear-gradient(var(--muted), var(--muted)) 1em 0 / 2px 100% no-repeat;
 }
 .visual-editor .cm-md-bullet {
@@ -340,7 +328,7 @@ textarea:focus-visible {
   position: relative;
   display: grid;
   grid-template-columns: repeat(var(--table-columns), minmax(0, 1fr));
-  width: calc(100% - var(--md-section, 0) * var(--section-step, 0px));
+  width: 100%;
   background: var(--paper);
   font:
     0.9em/1.5 Georgia,
@@ -618,80 +606,84 @@ textarea:focus-visible {
   color: var(--muted);
 }
 .markdown {
+  --line: calc(var(--editor-size) * 1.62);
   font-size: var(--editor-size);
-  line-height: 1.55;
+  line-height: 1.62;
   padding-bottom: 70px;
   overflow-wrap: anywhere;
+}
+/* Same vertical rhythm as the live editor: spacing is the source's blank lines (--gap). */
+.markdown * {
+  --gap: 0;
+}
+.markdown
+  :is(p, ul, ol, li, blockquote, table, hr, h1, h2, h3, h4, h5, h6, .code-block, .md-section) {
+  margin: calc(var(--gap) * var(--line)) 0 0;
 }
 .markdown h1 {
   font-size: 1.6em;
   font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 1.2;
-  margin: 0 0 0.7em;
 }
 .markdown h2 {
   font-size: 1.32em;
   font-weight: 600;
-  margin: 1.5em 0 0.35em;
 }
 .markdown h3 {
   font-size: 1.14em;
   font-weight: 600;
-  margin: 1.3em 0 0.3em;
 }
-.markdown h4 {
-  font-size: 1.02em;
+.markdown :is(h4, h5, h6) {
+  font-size: 1em;
   font-weight: 600;
-  margin: 1.2em 0 0.25em;
 }
 .markdown table {
   width: 100%;
   border-collapse: collapse;
-  margin: 1.2em 0;
-  font-size: 0.92em;
+  font-size: 0.9em;
+  line-height: 1.5;
 }
 .markdown th,
 .markdown td {
   border-bottom: 1px solid var(--soft);
-  padding: 8px 10px;
+  padding: 7px 10px;
   text-align: left;
 }
 .markdown th {
   font-weight: 600;
 }
-.markdown p {
-  margin: 0.5em 0;
-}
 .markdown ul,
 .markdown ol {
   padding-left: 1.5em;
-}
-.markdown li {
-  margin: 0.15em 0;
 }
 .markdown li::marker {
   color: var(--muted);
 }
 .markdown blockquote {
   border-left: 2px solid var(--soft);
-  margin: 1em 0;
   padding: 0 0 0 1em;
   color: var(--muted);
+}
+.markdown hr {
+  height: var(--line);
+  border: 0;
+  border-bottom: 1px solid var(--soft);
+  box-sizing: content-box;
 }
 .markdown a {
   color: var(--accent);
 }
 .markdown code {
-  font: 0.78em var(--mono);
+  font: 0.85em var(--mono);
   background: var(--soft);
-  padding: 0.12em 0.32em;
+  padding: 0.1em 0.25em;
   border-radius: var(--radius-sm);
 }
 .markdown pre {
   background: var(--paper);
-  border: 1px solid var(--soft);
-  padding: 42px 16px 16px;
+  border: 0;
+  /* As tall as the live editor's fence lines (they carry the copy badge there too). */
+  padding: 1.445em 0.85em;
   overflow: auto;
   margin: 0;
   position: relative;
@@ -699,7 +691,6 @@ textarea:focus-visible {
 }
 .code-block {
   position: relative;
-  margin: 1.3em 0;
 }
 .code-block-tools {
   position: sticky;
@@ -717,6 +708,7 @@ textarea:focus-visible {
   align-self: flex-start;
 }
 .markdown pre code {
+  font: 0.85em/1.7 var(--mono);
   display: block;
   white-space: pre;
   background: transparent;
@@ -789,8 +781,11 @@ textarea:focus-visible {
   min-width: 0;
 }
 .markdown img {
-  max-width: 100%;
-  height: auto;
+  /* Same box as the live editor's image preview. */
+  max-width: min(100%, 600px);
+  max-height: 400px;
+  object-fit: contain;
+  display: inline-block;
   border-radius: var(--radius-sm);
 }
 .markdown .task-list-item {
@@ -855,16 +850,18 @@ textarea:focus-visible {
 .cm-md-inline-strike {
   text-decoration: line-through;
 }
-.cm-md-inline-footnote {
+.cm-md-inline-footnote,
+.markdown sup {
   vertical-align: super;
   font-size: 0.75em;
+  line-height: 0;
+}
+.cm-md-inline-footnote {
   color: var(--accent-ink);
 }
 .visual-editor .cm-md-h5,
 .visual-editor .cm-md-h6 {
   font-weight: 600;
-  /* Padding, not margin: CodeMirror does not measure line margins, so clicks below would land on the wrong line. */
-  padding-top: 16px;
 }
 .visual-editor .cm-md-rule {
   color: var(--muted);
@@ -1018,4 +1015,34 @@ textarea:focus-visible {
 }
 .markdown .md-section[data-collapsed] > :not(:first-child) {
   display: none;
+}
+
+/* Rails: dotted guides for nested sections and nested lists, drawn outside the text column. */
+.cm-rail {
+  border-left: 1px dotted var(--rail);
+  pointer-events: none;
+}
+.markdown .md-section {
+  position: relative;
+}
+.markdown .md-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(-8px - 5px * (min(var(--rails, 1), 4) - 1));
+  border-left: 1px dotted var(--rail);
+  pointer-events: none;
+}
+.markdown li > :is(ul, ol) {
+  position: relative;
+}
+.markdown li > :is(ul, ol)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.93em;
+  border-left: 1px dotted var(--rail);
+  pointer-events: none;
 }

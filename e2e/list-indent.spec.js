@@ -76,9 +76,28 @@ test('nested items are drawn indented in Padrão, ordered ones too', async ({ pa
   expect(await left(ordered.nth(1))).toBeGreaterThan(await left(ordered.nth(0)))
 })
 
-test('Shift+Tab on an item already at the margin still returns to the title', async ({ page }) => {
+test('Shift+Tab on list items that are already at the margin does nothing', async ({ page }) => {
   await select(page, LIST.indexOf('- b') + 3)
   await page.keyboard.press('Shift+Tab')
   await page.keyboard.type('X')
+  await expect(box(page)).toHaveValue(LIST.replace('- b', '- bX'))
+  await select(page, LIST.indexOf('- a'), LIST.indexOf('- c') + 3)
+  await page.keyboard.press('Shift+Tab')
+  await expect(box(page)).toHaveValue(LIST.replace('- b', '- bX'))
+})
+
+test('Shift+Tab outside a list still returns to the title', async ({ page }) => {
+  await select(page, LIST.length)
+  await page.keyboard.press('Shift+Tab')
+  await page.keyboard.type('X')
   await expect(box(page)).toHaveValue(LIST.replace('# Lista', '# ListaX'))
+})
+
+test('Shift+Tab on a list item at the margin does nothing in Padrão too', async ({ page }) => {
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  await page.locator('.cm-line', { hasText: /^b$/ }).click()
+  await page.keyboard.press('Shift+Tab')
+  await page.keyboard.type('X')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await expect(box(page)).toHaveValue(LIST.replace('- b', '- bX'))
 })

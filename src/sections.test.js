@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
-import { headingSections, lineLevels, remarkSections } from './sections.js'
+import { headingSections, remarkSections } from './sections.js'
 
 const DOC = [
   '# Título', // 1
@@ -37,26 +37,41 @@ test('headings know their nesting level and where their section ends', () => {
   )
 })
 
-test('every line gets the level of the section it belongs to', () => {
-  assert.deepEqual(lineLevels(DOC), [0, 0, 0, 1, 1, 2, 2, 3, 3, 2, 1, 1, 2, 2])
+test('sections know how many rows of subsections they hold', () => {
+  assert.deepEqual(
+    headingSections(DOC).map((heading) => heading.height),
+    [1, 3, 2, 1, 1, 2, 1],
+  )
 })
 
 test('headings inside code, quotes and lists are not sections', () => {
   const text = '# T\n\n## A\n\n```\n## falso\n```\n\n> ## citado\n\n- ## item\n\ntexto'
   assert.deepEqual(
-    headingSections(text).map((heading) => heading.line),
-    [1, 3],
+    headingSections(text).map((heading) => [heading.line, heading.end]),
+    [
+      [1, 1],
+      [3, 13],
+    ],
   )
-  assert.deepEqual(lineLevels(text).slice(2), [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 })
 
-test('setext headings count and a note without headings has no levels', () => {
-  assert.deepEqual(lineLevels('Título\n------\ntexto'), [1, 1, 1])
-  assert.deepEqual(lineLevels('só texto\n\noutro'), [0, 0, 0])
+test('setext headings count and a note without headings has no sections', () => {
+  assert.deepEqual(
+    headingSections('Título\n------\ntexto').map((heading) => [heading.level, heading.end]),
+    [[1, 3]],
+  )
+  assert.deepEqual(headingSections('só texto\n\noutro'), [])
 })
 
 test('a later H1 closes the open sections', () => {
-  assert.deepEqual(lineLevels('# A\n## B\ntexto\n# C\ntexto'), [0, 1, 1, 0, 0])
+  assert.deepEqual(
+    headingSections('# A\n## B\ntexto\n# C\ntexto').map((h) => [h.level, h.end]),
+    [
+      [0, 1],
+      [1, 3],
+      [0, 4],
+    ],
+  )
 })
 
 test('the reading tree nests sections by rank and hoists definitions', () => {

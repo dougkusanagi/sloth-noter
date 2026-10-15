@@ -5,7 +5,7 @@ import { t } from './i18n.js'
 import { codeTokens, codeLanguageName } from './syntax-highlight.js'
 import { ChevronDown, Copy } from 'lucide-react'
 import { remarkTags, remarkWikiLinks, findNote } from './markdown-model.js'
-import { remarkSections } from './sections.js'
+import { remarkSections, remarkSourceLayout } from './sections.js'
 import { resolveImage } from './images.js'
 
 function highlightedCode(tokens) {
@@ -92,7 +92,15 @@ function taskInput(node) {
   }
   return null
 }
-function ListItem({ children, className, node }) {
+/** The whitespace between tags in the HTML would add a space after the task checkbox. */
+function dropLeadingSpace(children) {
+  const parts = React.Children.toArray(children)
+  const text = parts.findIndex((part) => typeof part === 'string' && part.trim())
+  if (text < 0) return parts
+  parts[text] = parts[text].trimStart()
+  return parts.filter((part, index) => index >= text || typeof part !== 'string')
+}
+function ListItem({ children, className, node, style }) {
   const { text, onChange } = useContext(MarkdownContext)
   const task = className?.includes('task-list-item')
   const checked = task ? Boolean(taskInput(node)?.properties.checked) : false
@@ -105,7 +113,7 @@ function ListItem({ children, className, node }) {
     }
   }
   return (
-    <li className={className}>
+    <li className={className} style={style}>
       {task && (
         <input
           type="checkbox"
@@ -116,7 +124,7 @@ function ListItem({ children, className, node }) {
           onChange={toggle}
         />
       )}
-      {children}
+      {dropLeadingSpace(children)}
     </li>
   )
 }
@@ -127,7 +135,7 @@ function CodeBlock({ children }) {
   const language = child?.props?.className?.replace('language-', '') ?? ''
   const label = codeLanguageName(language)
   return (
-    <div className="code-block">
+    <div className="code-block" style={child?.props?.style}>
       <div className="code-block-tools">
         <button
           type="button"
@@ -146,6 +154,11 @@ function CodeBlock({ children }) {
   )
 }
 const SectionContext = createContext(null)
+const isSection = (child) =>
+  child.type === 'element' && child.properties?.className?.includes('md-section')
+/** Rows of nested sections inside and including this one: outer rails sit outside inner ones. */
+const sectionHeight = (node) =>
+  1 + Math.max(0, ...node.children.filter(isSection).map(sectionHeight))
 function Section({ node, children, className, ...props }) {
   const { folds } = useContext(MarkdownContext)
   if (!className?.includes('md-section'))
@@ -158,7 +171,12 @@ function Section({ node, children, className, ...props }) {
   const line = parts[0]?.position?.start.line
   const collapsed = Boolean(folds?.has(line))
   return (
-    <section className={className} data-collapsed={collapsed ? '' : undefined} {...props}>
+    <section
+      className={className}
+      data-collapsed={collapsed ? '' : undefined}
+      {...props}
+      style={{ ...props.style, '--rails': sectionHeight(node) }}
+    >
       <SectionContext.Provider value={{ line, collapsed, hasContent: parts.length > 1 }}>
         {children}
       </SectionContext.Provider>
@@ -206,7 +224,13 @@ export function Markdown({ text, onCopy, onChange, onOpenWiki, notes, folds, onT
     >
       <article className="markdown">
         <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkWikiLinks, remarkTags, remarkSections]}
+          remarkPlugins={[
+            remarkGfm,
+            remarkWikiLinks,
+            remarkTags,
+            remarkSections,
+            remarkSourceLayout,
+          ]}
           urlTransform={(url, key) =>
             key === 'src' && /^data:image\/(png|jpeg|gif|webp|avif|bmp);base64,/i.test(url)
               ? url

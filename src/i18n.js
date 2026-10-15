@@ -20,9 +20,6 @@ const messages = {
     'settings.tabsHint': 'Mantém as notas abertas em abas no topo.',
     'settings.sidebar': 'Mostrar biblioteca',
     'settings.sidebarHint': 'Lista de notas e imagens ao lado do texto.',
-    'settings.sectionIndent': 'Recuar seções',
-    'settings.sectionIndentHint':
-      'O texto sob cada título (H2, H3…) fica recuado só na tela; o arquivo não muda.',
     'settings.fontSize': 'Tamanho do texto',
     'settings.fontHint': 'Vale para todas as notas.',
     'settings.fontReset': 'Restaurar',
@@ -272,9 +269,6 @@ const messages = {
     'settings.tabsHint': 'Keeps open notes in tabs at the top.',
     'settings.sidebar': 'Show library',
     'settings.sidebarHint': 'List of notes and images next to the text.',
-    'settings.sectionIndent': 'Indent sections',
-    'settings.sectionIndentHint':
-      'Text under each heading (H2, H3…) is indented on screen only; the file is unchanged.',
     'settings.fontSize': 'Text size',
     'settings.fontHint': 'Applies to every note.',
     'settings.fontReset': 'Reset',

@@ -10,7 +10,7 @@ const run = (text, from, to = from, outdent = false) => {
 test('Tab nests a list item under the previous one with four spaces', () => {
   assert.equal(INDENT, '    ')
   assert.equal(run('- a\n- b', 7), '- a\n    - b')
-  assert.equal(run('1. a\n2. b', 9), '1. a\n    2. b')
+  assert.equal(run('1. a\n2. b', 9), '1. a\n    1. b')
   assert.equal(run('- a\n- [ ] tarefa', 10), '- a\n    - [ ] tarefa')
   assert.equal(run('* a\n+ b', 7), '* a\n    + b')
   assert.equal(run('- a\n\n- b', 8), '- a\n\n    - b')
@@ -61,4 +61,21 @@ test('positions follow the edits', () => {
   const back = listIndentChanges('- a\n    - b', 10, 10, true)
   assert.equal(mapPosition(10, back), 6)
   assert.equal(mapPosition(5, back), 4)
+})
+
+test('the first item of a new numbered sublist restarts at 1', () => {
+  assert.equal(run('1. a\n2. b', 9), '1. a\n    1. b')
+  assert.equal(run('1. a\n7) b', 9), '1. a\n    1) b')
+  assert.equal(run('1. a\n2. b\n3. c', 9), '1. a\n    1. b\n3. c')
+  // A sibling already exists at that level, so the number stays.
+  assert.equal(run('1. a\n    1. x\n2. y', 17), '1. a\n    1. x\n    2. y')
+  // Bullets are not numbered.
+  assert.equal(run('- a\n- b', 7), '- a\n    - b')
+})
+
+test('renumbering follows a moved selection and keeps the cursor with its text', () => {
+  const text = '1. a\n2. b\n3. c'
+  const changes = listIndentChanges(text, 5, 15)
+  assert.equal(applyChanges(text, changes), '1. a\n    1. b\n    3. c')
+  assert.equal(mapPosition(10, changes), 18)
 })

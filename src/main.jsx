@@ -401,7 +401,7 @@ function Workspace({ persistence, loaded }) {
         field.selectionEnd,
         event.shiftKey,
       )
-      if (changes && (changes.length || !event.shiftKey)) {
+      if (changes) {
         event.preventDefault()
         if (changes.length) {
           const start = mapPosition(field.selectionStart, changes)
@@ -1266,7 +1266,7 @@ function Workspace({ persistence, loaded }) {
   }
   return (
     <main
-      className={`app${prefs.sectionIndent === false ? '' : ' section-indent'}`}
+      className="app"
       style={{ '--editor-size': `${prefs.fontSize}px` }}
       onDragOver={(event) => {
         if (event.dataTransfer.types.includes('Files')) event.preventDefault()

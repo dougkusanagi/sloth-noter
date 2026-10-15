@@ -5,7 +5,8 @@ import { markdownTree } from './markdown-model.js'
  *
  * `level` is how many sections enclose the heading, itself included (H2 = 1, an H3 under
  * it = 2, ...), so skipped heading levels do not leave gaps. H1 is the note title and
- * stays at 0. `end` is the last line (1-based) of the section: everything up to the next
+ * stays at 0. `height` is 1 for a section without subsections, else 1 more than its deepest
+ * subsection. `end` is the last line (1-based) of the section: everything up to the next
  * heading of the same or a higher rank.
  */
 export function headingSections(text, tree = markdownTree(text)) {
@@ -17,6 +18,7 @@ export function headingSections(text, tree = markdownTree(text)) {
       titleEnd: node.position.end.line,
       level: 0,
       end: 0,
+      height: 1,
     }))
   const lineCount = text.split('\n').length
   const open = []
@@ -25,10 +27,14 @@ export function headingSections(text, tree = markdownTree(text)) {
     if (heading.depth === 1) {
       heading.level = 0
     } else {
+      heading.parent = open.at(-1) ?? null
       open.push(heading)
       heading.level = open.length
     }
   }
+  // Rows of nesting below and including each section, so outer rails sit outside inner ones.
+  for (const heading of [...headings].reverse())
+    if (heading.parent) heading.parent.height = Math.max(heading.parent.height, heading.height + 1)
   for (const heading of open) heading.end = lineCount
   for (const heading of headings) if (heading.depth === 1) heading.end = heading.titleEnd
   return headings
@@ -43,16 +49,6 @@ export function foldableLines(text, tree) {
         heading.level > 0 && lines.slice(heading.titleEnd, heading.end).some((line) => line.trim()),
     )
     .map((heading) => heading.line)
-}
-
-/** Section level of every line (index 0 is line 1). */
-export function lineLevels(text, tree) {
-  const levels = new Array(text.split('\n').length).fill(0)
-  for (const heading of headingSections(text, tree)) {
-    if (heading.level === 0) continue
-    for (let line = heading.line; line <= heading.end; line++) levels[line - 1] = heading.level
-  }
-  return levels
 }
 
 /**
@@ -94,5 +90,51 @@ export function remarkSections() {
       ;(open.at(-1) ?? { children: root }).children.push(node)
     }
     tree.children = [...root, ...hoisted]
+  }
+}
+
+/** Gives each section the extent of its content, so blank-line gaps can be measured around it. */
+export function fitSectionPositions(node) {
+  if (node.type === 'section') {
+    for (const child of node.children) fitSectionPositions(child)
+    node.position = { start: node.position.start, end: node.children.at(-1).position.end }
+  } else for (const child of node.children ?? []) fitSectionPositions(child)
+}
+
+/**
+ * Keeps the source's own spacing in the reading view, so switching between the live editor
+ * and reading does not move anything: every line break is a line break, and the space
+ * before a block is the number of blank lines that precede it in the Markdown
+ * (`--gap`, in lines). Run after `remarkSections`.
+ */
+export function remarkSourceLayout() {
+  return (tree) => {
+    fitSectionPositions(tree)
+    const visit = (node) => {
+      if (!node.children) return
+      node.children = node.children.flatMap((child) => {
+        if (child.type !== 'text' || !child.value.includes('\n')) return [child]
+        return child.value
+          .split('\n')
+          .flatMap((part, index) => [
+            ...(index ? [{ type: 'break' }] : []),
+            ...(part ? [{ type: 'text', value: part }] : []),
+          ])
+      })
+      let before = node.position.start.line - 1
+      for (const child of node.children) {
+        if (!child.position || child.type === 'definition' || child.type === 'footnoteDefinition')
+          continue
+        const gap = child.position.start.line - before - 1
+        if (gap > 0 && child.type !== 'text')
+          child.data = {
+            ...child.data,
+            hProperties: { ...child.data?.hProperties, style: `--gap:${gap}` },
+          }
+        before = child.position.end.line
+        visit(child)
+      }
+    }
+    visit(tree)
   }
 }

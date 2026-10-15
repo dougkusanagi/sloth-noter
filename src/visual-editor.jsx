@@ -4,6 +4,7 @@ import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
 import { liveMarkdown } from './editor/live-decorations.js'
 import { foldField } from './editor/folding.js'
+import { railsLayer } from './editor/rails.js'
 import { codeCopyHandler, stickyCodeCopy } from './editor/code-copy.js'
 import {
   insertTableColumnAt,
@@ -433,6 +434,7 @@ export function VisualEditor({
             },
           }),
           foldField,
+          railsLayer,
           liveMarkdown,
           stickyCodeCopy,
           codeCopyHandler.of((source) => callbacks.current.onCopy?.(source)),

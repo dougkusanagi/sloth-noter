@@ -16,7 +16,7 @@ A barra marca os estilos presentes na seleção; clicar em um botão ativo remov
 
 No modo Padrão, tabelas aparecem como células até o cursor entrar nelas. Entrar em um bloco de código revela as duas cercas Markdown para edição. Blocos com linguagem conhecida recebem realce de sintaxe também na Leitura. Trechos como `normal *itálico*` são Markdown válido; estilos separados e aninhados são renderizados fora da linha ativa.
 
-Tab em um item de lista cria uma sublista (recuo de quatro espaços, no máximo um nível abaixo do item anterior) e Shift+Tab volta um nível; com vários itens selecionados, todos se movem juntos, nos modos Padrão e Código. O primeiro item de uma lista não recua, e Shift+Tab num item sem recuo continua voltando ao título. Enter no fim de uma lista continua o marcador ou a numeração; tarefas concluídas continuam com uma nova tarefa desmarcada; Enter em um item vazio encerra a lista. Isso também funciona para citações e no modo Código. No modo Padrão, as setas param nas cercas de um bloco de código antes de entrar no conteúdo. Clicar em uma célula da tabela revela o Markdown para editá-la. Links renderizados mostram a dica de abertura e abrem com Ctrl/Cmd + clique.
+Tab em um item de lista cria uma sublista (recuo de quatro espaços, no máximo um nível abaixo do item anterior) e Shift+Tab volta um nível; com vários itens selecionados, todos se movem juntos, nos modos Padrão e Código. O primeiro item de uma lista não recua, e Shift+Tab num item sem recuo não faz nada (fora de listas ele continua voltando ao título). Um item numerado que vira o primeiro de uma sublista recomeça em 1, porque só `1.` abre uma lista dentro de outra. O recuo na tela segue a estrutura da lista, não a quantidade de espaços do arquivo, e itens de tarefa e numerados aninhados aparecem recuados também fora da linha em edição. Enter no fim de uma lista continua o marcador ou a numeração; tarefas concluídas continuam com uma nova tarefa desmarcada; Enter em um item vazio encerra a lista. Isso também funciona para citações e no modo Código. No modo Padrão, as setas param nas cercas de um bloco de código antes de entrar no conteúdo. Clicar em uma célula da tabela revela o Markdown para editá-la. Links renderizados mostram a dica de abertura e abrem com Ctrl/Cmd + clique.
 
 Nos modos Padrão e Código, digitar `(`, `[`, `{`, aspas simples, aspas duplas ou crase com texto selecionado envolve a seleção com o par correspondente. O texto permanece selecionado dentro dos delimitadores.
 
@@ -30,7 +30,11 @@ A Leitura usa `react-markdown` com `remark-gfm`: CommonMark, títulos H1–H6, l
 
 Os títulos H2–H6 organizam a nota em seções. Passe o mouse sobre um título (ou foque a seta com o teclado) e clique na seta para recolher a seção e suas subseções; no modo Padrão fica uma etiqueta “⋯ N linhas ocultas” que também expande. Mover o cursor ou a seleção para dentro do trecho recolhido o revela. **Recolher todas as seções** e **Expandir todas as seções** estão na paleta de comandos (Ctrl+K), nos modos Padrão e Leitura. Recolher é só da tela: o Markdown não muda, e na Leitura o estado é lembrado por nota enquanto o app está aberto.
 
-O texto sob cada título também aparece recuado, um nível por seção (H2 = 1, H3 = 2, …; o título H1 da nota não recua). O recuo é visual, não grava espaços nem tabs no arquivo, e pode ser desligado em **Configurações → Editor → Recuar seções**.
+A hierarquia aparece sem recuar o texto: linhas pontilhadas discretas na margem esquerda acompanham cada seção (as externas ficam mais à esquerda) e as sublistas, nos modos Padrão e Leitura.
+
+### Padrão e Leitura têm o mesmo layout
+
+Mudar entre Padrão e Leitura não move nada: o espaço antes de cada bloco é o número de linhas em branco do Markdown, cada quebra de linha é uma quebra de linha e fontes, entrelinhas, listas aninhadas, tarefas, citações, tabelas, blocos de código e imagens têm as mesmas medidas nos dois modos (um teste E2E compara as posições). Só o modo Código, com o texto cru, difere. A Leitura passa a mostrar quebras simples de linha como quebras, em vez de juntá-las num parágrafo.
 
 ### Página de ajuda
 

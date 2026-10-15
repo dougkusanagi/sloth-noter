@@ -65,8 +65,7 @@ export function indentList(view, outdent = false) {
   const { from, to } = view.state.selection.main
   if (view.state.selection.ranges.length !== 1) return false
   const changes = listIndentChanges(view.state.doc.toString(), from, to, outdent)
-  // At the margin, Shift+Tab keeps its other job: moving back to the title.
-  if (!changes || (outdent && !changes.length)) return false
+  if (!changes) return false
   if (changes.length)
     view.dispatch({ changes, userEvent: outdent ? 'delete.dedent' : 'input.indent' })
   return true

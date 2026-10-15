@@ -44,6 +44,19 @@ export function listIndentChanges(text, from, to, outdent = false) {
 
   // Indentation after the edit, so a moved block keeps its shape.
   const indents = lines.map((line) => width(line.match(/^[ \t]*/)[0]))
+  // Is there an item at this indentation above, in the same list (not past its parent)?
+  const hasSibling = (index, indent) => {
+    for (let above = index - 1; above >= 0; above--) {
+      if (!lines[above].trim()) continue
+      if (!isList(above)) {
+        if (/^[ \t]/.test(lines[above])) continue
+        return false
+      }
+      if (indents[above] === indent) return true
+      if (indents[above] < indent) return false
+    }
+    return false
+  }
   const changes = []
   for (const index of touched) {
     const space = lines[index].match(/^[ \t]*/)[0]
@@ -68,6 +81,12 @@ export function listIndentChanges(text, from, to, outdent = false) {
     if (parent === null || indents[index] + INDENT.length > parent + INDENT.length) continue
     changes.push({ from: starts[index], to: starts[index], insert: INDENT })
     indents[index] += INDENT.length
+    // Only "1." can start a list inside a paragraph, so the first item of a new sublist restarts.
+    const number = lines[index].match(/^([ \t]*)(\d+)(?=[.)])/)
+    if (number && number[2] !== '1' && !hasSibling(index, indents[index])) {
+      const at = starts[index] + number[1].length
+      changes.push({ from: at, to: at + number[2].length, insert: '1' })
+    }
   }
   return changes
 }

@@ -20,7 +20,6 @@ const BODY = [
   '## Vazia',
 ].join('\n')
 const box = (page) => page.getByRole('textbox', { name: 'Editor Markdown em texto puro' })
-const left = (locator) => locator.evaluate((element) => element.getBoundingClientRect().left)
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 1400 })
@@ -42,68 +41,12 @@ async function runCommand(page, query) {
   await expect(commands).toBeHidden()
 }
 
-test('Padrão indents each section one step per level, without touching the text', async ({
-  page,
-}) => {
-  await mode(page, 'Padrão')
-  await page.locator('.cm-content').click()
-  await page.keyboard.press('Control+End')
-  const line = (text) => page.locator('.cm-line', { hasText: text }).first()
-  const x = {
-    title: await left(line('Notas')),
-    intro: await left(line('Introdução')),
-    h2: await left(line('Seção um')),
-    h2text: await left(line('texto um')),
-    h3: await left(line('Sub um')),
-    h3text: await left(line('texto sub')),
-    next: await left(line('texto dois')),
-  }
-  expect(x.intro).toBe(x.title)
-  expect(x.h2).toBeGreaterThan(x.intro)
-  expect(x.h2text).toBe(x.h2)
-  expect(x.h3).toBeGreaterThan(x.h2)
-  expect(x.h3text).toBe(x.h3)
-  expect(x.next).toBe(x.h2)
-  await mode(page, 'Código')
-  await expect(box(page)).toHaveValue(BODY)
-})
-
-test('Leitura nests sections the same way', async ({ page }) => {
+test('Leitura wraps each H2–H6 and its content in a nested section', async ({ page }) => {
   await mode(page, 'Leitura')
   const read = page.locator('.markdown')
-  const x = {
-    intro: await left(read.getByText('Introdução')),
-    h2: await left(read.getByRole('heading', { name: 'Seção um' })),
-    h3: await left(read.getByRole('heading', { name: 'Sub um' })),
-    sub: await left(read.getByText('texto sub')),
-    next: await left(read.getByText('texto dois')),
-  }
-  expect(x.h2).toBeGreaterThan(x.intro)
-  expect(x.h3).toBeGreaterThan(x.h2)
-  expect(x.sub).toBe(x.h3)
-  expect(x.next).toBe(x.h2)
   await expect(read.locator('.md-section')).toHaveCount(4)
-})
-
-test('the section indent can be turned off in Settings and stays off', async ({ page }) => {
-  await mode(page, 'Leitura')
-  const heading = page.locator('.markdown').getByRole('heading', { name: 'Seção um' })
-  const indented = await left(heading)
-  await page.keyboard.press('Control+,')
-  const settings = page.getByRole('dialog', { name: 'Configurações' })
-  await settings.getByRole('button', { name: 'Editor' }).click()
-  await settings.getByRole('switch', { name: 'Recuar seções' }).uncheck()
-  await page.keyboard.press('Escape')
-  await expect.poll(() => left(heading)).toBeLessThan(indented)
-  await mode(page, 'Padrão')
-  expect(await left(page.locator('.cm-line', { hasText: 'texto um' }).first())).toBe(
-    await left(page.locator('.cm-line', { hasText: 'Introdução' }).first()),
-  )
-  await page.reload()
-  await mode(page, 'Leitura')
-  expect(await left(page.locator('.markdown').getByRole('heading', { name: 'Seção um' }))).toBe(
-    await left(page.locator('.markdown').getByText('Introdução')),
-  )
+  await expect(read.locator('.md-section .md-section')).toHaveCount(1)
+  await expect(read.locator('.md-section .md-section')).toContainText('texto sub')
 })
 
 test('Padrão collapses a section and expands it from the heading or the pill', async ({ page }) => {
