@@ -29,7 +29,7 @@
 
 ### Distribuição
 
-- CI/CD gera `.msi` e `.AppImage` (feito). Falta: política de atualização e validação manual de upgrade/desinstalação preservando as notas.
+- CI/CD gera instalador NSIS `.exe` por usuário no Windows e `.AppImage` no Linux (feito). Falta: política de atualização e validação manual de upgrade/desinstalação preservando as notas.
 - **Decisão:** os artefatos não serão assinados (fora de escopo, sem previsão de mudar).
 - Rodada de uso real: edição longa, IME, zoom 200%, teclado, leitor de tela, nomes Unicode, pasta grande.
 

@@ -20,7 +20,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "e2e": "playwright test",
-    "desktop:update": "bun scripts/update-appimage.mjs"
+    "desktop:update": "bun scripts/update-desktop.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "6.11.1",
