@@ -1,4 +1,4 @@
-import { markdownTree, walk, wikiParts } from './markdown-model.js'
+import { TAG, markdownTree, walk, wikiParts } from './markdown-model.js'
 export function classifyLine(text, inFence) {
   if (text.startsWith('```')) return { kind: 'fence', prefix: text.length, nextFence: !inFence }
   if (inFence) return { kind: 'code', prefix: 0, nextFence: true }
@@ -6,8 +6,14 @@ export function classifyLine(text, inFence) {
   if (heading) return { kind: `h${heading[1].length}`, prefix: heading[0].length, nextFence: false }
   if (/^\s{0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/.test(text))
     return { kind: 'rule', prefix: text.length, nextFence: false }
-  const quote = text.match(/^> +/)
-  if (quote) return { kind: 'quote', prefix: quote[0].length, nextFence: false }
+  const quote = text.match(/^(?:>[ ]?)+/)
+  if (quote)
+    return {
+      kind: 'quote',
+      prefix: quote[0].length,
+      depth: quote[0].split('>').length - 1,
+      nextFence: false,
+    }
   const bullet = text.match(/^\s*[-*+] +/)
   if (bullet) return { kind: 'bullet', prefix: bullet[0].length, nextFence: false }
   if (/^\d+\. +/.test(text)) return { kind: 'ordered', prefix: 0, nextFence: false }
@@ -57,28 +63,37 @@ export function inlineSyntax(text, definitions = '') {
       }
       result.push({ kind, start, end, contentStart, contentEnd })
     }
-    if (node.type === 'text' && !inLink) {
+    if (node.type === 'text') {
       const raw = text.slice(start, end)
-      for (const match of raw.matchAll(/(?<!\\)\[\[([^\]\n]+)\]\]/g)) {
-        const at = start + match.index,
-          parts = wikiParts(match[1])
-        const labelAt = match[1].includes('|') ? match[1].indexOf('|') + 1 : 0
+      for (const match of raw.matchAll(/\\[!-/:-@[-`{-~]/g))
         result.push({
-          kind: 'wiki',
-          start: at,
-          end: at + match[0].length,
-          contentStart: at + 2 + labelAt,
-          contentEnd: at + match[0].length - 2,
-          target: match[1],
-          label: parts.label,
+          kind: 'escape',
+          start: start + match.index,
+          end: start + match.index + 2,
+          contentStart: start + match.index + 1,
+          contentEnd: start + match.index + 2,
         })
-      }
+      if (!inLink)
+        for (const match of raw.matchAll(/(?<!\\)\[\[([^\]\n]+)\]\]/g)) {
+          const at = start + match.index,
+            parts = wikiParts(match[1])
+          const labelAt = match[1].includes('|') ? match[1].indexOf('|') + 1 : 0
+          result.push({
+            kind: 'wiki',
+            start: at,
+            end: at + match[0].length,
+            contentStart: at + 2 + labelAt,
+            contentEnd: at + match[0].length - 2,
+            target: match[1],
+            label: parts.label,
+          })
+        }
     }
     if (node.type !== 'inlineCode' && node.type !== 'code')
       for (const child of node.children ?? []) collect(child, inLink)
   }
   collect(tree)
-  for (const match of text.matchAll(/(?<![\p{L}\p{N}_])#[\p{L}\p{N}_/-]+/gu)) {
+  for (const match of text.matchAll(TAG)) {
     const start = match.index,
       end = start + match[0].length
     if (

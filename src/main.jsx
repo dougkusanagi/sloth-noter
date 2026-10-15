@@ -53,6 +53,7 @@ import {
 } from './components/dialogs.jsx'
 import { setLanguage, t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
+import { welcomeNote } from './welcome.js'
 import { continueBlock } from './continue-block.js'
 import { restoreWindowState } from './window-state.js'
 import { protectPendingSaves } from './save-lifecycle.js'
@@ -1212,6 +1213,11 @@ function Workspace({ persistence, loaded }) {
     language: () =>
       runMenu(() => updatePrefs({ language: prefs.language === 'en' ? 'pt-BR' : 'en' })),
     shortcuts: () => runMenu(() => setShortcutsOpen(true), false),
+    welcome: () =>
+      runMenu(() => {
+        const welcome = welcomeNote(prefs.language)
+        createNote(welcome.name, welcome.body)
+      }, false),
     settings: () => runMenu(() => setSettingsOpen(true), false),
     commands: () =>
       runMenu(() => {

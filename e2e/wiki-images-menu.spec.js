@@ -74,7 +74,8 @@ test('used images are protected and the library and shortcut dialog are accessib
     .locator('input[type=file][accept^="image/png"]')
     .setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: png })
   await page.keyboard.press('Control+Shift+l')
-  await page.locator('.image-item').click()
+  // The help page's own sloth image is listed too, so pick the uploaded one.
+  await page.locator('.image-item', { hasText: 'foto.png' }).click()
   await expect(page.getByRole('button', { name: 'Excluir imagem', exact: true })).toBeDisabled()
   expect(
     (

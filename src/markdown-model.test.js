@@ -7,6 +7,7 @@ import {
   imageReferences,
   replaceImageSource,
   remarkWikiLinks,
+  remarkTags,
 } from './markdown-model.js'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
@@ -51,4 +52,23 @@ test('image source normalization protects escaped local filenames and handles re
     replaceImageSource(text, 'assets/a b.png', 'assets/$photo.png'),
     '![Foto](assets/$photo.png)',
   )
+})
+
+test('reading view wraps tags but not code, links, words with a hash or headings marks', () => {
+  const text =
+    '#ideia e #projeto/lista, C# e palavra#nao `#código` [#link](https://example.com) [[Nota#Seção]]'
+  const tree = unified()
+    .use(remarkParse)
+    .use(remarkWikiLinks)
+    .use(remarkTags)
+    .runSync(unified().use(remarkParse).parse(text), { value: text })
+  const tags = []
+  const visit = (node) => {
+    if (node.data?.hProperties?.className?.includes('markdown-tag'))
+      tags.push(node.children[0].value)
+    node.children?.forEach(visit)
+  }
+  visit(tree)
+  assert.deepEqual(tags, ['#ideia', '#projeto/lista'])
+  assert.equal(tree.children[0].children[0].data.hName, 'span')
 })

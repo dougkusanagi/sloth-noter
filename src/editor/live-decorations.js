@@ -59,6 +59,7 @@ export function lineAttributes(line, shape, active) {
   const classes = [shape.kind === 'paragraph' ? 'cm-md-paragraph' : `cm-md-${shape.kind}`]
   if (active) classes.push('cm-md-editing')
   if (shape.prefix && shape.kind !== 'fence') classes.push('cm-md-prefix')
+  if (shape.depth > 1) classes.push('cm-md-quote-nested')
   const syntax =
     shape.kind === 'fence' || shape.kind === 'code' || shape.kind === 'paragraph'
       ? []
@@ -99,12 +100,18 @@ export function decorationsFor(view) {
       image,
     ]),
   )
+  const breakMarks = new Map()
   const blockShapes = new Map()
   const fenceStarts = new Set(),
     fenceEnds = new Set()
   const codeBlocks = new Map()
   const codeRangesByLine = new Map()
   walk(tree, (node) => {
+    if (
+      node.type === 'break' &&
+      doc.sliceString(node.position.start.offset, node.position.start.offset + 1) === '\\'
+    )
+      breakMarks.set(node.position.start.line, node.position.start.offset)
     if (node.type === 'code') {
       const first = node.position.start.line,
         last = node.position.end.line
@@ -216,6 +223,10 @@ export function decorationsFor(view) {
         )
         continue
       }
+      if (!active && breakMarks.has(number))
+        ranges.push(
+          Decoration.replace({}).range(breakMarks.get(number), breakMarks.get(number) + 1),
+        )
       const attrs = lineAttributes(line, shape, active)
       const block = codeBlocks.get(number)
       if (block) {

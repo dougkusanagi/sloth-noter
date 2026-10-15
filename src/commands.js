@@ -23,6 +23,7 @@ import {
   Keyboard,
   Settings,
   Command,
+  LifeBuoy,
 } from 'lucide-react'
 import { t, LANGUAGES } from './i18n.js'
 
@@ -86,6 +87,7 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
         ['commands', 'menu.commands', Command, 'K', false, true],
         ['settings', 'menu.settings', Settings, ',', false, true],
         ['shortcuts', 'menu.shortcuts', Keyboard, 'Shift+/', false, true],
+        ['welcome', 'menu.welcome', LifeBuoy, undefined, false, true],
       ],
     ],
   ]

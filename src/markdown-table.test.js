@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   isTableDivider,
+  tableAlignments,
   parseTableLine,
   tableCellAtColumn,
   tableCellAtOffset,
@@ -46,4 +47,13 @@ test('exposes table column count and parsed rows for navigation', () => {
     group.rows[1].cells.map((cell) => cell.value),
     ['1', '2', '3'],
   )
+})
+
+test('reads column alignment from the divider row', () => {
+  const group = tableGroupDetails(
+    ['| a | b | c | d |', '| --- | :-- | :-: | --: |', '| 1 | 2 | 3 | 4 |'],
+    0,
+  )
+  assert.deepEqual(group.alignments, [null, 'left', 'center', 'right'])
+  assert.deepEqual(tableAlignments(parseTableLine('|:--|--:|')), ['left', 'right'])
 })
