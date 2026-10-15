@@ -166,7 +166,7 @@ test('dropping Markdown files imports them as notes, even over the sidebar', asy
   })
   await page.locator('.notes-sidebar').dispatchEvent('drop', { dataTransfer: transfer })
   await expect(page.locator('.notes-sidebar')).toContainText('Solta A')
-  await expect(page.locator('.notes-sidebar')).toContainText('b')
+  await expect(page.locator('.notes-sidebar')).toContainText('sem titulo')
   await expect(page.locator('[data-sonner-toast]')).toHaveCount(0)
 })
 

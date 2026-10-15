@@ -17,10 +17,19 @@ test.beforeEach(async ({ page }) => {
       window.nativeClipboard = { kind: 'image', bytes: png }
       window.nativeClipboardReads = 0
       window.nativeImages = {}
+      window.nativeWindowActions = []
       window.__TAURI_INTERNALS__ = {
         metadata: { currentWindow: { label: 'main' }, currentWebview: { label: 'main' } },
         transformCallback: () => 1,
         invoke: async (command, args) => {
+          if (
+            ['minimize', 'toggle_maximize', 'close'].some(
+              (action) => command === `plugin:window|${action}`,
+            )
+          ) {
+            window.nativeWindowActions.push(command)
+            return null
+          }
           if (command === 'read_state') return JSON.stringify(window.nativeDocument)
           if (command === 'write_state') {
             window.nativeDocument = JSON.parse(args.contents)
@@ -44,7 +53,10 @@ test.beforeEach(async ({ page }) => {
             return null
           }
           if (command === 'image_read') return window.nativeImages[args.name]
-          if (command === 'image_list') return Object.keys(window.nativeImages)
+          if (command === 'image_list') {
+            window.nativeImageListReads = (window.nativeImageListReads ?? 0) + 1
+            return Object.keys(window.nativeImages)
+          }
           throw new Error(`Unsupported test IPC command: ${command}`)
         },
       }
@@ -53,6 +65,23 @@ test.beforeEach(async ({ page }) => {
   )
   await page.goto('/')
   await expect(page.locator('.cm-content')).toBeVisible()
+})
+
+test('desktop clicks invoke window actions only through their own controls', async ({ page }) => {
+  await page.locator('.cm-content').click()
+  await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Aparência do texto', exact: true }).click()
+  await page.keyboard.press('Escape')
+  expect(await page.evaluate(() => window.nativeWindowActions)).toEqual([])
+  await page.getByRole('button', { name: 'Minimizar', exact: true }).click()
+  await page.getByRole('button', { name: 'Maximizar ou restaurar', exact: true }).click()
+  await page.getByRole('button', { name: 'Fechar janela', exact: true }).click()
+  expect(await page.evaluate(() => window.nativeWindowActions)).toEqual([
+    'plugin:window|minimize',
+    'plugin:window|toggle_maximize',
+    'plugin:window|close',
+  ])
 })
 
 for (const mode of ['visual', 'source']) {
@@ -230,4 +259,27 @@ test('an actual reference reported by the backend gives a localized deletion err
   await expect(page.getByText(/Falha na importação/)).toHaveCount(0)
   await expect(page.locator('.image-item')).toHaveCount(1)
   expect(await page.evaluate(() => Object.keys(window.nativeImages))).toEqual(['photo.png'])
+})
+
+test('image library refreshes on focus and periodically without a refresh button', async ({
+  page,
+}) => {
+  await page.clock.install()
+  await page.keyboard.press('Control+Shift+l')
+  await expect(page.getByRole('button', { name: 'Atualizar imagens', exact: true })).toHaveCount(0)
+  await page.evaluate(() => {
+    window.nativeImages['Primeira.png'] = []
+    window.dispatchEvent(new Event('focus'))
+  })
+  await expect(page.locator('.image-name', { hasText: 'Primeira.png' })).toBeVisible()
+  await page.evaluate(() => {
+    window.nativeImages['Segunda.png'] = []
+  })
+  await page.clock.runFor(15001)
+  await expect(page.locator('.image-name', { hasText: 'Segunda.png' })).toBeVisible()
+  await page.getByRole('button', { name: 'Mostrar/ocultar biblioteca', exact: true }).click()
+  const reads = await page.evaluate(() => window.nativeImageListReads)
+  await page.clock.runFor(15001)
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  expect(await page.evaluate(() => window.nativeImageListReads)).toBe(reads)
 })

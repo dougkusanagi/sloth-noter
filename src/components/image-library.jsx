@@ -1,13 +1,6 @@
+import { createPortal } from 'react-dom'
 import { useEffect, useRef, useState } from 'react'
-import {
-  Image as ImageIcon,
-  RefreshCw,
-  Plus,
-  Pencil,
-  Trash2,
-  Download,
-  ArrowLeft,
-} from 'lucide-react'
+import { Image as ImageIcon, Plus, Pencil, Trash2, Download, ArrowLeft } from 'lucide-react'
 import { resolveImage } from '../images.js'
 import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
@@ -56,6 +49,8 @@ export function ImageThumbnail({ src, alt = '' }) {
     </div>
   )
 }
+const HINT_KEY = 'sloth-note.image-drag-hint'
+
 export function ImageLibrary({
   images,
   query,
@@ -65,16 +60,16 @@ export function ImageLibrary({
   notes,
   selected,
   onSelect,
-  onImport,
-  onRefresh,
   onInsert,
   onRename,
   onDelete,
   onDownload,
   onOpenNote,
   onDropImage,
+  onDeleteUnused,
 }) {
   const [filter, setFilter] = useState('all')
+  const [hintSeen, setHintSeen] = useState(() => localStorage.getItem(HINT_KEY) === '1')
   const drag = useRef(null)
   const suppressClick = useRef(false)
   const [dragPreview, setDragPreview] = useState(null)
@@ -144,7 +139,12 @@ export function ImageLibrary({
       event.currentTarget.releasePointerCapture(event.pointerId)
     if (!current?.moved) return
     suppressClick.current = true
-    if (!cancelled) onDropImage?.(current.image, { x: event.clientX, y: event.clientY })
+    if (cancelled) return
+    onDropImage?.(current.image, { x: event.clientX, y: event.clientY })
+    if (!hintSeen) {
+      localStorage.setItem(HINT_KEY, '1')
+      setHintSeen(true)
+    }
   }
   const visible = images
     .filter(
@@ -153,6 +153,7 @@ export function ImageLibrary({
         (filter !== 'unused' || !image.noteIds.length),
     )
     .sort((a, b) => a.name.localeCompare(b.name))
+  const unused = images.filter((item) => !item.noteIds.length)
   const menuImage = images.find((item) => item.src === menu?.src)
   const image = images.find((item) => item.src === selected)
   if (image)
@@ -213,30 +214,27 @@ export function ImageLibrary({
     )
   return (
     <>
-      <div className="image-library-actions">
-        <button className="button primary" disabled={busy} onClick={onImport}>
-          <Plus size={14} aria-hidden="true" />
-          {busy ? t('images.importing') : t('images.import')}
-        </button>
-        <button
-          className="icon-button"
-          title={t('images.refresh')}
-          aria-label={t('images.refresh')}
-          onClick={onRefresh}
-          disabled={busy}
-        >
-          <RefreshCw size={14} aria-hidden="true" />
-        </button>
-      </div>
       <div className="segmented small">
         <button aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
-          {t('images.all')}
+          {t('images.all')} <span className="count">{images.length}</span>
         </button>
         <button aria-pressed={filter === 'unused'} onClick={() => setFilter('unused')}>
-          {t('images.unused')}
+          {t('images.unused')} <span className="count">{unused.length}</span>
         </button>
       </div>
-      <p className="dialog-hint image-library-hint">{t('images.libraryHint')}</p>
+      {filter === 'unused' && unused.length > 0 && (
+        <button
+          className="button quiet danger image-clean"
+          disabled={busy}
+          onClick={() => onDeleteUnused(unused)}
+        >
+          <Trash2 size={13} aria-hidden="true" />
+          {t('images.cleanUnused', { count: unused.length })}
+        </button>
+      )}
+      {!hintSeen && images.length > 0 && (
+        <p className="dialog-hint image-library-hint">{t('images.libraryHint')}</p>
+      )}
       {dragPreview && (
         <div
           className="image-drag-preview"
@@ -289,61 +287,63 @@ export function ImageLibrary({
           </div>
         ))}
       </div>
-      {menuImage && (
-        <div
-          ref={menuRef}
-          className="tab-context-menu image-context-menu"
-          role="menu"
-          aria-label={t('images.manageName', { name: menuImage.name })}
-          style={{ left: menu.x, top: menu.y }}
-          onKeyDown={(event) => {
-            const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')]
-            const index = buttons.indexOf(document.activeElement)
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-              event.preventDefault()
-              buttons[
-                (index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length
-              ]?.focus()
-            } else if (event.key === 'Home' || event.key === 'End') {
-              event.preventDefault()
-              const target = event.key === 'Home' ? buttons[0] : buttons.at(-1)
-              target?.focus()
-            } else if (event.key === 'Tab') closeMenu()
-          }}
-        >
-          {[
-            ['images.insert', Plus, () => onInsert(menuImage), !active || busy],
-            ['images.manage', ImageIcon, () => onSelect(menuImage.src), busy],
-            ['images.rename', Pencil, () => onRename(menuImage), busy],
-            ['images.download', Download, () => onDownload(menuImage), busy],
-            ['images.delete', Trash2, () => onDelete(menuImage), !canDelete(menuImage)],
-          ].map(([label, Icon, action, disabled]) => (
-            <button
-              key={label}
-              type="button"
-              role="menuitem"
-              disabled={disabled}
-              aria-describedby={
-                label === 'images.delete' && menuImage.noteIds.length
-                  ? 'image-delete-reason'
-                  : undefined
-              }
-              onClick={() => {
-                setMenu(null)
-                action()
-              }}
-            >
-              <Icon size={14} aria-hidden="true" />
-              <span>{t(label)}</span>
-            </button>
-          ))}
-          {menuImage.noteIds.length > 0 && (
-            <p id="image-delete-reason" className="dialog-hint">
-              {t('images.protected')}
-            </p>
-          )}
-        </div>
-      )}
+      {menuImage &&
+        createPortal(
+          <div
+            ref={menuRef}
+            className="tab-context-menu image-context-menu"
+            role="menu"
+            aria-label={t('images.manageName', { name: menuImage.name })}
+            style={{ left: menu.x, top: menu.y }}
+            onKeyDown={(event) => {
+              const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')]
+              const index = buttons.indexOf(document.activeElement)
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault()
+                buttons[
+                  (index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length
+                ]?.focus()
+              } else if (event.key === 'Home' || event.key === 'End') {
+                event.preventDefault()
+                const target = event.key === 'Home' ? buttons[0] : buttons.at(-1)
+                target?.focus()
+              } else if (event.key === 'Tab') closeMenu()
+            }}
+          >
+            {[
+              ['images.insert', Plus, () => onInsert(menuImage), !active || busy],
+              ['images.manage', ImageIcon, () => onSelect(menuImage.src), busy],
+              ['images.rename', Pencil, () => onRename(menuImage), busy],
+              ['images.download', Download, () => onDownload(menuImage), busy],
+              ['images.delete', Trash2, () => onDelete(menuImage), !canDelete(menuImage)],
+            ].map(([label, Icon, action, disabled]) => (
+              <button
+                key={label}
+                type="button"
+                role="menuitem"
+                disabled={disabled}
+                aria-describedby={
+                  label === 'images.delete' && menuImage.noteIds.length
+                    ? 'image-delete-reason'
+                    : undefined
+                }
+                onClick={() => {
+                  setMenu(null)
+                  action()
+                }}
+              >
+                <Icon size={14} aria-hidden="true" />
+                <span>{t(label)}</span>
+              </button>
+            ))}
+            {menuImage.noteIds.length > 0 && (
+              <p id="image-delete-reason" className="dialog-hint">
+                {t('images.protected')}
+              </p>
+            )}
+          </div>,
+          document.body,
+        )}
       {!loading && !visible.length && (
         <div className="empty-state">
           <ImageIcon size={22} aria-hidden="true" />

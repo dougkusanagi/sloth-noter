@@ -57,12 +57,15 @@ export async function restoreWindowState() {
   }
   const save = async () => {
     try {
+      // A minimized window can report zero size or an off-screen position.
+      // Keep its last usable geometry for the next launch.
+      if (await appWindow.isMinimized()) return
       const [position, size, maximized] = await Promise.all([
         appWindow.outerPosition(),
         appWindow.innerSize(),
         appWindow.isMaximized(),
       ])
-      if (!maximized)
+      if (!maximized && size.width >= MIN_WIDTH && size.height >= MIN_HEIGHT)
         normal = { x: position.x, y: position.y, width: size.width, height: size.height }
       if (normal)
         localStorage.setItem(

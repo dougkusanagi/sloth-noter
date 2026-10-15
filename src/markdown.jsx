@@ -1,11 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { t } from './i18n.js'
 import { codeTokens, codeLanguageName } from './syntax-highlight.js'
-import { Copy } from 'lucide-react'
+import { ChevronDown, Copy } from 'lucide-react'
 import { remarkTags, remarkWikiLinks, findNote } from './markdown-model.js'
+import { remarkSections, remarkSourceLayout } from './sections.js'
 import { resolveImage } from './images.js'
+import { sectionProgress } from './tasks.js'
+import { CIRCUMFERENCE, RADIUS } from './progress-badge.js'
 
 function highlightedCode(tokens) {
   return tokens.map((token, index) =>
@@ -91,7 +94,15 @@ function taskInput(node) {
   }
   return null
 }
-function ListItem({ children, className, node }) {
+/** The whitespace between tags in the HTML would add a space after the task checkbox. */
+function dropLeadingSpace(children) {
+  const parts = React.Children.toArray(children)
+  const text = parts.findIndex((part) => typeof part === 'string' && part.trim())
+  if (text < 0) return parts
+  parts[text] = parts[text].trimStart()
+  return parts.filter((part, index) => index >= text || typeof part !== 'string')
+}
+function ListItem({ children, className, node, style }) {
   const { text, onChange } = useContext(MarkdownContext)
   const task = className?.includes('task-list-item')
   const checked = task ? Boolean(taskInput(node)?.properties.checked) : false
@@ -104,7 +115,7 @@ function ListItem({ children, className, node }) {
     }
   }
   return (
-    <li className={className}>
+    <li className={className} style={style}>
       {task && (
         <input
           type="checkbox"
@@ -115,7 +126,7 @@ function ListItem({ children, className, node }) {
           onChange={toggle}
         />
       )}
-      {children}
+      {dropLeadingSpace(children)}
     </li>
   )
 }
@@ -126,7 +137,7 @@ function CodeBlock({ children }) {
   const language = child?.props?.className?.replace('language-', '') ?? ''
   const label = codeLanguageName(language)
   return (
-    <div className="code-block">
+    <div className="code-block" style={child?.props?.style}>
       <div className="code-block-tools">
         <button
           type="button"
@@ -144,13 +155,100 @@ function CodeBlock({ children }) {
     </div>
   )
 }
-const components = { img: Image, a: Link, li: ListItem, input: () => null, pre: CodeBlock }
-export function Markdown({ text, onCopy, onChange, onOpenWiki, notes }) {
+const SectionContext = createContext(null)
+function Section({ node, children, className, ...props }) {
+  const { folds } = useContext(MarkdownContext)
+  if (!className?.includes('md-section'))
+    return (
+      <section className={className} {...props}>
+        {children}
+      </section>
+    )
+  const parts = node.children.filter((child) => child.type === 'element')
+  const line = parts[0]?.position?.start.line
+  const collapsed = Boolean(folds?.has(line))
   return (
-    <MarkdownContext.Provider value={{ text, onCopy, onChange, onOpenWiki, notes }}>
+    <section className={className} data-collapsed={collapsed ? '' : undefined} {...props}>
+      <SectionContext.Provider value={{ line, collapsed, hasContent: parts.length > 1 }}>
+        {children}
+      </SectionContext.Provider>
+    </section>
+  )
+}
+function ProgressBadge({ done, total }) {
+  return (
+    <span
+      className="section-progress"
+      data-complete={done === total ? '' : undefined}
+      role="img"
+      aria-label={t('progress.label', { done, total })}
+    >
+      <svg viewBox="0 0 14 14" aria-hidden="true">
+        <circle className="section-progress-track" cx="7" cy="7" r={RADIUS} />
+        <circle
+          className="section-progress-fill"
+          cx="7"
+          cy="7"
+          r={RADIUS}
+          strokeDasharray={CIRCUMFERENCE}
+          strokeDashoffset={CIRCUMFERENCE * (1 - done / total)}
+        />
+      </svg>
+      <span className="section-progress-count" data-count={`${done}/${total}`} />
+    </span>
+  )
+}
+function Heading({ node, children, ...props }) {
+  const Tag = node.tagName
+  const section = useContext(SectionContext)
+  const { onToggleFold, progress } = useContext(MarkdownContext)
+  const tasks = section && progress.get(section.line)
+  return (
+    <Tag {...props}>
+      {section?.hasContent && onToggleFold && (
+        <button
+          type="button"
+          className="fold-toggle"
+          aria-expanded={!section.collapsed}
+          aria-label={t(section.collapsed ? 'fold.expand' : 'fold.collapse')}
+          onClick={() => onToggleFold(section.line)}
+        >
+          <ChevronDown aria-hidden="true" />
+        </button>
+      )}
+      {children}
+      {tasks && <ProgressBadge {...tasks} />}
+    </Tag>
+  )
+}
+const components = {
+  img: Image,
+  a: Link,
+  li: ListItem,
+  input: () => null,
+  pre: CodeBlock,
+  section: Section,
+  h2: Heading,
+  h3: Heading,
+  h4: Heading,
+  h5: Heading,
+  h6: Heading,
+}
+export function Markdown({ text, onCopy, onChange, onOpenWiki, notes, folds, onToggleFold }) {
+  const progress = useMemo(() => sectionProgress(text), [text])
+  return (
+    <MarkdownContext.Provider
+      value={{ text, onCopy, onChange, onOpenWiki, notes, folds, onToggleFold, progress }}
+    >
       <article className="markdown">
         <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkWikiLinks, remarkTags]}
+          remarkPlugins={[
+            remarkGfm,
+            remarkWikiLinks,
+            remarkTags,
+            remarkSections,
+            remarkSourceLayout,
+          ]}
           urlTransform={(url, key) =>
             key === 'src' && /^data:image\/(png|jpeg|gif|webp|avif|bmp);base64,/i.test(url)
               ? url

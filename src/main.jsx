@@ -10,10 +10,13 @@ import { createFullBackup, readBackupBundle, restoreBackupImages } from './backu
 import {
   findNote,
   wikiParts,
+  wikiReferences,
   renameWikiReferences,
   normalizeImageSource,
 } from './markdown-model.js'
-import { FONT_SIZE } from './storage.js'
+import { CONTENT_WIDTH, FONT_SIZE, contentWidth } from './storage.js'
+import { WidthFeedback } from './components/width-feedback.jsx'
+import { TrashLibrary } from './components/trash-library.jsx'
 import { NoteList } from './components/note-list.jsx'
 import { friendlyError } from './errors.js'
 import { ToastButtons } from './components/toast-buttons.jsx'
@@ -21,6 +24,11 @@ import { CommandPalette } from './components/command-palette.jsx'
 import { SettingsDialog } from './components/settings-dialog.jsx'
 import { buildCommands } from './commands.js'
 import { MainMenu } from './components/main-menu.jsx'
+import { WindowControls, isMac } from './components/window-controls.jsx'
+import { DisplayMenu } from './components/display-menu.jsx'
+import { TasksLibrary } from './components/tasks-library.jsx'
+import { noteTasks, toggleTask } from './tasks.js'
+import { displayName } from './note-title.js'
 import { useTabs } from './components/tabs.jsx'
 import { ImageLibrary } from './components/image-library.jsx'
 import { readNoteFile, splitDrop } from './note-drop.js'
@@ -49,12 +57,14 @@ import {
   PaletteDialog,
   PromptDialog,
   SyncConflictDialog,
-  TrashDialog,
 } from './components/dialogs.jsx'
 import { setLanguage, t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
 import { welcomeNote } from './welcome.js'
+import { foldableLines } from './sections.js'
+import { foldAll, unfoldAll } from './editor/folding.js'
 import { continueBlock } from './continue-block.js'
+import { applyChanges, listIndentChanges, mapPosition } from './list-indent.js'
 import { restoreWindowState } from './window-state.js'
 import { protectPendingSaves } from './save-lifecycle.js'
 import {
@@ -77,6 +87,10 @@ import {
   Menu,
   Search,
   Image as ImageIcon,
+  ArrowLeft,
+  ListChecks,
+  NotebookText,
+  Trash2,
 } from 'lucide-react'
 import './styles.css'
 import './ui.css'
@@ -88,6 +102,14 @@ function download(name, body, type = 'text/markdown;charset=utf-8') {
   link.download = name
   link.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+const mac = isMac()
+const SECTIONS = ['notes', 'tasks', 'images']
+const SECTION_LABELS = {
+  notes: ['menu.notes', NotebookText],
+  tasks: ['tasks.title', ListChecks],
+  images: ['images.title', ImageIcon],
 }
 
 function ModeIcon({ mode }) {
@@ -136,6 +158,8 @@ function Workspace({ persistence, loaded }) {
   const [blocked, setBlocked] = useState(loaded.blocked)
   const [sidebarQuery, setSidebarQuery] = useState('')
   const [sidebarSection, setSidebarSection] = useState('notes')
+  const [previewId, setPreviewId] = useState(null)
+  const [showDoneTasks, setShowDoneTasks] = useState(false)
   const [diskImages, setDiskImages] = useState([])
   const [imageVersion, setImageVersion] = useState(0)
   const [imagesLoading, setImagesLoading] = useState(false)
@@ -160,7 +184,6 @@ function Workspace({ persistence, loaded }) {
   const [conflict, setConflict] = useState(null)
   const conflictRef = useRef(null)
   const conflictQueue = useRef([])
-  const [trashOpen, setTrashOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [findOpen, setFindOpen] = useState(false)
   const [findQuery, setFindQuery] = useState('')
@@ -184,10 +207,10 @@ function Workspace({ persistence, loaded }) {
   const findInput = useRef(null)
   const editorRef = useRef(null)
   const visualRef = useRef(null)
+  const [readingFolds, setReadingFolds] = useState({ id: null, lines: new Set() })
   const closedTabs = useRef([])
   const clipboardBusy = useRef(false)
   const [middleClickPasteGuard] = useState(createMiddleClickPasteGuard)
-  const trashFirst = useRef(null)
   const returnFocus = useRef(null)
   const active = data.notes.find((note) => note.id === data.activeId) ?? null
   const choices = data.notes.filter((note) =>
@@ -199,7 +222,9 @@ function Workspace({ persistence, loaded }) {
     current,
     commit,
     tabsVisible: prefs.tabsVisible,
+    previewId,
     open: openNote,
+    keep: keepNote,
     rename: renameNote,
     close: closeTab,
     trash: deleteNote,
@@ -207,6 +232,14 @@ function Workspace({ persistence, loaded }) {
   const sidebarVisible = prefs.sidebarVisible ?? !window.matchMedia('(max-width: 600px)').matches
   setLanguage(prefs.language)
   const images = useMemo(() => libraryImages(data, diskImages), [data, diskImages])
+  const openTasks = useMemo(
+    () =>
+      data.notes.reduce(
+        (sum, note) => sum + noteTasks(note.body).filter((task) => !task.done).length,
+        0,
+      ),
+    [data.notes],
+  )
 
   useEffect(() => {
     let disposed = false
@@ -273,6 +306,32 @@ function Workspace({ persistence, loaded }) {
     if (palette) closePalette()
     setTimeout(focusEditor, 0)
   }
+  /**
+   * Opens a note from the library in a preview tab: the next note opened this way takes
+   * its place, so browsing does not pile up tabs. Editing or double-clicking keeps it.
+   */
+  function previewNote(id) {
+    const old = current.current
+    if (old.openIds.includes(id)) return openNote(id)
+    const replace =
+      previewId && old.openIds.includes(previewId) && !old.pinnedIds?.includes(previewId)
+    commit({
+      ...old,
+      openIds: replace
+        ? old.openIds.map((item) => (item === previewId ? id : item))
+        : [...old.openIds, id],
+      activeId: id,
+      preferences: window.matchMedia('(max-width: 600px)').matches
+        ? { ...old.preferences, sidebarVisible: false }
+        : old.preferences,
+    })
+    setPreviewId(id)
+    if (mode === 'reading') setMode('visual')
+  }
+  function keepNote(id) {
+    if (id === previewId) setPreviewId(null)
+    if (!current.current.openIds.includes(id)) openNote(id)
+  }
   async function openWiki(target) {
     const parts = wikiParts(target)
     const note = parts.name ? findNote(current.current.notes, target) : active
@@ -337,6 +396,7 @@ function Workspace({ persistence, loaded }) {
   function updateBody(body) {
     body = ensureTitle(body)
     const old = current.current
+    if (old.activeId === previewId) setPreviewId(null)
     const name = nameFromHeading(body, old.notes, old.activeId)
     const previousName = old.notes.find((note) => note.id === old.activeId)?.name
     const rewrite = (note) => {
@@ -391,6 +451,25 @@ function Workspace({ persistence, loaded }) {
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return
     const field = event.currentTarget
     if (event.key === 'Tab') {
+      const changes = listIndentChanges(
+        field.value,
+        field.selectionStart,
+        field.selectionEnd,
+        event.shiftKey,
+      )
+      if (changes) {
+        event.preventDefault()
+        if (changes.length) {
+          const start = mapPosition(field.selectionStart, changes)
+          const end = mapPosition(field.selectionEnd, changes)
+          field.value = applyChanges(field.value, changes)
+          field.setSelectionRange(start, end)
+          updateBody(field.value)
+        }
+        return
+      }
+    }
+    if (event.key === 'Tab') {
       const target = titleNavigationTarget(field.value, field.selectionStart, event.shiftKey)
       if (target !== null) {
         event.preventDefault()
@@ -424,6 +503,7 @@ function Workspace({ persistence, loaded }) {
   function closeTab(id) {
     const old = current.current
     if (!old.openIds.includes(id) || old.pinnedIds?.includes(id)) return
+    if (id === previewId) setPreviewId(null)
     const note = old.notes.find((item) => item.id === id)
     const openIds = old.openIds.filter((item) => item !== id)
     const notes =
@@ -523,7 +603,7 @@ function Workspace({ persistence, loaded }) {
   function restoreNote(id) {
     commit(restoreFromTrash(current.current, id))
     if (mode === 'reading') setMode('visual')
-    closeTrash()
+    setSidebarSection('notes')
   }
   async function purgeNote(id) {
     const note = data.trash.find((entry) => entry.note.id === id)?.note
@@ -535,9 +615,56 @@ function Workspace({ persistence, loaded }) {
     })
     if (confirmed) commit(purgeFromTrash(current.current, id))
   }
-  function closeTrash() {
-    setTrashOpen(false)
-    setTimeout(() => menuButton.current?.focus(), 0)
+  async function emptyTrash() {
+    const count = current.current.trash.length
+    if (!count) return
+    const confirmed = await ask({
+      kind: 'confirm',
+      message: t('trash.emptyConfirm', { count }),
+      confirmLabel: t('trash.emptyAll'),
+    })
+    if (!confirmed) return
+    commit(
+      current.current.trash.reduce(
+        (document, entry) => purgeFromTrash(document, entry.note.id),
+        current.current,
+      ),
+    )
+  }
+  function toggleNoteTask(noteId, mark) {
+    const note = current.current.notes.find((item) => item.id === noteId)
+    if (!note) return
+    const view = visualRef.current
+    if (mode === 'visual' && current.current.activeId === noteId && view) {
+      view.dispatch({
+        changes: { from: mark, to: mark + 1, insert: note.body[mark] === ' ' ? 'x' : ' ' },
+      })
+      return
+    }
+    commit({
+      ...current.current,
+      notes: current.current.notes.map((item) =>
+        item.id === noteId
+          ? { ...item, body: toggleTask(item.body, mark), revision: item.revision + 1 }
+          : item,
+      ),
+    })
+  }
+  function jumpToTask(noteId, offset) {
+    openNote(noteId)
+    if (offset === null) return
+    setTimeout(() => {
+      if (mode === 'source' && editorRef.current) {
+        editorRef.current.focus()
+        editorRef.current.setSelectionRange(offset, offset)
+      } else if (visualRef.current) {
+        visualRef.current.dispatch({
+          selection: { anchor: offset },
+          scrollIntoView: true,
+        })
+        visualRef.current.focus()
+      }
+    }, 0)
   }
   async function importFiles(files) {
     setImportError('')
@@ -793,22 +920,39 @@ function Workspace({ persistence, loaded }) {
       }))
     )
       return
+    await removeImages([image])
+  }
+  async function deleteUnusedImages(images) {
+    if (
+      !images.length ||
+      !(await ask({
+        kind: 'confirm',
+        message: t('images.cleanConfirm', { count: images.length }),
+        confirmLabel: t('images.delete'),
+      }))
+    )
+      return
+    await removeImages(images)
+  }
+  async function removeImages(images) {
     setImageBusy(true)
     setImportError('')
     toast.dismiss('image-delete')
     try {
       const failure = await writer.current.whenIdle()
       if (failure) throw new Error(failure)
-      if (noteImages(allNotes(current.current)).some((entry) => entry.src === image.src))
-        throw new Error(t('images.protected'))
-      if (persistence.invoke && !/^(data:|https?:)/i.test(image.src))
-        await persistence.invoke('image_delete', { name: normalizeImageSource(image.src) })
-      commit({
-        ...current.current,
-        assets: (current.current.assets ?? []).filter(
-          (asset) => normalizeImageSource(asset.src) !== image.src,
-        ),
-      })
+      for (const image of images) {
+        if (noteImages(allNotes(current.current)).some((entry) => entry.src === image.src))
+          throw new Error(t('images.protected'))
+        if (persistence.invoke && !/^(data:|https?:)/i.test(image.src))
+          await persistence.invoke('image_delete', { name: normalizeImageSource(image.src) })
+        commit({
+          ...current.current,
+          assets: (current.current.assets ?? []).filter(
+            (asset) => normalizeImageSource(asset.src) !== image.src,
+          ),
+        })
+      }
       setSelectedImage(null)
       refreshImages()
     } catch (cause) {
@@ -835,24 +979,41 @@ function Workspace({ persistence, loaded }) {
     }
   }
   useEffect(() => {
-    if (sidebarSection !== 'images' || !persistence.invoke) return
+    if (sidebarSection !== 'images' || !sidebarVisible || !persistence.invoke) return
     let stopped = false
-    setImagesLoading(true)
-    persistence
-      .invoke('image_list')
-      .then((names) => {
-        if (!stopped) setDiskImages(names.map((src) => ({ src, name: src.split('/').at(-1) })))
-      })
-      .catch((cause) => {
+    let pending = false
+    const load = async () => {
+      if (pending || document.visibilityState === 'hidden') return
+      pending = true
+      try {
+        const names = await persistence.invoke('image_list')
+        if (!stopped)
+          setDiskImages((previous) => {
+            const next = names.map((src) => ({ src, name: src.split('/').at(-1) }))
+            return JSON.stringify(previous) === JSON.stringify(next) ? previous : next
+          })
+      } catch (cause) {
         if (!stopped) setImportError(String(cause))
-      })
-      .finally(() => {
+      } finally {
+        pending = false
         if (!stopped) setImagesLoading(false)
-      })
+      }
+    }
+    setImagesLoading(true)
+    void load()
+    const onFocus = () => {
+      void load()
+    }
+    const timer = setInterval(onFocus, 15000)
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
     return () => {
       stopped = true
+      clearInterval(timer)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
     }
-  }, [sidebarSection, imageVersion, persistence])
+  }, [sidebarSection, sidebarVisible, imageVersion, persistence])
   function resolveSync(choice) {
     const [conflict, ...rest] = syncConflicts
     setSyncConflicts(rest)
@@ -889,7 +1050,7 @@ function Workspace({ persistence, loaded }) {
       refreshImages()
       if (mode === 'reading') setMode('visual')
       setFindOpen(false)
-      setTrashOpen(false)
+      setSidebarSection('notes')
     } catch (cause) {
       setImportError(friendlyError(cause, t('error.readBackup')))
     }
@@ -949,7 +1110,10 @@ function Workspace({ persistence, loaded }) {
   }
   function closeMenu(restoreFocus = true) {
     setMenuOpen(false)
-    if (restoreFocus) setTimeout(() => menuButton.current?.focus(), 0)
+    if (restoreFocus)
+      setTimeout(() => {
+        if (!document.querySelector('[role="dialog"]')) menuButton.current?.focus()
+      }, 0)
   }
   function openFind() {
     setMenuOpen(false)
@@ -984,7 +1148,10 @@ function Workspace({ persistence, loaded }) {
   function runMenu(action, restoreFocus = true) {
     setMenuOpen(false)
     action()
-    if (restoreFocus) setTimeout(() => menuButton.current?.focus(), 0)
+    if (restoreFocus)
+      setTimeout(() => {
+        if (!document.querySelector('[role="dialog"]')) menuButton.current?.focus()
+      }, 0)
   }
   function changeMode(next) {
     setMode(next)
@@ -1113,12 +1280,6 @@ function Workspace({ persistence, loaded }) {
     if (conflict) conflictFirst.current?.focus()
   }, [conflict])
   useEffect(() => {
-    if (trashOpen) trashFirst.current?.focus()
-  }, [trashOpen])
-  useEffect(() => {
-    if (trashOpen && document.activeElement === document.body) trashFirst.current?.focus()
-  }, [trashOpen, data.trash.length])
-  useEffect(() => {
     if (menuOpen) menuFirst.current?.focus()
   }, [menuOpen])
   useEffect(() => {
@@ -1135,10 +1296,6 @@ function Workspace({ persistence, loaded }) {
         if (event.key === 'Escape') closeConflict()
         return
       }
-      if (trashOpen) {
-        if (event.key === 'Escape') closeTrash()
-        return
-      }
       if (menuOpen && event.key === 'Escape') {
         closeMenu()
         return
@@ -1151,6 +1308,19 @@ function Workspace({ persistence, loaded }) {
         event.preventDefault()
         event.stopPropagation()
         menuActions[action]()
+        return
+      }
+      if (modifier && event.altKey) {
+        if (event.code === 'Minus' || event.key === '-') {
+          event.preventDefault()
+          stepWidth(-1)
+        } else if (event.code === 'Equal' || event.key === '+') {
+          event.preventDefault()
+          stepWidth(1)
+        } else if (key === '0') {
+          event.preventDefault()
+          updatePrefs({ contentWidth: CONTENT_WIDTH.default })
+        }
         return
       }
       if (modifier && (event.key === '+' || event.code === 'Equal')) {
@@ -1171,6 +1341,28 @@ function Workspace({ persistence, loaded }) {
     return () => document.removeEventListener('keydown', onKey, true)
   })
 
+  const folds = readingFolds.id === active?.id ? readingFolds.lines : undefined
+  function setFolds(lines) {
+    setReadingFolds({ id: active?.id ?? null, lines })
+  }
+  function toggleReadingFold(line) {
+    const lines = new Set(folds)
+    if (!lines.delete(line)) lines.add(line)
+    setFolds(lines)
+  }
+  function foldSections(collapse) {
+    if (mode === 'reading') setFolds(new Set(collapse && active ? foldableLines(active.body) : []))
+    else if (visualRef.current) (collapse ? foldAll : unfoldAll)(visualRef.current)
+  }
+
+  function stepWidth(steps) {
+    updatePrefs({
+      contentWidth: Math.min(
+        CONTENT_WIDTH.max,
+        Math.max(CONTENT_WIDTH.min, contentWidth(prefs) + steps * CONTENT_WIDTH.step),
+      ),
+    })
+  }
   const menuActions = {
     newNote: () => runMenu(() => createNote(), false),
     findNote: () => runMenu(openPalette, false),
@@ -1190,7 +1382,12 @@ function Workspace({ persistence, loaded }) {
     backup: () => runMenu(downloadBackup),
     restoreBackup: () => runMenu(() => backupInput.current?.click(), false),
     folder: () => persistence.invoke && runMenu(() => setFolderOpen(true), false),
-    trash: () => runMenu(() => setTrashOpen(true), false),
+    trash: () =>
+      runMenu(() => {
+        setSidebarSection('trash')
+        setSidebarQuery('')
+        updatePrefs({ sidebarVisible: true })
+      }, false),
     sidebar: () =>
       runMenu(
         () => updatePrefs({ sidebarVisible: !sidebarVisible }),
@@ -1210,9 +1407,13 @@ function Workspace({ persistence, loaded }) {
       runMenu(() => updatePrefs({ fontSize: Math.max(FONT_SIZE.min, prefs.fontSize - 1) })),
     larger: () =>
       runMenu(() => updatePrefs({ fontSize: Math.min(FONT_SIZE.max, prefs.fontSize + 1) })),
+    narrower: () => runMenu(() => stepWidth(-2)),
+    wider: () => runMenu(() => stepWidth(2)),
     language: () =>
       runMenu(() => updatePrefs({ language: prefs.language === 'en' ? 'pt-BR' : 'en' })),
     shortcuts: () => runMenu(() => setShortcutsOpen(true), false),
+    foldAll: () => active && runMenu(() => foldSections(true), false),
+    unfoldAll: () => active && runMenu(() => foldSections(false), false),
     welcome: () =>
       runMenu(() => {
         const welcome = welcomeNote(prefs.language)
@@ -1225,10 +1426,37 @@ function Workspace({ persistence, loaded }) {
         setCommandsOpen(true)
       }, false),
   }
+  const backlinks = useMemo(
+    () =>
+      active
+        ? data.notes.filter(
+            (note) =>
+              note.id !== active.id &&
+              wikiReferences(note.body).some(
+                (link) => findNote(data.notes, link.target)?.id === active.id,
+              ),
+          )
+        : [],
+    [active, data.notes],
+  )
+  function showSection(section) {
+    setSidebarSection(section)
+    setSidebarQuery('')
+  }
+  const documentText = active?.body.replace(/^# /, '') ?? ''
+  const wordCount = documentText
+    .trim()
+    .split(/\s+/u)
+    .filter(Boolean)
+    .length.toLocaleString(prefs.language)
+  const characterCount = Array.from(documentText).length.toLocaleString(prefs.language)
   return (
     <main
       className="app"
-      style={{ '--editor-size': `${prefs.fontSize}px` }}
+      style={{
+        '--editor-size': `${prefs.fontSize}px`,
+        '--content-width': `${contentWidth(prefs)}px`,
+      }}
       onDragOver={(event) => {
         if (event.dataTransfer.types.includes('Files')) event.preventDefault()
       }}
@@ -1242,7 +1470,8 @@ function Workspace({ persistence, loaded }) {
           addImages(others, insertionPoint(event))
       }}
     >
-      <header className="app-header" inert={switching ? true : undefined}>
+      <header className="app-header" data-tauri-drag-region inert={switching ? true : undefined}>
+        {persistence.invoke && mac && <WindowControls mac />}
         <div className="main-menu-wrap" ref={menuWrap}>
           <button
             ref={menuButton}
@@ -1267,7 +1496,6 @@ function Workspace({ persistence, loaded }) {
               active={active}
               activePinned={data.pinnedIds?.includes(data.activeId)}
               prefs={prefs}
-              mode={mode}
               sidebarVisible={sidebarVisible}
               trashCount={data.trash.length}
               desktop={Boolean(persistence.invoke)}
@@ -1276,7 +1504,6 @@ function Workspace({ persistence, loaded }) {
             />
           )}
         </div>
-        <span className="app-title">Sloth Note</span>
         <button
           className="icon-button sidebar-toggle"
           title={t('sidebar.toggle')}
@@ -1285,7 +1512,7 @@ function Workspace({ persistence, loaded }) {
           aria-controls="notes-sidebar"
           onClick={() => updatePrefs({ sidebarVisible: !sidebarVisible })}
         >
-          <PanelLeft size={16} />
+          <PanelLeft size={16} aria-hidden="true" />
         </button>
         <input
           ref={imageInput}
@@ -1299,13 +1526,9 @@ function Workspace({ persistence, loaded }) {
           }}
         />
         {tabStrip}
-        <span
-          className="save-status"
-          role="status"
-          data-state={error ? 'error' : saving ? 'saving' : 'saved'}
-        >
-          {error ? t('save.notSaved') : saving ? t('save.saving') : t('save.saved')}
-        </span>
+        <div className="window-drag-space" data-tauri-drag-region />
+        <DisplayMenu prefs={prefs} onChange={updatePrefs} />
+        {persistence.invoke && !mac && <WindowControls />}
         <input
           ref={importInput}
           type="file"
@@ -1330,41 +1553,86 @@ function Workspace({ persistence, loaded }) {
       {tabContextMenu}
       <div className="workspace-layout" inert={switching ? true : undefined}>
         {sidebarVisible && (
-          <aside id="notes-sidebar" className="notes-sidebar" aria-label={t('sidebar.title')}>
-            <div className="sidebar-heading">
-              <span>{t('sidebar.title')}</span>
-              <button
-                className="icon-button"
-                aria-label={t('menu.newNote')}
-                title={t('menu.newNote')}
-                onClick={() => createNote()}
+          <aside
+            id="notes-sidebar"
+            className="notes-sidebar"
+            aria-label={t('sidebar.title')}
+            data-section={sidebarSection}
+          >
+            {sidebarSection === 'trash' ? (
+              <div className="sidebar-heading">
+                <button
+                  className="icon-button"
+                  aria-label={t('trash.back')}
+                  title={t('trash.back')}
+                  onClick={() => showSection('notes')}
+                >
+                  <ArrowLeft size={16} aria-hidden="true" />
+                </button>
+                <span>{t('trash.title')}</span>
+                <button
+                  className="button quiet danger small"
+                  disabled={!data.trash.length}
+                  onClick={emptyTrash}
+                >
+                  {t('trash.emptyAll')}
+                </button>
+              </div>
+            ) : (
+              <div
+                className="segmented sidebar-sections"
+                data-index={SECTIONS.indexOf(sidebarSection)}
               >
-                <Plus size={16} />
-              </button>
-            </div>
-            <div className="segmented">
-              <button
-                aria-pressed={sidebarSection === 'notes'}
-                onClick={() => setSidebarSection('notes')}
-              >
-                {t('menu.notes')} <span className="count">{data.notes.length}</span>
-              </button>
-              <button
-                aria-pressed={sidebarSection === 'images'}
-                onClick={() => setSidebarSection('images')}
-              >
-                <ImageIcon size={14} />
-                {t('images.title')}
-              </button>
-            </div>
-            <div className="search-field">
-              <Search size={14} aria-hidden="true" />
-              <input
-                aria-label={t('sidebar.search')}
-                placeholder={t('sidebar.search')}
-                value={sidebarQuery}
-                onChange={(event) => setSidebarQuery(event.target.value)}
-              />
+                {SECTIONS.map((section) => {
+                  const [label, Icon] = SECTION_LABELS[section]
+                  return (
+                    <button
+                      key={section}
+                      aria-pressed={sidebarSection === section}
+                      onClick={() => showSection(section)}
+                    >
+                      <Icon size={14} aria-hidden="true" />
+                      {t(label)}
+                      {section === 'notes' && <span className="count">{data.notes.length}</span>}
+                      {section === 'tasks' && openTasks > 0 && (
+                        <span className="count">{openTasks}</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            <div className="sidebar-search-row">
+              <div className="search-field">
+                <Search size={14} aria-hidden="true" />
+                <input
+                  aria-label={t('sidebar.search')}
+                  placeholder={t('sidebar.search')}
+                  value={sidebarQuery}
+                  onChange={(event) => setSidebarQuery(event.target.value)}
+                />
+              </div>
+              {sidebarSection === 'notes' && (
+                <button
+                  className="button sidebar-add"
+                  aria-label={t('menu.newNote')}
+                  title={t('menu.newNote')}
+                  onClick={() => createNote()}
+                >
+                  <Plus size={15} aria-hidden="true" />
+                </button>
+              )}
+              {sidebarSection === 'images' && (
+                <button
+                  className="button sidebar-add sidebar-add-image"
+                  title={t('images.import')}
+                  aria-label={t('images.import')}
+                  disabled={imageBusy}
+                  onClick={pickImages}
+                >
+                  <Plus size={15} aria-hidden="true" />
+                </button>
+              )}
             </div>
             <div className="sidebar-items">
               {sidebarSection === 'notes' ? (
@@ -1373,8 +1641,25 @@ function Workspace({ persistence, loaded }) {
                   query={sidebarQuery}
                   activeId={active?.id}
                   openIds={data.openIds}
-                  onOpen={openNote}
+                  onOpen={previewNote}
+                  onKeep={keepNote}
                   onMenu={openTabMenu}
+                />
+              ) : sidebarSection === 'tasks' ? (
+                <TasksLibrary
+                  notes={data.notes}
+                  query={sidebarQuery}
+                  showDone={showDoneTasks}
+                  onShowDone={setShowDoneTasks}
+                  onToggle={toggleNoteTask}
+                  onJump={jumpToTask}
+                />
+              ) : sidebarSection === 'trash' ? (
+                <TrashLibrary
+                  trash={data.trash}
+                  query={sidebarQuery}
+                  onRestore={restoreNote}
+                  onPurge={purgeNote}
                 />
               ) : (
                 <ImageLibrary
@@ -1387,12 +1672,11 @@ function Workspace({ persistence, loaded }) {
                   notes={data.notes}
                   selected={selectedImage}
                   onSelect={setSelectedImage}
-                  onImport={pickImages}
-                  onRefresh={refreshImages}
                   onInsert={(image) => insertMarkdown(markdownImage(image.name, image.src))}
                   onRename={renameImage}
                   onDelete={deleteImage}
                   onDownload={downloadImage}
+                  onDeleteUnused={deleteUnusedImages}
                   onOpenNote={openNote}
                   onDropImage={(image, position) => {
                     if (blocked || switching || imageBusy || !active) return
@@ -1410,6 +1694,15 @@ function Workspace({ persistence, loaded }) {
                 />
               )}
             </div>
+            {sidebarSection !== 'trash' && (
+              <div className="sidebar-footer">
+                <button className="sidebar-trash" onClick={() => showSection('trash')}>
+                  <Trash2 size={14} aria-hidden="true" />
+                  {t('trash.title')}
+                  {data.trash.length > 0 && <span className="count">{data.trash.length}</span>}
+                </button>
+              </div>
+            )}
           </aside>
         )}
         <section
@@ -1456,27 +1749,7 @@ function Workspace({ persistence, loaded }) {
             }
           }}
         >
-          <fieldset className="mode-switch">
-            <legend className="sr-only">{t('mode.legend')}</legend>
-            {[
-              ['visual', t('mode.visual')],
-              ['source', t('mode.source')],
-              ['reading', t('mode.reading')],
-            ].map(([value, label]) => (
-              <label key={value} title={label}>
-                <input
-                  type="radio"
-                  name="editor-mode"
-                  value={value}
-                  aria-label={label}
-                  checked={mode === value}
-                  onChange={() => changeMode(value)}
-                />
-                <ModeIcon mode={value} />
-                <span className="mode-label">{label}</span>
-              </label>
-            ))}
-          </fieldset>
+          <WidthFeedback width={contentWidth(prefs)} mode={mode} />
           {active ? (
             mode === 'reading' ? (
               <div className="reading">
@@ -1486,6 +1759,8 @@ function Workspace({ persistence, loaded }) {
                   onChange={updateBody}
                   onOpenWiki={openWiki}
                   notes={data.notes}
+                  folds={folds}
+                  onToggleFold={toggleReadingFold}
                 />
               </div>
             ) : mode === 'source' ? (
@@ -1526,6 +1801,58 @@ function Workspace({ persistence, loaded }) {
           ) : (
             <div className="empty-note">{t('empty.note')}</div>
           )}
+          <footer className="document-info">
+            <span
+              className="save-status"
+              role="status"
+              data-state={error ? 'error' : saving ? 'saving' : 'saved'}
+            >
+              {error ? t('save.notSaved') : saving ? t('save.saving') : ''}
+            </span>
+
+            {active && (
+              <>
+                {backlinks.length > 0 && (
+                  <details className="backlinks">
+                    <summary>{t('document.backlinks', { count: backlinks.length })}</summary>
+                    <div className="backlinks-popover">
+                      {backlinks.map((note) => (
+                        <button key={note.id} onClick={() => openNote(note.id)}>
+                          {displayName(note.name)}
+                        </button>
+                      ))}
+                    </div>
+                  </details>
+                )}
+                <span>{t('document.words', { count: wordCount })}</span>
+                <span>{t('document.characters', { count: characterCount })}</span>
+              </>
+            )}
+            <fieldset className="mode-switch">
+              <legend className="sr-only">{t('mode.legend')}</legend>
+              {[
+                ['visual', t('mode.visual')],
+                ['source', t('mode.source')],
+                ['reading', t('mode.reading')],
+              ].map(([value, label], index) => (
+                <label
+                  key={value}
+                  title={`${label} · ${mac ? `⌘⌥${index + 1}` : `Ctrl+Alt+${index + 1}`}`}
+                >
+                  <input
+                    type="radio"
+                    name="editor-mode"
+                    value={value}
+                    aria-label={label}
+                    checked={mode === value}
+                    onChange={() => changeMode(value)}
+                  />
+                  <ModeIcon mode={value} />
+                  <span className="mode-label">{label}</span>
+                </label>
+              ))}
+            </fieldset>
+          </footer>
         </section>
       </div>
       {shortcutsOpen && (
@@ -1544,6 +1871,7 @@ function Workspace({ persistence, loaded }) {
             prefs,
             trashCount: data.trash.length,
             desktop: Boolean(persistence.invoke),
+            mode,
           })
             .flatMap(([, entries]) => entries)
             .filter(([id]) => id !== 'commands')
@@ -1599,15 +1927,6 @@ function Workspace({ persistence, loaded }) {
           name={conflict.name}
           onResolve={resolveConflict}
           onClose={closeConflict}
-        />
-      )}
-      {trashOpen && (
-        <TrashDialog
-          firstRef={trashFirst}
-          trash={data.trash}
-          onRestore={restoreNote}
-          onPurge={purgeNote}
-          onClose={closeTrash}
         />
       )}
       {findOpen && (

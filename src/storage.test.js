@@ -4,6 +4,9 @@ import {
   loadDocument,
   saveDocument,
   newDocument,
+  validateDocument,
+  CONTENT_WIDTH,
+  contentWidth,
   STORAGE_KEY,
   V2_KEY,
   LEGACY_KEY,
@@ -152,4 +155,20 @@ test('restoring a deleted note resolves name conflicts; permanent deletion remov
   const restored = restoreFromTrash(conflicting, 'welcome')
   assert.equal(restored.notes.find((note) => note.id === 'welcome').name, 'Welcome (2).md')
   assert.equal(purgeFromTrash(deleted, 'welcome').trash.length, 0)
+})
+
+test('the text column width defaults to 760 and is kept within its limits', () => {
+  assert.equal(CONTENT_WIDTH.default, 760)
+  assert.equal(contentWidth({}), 760)
+  assert.equal(contentWidth({ contentWidth: 900 }), 900)
+  assert.equal(contentWidth({ contentWidth: 10 }), CONTENT_WIDTH.min)
+  assert.equal(contentWidth({ contentWidth: 99999 }), CONTENT_WIDTH.max)
+  assert.equal(contentWidth({ contentWidth: 'abc' }), 760)
+  assert.equal(contentWidth({ contentWidth: 800.4 }), 800)
+})
+
+test('a saved width does not make the stored document invalid', () => {
+  const document = newDocument()
+  document.preferences.contentWidth = 1000
+  assert.equal(validateDocument(document), document)
 })

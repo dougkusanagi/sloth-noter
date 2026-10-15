@@ -4,6 +4,14 @@ import { WELCOME_NAME, welcomeBody } from './welcome.js'
 /** Editor text size in px. 16 keeps a page dense, closer to a plain-text editor. */
 export const FONT_SIZE = { min: 12, max: 24, default: 16 }
 
+/** Width of the text column in px (the default is the long-standing 760). */
+export const CONTENT_WIDTH = { min: 520, max: 1400, step: 20, default: 760 }
+export const contentWidth = (prefs) =>
+  Math.min(
+    CONTENT_WIDTH.max,
+    Math.max(CONTENT_WIDTH.min, Math.round(Number(prefs.contentWidth) || CONTENT_WIDTH.default)),
+  )
+
 export const STORAGE_KEY = 'sloth-note:v3'
 export const V2_KEY = 'sloth-note:v2'
 export const LEGACY_KEY = 'sloth-note:v1'

@@ -16,7 +16,7 @@ export function classifyLine(text, inFence) {
     }
   const bullet = text.match(/^\s*[-*+] +/)
   if (bullet) return { kind: 'bullet', prefix: bullet[0].length, nextFence: false }
-  if (/^\d+\. +/.test(text)) return { kind: 'ordered', prefix: 0, nextFence: false }
+  if (/^\s*\d+[.)] +/.test(text)) return { kind: 'ordered', prefix: 0, nextFence: false }
   if (/^[ \t]*\|.*\|[ \t]*$/.test(text)) return { kind: 'table', prefix: 0, nextFence: false }
   return { kind: 'paragraph', prefix: 0, nextFence: false }
 }

@@ -12,7 +12,9 @@ export function shortcutText(keys) {
 }
 
 export function Shortcut({ keys }) {
-  const parts = keys === '+' ? ['+'] : keys.split('+')
+  const parts = keys.endsWith('+')
+    ? [...keys.slice(0, -1).split('+').filter(Boolean), '+']
+    : keys.split('+')
   const bare = isBare(keys)
   return (
     <span className="menu-shortcut" aria-label={shortcutText(keys)}>
@@ -28,7 +30,6 @@ export function MainMenu({
   active,
   activePinned,
   prefs,
-  mode,
   sidebarVisible,
   trashCount,
   desktop,
@@ -45,7 +46,7 @@ export function MainMenu({
       role="region"
       aria-label={t('menu.main')}
       onKeyDown={(event) => {
-        const items = [...event.currentTarget.querySelectorAll('[role="menuitem"]:not(:disabled)')]
+        const items = [...event.currentTarget.querySelectorAll('[role^="menuitem"]:not(:disabled)')]
         const index = items.indexOf(document.activeElement)
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
           event.preventDefault()
@@ -80,9 +81,7 @@ export function MainMenu({
                 ref={id === 'newNote' ? firstRef : null}
                 role="menuitem"
                 disabled={disabled}
-                className={
-                  id === mode || (id === 'sidebar' && sidebarVisible) ? 'menu-active' : undefined
-                }
+                className={id === 'sidebar' && sidebarVisible ? 'menu-active' : undefined}
                 onClick={actions[id]}
               >
                 <Icon size={15} aria-hidden="true" />
