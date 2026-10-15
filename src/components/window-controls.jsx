@@ -4,7 +4,16 @@ import { toast } from 'sonner'
 import { friendlyError } from '../errors.js'
 import { t } from '../i18n.js'
 
-export function WindowControls() {
+const BUTTONS = [
+  ['minimize', 'window.minimize', Minus],
+  ['toggleMaximize', 'window.maximize', Square],
+  ['close', 'window.close', X],
+]
+
+export const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform)
+
+/** Minimize, maximize and close. On macOS they are the traffic lights at the left. */
+export function WindowControls({ mac = false }) {
   const run = async (action) => {
     try {
       await getCurrentWindow()[action]()
@@ -13,20 +22,16 @@ export function WindowControls() {
     }
   }
   return (
-    <div className="window-controls">
-      {[
-        ['minimize', 'window.minimize', Minus],
-        ['toggleMaximize', 'window.maximize', Square],
-        ['close', 'window.close', X],
-      ].map(([action, label, Icon]) => (
+    <div className={mac ? 'window-controls mac' : 'window-controls'}>
+      {(mac ? [BUTTONS[2], BUTTONS[0], BUTTONS[1]] : BUTTONS).map(([action, label, Icon]) => (
         <button
           key={action}
-          className={`icon-button window-${action}`}
+          className={mac ? `traffic-light window-${action}` : `icon-button window-${action}`}
           aria-label={t(label)}
           title={t(label)}
           onClick={() => run(action)}
         >
-          <Icon size={15} aria-hidden="true" />
+          <Icon size={mac ? 8 : 15} strokeWidth={mac ? 3 : 2} aria-hidden="true" />
         </button>
       ))}
     </div>

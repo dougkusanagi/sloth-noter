@@ -80,14 +80,15 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
       const headerBottom =
         document.querySelector('.app-header')?.getBoundingClientRect().bottom ?? 0
       const top = Math.max(0, scroller.top, headerBottom) + 12
-      const bottom = Math.min(window.innerHeight, scroller.bottom)
+      const footerTop = document.querySelector('.document-info')?.getBoundingClientRect().top
+      const bottom = Math.min(window.innerHeight, scroller.bottom, footerTop ?? Infinity)
       return this.blocks.map(({ from, to, button }) => {
         const start = view.documentTop + view.lineBlockAt(from).top
         const end = view.documentTop + view.lineBlockAt(to).bottom
         return {
           top: Math.min(Math.max(start + 12, top), end - 38),
           right: window.innerWidth - Math.min(content.right, scroller.right) + 10,
-          visible: end > top + 26 && start < bottom - 12,
+          visible: end > top + 26 && start + 38 < bottom,
           button,
         }
       })

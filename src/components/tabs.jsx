@@ -11,7 +11,18 @@ import { Shortcut } from './main-menu.jsx'
  * Returns the two pieces of markup so the strip can live in the header while the
  * context menu sits outside it.
  */
-export function useTabs({ data, current, commit, tabsVisible, open, rename, close, trash }) {
+export function useTabs({
+  data,
+  current,
+  commit,
+  tabsVisible,
+  previewId,
+  open,
+  keep,
+  rename,
+  close,
+  trash,
+}) {
   const [tabMenu, setTabMenu] = useState(null)
   const [draggingTab, setDraggingTab] = useState(null)
   const [tabDropIndex, setTabDropIndex] = useState(null)
@@ -75,7 +86,10 @@ export function useTabs({ data, current, commit, tabsVisible, open, rename, clos
     setTabMenu(null)
     if (action === 'open') open(menu.id)
     if (action === 'rename') rename(menu.id)
-    if (action === 'pin') commit(togglePinnedTab(current.current, menu.id))
+    if (action === 'pin') {
+      keep(menu.id)
+      commit(togglePinnedTab(current.current, menu.id))
+    }
     if (action === 'left' || action === 'right') {
       commit(
         moveTab(
@@ -152,6 +166,7 @@ export function useTabs({ data, current, commit, tabsVisible, open, rename, clos
                   'tab-wrap',
                   id === data.activeId && 'active',
                   pinned && 'pinned',
+                  previewId === id && 'preview',
                   draggingTab === id && 'dragging',
                   tabDropIndex === index &&
                     draggingTab !== id &&
@@ -161,7 +176,13 @@ export function useTabs({ data, current, commit, tabsVisible, open, rename, clos
                   .join(' ')}
               >
                 <button
-                  title={pinned ? `${note.name} · ${t('tabs.pinned')}` : note.name}
+                  title={
+                    pinned
+                      ? `${note.name} · ${t('tabs.pinned')}`
+                      : previewId === id
+                        ? `${note.name} · ${t('tabs.preview')}`
+                        : note.name
+                  }
                   className={id === data.activeId ? 'tab active' : 'tab'}
                   aria-haspopup="menu"
                   aria-expanded={tabMenu?.id === id}
@@ -179,6 +200,7 @@ export function useTabs({ data, current, commit, tabsVisible, open, rename, clos
                     }
                     open(id)
                   }}
+                  onDoubleClick={() => keep(id)}
                   onAuxClick={(event) => {
                     if (event.button === 1) {
                       event.preventDefault()

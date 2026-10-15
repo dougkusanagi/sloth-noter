@@ -49,6 +49,8 @@ export function ImageThumbnail({ src, alt = '' }) {
     </div>
   )
 }
+const HINT_KEY = 'sloth-note.image-drag-hint'
+
 export function ImageLibrary({
   images,
   query,
@@ -64,8 +66,10 @@ export function ImageLibrary({
   onDownload,
   onOpenNote,
   onDropImage,
+  onDeleteUnused,
 }) {
   const [filter, setFilter] = useState('all')
+  const [hintSeen, setHintSeen] = useState(() => localStorage.getItem(HINT_KEY) === '1')
   const drag = useRef(null)
   const suppressClick = useRef(false)
   const [dragPreview, setDragPreview] = useState(null)
@@ -135,7 +139,12 @@ export function ImageLibrary({
       event.currentTarget.releasePointerCapture(event.pointerId)
     if (!current?.moved) return
     suppressClick.current = true
-    if (!cancelled) onDropImage?.(current.image, { x: event.clientX, y: event.clientY })
+    if (cancelled) return
+    onDropImage?.(current.image, { x: event.clientX, y: event.clientY })
+    if (!hintSeen) {
+      localStorage.setItem(HINT_KEY, '1')
+      setHintSeen(true)
+    }
   }
   const visible = images
     .filter(
@@ -144,6 +153,7 @@ export function ImageLibrary({
         (filter !== 'unused' || !image.noteIds.length),
     )
     .sort((a, b) => a.name.localeCompare(b.name))
+  const unused = images.filter((item) => !item.noteIds.length)
   const menuImage = images.find((item) => item.src === menu?.src)
   const image = images.find((item) => item.src === selected)
   if (image)
@@ -206,13 +216,25 @@ export function ImageLibrary({
     <>
       <div className="segmented small">
         <button aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
-          {t('images.all')}
+          {t('images.all')} <span className="count">{images.length}</span>
         </button>
         <button aria-pressed={filter === 'unused'} onClick={() => setFilter('unused')}>
-          {t('images.unused')}
+          {t('images.unused')} <span className="count">{unused.length}</span>
         </button>
       </div>
-      <p className="dialog-hint image-library-hint">{t('images.libraryHint')}</p>
+      {filter === 'unused' && unused.length > 0 && (
+        <button
+          className="button quiet danger image-clean"
+          disabled={busy}
+          onClick={() => onDeleteUnused(unused)}
+        >
+          <Trash2 size={13} aria-hidden="true" />
+          {t('images.cleanUnused', { count: unused.length })}
+        </button>
+      )}
+      {!hintSeen && images.length > 0 && (
+        <p className="dialog-hint image-library-hint">{t('images.libraryHint')}</p>
+      )}
       {dragPreview && (
         <div
           className="image-drag-preview"

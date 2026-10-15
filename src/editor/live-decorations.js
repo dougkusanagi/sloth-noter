@@ -8,6 +8,22 @@ import { classifyLine, inlineSyntax } from '../live-markdown.js'
 import { headingSections } from '../sections.js'
 import { FoldToggleWidget, foldField, foldRange, isFolded } from './folding.js'
 import { codeTokens, syntaxRanges } from '../syntax-highlight.js'
+import { sectionProgress } from '../tasks.js'
+import { progressBadge } from '../progress-badge.js'
+
+class ProgressWidget extends WidgetType {
+  constructor(done, total) {
+    super()
+    this.done = done
+    this.total = total
+  }
+  eq(other) {
+    return this.done === other.done && this.total === other.total
+  }
+  toDOM() {
+    return progressBadge(this.done, this.total)
+  }
+}
 
 class TaskWidget extends WidgetType {
   constructor(checked, at) {
@@ -98,6 +114,7 @@ export function decorationsFor(view) {
     const range = heading.level > 0 && foldRange(view.state, heading)
     if (range) foldable.set(heading.line, isFolded(view.state, range.from))
   }
+  const progress = sectionProgress(text)
   const definitions = []
   walk(tree, (node) => {
     if (node.type === 'definition' || node.type === 'footnoteDefinition')
@@ -303,6 +320,14 @@ export function decorationsFor(view) {
         ranges.push(Decoration.replace({}).range(line.from, line.from + shape.prefix))
       if (shape.kind === 'fence') continue
       addInlineDecorations(ranges, line, shape, false)
+      const section = progress.get(number)
+      if (section)
+        ranges.push(
+          Decoration.widget({
+            widget: new ProgressWidget(section.done, section.total),
+            side: -1,
+          }).range(line.to),
+        )
     }
   }
   return Decoration.set(ranges, true)

@@ -75,9 +75,9 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
       'menu.view',
       [
         ['sidebar', 'sidebar.toggle', PanelLeft, 'B', false, true],
-        ['visual', 'mode.visual', Eye, 'Alt+1', false, true],
-        ['source', 'mode.source', Code, 'Alt+2', false, true],
-        ['reading', 'mode.reading', BookOpen, 'Alt+3', false, true],
+        ['visual', 'mode.visual', Eye, 'Alt+1'],
+        ['source', 'mode.source', Code, 'Alt+2'],
+        ['reading', 'mode.reading', BookOpen, 'Alt+3'],
         ['foldAll', 'menu.foldAll', ChevronsDownUp, undefined, noFold],
         ['unfoldAll', 'menu.unfoldAll', ChevronsUpDown, undefined, noFold],
         ['tabs', prefs.tabsVisible ? 'menu.tabsHide' : 'menu.tabsShow', PanelsTopLeft],

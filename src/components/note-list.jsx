@@ -10,7 +10,7 @@ export function matchesNote(note, query) {
   )
 }
 
-export function NoteList({ notes, query, activeId, openIds, onOpen, onMenu }) {
+export function NoteList({ notes, query, activeId, openIds, onOpen, onKeep, onMenu }) {
   const shown = notes.filter((note) => matchesNote(note, query))
   if (!shown.length) return <p className="sidebar-empty">{t('library.noResults')}</p>
   return shown.map((note) => {
@@ -24,6 +24,7 @@ export function NoteList({ notes, query, activeId, openIds, onOpen, onMenu }) {
         aria-current={note.id === activeId ? 'page' : undefined}
         data-open={openIds.includes(note.id) || undefined}
         onClick={() => onOpen(note.id)}
+        onDoubleClick={() => onKeep(note.id)}
         onContextMenu={(event) => onMenu(event, note.id)}
       >
         <span className="note-title">{displayName(note.name)}</span>
