@@ -154,11 +154,6 @@ function CodeBlock({ children }) {
   )
 }
 const SectionContext = createContext(null)
-const isSection = (child) =>
-  child.type === 'element' && child.properties?.className?.includes('md-section')
-/** Rows of nested sections inside and including this one: outer rails sit outside inner ones. */
-const sectionHeight = (node) =>
-  1 + Math.max(0, ...node.children.filter(isSection).map(sectionHeight))
 function Section({ node, children, className, ...props }) {
   const { folds } = useContext(MarkdownContext)
   if (!className?.includes('md-section'))
@@ -171,12 +166,7 @@ function Section({ node, children, className, ...props }) {
   const line = parts[0]?.position?.start.line
   const collapsed = Boolean(folds?.has(line))
   return (
-    <section
-      className={className}
-      data-collapsed={collapsed ? '' : undefined}
-      {...props}
-      style={{ ...props.style, '--rails': sectionHeight(node) }}
-    >
+    <section className={className} data-collapsed={collapsed ? '' : undefined} {...props}>
       <SectionContext.Provider value={{ line, collapsed, hasContent: parts.length > 1 }}>
         {children}
       </SectionContext.Provider>

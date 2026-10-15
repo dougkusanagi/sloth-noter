@@ -24,6 +24,7 @@ import {
   Settings,
   Command,
   LifeBuoy,
+  MoveHorizontal,
   ChevronsDownUp,
   ChevronsUpDown,
 } from 'lucide-react'
@@ -83,6 +84,8 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
         ['theme', t('menu.theme', { theme: t(`theme.${prefs.theme}`) }), SunMoon],
         ['smaller', 'menu.smaller', Minus, '-'],
         ['larger', 'menu.larger', Plus, '+'],
+        ['narrower', 'menu.narrower', MoveHorizontal],
+        ['wider', 'menu.wider', MoveHorizontal],
         ['language', t('menu.language', { language }), Globe],
       ],
     ],

@@ -103,7 +103,7 @@ test('settings change the theme, font size and tabs immediately', async ({ page 
   await settings.getByRole('button', { name: 'Editor' }).click()
   await settings.getByLabel('Tamanho do texto').fill('20')
   await expect(page.locator('.app')).toHaveCSS('--editor-size', '20px')
-  await settings.getByRole('button', { name: 'Restaurar' }).click()
+  await settings.getByRole('button', { name: 'Restaurar' }).first().click()
   await expect(page.locator('.app')).toHaveCSS('--editor-size', '16px')
   await settings.getByRole('button', { name: 'Atalhos' }).click()
   await expect(settings).toContainText('Renomear nota')

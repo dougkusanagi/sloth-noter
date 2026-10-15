@@ -116,6 +116,11 @@ const messages = {
     'menu.theme': 'Tema: {theme}',
     'menu.smaller': 'Texto menor',
     'menu.larger': 'Texto maior',
+    'menu.narrower': 'Coluna de texto mais estreita',
+    'menu.wider': 'Coluna de texto mais larga',
+    'settings.contentWidth': 'Largura do texto',
+    'settings.contentWidthHint':
+      'Largura útil da coluna de texto; em janelas estreitas ela se ajusta sozinha.',
     'menu.language': 'Idioma: {language}',
     'theme.system': 'Sistema',
     'theme.light': 'Claro',
@@ -363,6 +368,11 @@ const messages = {
     'menu.theme': 'Theme: {theme}',
     'menu.smaller': 'Smaller text',
     'menu.larger': 'Larger text',
+    'menu.narrower': 'Narrower text column',
+    'menu.wider': 'Wider text column',
+    'settings.contentWidth': 'Text width',
+    'settings.contentWidthHint':
+      'Width of the text column; it shrinks by itself in narrow windows.',
     'menu.language': 'Language: {language}',
     'theme.system': 'System',
     'theme.light': 'Light',

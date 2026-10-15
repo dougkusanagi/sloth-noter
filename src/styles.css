@@ -128,7 +128,7 @@ textarea {
   border: 0;
   background: transparent;
   color: var(--ink);
-  padding: 28px max(24px, calc((100% - 760px) / 2)) 70px;
+  padding: 28px max(24px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
   font:
     var(--editor-size)/1.55 Georgia,
     serif;
@@ -237,7 +237,7 @@ textarea:focus-visible {
 .visual-editor .cm-scroller {
   overflow: auto;
   font-family: Georgia, serif;
-  padding: 28px max(24px, calc((100% - 760px) / 2)) 70px;
+  padding: 28px max(24px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
 }
 .visual-editor .cm-content {
   min-height: 100%;
@@ -597,12 +597,12 @@ textarea:focus-visible {
 .reading {
   flex: 1;
   min-width: 0;
-  padding: 28px max(24px, calc((100% - 760px) / 2)) 0;
+  padding: 28px max(24px, calc((100% - var(--content-width, 760px)) / 2)) 0;
   cursor: text;
 }
 .empty-note {
   flex: 1;
-  padding: 28px max(24px, calc((100% - 760px) / 2));
+  padding: 28px max(24px, calc((100% - var(--content-width, 760px)) / 2));
   color: var(--muted);
 }
 .markdown {
@@ -1017,20 +1017,8 @@ textarea:focus-visible {
   display: none;
 }
 
-/* Rails: dotted guides for nested sections and nested lists, drawn outside the text column. */
+/* Rails: dotted guides for nested lists. */
 .cm-rail {
-  border-left: 1px dotted var(--rail);
-  pointer-events: none;
-}
-.markdown .md-section {
-  position: relative;
-}
-.markdown .md-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(-8px - 5px * (min(var(--rails, 1), 4) - 1));
   border-left: 1px dotted var(--rail);
   pointer-events: none;
 }

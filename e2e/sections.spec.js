@@ -37,6 +37,7 @@ async function runCommand(page, query) {
   await page.keyboard.press('Control+k')
   const commands = page.getByRole('dialog', { name: 'Paleta de comandos' })
   await commands.getByRole('combobox').fill(query)
+  await expect(commands.getByRole('option')).toHaveCount(1)
   await page.keyboard.press('Enter')
   await expect(commands).toBeHidden()
 }

@@ -5,8 +5,7 @@ import { markdownTree } from './markdown-model.js'
  *
  * `level` is how many sections enclose the heading, itself included (H2 = 1, an H3 under
  * it = 2, ...), so skipped heading levels do not leave gaps. H1 is the note title and
- * stays at 0. `height` is 1 for a section without subsections, else 1 more than its deepest
- * subsection. `end` is the last line (1-based) of the section: everything up to the next
+ * stays at 0.  `end` is the last line (1-based) of the section: everything up to the next
  * heading of the same or a higher rank.
  */
 export function headingSections(text, tree = markdownTree(text)) {
@@ -18,7 +17,6 @@ export function headingSections(text, tree = markdownTree(text)) {
       titleEnd: node.position.end.line,
       level: 0,
       end: 0,
-      height: 1,
     }))
   const lineCount = text.split('\n').length
   const open = []
@@ -27,14 +25,10 @@ export function headingSections(text, tree = markdownTree(text)) {
     if (heading.depth === 1) {
       heading.level = 0
     } else {
-      heading.parent = open.at(-1) ?? null
       open.push(heading)
       heading.level = open.length
     }
   }
-  // Rows of nesting below and including each section, so outer rails sit outside inner ones.
-  for (const heading of [...headings].reverse())
-    if (heading.parent) heading.parent.height = Math.max(heading.parent.height, heading.height + 1)
   for (const heading of open) heading.end = lineCount
   for (const heading of headings) if (heading.depth === 1) heading.end = heading.titleEnd
   return headings

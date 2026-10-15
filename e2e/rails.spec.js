@@ -3,25 +3,19 @@ import { expect, test } from '@playwright/test'
 const BODY = [
   '# Notas',
   '',
-  'Intro',
-  '',
   '## Seção um',
-  '',
-  'texto um',
   '',
   '- item',
   '    - filho',
   '        - neto',
+  '    - filho dois',
+  '- outro',
   '',
   '### Sub um-a',
   '',
   'texto sub',
   '',
   '## Seção dois',
-  '',
-  'texto dois',
-  '',
-  '## Vazia',
   '',
   'Fim',
 ].join('\n')
@@ -35,81 +29,40 @@ test.beforeEach(async ({ page }) => {
   await box(page).fill(BODY)
 })
 
-test('Padrão draws dotted rails for nested sections and nested lists outside the text column', async ({
-  page,
-}) => {
+test('Padrão draws dotted rails only for nested lists, one per nesting level', async ({ page }) => {
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+End')
   const rails = page.locator('.cm-rail')
-  // Seção um, Sub um-a, Seção dois, Vazia (content: "Fim") and two list levels.
-  await expect(rails).toHaveCount(6)
+  // "item" holds a list and "filho" holds one too; sections get no rail.
+  await expect(rails).toHaveCount(2)
   await expect(rails.first()).toHaveCSS('border-left-style', 'dotted')
   const boxes = await rails.evaluateAll((elements) =>
-    elements.map((element) => {
-      const { left, top, height } = element.getBoundingClientRect()
-      return { left, top, height }
-    }),
+    elements.map((element) => element.getBoundingClientRect().toJSON()),
   )
-  const text = await page
-    .locator('.cm-line', { hasText: 'texto um' })
-    .evaluate((element) => element.getBoundingClientRect().left)
-  const outer = boxes.filter((rail) => rail.left < text)
-  // The two section rails around "Sub um-a" are left of the text; the outer one is further left.
-  expect(outer.length).toBeGreaterThanOrEqual(4)
-  expect(Math.min(...outer.map((rail) => rail.left))).toBeLessThan(text - 8)
-  // Rails never move the text.
+  const line = (text) =>
+    page
+      .locator('.cm-line', { hasText: text })
+      .first()
+      .evaluate((element) => element.getBoundingClientRect().toJSON())
+  const [outer, inner] = boxes.sort((a, b) => a.left - b.left)
+  expect(inner.left).toBeGreaterThan(outer.left)
+  // The outer rail spans the sublist: from "filho" down to "filho dois".
+  const first = await line('filho')
+  const last = await line('filho dois')
+  expect(Math.abs(outer.top - first.top)).toBeLessThan(1)
+  expect(Math.abs(outer.bottom - last.bottom)).toBeLessThan(1)
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(box(page)).toHaveValue(BODY)
 })
 
-test('a section rail starts at its heading and stops at its last line of content', async ({
-  page,
-}) => {
-  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
-  await page.locator('.cm-content').click()
-  await page.keyboard.press('Control+End')
-  const lineBox = (text) =>
-    page
-      .locator('.cm-line', { hasText: text })
-      .first()
-      .evaluate((element) => {
-        const { top, bottom } = element.getBoundingClientRect()
-        return { top, bottom }
-      })
-  const heading = await lineBox('Seção dois')
-  const last = await lineBox('texto dois')
-  const rails = await page
-    .locator('.cm-rail')
-    .evaluateAll((elements) => elements.map((e) => e.getBoundingClientRect().toJSON()))
-  const rail = rails.find((candidate) => Math.abs(candidate.top - heading.top) < 1)
-  expect(rail).toBeTruthy()
-  expect(Math.abs(rail.bottom - last.bottom)).toBeLessThan(1)
-})
-
-test('Leitura draws the same kinds of rails', async ({ page }) => {
+test('Leitura draws the same rails for nested lists and none for sections', async ({ page }) => {
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
   const pseudo = (selector, property) =>
     page
       .locator(selector)
       .first()
       .evaluate((element, name) => getComputedStyle(element, '::before')[name], property)
-  expect(await pseudo('.markdown .md-section', 'borderLeftStyle')).toBe('dotted')
   expect(await pseudo('.markdown li > ul', 'borderLeftStyle')).toBe('dotted')
-  const left = (selector) =>
-    page
-      .locator(selector)
-      .first()
-      .evaluate((element) => parseFloat(getComputedStyle(element, '::before').left))
-  // The section holding a subsection has its rail further out than a leaf section's.
-  const outer = await page
-    .locator('.md-section')
-    .first()
-    .evaluate((e) => parseFloat(getComputedStyle(e, '::before').left))
-  const inner = await page
-    .locator('.md-section .md-section')
-    .first()
-    .evaluate((e) => parseFloat(getComputedStyle(e, '::before').left))
-  expect(outer).toBeLessThan(inner)
-  expect(await left('.markdown li > ul')).toBeLessThan(0)
+  expect(await pseudo('.markdown .md-section', 'content')).toBe('none')
 })

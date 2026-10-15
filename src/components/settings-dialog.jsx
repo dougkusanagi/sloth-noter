@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Monitor, Sun, Moon, Palette, Type, Database, Keyboard, X } from 'lucide-react'
 import { Modal, ShortcutList } from './dialogs.jsx'
-import { FontSlider, Segmented, Switch } from './controls.jsx'
-import { FONT_SIZE } from '../storage.js'
+import { FontSlider, RangeSlider, Segmented, Switch } from './controls.jsx'
+import { CONTENT_WIDTH, FONT_SIZE, contentWidth } from '../storage.js'
 import { LANGUAGES, t } from '../i18n.js'
 
 const THEMES = [
@@ -142,6 +142,28 @@ export function SettingsDialog({
                   className="button quiet"
                   disabled={prefs.fontSize === FONT_SIZE.default}
                   onClick={() => onChange({ fontSize: FONT_SIZE.default })}
+                >
+                  {t('settings.fontReset')}
+                </button>
+              </Row>
+              <Row
+                id="settings-width"
+                title={t('settings.contentWidth')}
+                hint={t('settings.contentWidthHint')}
+              >
+                <RangeSlider
+                  id="settings-width"
+                  value={contentWidth(prefs)}
+                  min={CONTENT_WIDTH.min}
+                  max={CONTENT_WIDTH.max}
+                  step={CONTENT_WIDTH.step}
+                  onChange={(width) => onChange({ contentWidth: width })}
+                />
+                <output htmlFor="settings-width">{contentWidth(prefs)}px</output>
+                <button
+                  className="button quiet"
+                  disabled={contentWidth(prefs) === CONTENT_WIDTH.default}
+                  onClick={() => onChange({ contentWidth: CONTENT_WIDTH.default })}
                 >
                   {t('settings.fontReset')}
                 </button>

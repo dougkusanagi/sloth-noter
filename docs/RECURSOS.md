@@ -30,7 +30,9 @@ A Leitura usa `react-markdown` com `remark-gfm`: CommonMark, títulos H1–H6, l
 
 Os títulos H2–H6 organizam a nota em seções. Passe o mouse sobre um título (ou foque a seta com o teclado) e clique na seta para recolher a seção e suas subseções; no modo Padrão fica uma etiqueta “⋯ N linhas ocultas” que também expande. Mover o cursor ou a seleção para dentro do trecho recolhido o revela. **Recolher todas as seções** e **Expandir todas as seções** estão na paleta de comandos (Ctrl+K), nos modos Padrão e Leitura. Recolher é só da tela: o Markdown não muda, e na Leitura o estado é lembrado por nota enquanto o app está aberto.
 
-A hierarquia aparece sem recuar o texto: linhas pontilhadas discretas na margem esquerda acompanham cada seção (as externas ficam mais à esquerda) e as sublistas, nos modos Padrão e Leitura.
+As seções não recuam o texto nem recebem linhas; só as sublistas ganham uma linha pontilhada discreta sob o marcador do item pai, nos modos Padrão e Leitura.
+
+**Largura do texto:** Configurações → Editor tem um controle (520–1400 px, padrão 760) para a coluna de texto, que vale para os três modos e se ajusta sozinha em janelas estreitas. A paleta (Ctrl+K) tem “Coluna de texto mais larga/estreita”, que mudam 40 px por vez.
 
 ### Padrão e Leitura têm o mesmo layout
 

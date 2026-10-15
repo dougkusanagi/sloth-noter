@@ -13,7 +13,7 @@ import {
   renameWikiReferences,
   normalizeImageSource,
 } from './markdown-model.js'
-import { FONT_SIZE } from './storage.js'
+import { CONTENT_WIDTH, FONT_SIZE, contentWidth } from './storage.js'
 import { NoteList } from './components/note-list.jsx'
 import { friendlyError } from './errors.js'
 import { ToastButtons } from './components/toast-buttons.jsx'
@@ -1208,6 +1208,14 @@ function Workspace({ persistence, loaded }) {
     else if (visualRef.current) (collapse ? foldAll : unfoldAll)(visualRef.current)
   }
 
+  function stepWidth(steps) {
+    updatePrefs({
+      contentWidth: Math.min(
+        CONTENT_WIDTH.max,
+        Math.max(CONTENT_WIDTH.min, contentWidth(prefs) + steps * CONTENT_WIDTH.step),
+      ),
+    })
+  }
   const menuActions = {
     newNote: () => runMenu(() => createNote(), false),
     findNote: () => runMenu(openPalette, false),
@@ -1247,6 +1255,8 @@ function Workspace({ persistence, loaded }) {
       runMenu(() => updatePrefs({ fontSize: Math.max(FONT_SIZE.min, prefs.fontSize - 1) })),
     larger: () =>
       runMenu(() => updatePrefs({ fontSize: Math.min(FONT_SIZE.max, prefs.fontSize + 1) })),
+    narrower: () => runMenu(() => stepWidth(-2)),
+    wider: () => runMenu(() => stepWidth(2)),
     language: () =>
       runMenu(() => updatePrefs({ language: prefs.language === 'en' ? 'pt-BR' : 'en' })),
     shortcuts: () => runMenu(() => setShortcutsOpen(true), false),
@@ -1267,7 +1277,10 @@ function Workspace({ persistence, loaded }) {
   return (
     <main
       className="app"
-      style={{ '--editor-size': `${prefs.fontSize}px` }}
+      style={{
+        '--editor-size': `${prefs.fontSize}px`,
+        '--content-width': `${contentWidth(prefs)}px`,
+      }}
       onDragOver={(event) => {
         if (event.dataTransfer.types.includes('Files')) event.preventDefault()
       }}

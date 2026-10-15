@@ -1,13 +1,7 @@
 import { RectangleMarker, layer } from '@codemirror/view'
 import { markdownTree } from '../markdown-model.js'
-import { headingSections } from '../sections.js'
 
-/** Distance between the rails of nested sections, and from the first one to the text. */
-const RAIL_GAP = 5
-const RAIL_EDGE = 8
-const MAX_RAILS = 4
-
-/** Dotted rails (as in the reading view) that show how sections and lists nest. */
+/** Dotted rails (as in the reading view) that show how nested lists nest. */
 export const railsLayer = layer({
   above: false,
   class: 'cm-rails',
@@ -17,7 +11,6 @@ export const railsLayer = layer({
     const { doc } = view.state
     const text = doc.toString()
     const tree = markdownTree(text)
-    const lines = text.split('\n')
     const base = view.scrollDOM.getBoundingClientRect()
     const left =
       view.contentDOM.getBoundingClientRect().left - base.left + view.scrollDOM.scrollLeft
@@ -28,17 +21,6 @@ export const railsLayer = layer({
       const start = view.lineBlockAt(doc.line(from).from)
       const end = view.lineBlockAt(doc.line(to).to)
       markers.push(new RectangleMarker('cm-rail', x, top + start.top, null, end.bottom - start.top))
-    }
-    for (const heading of headingSections(text, tree)) {
-      if (heading.level === 0) continue
-      let last = Math.min(heading.end, lines.length)
-      while (last > heading.titleEnd && !lines[last - 1].trim()) last--
-      if (last === heading.titleEnd) continue
-      rail(
-        left - RAIL_EDGE - RAIL_GAP * (Math.min(heading.height, MAX_RAILS) - 1),
-        heading.line,
-        last,
-      )
     }
     const visit = (node, depth) => {
       if (node.type === 'listItem') {

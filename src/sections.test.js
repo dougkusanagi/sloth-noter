@@ -37,13 +37,6 @@ test('headings know their nesting level and where their section ends', () => {
   )
 })
 
-test('sections know how many rows of subsections they hold', () => {
-  assert.deepEqual(
-    headingSections(DOC).map((heading) => heading.height),
-    [1, 3, 2, 1, 1, 2, 1],
-  )
-})
-
 test('headings inside code, quotes and lists are not sections', () => {
   const text = '# T\n\n## A\n\n```\n## falso\n```\n\n> ## citado\n\n- ## item\n\ntexto'
   assert.deepEqual(
