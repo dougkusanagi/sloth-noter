@@ -63,7 +63,7 @@ test('a deleted note goes to the trash and can be restored', async ({ page }) =>
   await page.getByRole('dialog').getByRole('button', { name: 'Mover' }).click()
   await page.getByRole('button', { name: 'Menu principal' }).click()
   await page.getByRole('menuitem', { name: /^Lixeira \(/ }).click()
-  const trash = page.getByRole('dialog', { name: 'Lixeira' })
+  const trash = page.getByRole('region', { name: 'Lixeira', exact: true })
   await trash.getByRole('button', { name: 'Restaurar' }).click()
   await expect(trash).toBeHidden()
   await expect(page.getByRole('button', { name: 'Welcome.md', exact: true })).toBeVisible()

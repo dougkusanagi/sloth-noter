@@ -22,6 +22,12 @@ export const SHORTCUTS = [
   ['Alt+2', 'mode.source'],
   ['Alt+3', 'mode.reading'],
   ['Shift+/', 'menu.shortcuts'],
+  ['-', 'menu.smaller'],
+  ['0', 'menu.resetText'],
+  ['+', 'menu.larger'],
+  ['Alt+-', 'menu.narrower'],
+  ['Alt+0', 'menu.resetWidth'],
+  ['Alt++', 'menu.wider'],
 ]
 export function appShortcut(event) {
   if (event.key === 'F2' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey)

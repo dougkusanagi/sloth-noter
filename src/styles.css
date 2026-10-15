@@ -6,12 +6,12 @@
   --rail: color-mix(in srgb, var(--muted) 45%, transparent);
   --soft: #e8e5de;
   --paper: #fcfbf8;
-  --raised: #ffffff;
+  --raised: #f1efe8;
   --accent: #a65427;
   --accent-ink: #9d4f25;
   --on-accent: #ffffff;
   --danger: #b3382a;
-  --ok: #2f7d4f;
+  --ok: #2a7347;
   --line: color-mix(in srgb, var(--ink) 11%, transparent);
   --hover: color-mix(in srgb, var(--ink) 6%, transparent);
   --active: color-mix(in srgb, var(--accent) 13%, transparent);
@@ -123,7 +123,7 @@ textarea {
   display: block;
   width: 100%;
   flex: 1;
-  min-height: calc(100dvh - 48px);
+  min-height: calc(100dvh - 76px);
   resize: none;
   border: 0;
   background: transparent;
@@ -140,7 +140,7 @@ textarea:focus-visible {
 }
 .visual-editor {
   flex: 1;
-  min-height: calc(100dvh - 48px);
+  min-height: calc(100dvh - 76px);
   min-width: 0;
   cursor: text;
 }
@@ -1017,20 +1017,27 @@ textarea:focus-visible {
   display: none;
 }
 
-/* Rails: dotted guides for nested lists. */
+/* Nested-list guides start below the parent’s first visual line. */
 .cm-rail {
-  border-left: 1px dotted var(--rail);
+  border-left: 1px solid var(--rail);
   pointer-events: none;
 }
-.markdown li > :is(ul, ol) {
+.markdown li:has(> :is(ul, ol)) {
   position: relative;
 }
-.markdown li > :is(ul, ol)::before {
+.markdown li:has(> :is(ul, ol))::after {
   content: '';
   position: absolute;
-  top: 0;
+  top: 1lh;
   bottom: 0;
   left: -0.93em;
-  border-left: 1px dotted var(--rail);
+  border-left: 1px solid var(--rail);
   pointer-events: none;
+}
+
+.visual-editor .cm-md-task {
+  padding-left: 25px;
+}
+.visual-editor .cm-md-task .cm-task-checkbox {
+  margin-left: -25px;
 }

@@ -1,12 +1,11 @@
 import { RectangleMarker, layer } from '@codemirror/view'
 import { markdownTree } from '../markdown-model.js'
 
-/** Dotted rails (as in the reading view) that show how nested lists nest. */
+/** Continuous guides include wrapped lines below the parent marker. */
 export const railsLayer = layer({
   above: false,
   class: 'cm-rails',
-  update: (update) =>
-    update.docChanged || update.viewportChanged || update.geometryChanged || update.heightChanged,
+  update: () => true,
   markers(view) {
     const { doc } = view.state
     const text = doc.toString()
@@ -17,10 +16,12 @@ export const railsLayer = layer({
     const top = view.documentTop - base.top + view.scrollDOM.scrollTop
     const size = parseFloat(getComputedStyle(view.contentDOM).fontSize) || 16
     const markers = []
-    const rail = (x, from, to) => {
+    const rail = (x, from, to, parentLine) => {
       const start = view.lineBlockAt(doc.line(from).from)
       const end = view.lineBlockAt(doc.line(to).to)
-      markers.push(new RectangleMarker('cm-rail', x, top + start.top, null, end.bottom - start.top))
+      const parent = view.lineBlockAt(doc.line(parentLine).from)
+      const railTop = Math.min(start.top, parent.top + view.defaultLineHeight)
+      markers.push(new RectangleMarker('cm-rail', x, top + railTop, null, end.bottom - railTop))
     }
     const visit = (node, depth) => {
       if (node.type === 'listItem') {
@@ -30,6 +31,7 @@ export const railsLayer = layer({
             left + (depth * 1.5 + 0.57) * size,
             nested[0].position.start.line,
             nested.at(-1).position.end.line,
+            node.position.start.line,
           )
       }
       for (const child of node.children ?? [])

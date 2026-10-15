@@ -127,30 +127,6 @@ export function ConflictDialog({ firstRef, name, onResolve, onClose }) {
   )
 }
 
-export function TrashDialog({ firstRef, trash, onRestore, onPurge, onClose }) {
-  return (
-    <Modal label={t('trash.title')} className="trash-dialog">
-      <h2>{t('trash.title')}</h2>
-      {trash.length ? (
-        <div className="trash-list">
-          {trash.map((entry) => (
-            <div className="trash-item" key={entry.note.id}>
-              <span>{entry.note.name}</span>
-              <button onClick={() => onRestore(entry.note.id)}>{t('trash.restore')}</button>
-              <button onClick={() => onPurge(entry.note.id)}>{t('trash.purge')}</button>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p>{t('trash.empty')}</p>
-      )}
-      <button ref={firstRef} onClick={onClose}>
-        {t('dialog.close')}
-      </button>
-    </Modal>
-  )
-}
-
 export function FindDialog({ inputRef, query, matchCount, onQuery, onStep, onClose }) {
   return (
     <Modal

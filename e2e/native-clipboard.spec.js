@@ -44,7 +44,10 @@ test.beforeEach(async ({ page }) => {
             return null
           }
           if (command === 'image_read') return window.nativeImages[args.name]
-          if (command === 'image_list') return Object.keys(window.nativeImages)
+          if (command === 'image_list') {
+            window.nativeImageListReads = (window.nativeImageListReads ?? 0) + 1
+            return Object.keys(window.nativeImages)
+          }
           throw new Error(`Unsupported test IPC command: ${command}`)
         },
       }
@@ -230,4 +233,27 @@ test('an actual reference reported by the backend gives a localized deletion err
   await expect(page.getByText(/Falha na importação/)).toHaveCount(0)
   await expect(page.locator('.image-item')).toHaveCount(1)
   expect(await page.evaluate(() => Object.keys(window.nativeImages))).toEqual(['photo.png'])
+})
+
+test('image library refreshes on focus and periodically without a refresh button', async ({
+  page,
+}) => {
+  await page.clock.install()
+  await page.keyboard.press('Control+Shift+l')
+  await expect(page.getByRole('button', { name: 'Atualizar imagens', exact: true })).toHaveCount(0)
+  await page.evaluate(() => {
+    window.nativeImages['Primeira.png'] = []
+    window.dispatchEvent(new Event('focus'))
+  })
+  await expect(page.locator('.image-name', { hasText: 'Primeira.png' })).toBeVisible()
+  await page.evaluate(() => {
+    window.nativeImages['Segunda.png'] = []
+  })
+  await page.clock.runFor(15001)
+  await expect(page.locator('.image-name', { hasText: 'Segunda.png' })).toBeVisible()
+  await page.getByRole('button', { name: 'Mostrar/ocultar biblioteca', exact: true }).click()
+  const reads = await page.evaluate(() => window.nativeImageListReads)
+  await page.clock.runFor(15001)
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  expect(await page.evaluate(() => window.nativeImageListReads)).toBe(reads)
 })

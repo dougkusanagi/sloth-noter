@@ -224,7 +224,7 @@ export function decorationsFor(view) {
         ranges.push(
           Decoration.line({
             attributes: {
-              class: 'cm-md-paragraph',
+              class: 'cm-md-paragraph cm-md-task',
               ...(listDepths.get(number) ? { style: listMargin(listDepths.get(number)) } : {}),
             },
           }).range(line.from),

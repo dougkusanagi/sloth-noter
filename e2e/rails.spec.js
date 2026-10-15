@@ -29,14 +29,16 @@ test.beforeEach(async ({ page }) => {
   await box(page).fill(BODY)
 })
 
-test('Padrão draws dotted rails only for nested lists, one per nesting level', async ({ page }) => {
+test('Padrão draws continuous rails only for nested lists, one per nesting level', async ({
+  page,
+}) => {
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+End')
   const rails = page.locator('.cm-rail')
   // "item" holds a list and "filho" holds one too; sections get no rail.
   await expect(rails).toHaveCount(2)
-  await expect(rails.first()).toHaveCSS('border-left-style', 'dotted')
+  await expect(rails.first()).toHaveCSS('border-left-style', 'solid')
   const boxes = await rails.evaluateAll((elements) =>
     elements.map((element) => element.getBoundingClientRect().toJSON()),
   )
@@ -62,7 +64,11 @@ test('Leitura draws the same rails for nested lists and none for sections', asyn
     page
       .locator(selector)
       .first()
-      .evaluate((element, name) => getComputedStyle(element, '::before')[name], property)
-  expect(await pseudo('.markdown li > ul', 'borderLeftStyle')).toBe('dotted')
+      .evaluate(
+        (element, name) =>
+          getComputedStyle(element, element.matches('li') ? '::after' : '::before')[name],
+        property,
+      )
+  expect(await pseudo('.markdown li:has(> ul)', 'borderLeftStyle')).toBe('solid')
   expect(await pseudo('.markdown .md-section', 'content')).toBe('none')
 })

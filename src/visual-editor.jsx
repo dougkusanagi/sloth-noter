@@ -441,7 +441,12 @@ export function VisualEditor({
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !syncing.current)
               callbacks.current.onChange(update.state.doc.toString())
-            if (update.selectionSet || update.docChanged || update.viewportChanged) {
+            if (
+              update.selectionSet ||
+              update.docChanged ||
+              update.viewportChanged ||
+              update.geometryChanged
+            ) {
               positionToolbar(update.view)
               positionInsert(update.view)
             }
@@ -471,6 +476,13 @@ export function VisualEditor({
     // Both the document and editor can scroll; the trigger uses viewport coordinates.
     window.addEventListener('scroll', reposition, true)
     window.addEventListener('resize', reposition)
+    const layoutObserver = new ResizeObserver(() => {
+      view.dispatch({})
+      view.requestMeasure()
+      reposition()
+    })
+    layoutObserver.observe(view.dom)
+    layoutObserver.observe(view.contentDOM)
     view.scrollDOM.addEventListener('mousedown', focusBlankArea)
     callbacks.current.onReady(view)
     return () => {
@@ -478,6 +490,7 @@ export function VisualEditor({
       viewRef.current = null
       window.removeEventListener('scroll', reposition, true)
       window.removeEventListener('resize', reposition)
+      layoutObserver.disconnect()
       view.scrollDOM.removeEventListener('mousedown', focusBlankArea)
       view.destroy()
     }
