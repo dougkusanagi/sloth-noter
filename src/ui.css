@@ -26,7 +26,6 @@
 .button,
 .conflict button,
 .dialog-close,
-.trash-dialog button,
 .find-dialog button,
 .shortcuts-dialog > button,
 .toast-buttons button {
@@ -50,7 +49,6 @@
 .button:hover:not(:disabled),
 .conflict button:hover,
 .dialog-close:hover,
-.trash-dialog button:hover,
 .find-dialog button:hover:not(:disabled),
 .shortcuts-dialog > button:hover,
 .toast-buttons button:hover {
@@ -275,6 +273,12 @@ kbd {
 .shortcut-list {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--ink) 22%, transparent) transparent;
+}
+/* WebKitGTK paints the scrollbars of composited scrollers above fixed popups, whatever their
+   z-index; hide those scrollbars while any menu, popover or dialog is open. */
+html:has(.main-menu, .tab-context-menu, .block-menu, .table-context-menu, .palette-backdrop)
+  :is(.notes-sidebar, .sidebar-items, .cm-scroller) {
+  scrollbar-color: transparent transparent;
 }
 
 /* ---------- Header and tabs ---------- */
@@ -622,8 +626,8 @@ kbd {
 .mode-switch {
   position: fixed;
   z-index: 3;
-  right: 24px;
-  bottom: 20px;
+  right: 16px;
+  bottom: 44px;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -632,10 +636,8 @@ kbd {
   padding: 3px;
   border: 0;
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--raised) 88%, transparent);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  box-shadow: var(--shadow-pop);
+  background: var(--paper);
+  border: 1px solid var(--line);
 }
 .mode-switch label {
   position: relative;
@@ -678,7 +680,7 @@ kbd {
 .notes-sidebar {
   position: sticky;
   top: 48px;
-  width: 264px;
+  width: 312px;
   height: calc(100dvh - 48px);
   flex: none;
   display: flex;
@@ -777,18 +779,6 @@ kbd {
 .note-preview {
   color: var(--muted);
   font: 12px/1.4 var(--ui);
-}
-.image-library-actions {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-.image-library-actions .primary {
-  flex: 1;
-}
-.image-library-actions .icon-button {
-  border: 1px solid var(--line);
-  background: var(--raised);
 }
 .image-grid {
   display: grid;
@@ -1137,42 +1127,6 @@ kbd {
   color: var(--muted);
   font: 12.5px var(--ui);
 }
-.trash-dialog {
-  max-height: 70vh;
-  padding: 20px 20px 16px;
-  overflow: auto;
-}
-.trash-dialog h2 {
-  margin: 0 0 10px;
-  font: 600 17px var(--ui);
-}
-.trash-dialog > p {
-  margin: 12px 0;
-  color: var(--muted);
-  font: 14px var(--ui);
-}
-.trash-dialog > button {
-  margin-top: 12px;
-}
-.trash-item {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 10px 0;
-  border-top: 1px solid var(--line);
-}
-.trash-item span {
-  flex: 1;
-  min-width: 120px;
-  font: 14px var(--ui);
-  overflow-wrap: anywhere;
-}
-.trash-item button {
-  height: 28px;
-  padding: 0 10px;
-  font-size: 12px;
-}
 .shortcuts-dialog {
   padding: 20px 22px 16px;
 }
@@ -1402,19 +1356,16 @@ kbd {
   .app-header {
     padding: 0 8px;
   }
-  .save-status {
-    display: none;
-  }
   .notes-sidebar {
     position: fixed;
     left: 0;
     z-index: 4;
-    width: min(280px, 82vw);
+    width: min(312px, 88vw);
     box-shadow: var(--shadow-pop);
   }
   .mode-switch {
-    right: 12px;
-    bottom: 12px;
+    right: 16px;
+    bottom: 44px;
   }
 }
 @media (max-width: 300px) {
@@ -1429,4 +1380,208 @@ kbd {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+.save-status[data-state='saved'] {
+  display: none;
+}
+.window-drag-space {
+  flex: 1;
+  align-self: stretch;
+  min-width: 24px;
+}
+.tabs + .window-drag-space {
+  flex: 0 0 24px;
+}
+.window-controls {
+  display: flex;
+  gap: 2px;
+  flex: none;
+}
+.window-controls .window-close:hover {
+  background: var(--danger);
+  color: var(--bg);
+}
+.document-info {
+  position: sticky;
+  bottom: 0;
+  min-height: 28px;
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 6px 16px;
+  background: var(--bg);
+  color: var(--muted);
+  font: 11px var(--ui);
+  cursor: default;
+}
+.document-info svg {
+  width: 13px;
+  height: 13px;
+}
+.backlinks {
+  position: relative;
+}
+.backlinks summary {
+  cursor: pointer;
+  list-style: none;
+}
+.backlinks summary::-webkit-details-marker {
+  display: none;
+}
+.backlinks-popover {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  width: min(260px, calc(100vw - 32px));
+  max-height: 220px;
+  overflow: auto;
+  background: var(--raised);
+  box-shadow: var(--shadow-pop);
+  border-radius: var(--radius);
+  padding: 8px;
+}
+.backlinks-popover button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+}
+
+@media (max-width: 600px) {
+  .backlinks-popover {
+    left: 0;
+    right: auto;
+  }
+}
+
+.menu-adjustments {
+  margin: 4px 10px 10px;
+}
+.menu-theme {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: 14px;
+  background: var(--hover);
+  border-radius: var(--radius-md);
+}
+.main-menu .menu-theme button {
+  flex: 1;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 4px;
+  min-height: 30px;
+  font-size: 12px;
+}
+.menu-theme button[aria-checked='true'] {
+  background: var(--active);
+  color: var(--ink);
+}
+.menu-adjustment + .menu-adjustment {
+  margin-top: 12px;
+}
+.adjustment-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+}
+.adjustment-label output {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.adjustment-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.main-menu .adjustment-buttons button {
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 48px;
+  padding: 6px 2px;
+  background: var(--hover);
+}
+.adjustment-buttons .menu-shortcut {
+  margin: 0;
+  gap: 2px;
+}
+.adjustment-buttons kbd {
+  min-width: 0;
+  padding: 1px 2px;
+  font-size: 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.document-info .save-status {
+  margin: 0 auto 0 0;
+  font: inherit;
+}
+
+.sidebar-search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sidebar-search-row .search-field {
+  flex: 1;
+  min-width: 0;
+}
+.sidebar-add-image {
+  flex: none;
+  min-height: 34px;
+  padding: 6px 8px;
+}
+.trash-library-item {
+  padding: 10px 6px;
+  border-bottom: 1px solid var(--line);
+}
+.trash-library-item .note-title {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.trash-library-item .note-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  margin-top: 4px;
+}
+.trash-library-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.trash-library-actions .button {
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.width-feedback {
+  position: fixed;
+  z-index: 2;
+  top: 60px;
+  bottom: 40px;
+  border-inline: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  pointer-events: none;
+}
+.width-feedback-value {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--muted);
+  white-space: nowrap;
+  font: 11px var(--ui);
+  font-variant-numeric: tabular-nums;
 }

@@ -5,6 +5,8 @@ import { resolveImage } from '../images.js'
 import { t } from '../i18n.js'
 import { Decoration, ViewPlugin, WidgetType } from '@codemirror/view'
 import { classifyLine, inlineSyntax } from '../live-markdown.js'
+import { headingSections } from '../sections.js'
+import { FoldToggleWidget, foldField, foldRange, isFolded } from './folding.js'
 import { codeTokens, syntaxRanges } from '../syntax-highlight.js'
 
 class TaskWidget extends WidgetType {
@@ -55,7 +57,10 @@ class ImageWidget extends WidgetType {
   }
 }
 
-export function lineAttributes(line, shape, active) {
+/** How far a list item is pushed in: one step per enclosing item, whatever the source spaces. */
+export const listMargin = (depth) => `margin-left:calc(${depth} * var(--editor-size) * 1.5)`
+
+export function lineAttributes(line, shape, active, listDepth = 0) {
   const classes = [shape.kind === 'paragraph' ? 'cm-md-paragraph' : `cm-md-${shape.kind}`]
   if (active) classes.push('cm-md-editing')
   if (shape.prefix && shape.kind !== 'fence') classes.push('cm-md-prefix')
@@ -71,8 +76,7 @@ export function lineAttributes(line, shape, active) {
   if (reserve) classes.push('cm-md-syntax')
   const attributes = { class: classes.join(' ') }
   if (reserve) attributes.style = `--md-syntax-reserve:${reserve}ch`
-  if (/^\s+[-*+]/.test(line.text))
-    attributes.style = `${attributes.style ?? ''};margin-left:${line.text.match(/^\s*/)[0].length}ch`
+  if (listDepth) attributes.style = `${attributes.style ?? ''};${listMargin(listDepth)}`
   return attributes
 }
 
@@ -87,7 +91,13 @@ export function decorationsFor(view) {
     selectedLines.push({ first, last })
     for (let number = first; number <= last; number++) editing.add(number)
   }
-  const tree = markdownTree(doc.toString())
+  const text = doc.toString()
+  const tree = markdownTree(text)
+  const foldable = new Map()
+  for (const heading of headingSections(text, tree)) {
+    const range = heading.level > 0 && foldRange(view.state, heading)
+    if (range) foldable.set(heading.line, isFolded(view.state, range.from))
+  }
   const definitions = []
   walk(tree, (node) => {
     if (node.type === 'definition' || node.type === 'footnoteDefinition')
@@ -101,6 +111,18 @@ export function decorationsFor(view) {
     ]),
   )
   const breakMarks = new Map()
+  const listDepths = new Map()
+  const continuations = new Map()
+  const collectLists = (node, depth) => {
+    if (node.type === 'listItem') {
+      listDepths.set(node.position.start.line, depth)
+      for (let line = node.position.start.line + 1; line <= node.position.end.line; line++)
+        continuations.set(line, depth + 1)
+    }
+    for (const child of node.children ?? [])
+      collectLists(child, node.type === 'listItem' ? depth + 1 : depth)
+  }
+  collectLists(tree, 0)
   const blockShapes = new Map()
   const fenceStarts = new Set(),
     fenceEnds = new Set()
@@ -199,7 +221,14 @@ export function decorationsFor(view) {
       const active = editing.has(number)
       const task = line.text.match(/^(\s*(?:[-*+]|\d+[.)])\s+)\[([ xX])\]\s+/)
       if (task && !active) {
-        ranges.push(Decoration.line({ attributes: { class: 'cm-md-paragraph' } }).range(line.from))
+        ranges.push(
+          Decoration.line({
+            attributes: {
+              class: 'cm-md-paragraph cm-md-task',
+              ...(listDepths.get(number) ? { style: listMargin(listDepths.get(number)) } : {}),
+            },
+          }).range(line.from),
+        )
         ranges.push(
           Decoration.replace({
             widget: new TaskWidget(task[2].toLowerCase() === 'x', line.from + task[1].length + 1),
@@ -227,7 +256,23 @@ export function decorationsFor(view) {
         ranges.push(
           Decoration.replace({}).range(breakMarks.get(number), breakMarks.get(number) + 1),
         )
-      const attrs = lineAttributes(line, shape, active)
+      if (foldable.has(number))
+        ranges.push(
+          Decoration.widget({
+            widget: new FoldToggleWidget(number, foldable.get(number)),
+            side: -2,
+          }).range(line.from),
+        )
+      const indent = line.text.match(/^\s*/)[0].length
+      // The margin carries the nesting, so the source spaces never show.
+      if (shape.kind === 'ordered' && indent && listDepths.has(number))
+        ranges.push(Decoration.replace({}).range(line.from, line.from + indent))
+      const attrs = lineAttributes(line, shape, active, listDepths.get(number))
+      if (shape.kind === 'paragraph' && continuations.has(number) && !listDepths.has(number)) {
+        // Text continuing a list item lines up with the item's own text.
+        if (indent) ranges.push(Decoration.replace({}).range(line.from, line.from + indent))
+        attrs.style = `${attrs.style ?? ''};${listMargin(continuations.get(number))}`
+      }
       const block = codeBlocks.get(number)
       if (block) {
         attrs.class += ' cm-code-copy-anchor'
@@ -269,7 +314,12 @@ export const liveMarkdown = ViewPlugin.fromClass(
       this.decorations = decorationsFor(view)
     }
     update(update) {
-      if (update.docChanged || update.selectionSet || update.viewportChanged)
+      if (
+        update.docChanged ||
+        update.selectionSet ||
+        update.viewportChanged ||
+        update.startState.field(foldField) !== update.state.field(foldField)
+      )
         this.decorations = decorationsFor(update.view)
     }
   },

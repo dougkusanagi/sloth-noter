@@ -28,6 +28,23 @@ export function Switch({ id, checked, onChange }) {
   )
 }
 
+export function RangeSlider({ id, value, min, max, step = 1, onChange }) {
+  const fill = ((value - min) / (max - min)) * 100
+  return (
+    <input
+      id={id}
+      className="slider"
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      style={{ '--fill': `${fill}%` }}
+      onChange={(event) => onChange(Number(event.target.value))}
+    />
+  )
+}
+
 export function FontSlider({ id, value, onChange }) {
   const fill = ((value - FONT_SIZE.min) / (FONT_SIZE.max - FONT_SIZE.min)) * 100
   return (

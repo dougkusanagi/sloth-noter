@@ -3,14 +3,15 @@
   --bg: #f7f6f2;
   --ink: #23221e;
   --muted: #67645d;
+  --rail: color-mix(in srgb, var(--muted) 45%, transparent);
   --soft: #e8e5de;
   --paper: #fcfbf8;
-  --raised: #ffffff;
+  --raised: #f1efe8;
   --accent: #a65427;
   --accent-ink: #9d4f25;
   --on-accent: #ffffff;
   --danger: #b3382a;
-  --ok: #2f7d4f;
+  --ok: #2a7347;
   --line: color-mix(in srgb, var(--ink) 11%, transparent);
   --hover: color-mix(in srgb, var(--ink) 6%, transparent);
   --active: color-mix(in srgb, var(--accent) 13%, transparent);
@@ -122,12 +123,12 @@ textarea {
   display: block;
   width: 100%;
   flex: 1;
-  min-height: calc(100dvh - 48px);
+  min-height: calc(100dvh - 76px);
   resize: none;
   border: 0;
   background: transparent;
   color: var(--ink);
-  padding: 28px max(24px, calc((100% - 760px) / 2)) 70px;
+  padding: 28px max(24px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
   font:
     var(--editor-size)/1.55 Georgia,
     serif;
@@ -139,7 +140,7 @@ textarea:focus-visible {
 }
 .visual-editor {
   flex: 1;
-  min-height: calc(100dvh - 48px);
+  min-height: calc(100dvh - 76px);
   min-width: 0;
   cursor: text;
 }
@@ -236,7 +237,7 @@ textarea:focus-visible {
 .visual-editor .cm-scroller {
   overflow: auto;
   font-family: Georgia, serif;
-  padding: 28px max(24px, calc((100% - 760px) / 2)) 70px;
+  padding: 28px max(24px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
 }
 .visual-editor .cm-content {
   min-height: 100%;
@@ -285,7 +286,7 @@ textarea:focus-visible {
 }
 .visual-editor .cm-md-quote-nested {
   --md-prefix-width: 4.02em;
-  padding-left: 2em;
+  padding-left: calc(2em + 2px);
   background: linear-gradient(var(--muted), var(--muted)) 1em 0 / 2px 100% no-repeat;
 }
 .visual-editor .cm-md-bullet {
@@ -596,89 +597,93 @@ textarea:focus-visible {
 .reading {
   flex: 1;
   min-width: 0;
-  padding: 28px max(24px, calc((100% - 760px) / 2)) 0;
+  padding: 28px max(24px, calc((100% - var(--content-width, 760px)) / 2)) 0;
   cursor: text;
 }
 .empty-note {
   flex: 1;
-  padding: 28px max(24px, calc((100% - 760px) / 2));
+  padding: 28px max(24px, calc((100% - var(--content-width, 760px)) / 2));
   color: var(--muted);
 }
 .markdown {
+  --line: calc(var(--editor-size) * 1.62);
   font-size: var(--editor-size);
-  line-height: 1.55;
+  line-height: 1.62;
   padding-bottom: 70px;
   overflow-wrap: anywhere;
+}
+/* Same vertical rhythm as the live editor: spacing is the source's blank lines (--gap). */
+.markdown * {
+  --gap: 0;
+}
+.markdown
+  :is(p, ul, ol, li, blockquote, table, hr, h1, h2, h3, h4, h5, h6, .code-block, .md-section) {
+  margin: calc(var(--gap) * var(--line)) 0 0;
 }
 .markdown h1 {
   font-size: 1.6em;
   font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 1.2;
-  margin: 0 0 0.7em;
 }
 .markdown h2 {
   font-size: 1.32em;
   font-weight: 600;
-  margin: 1.5em 0 0.35em;
 }
 .markdown h3 {
   font-size: 1.14em;
   font-weight: 600;
-  margin: 1.3em 0 0.3em;
 }
-.markdown h4 {
-  font-size: 1.02em;
+.markdown :is(h4, h5, h6) {
+  font-size: 1em;
   font-weight: 600;
-  margin: 1.2em 0 0.25em;
 }
 .markdown table {
   width: 100%;
   border-collapse: collapse;
-  margin: 1.2em 0;
-  font-size: 0.92em;
+  font-size: 0.9em;
+  line-height: 1.5;
 }
 .markdown th,
 .markdown td {
   border-bottom: 1px solid var(--soft);
-  padding: 8px 10px;
+  padding: 7px 10px;
   text-align: left;
 }
 .markdown th {
   font-weight: 600;
 }
-.markdown p {
-  margin: 0.5em 0;
-}
 .markdown ul,
 .markdown ol {
   padding-left: 1.5em;
-}
-.markdown li {
-  margin: 0.15em 0;
 }
 .markdown li::marker {
   color: var(--muted);
 }
 .markdown blockquote {
   border-left: 2px solid var(--soft);
-  margin: 1em 0;
   padding: 0 0 0 1em;
   color: var(--muted);
+}
+.markdown hr {
+  height: var(--line);
+  border: 0;
+  border-bottom: 1px solid var(--soft);
+  box-sizing: content-box;
 }
 .markdown a {
   color: var(--accent);
 }
 .markdown code {
-  font: 0.78em var(--mono);
+  font: 0.85em var(--mono);
   background: var(--soft);
-  padding: 0.12em 0.32em;
+  padding: 0.1em 0.25em;
   border-radius: var(--radius-sm);
 }
 .markdown pre {
   background: var(--paper);
-  border: 1px solid var(--soft);
-  padding: 42px 16px 16px;
+  border: 0;
+  /* As tall as the live editor's fence lines (they carry the copy badge there too). */
+  padding: 1.445em 0.85em;
   overflow: auto;
   margin: 0;
   position: relative;
@@ -686,7 +691,6 @@ textarea:focus-visible {
 }
 .code-block {
   position: relative;
-  margin: 1.3em 0;
 }
 .code-block-tools {
   position: sticky;
@@ -704,6 +708,7 @@ textarea:focus-visible {
   align-self: flex-start;
 }
 .markdown pre code {
+  font: 0.85em/1.7 var(--mono);
   display: block;
   white-space: pre;
   background: transparent;
@@ -776,8 +781,11 @@ textarea:focus-visible {
   min-width: 0;
 }
 .markdown img {
-  max-width: 100%;
-  height: auto;
+  /* Same box as the live editor's image preview. */
+  max-width: min(100%, 600px);
+  max-height: 400px;
+  object-fit: contain;
+  display: inline-block;
   border-radius: var(--radius-sm);
 }
 .markdown .task-list-item {
@@ -842,16 +850,18 @@ textarea:focus-visible {
 .cm-md-inline-strike {
   text-decoration: line-through;
 }
-.cm-md-inline-footnote {
+.cm-md-inline-footnote,
+.markdown sup {
   vertical-align: super;
   font-size: 0.75em;
+  line-height: 0;
+}
+.cm-md-inline-footnote {
   color: var(--accent-ink);
 }
 .visual-editor .cm-md-h5,
 .visual-editor .cm-md-h6 {
   font-weight: 600;
-  /* Padding, not margin: CodeMirror does not measure line margins, so clicks below would land on the wrong line. */
-  padding-top: 16px;
 }
 .visual-editor .cm-md-rule {
   color: var(--muted);
@@ -923,4 +933,111 @@ textarea:focus-visible {
 .image-insert button:disabled {
   opacity: 0.55;
   cursor: default;
+}
+
+/* Collapsible sections */
+.visual-editor .cm-md-h2,
+.visual-editor .cm-md-h3,
+.visual-editor .cm-md-h4,
+.visual-editor .cm-md-h5,
+.visual-editor .cm-md-h6,
+.markdown :is(h2, h3, h4, h5, h6) {
+  position: relative;
+}
+.cm-fold-toggle,
+.fold-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4em;
+  height: 1.4em;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.cm-fold-toggle,
+.fold-toggle {
+  position: absolute;
+  left: -1.7em;
+  top: 50%;
+  translate: 0 -50%;
+}
+.cm-fold-toggle svg,
+.fold-toggle svg {
+  width: 1em;
+  height: 1em;
+  transition: rotate 0.12s;
+}
+.cm-fold-toggle.folded svg,
+.fold-toggle[aria-expanded='false'] svg {
+  rotate: -90deg;
+}
+.cm-md-h2:hover .cm-fold-toggle,
+.cm-md-h3:hover .cm-fold-toggle,
+.cm-md-h4:hover .cm-fold-toggle,
+.cm-md-h5:hover .cm-fold-toggle,
+.cm-md-h6:hover .cm-fold-toggle,
+.markdown :is(h2, h3, h4, h5, h6):hover .fold-toggle,
+.cm-fold-toggle:focus-visible,
+.fold-toggle:focus-visible,
+.cm-fold-toggle.folded,
+.fold-toggle[aria-expanded='false'] {
+  opacity: 1;
+}
+.cm-fold-toggle:hover,
+.fold-toggle:hover {
+  background: var(--soft);
+  color: var(--ink, inherit);
+}
+@media (hover: none) {
+  .cm-fold-toggle,
+  .fold-toggle {
+    opacity: 0.6;
+  }
+}
+.cm-folded-pill {
+  margin-left: 0.5em;
+  padding: 0 0.6em;
+  border: 1px solid var(--soft);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--muted);
+  font: 0.75em/1.7 var(--mono);
+  cursor: pointer;
+}
+.cm-folded-pill:hover {
+  color: var(--accent-ink);
+}
+.markdown .md-section[data-collapsed] > :not(:first-child) {
+  display: none;
+}
+
+/* Nested-list guides start below the parent’s first visual line. */
+.cm-rail {
+  border-left: 1px solid var(--rail);
+  pointer-events: none;
+}
+.markdown li:has(> :is(ul, ol)) {
+  position: relative;
+}
+.markdown li:has(> :is(ul, ol))::after {
+  content: '';
+  position: absolute;
+  top: 1lh;
+  bottom: 0;
+  left: -0.93em;
+  border-left: 1px solid var(--rail);
+  pointer-events: none;
+}
+
+.visual-editor .cm-md-task {
+  padding-left: 25px;
+}
+.visual-editor .cm-md-task .cm-task-checkbox {
+  margin-left: -25px;
 }

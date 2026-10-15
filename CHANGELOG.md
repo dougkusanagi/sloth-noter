@@ -6,6 +6,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Adicionado
 
+- Tab e Shift+Tab em listas criam e desfazem sublistas (quatro espaços), com um item ou vários selecionados, nos modos Padrão e Código. Shift+Tab em itens sem recuo não faz nada; um item numerado que inicia uma sublista recomeça em 1.
+- Seções recolhíveis: seta ao lado de cada título H2–H6 (Padrão e Leitura) e comandos “Recolher/Expandir todas as seções” na paleta.
+- Linha pontilhada discreta que mostra o aninhamento das sublistas (Padrão e Leitura).
+- Largura do texto ajustável em Configurações → Editor (520–1400 px) e por comandos “Coluna de texto mais larga/estreita” na paleta.
 - `Welcome.md` virou uma página de ajuda e exemplos (títulos, estilos, links, tags, imagem, citações, listas, tarefas, tabela, código, notas de rodapé e dicas). Pode ser excluída sem perda: o comando **Recriar página de ajuda** (Ctrl+K ou menu → Aplicativo) cria outra, no idioma da interface.
 - Testes de todos os formatos Markdown nos modos Padrão e Leitura (E2E e unidade) e da página de ajuda.
 - Janela de Configurações (Ctrl+,) com tema, idioma, tamanho do texto, abas, pasta de notas, backup e atalhos.
@@ -18,6 +22,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Corrigido
 
+- Padrão e Leitura agora têm exatamente o mesmo layout (espaços entre blocos, entrelinhas, listas, tarefas, citações, tabelas, código, imagens e rodapé), então trocar de modo não move o texto; a Leitura mostra quebras simples de linha como quebras.
+- Modo Padrão: tarefas e itens numerados aninhados ficavam sem recuo fora da linha em edição; o recuo segue a estrutura da lista e o texto de continuação de um item acompanha o item.
 - Modo Padrão: escapes (`\*`) e quebras de linha com `\` mostravam a barra invertida; citações vazias (`>`) e aninhadas (`> >`) apareciam como texto; tabelas ignoravam o alinhamento das colunas.
 - Modo Padrão: clicar abaixo de um título H5/H6 posicionava o cursor uma linha adiante (margem de linha não medida pelo CodeMirror).
 - Leitura: tags `#tag` não eram destacadas.

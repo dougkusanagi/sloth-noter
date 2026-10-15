@@ -3,6 +3,8 @@ import { ImageInsert } from './components/image-insert.jsx'
 import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
 import { liveMarkdown } from './editor/live-decorations.js'
+import { foldField } from './editor/folding.js'
+import { railsLayer } from './editor/rails.js'
 import { codeCopyHandler, stickyCodeCopy } from './editor/code-copy.js'
 import {
   insertTableColumnAt,
@@ -12,7 +14,7 @@ import {
   removeTableRowAt,
   tableAt,
 } from './editor/table.js'
-import { continueList, navigateToFence, wrapSelectedText } from './editor/keys.js'
+import { continueList, indentList, navigateToFence, wrapSelectedText } from './editor/keys.js'
 import { useEffect, useRef, useState } from 'react'
 import { t } from './i18n.js'
 import { flushSync } from 'react-dom'
@@ -279,6 +281,8 @@ export function VisualEditor({
           keymap.of([
             { key: 'Enter', run: (view) => moveTable(view, 'enter') },
             { key: 'Shift-Enter', run: (view) => moveTable(view, 'shift-enter') },
+            { key: 'Tab', run: (view) => indentList(view) },
+            { key: 'Shift-Tab', run: (view) => indentList(view, true) },
             { key: 'Tab', run: (view) => navigateTitle(view) },
             { key: 'Shift-Tab', run: (view) => navigateTitle(view, true) },
             { key: 'Tab', run: (view) => moveTable(view, 'tab') },
@@ -429,13 +433,20 @@ export function VisualEditor({
               return false
             },
           }),
+          foldField,
+          railsLayer,
           liveMarkdown,
           stickyCodeCopy,
           codeCopyHandler.of((source) => callbacks.current.onCopy?.(source)),
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !syncing.current)
               callbacks.current.onChange(update.state.doc.toString())
-            if (update.selectionSet || update.docChanged || update.viewportChanged) {
+            if (
+              update.selectionSet ||
+              update.docChanged ||
+              update.viewportChanged ||
+              update.geometryChanged
+            ) {
               positionToolbar(update.view)
               positionInsert(update.view)
             }
@@ -465,6 +476,13 @@ export function VisualEditor({
     // Both the document and editor can scroll; the trigger uses viewport coordinates.
     window.addEventListener('scroll', reposition, true)
     window.addEventListener('resize', reposition)
+    const layoutObserver = new ResizeObserver(() => {
+      view.dispatch({})
+      view.requestMeasure()
+      reposition()
+    })
+    layoutObserver.observe(view.dom)
+    layoutObserver.observe(view.contentDOM)
     view.scrollDOM.addEventListener('mousedown', focusBlankArea)
     callbacks.current.onReady(view)
     return () => {
@@ -472,6 +490,7 @@ export function VisualEditor({
       viewRef.current = null
       window.removeEventListener('scroll', reposition, true)
       window.removeEventListener('resize', reposition)
+      layoutObserver.disconnect()
       view.scrollDOM.removeEventListener('mousedown', focusBlankArea)
       view.destroy()
     }

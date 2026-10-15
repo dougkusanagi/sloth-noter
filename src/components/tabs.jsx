@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useEffect, useRef, useState } from 'react'
 import { Pin, X } from 'lucide-react'
 import { moveTab, togglePinnedTab } from '../tabs.js'
@@ -221,75 +222,78 @@ export function useTabs({ data, current, commit, tabsVisible, open, rename, clos
     </nav>
   )
 
-  const tabContextMenu = tabMenu && (
-    <div
-      className="tab-context-menu"
-      role="menu"
-      aria-label={t('tabs.menu')}
-      style={{ left: tabMenu.x, top: tabMenu.y }}
-      onKeyDown={(event) => {
-        const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')]
-        const index = buttons.indexOf(document.activeElement)
-        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-          event.preventDefault()
-          buttons[
-            (index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length
-          ]?.focus()
-        }
-        if (event.key === 'Home') {
-          event.preventDefault()
-          buttons[0]?.focus()
-        }
-        if (event.key === 'End') {
-          event.preventDefault()
-          buttons.at(-1)?.focus()
-        }
-        if (event.key === 'Escape') {
-          event.preventDefault()
-          setTabMenu(null)
-        }
-      }}
-    >
-      <button ref={tabMenuFirst} type="button" role="menuitem" onClick={() => runTabMenu('open')}>
-        <span>{t('tabs.open')}</span>
-      </button>
-      <button type="button" role="menuitem" onClick={() => runTabMenu('rename')}>
-        <span>{t('tabs.rename')}</span>
-      </button>
-      <button type="button" role="menuitem" onClick={() => runTabMenu('pin')}>
-        <span>{t(data.pinnedIds?.includes(tabMenu.id) ? 'tabs.unpin' : 'tabs.pin')}</span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        disabled={moveTab(data, tabMenu.id, data.openIds.indexOf(tabMenu.id) - 1) === data}
-        onClick={() => runTabMenu('left')}
+  const tabContextMenu =
+    tabMenu &&
+    createPortal(
+      <div
+        className="tab-context-menu"
+        role="menu"
+        aria-label={t('tabs.menu')}
+        style={{ left: tabMenu.x, top: tabMenu.y }}
+        onKeyDown={(event) => {
+          const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')]
+          const index = buttons.indexOf(document.activeElement)
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault()
+            buttons[
+              (index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length
+            ]?.focus()
+          }
+          if (event.key === 'Home') {
+            event.preventDefault()
+            buttons[0]?.focus()
+          }
+          if (event.key === 'End') {
+            event.preventDefault()
+            buttons.at(-1)?.focus()
+          }
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            setTabMenu(null)
+          }
+        }}
       >
-        <span>{t('tabs.moveLeft')}</span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        disabled={moveTab(data, tabMenu.id, data.openIds.indexOf(tabMenu.id) + 1) === data}
-        onClick={() => runTabMenu('right')}
-      >
-        <span>{t('tabs.moveRight')}</span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        disabled={data.pinnedIds?.includes(tabMenu.id)}
-        onClick={() => runTabMenu('close')}
-      >
-        <span>{t('tabs.close')}</span>
-        <Shortcut keys="W" />
-      </button>
-      <div className="table-context-menu-separator" />
-      <button type="button" role="menuitem" onClick={() => runTabMenu('trash')}>
-        <span>{t('tabs.trash')}</span>
-      </button>
-    </div>
-  )
+        <button ref={tabMenuFirst} type="button" role="menuitem" onClick={() => runTabMenu('open')}>
+          <span>{t('tabs.open')}</span>
+        </button>
+        <button type="button" role="menuitem" onClick={() => runTabMenu('rename')}>
+          <span>{t('tabs.rename')}</span>
+        </button>
+        <button type="button" role="menuitem" onClick={() => runTabMenu('pin')}>
+          <span>{t(data.pinnedIds?.includes(tabMenu.id) ? 'tabs.unpin' : 'tabs.pin')}</span>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          disabled={moveTab(data, tabMenu.id, data.openIds.indexOf(tabMenu.id) - 1) === data}
+          onClick={() => runTabMenu('left')}
+        >
+          <span>{t('tabs.moveLeft')}</span>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          disabled={moveTab(data, tabMenu.id, data.openIds.indexOf(tabMenu.id) + 1) === data}
+          onClick={() => runTabMenu('right')}
+        >
+          <span>{t('tabs.moveRight')}</span>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          disabled={data.pinnedIds?.includes(tabMenu.id)}
+          onClick={() => runTabMenu('close')}
+        >
+          <span>{t('tabs.close')}</span>
+          <Shortcut keys="W" />
+        </button>
+        <div className="table-context-menu-separator" />
+        <button type="button" role="menuitem" onClick={() => runTabMenu('trash')}>
+          <span>{t('tabs.trash')}</span>
+        </button>
+      </div>,
+      document.body,
+    )
 
   return { tabStrip, tabContextMenu, openTabMenu }
 }
