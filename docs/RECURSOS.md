@@ -10,7 +10,7 @@ O ícone ☰, o nome do app e as abas ficam no cabeçalho. As abas rolam horizon
 
 **Padrão** mostra títulos, ênfase, citações, listas, links, tags `#tag` e código estilizados nas linhas fora do cursor; a linha em edição mostra a sintaxe Markdown original. **Código** mostra todo o Markdown sem estilos; **Leitura** mostra o documento sem cursor de edição. O seletor usa ícones, mostra o nome do modo ao passar o mouse e aceita setas do teclado para alternar.
 
-Ao selecionar texto no modo Padrão, uma barra discreta oferece negrito, itálico, código em linha, link, título H2, citação e lista. O botão de link pede o endereço na própria barra. Novas instalações começam com `Welcome.md`, uma nota de exemplo com esses estilos, listas, tabela, tags e bloco de código; notas já salvas continuam intactas.
+Ao selecionar texto no modo Padrão, uma barra discreta oferece negrito, itálico, código em linha, link, título H2, citação e lista. O botão de link pede o endereço na própria barra. Novas instalações começam com `Welcome.md`, a página de ajuda (veja abaixo); notas já salvas continuam intactas.
 
 A barra marca os estilos presentes na seleção; clicar em um botão ativo remove o estilo. Com o editor focado e o cursor de digitação em uma linha vazia, o botão `+` permite inserir títulos H2–H4, citação, listas, tabela e bloco de código. O menu principal mostra os atalhos das ações de criar e buscar notas.
 
@@ -24,7 +24,11 @@ A primeira linha é sempre o título H1 (`# Título`): o app adiciona e preserva
 
 Use Ctrl/Cmd+F ou “Find in note” no menu para localizar texto na nota atual. Enter avança entre ocorrências e Shift+Enter retorna.
 
-A Leitura usa `react-markdown` com `remark-gfm`: CommonMark, títulos H1–H6, listas aninhadas, tarefas, tabelas com alinhamento, texto riscado, links automáticos e de referência, notas de rodapé, imagens, separadores e blocos de código. HTML bruto não é executado. A edição sempre usa o texto original. Tarefas `- [ ]` e `- [x]` aparecem como checkboxes redondos e interativos na Leitura e nas linhas fora do cursor do modo Padrão.
+A Leitura usa `react-markdown` com `remark-gfm`: CommonMark, títulos H1–H6, listas aninhadas, tarefas, tabelas com alinhamento, texto riscado, links automáticos e de referência, notas de rodapé, imagens, separadores e blocos de código. HTML bruto não é executado. A edição sempre usa o texto original. Tarefas `- [ ]` e `- [x]` aparecem como checkboxes redondos e interativos na Leitura e nas linhas fora do cursor do modo Padrão. Tags `#tag` recebem destaque nos dois modos; citações aninhadas (`> > texto`), escapes com barra invertida (`\*`), quebras de linha com `\` no fim da linha e o alinhamento das colunas das tabelas (`:--`, `:-:`, `--:`) também aparecem renderizados no modo Padrão, fora da linha em edição.
+
+### Página de ajuda
+
+`Welcome.md` é uma nota comum que serve de ajuda e de exemplo: mostra títulos H1–H6, ênfase, riscado, código em linha, escapes, quebra de linha, links (com texto, automáticos, entre sinais, por referência e internos), tags, imagem, citações aninhadas, listas aninhadas, ordenadas e de tarefas, tabela com alinhamento, blocos de código com realce, separador e nota de rodapé, e explica os atalhos principais. A imagem vem de uma URL HTTPS do repositório do projeto, então só aparece com conexão. Ela pode ser excluída sem perda: **Recriar página de ajuda** (paleta de comandos, Ctrl+K, ou menu → Aplicativo) cria uma cópia nova com o texto original, no idioma atual da interface. Se já existir uma nota com esse nome, a cópia recebe um sufixo (`Welcome (2).md`) e a existente não é alterada.
 
 ### Importar notas arrastando
 

@@ -2,6 +2,7 @@ import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
 
+export const TAG = /(?<![\p{L}\p{N}_])#[\p{L}\p{N}_/-]+/gu
 const parser = unified().use(remarkParse).use(remarkGfm)
 const cache = new Map()
 export function markdownTree(text) {
@@ -101,6 +102,37 @@ export function remarkWikiLinks() {
           from = link.end - node.position.start.offset
         }
         if (from < raw.length) pieces.push({ type: 'text', value: raw.slice(from) })
+        return pieces
+      })
+    }
+    visit(tree)
+  }
+}
+/** Wraps `#tag` text in a span so the reading view styles it like the live editor does. */
+export function remarkTags() {
+  return (tree) => {
+    function visit(parent) {
+      if (!parent.children || ['link', 'linkReference', 'code', 'inlineCode'].includes(parent.type))
+        return
+      parent.children = parent.children.flatMap((node) => {
+        if (node.type !== 'text') {
+          visit(node)
+          return [node]
+        }
+        const pieces = []
+        let from = 0
+        for (const match of node.value.matchAll(TAG)) {
+          if (match.index > from)
+            pieces.push({ type: 'text', value: node.value.slice(from, match.index) })
+          pieces.push({
+            type: 'emphasis',
+            data: { hName: 'span', hProperties: { className: ['markdown-tag'] } },
+            children: [{ type: 'text', value: match[0] }],
+          })
+          from = match.index + match[0].length
+        }
+        if (!pieces.length) return [node]
+        if (from < node.value.length) pieces.push({ type: 'text', value: node.value.slice(from) })
         return pieces
       })
     }

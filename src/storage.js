@@ -1,4 +1,5 @@
 import { DEFAULT_LANGUAGE, isLanguage } from './i18n.js'
+import { WELCOME_NAME, welcomeBody } from './welcome.js'
 
 /** Editor text size in px. 16 keeps a page dense, closer to a plain-text editor. */
 export const FONT_SIZE = { min: 12, max: 24, default: 16 }
@@ -13,41 +14,8 @@ export function newDocument() {
     notes: [
       {
         id: 'welcome',
-        name: 'Welcome.md',
-        body: [
-          '# Welcome',
-          '',
-          'Suas alterações são salvas automaticamente; use Export .md para guardar uma cópia.',
-          '',
-          '## Texto e links',
-          '',
-          'Você pode escrever em **negrito**, *itálico* e `código em linha`. Visite [Markdown Guide](https://www.markdownguide.org/) para conhecer mais.',
-          '',
-          '> Uma citação destaca uma ideia importante sem interromper o fluxo.',
-          '',
-          '## Listas',
-          '',
-          '- Organize ideias em tópicos',
-          '- Use #tags para encontrar assuntos',
-          '- Experimente selecionar texto e clicar na barra',
-          '',
-          '1. Escreva uma nota',
-          '2. Formate o texto',
-          '3. Exporte quando quiser',
-          '',
-          '## Tabela',
-          '',
-          '| Recurso | Como usar |',
-          '| --- | --- |',
-          '| Barra de texto | Selecione palavras |',
-          '| Inserir bloco | Clique em + numa linha vazia |',
-          '',
-          '## Bloco de código',
-          '',
-          '```js',
-          'const nota = "Sua próxima ideia começa aqui"',
-          '```',
-        ].join('\n'),
+        name: WELCOME_NAME,
+        body: welcomeBody(DEFAULT_LANGUAGE),
         revision: 0,
       },
     ],

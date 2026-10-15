@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm'
 import { t } from './i18n.js'
 import { codeTokens, codeLanguageName } from './syntax-highlight.js'
 import { Copy } from 'lucide-react'
-import { remarkWikiLinks, findNote } from './markdown-model.js'
+import { remarkTags, remarkWikiLinks, findNote } from './markdown-model.js'
 import { resolveImage } from './images.js'
 
 function highlightedCode(tokens) {
@@ -150,7 +150,7 @@ export function Markdown({ text, onCopy, onChange, onOpenWiki, notes }) {
     <MarkdownContext.Provider value={{ text, onCopy, onChange, onOpenWiki, notes }}>
       <article className="markdown">
         <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkWikiLinks]}
+          remarkPlugins={[remarkGfm, remarkWikiLinks, remarkTags]}
           urlTransform={(url, key) =>
             key === 'src' && /^data:image\/(png|jpeg|gif|webp|avif|bmp);base64,/i.test(url)
               ? url

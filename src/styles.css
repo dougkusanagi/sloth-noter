@@ -283,6 +283,11 @@ textarea:focus-visible {
   padding-left: 1em;
   color: var(--muted);
 }
+.visual-editor .cm-md-quote-nested {
+  --md-prefix-width: 4.02em;
+  padding-left: 2em;
+  background: linear-gradient(var(--muted), var(--muted)) 1em 0 / 2px 100% no-repeat;
+}
 .visual-editor .cm-md-bullet {
   --md-prefix-width: 0px;
   padding-left: 1.5em;
@@ -425,6 +430,12 @@ textarea:focus-visible {
   border-bottom: 1px solid var(--soft);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+.visual-editor .cm-md-table-cell[data-align='center'] {
+  text-align: center;
+}
+.visual-editor .cm-md-table-cell[data-align='right'] {
+  text-align: right;
 }
 .visual-editor .cm-md-table-cell-last {
   border-right: 0;
@@ -839,7 +850,8 @@ textarea:focus-visible {
 .visual-editor .cm-md-h5,
 .visual-editor .cm-md-h6 {
   font-weight: 600;
-  margin-top: 16px;
+  /* Padding, not margin: CodeMirror does not measure line margins, so clicks below would land on the wrong line. */
+  padding-top: 16px;
 }
 .visual-editor .cm-md-rule {
   color: var(--muted);

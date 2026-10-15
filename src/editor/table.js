@@ -154,7 +154,7 @@ export class TableColumnControlsWidget extends WidgetType {
   }
 }
 
-export function tableCellAttributes(cell, header, active, lineFrom, columnCount) {
+export function tableCellAttributes(cell, header, active, lineFrom, columnCount, align = null) {
   const edge = `${cell.index === 0 ? ' cm-md-table-cell-first' : ''}${cell.index === columnCount - 1 ? ' cm-md-table-cell-last' : ''}`
   return {
     class: `cm-md-table-cell${edge}${active ? ' cm-md-table-cell-active' : ''}`,
@@ -162,6 +162,7 @@ export function tableCellAttributes(cell, header, active, lineFrom, columnCount)
     'data-cell-from': String(lineFrom + cell.from),
     'data-cell-to': String(lineFrom + cell.to),
     'data-cell-empty': cell.to === cell.from ? 'true' : 'false',
+    ...(align ? { 'data-align': align } : {}),
     title: t('table.cellHint'),
   }
 }
@@ -252,7 +253,14 @@ export function tableDecorations(ranges, view, line, number, table) {
     if (cell.to > cell.from) {
       ranges.push(
         Decoration.mark({
-          attributes: tableCellAttributes(cell, row === 0, active, line.from, table.columnCount),
+          attributes: tableCellAttributes(
+            cell,
+            row === 0,
+            active,
+            line.from,
+            table.columnCount,
+            table.group.alignments[column],
+          ),
         }).range(line.from + cell.from, line.from + cell.rawTo),
       )
       addInlineRangeDecorations(ranges, line, cell.from, cell.to, false)

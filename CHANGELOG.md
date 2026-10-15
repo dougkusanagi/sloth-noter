@@ -6,6 +6,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Adicionado
 
+- `Welcome.md` virou uma página de ajuda e exemplos (títulos, estilos, links, tags, imagem, citações, listas, tarefas, tabela, código, notas de rodapé e dicas). Pode ser excluída sem perda: o comando **Recriar página de ajuda** (Ctrl+K ou menu → Aplicativo) cria outra, no idioma da interface.
+- Testes de todos os formatos Markdown nos modos Padrão e Leitura (E2E e unidade) e da página de ajuda.
 - Janela de Configurações (Ctrl+,) com tema, idioma, tamanho do texto, abas, pasta de notas, backup e atalhos.
 - Paleta de comandos (Ctrl+K) com todas as ações do app, separada da busca de notas (Ctrl+P). Substitui a busca dentro do menu.
 - Alertas em toasts empilháveis (sonner): erros de gravação e de pasta com ações, importação e cópia de código.
@@ -16,6 +18,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Corrigido
 
+- Modo Padrão: escapes (`\*`) e quebras de linha com `\` mostravam a barra invertida; citações vazias (`>`) e aninhadas (`> >`) apareciam como texto; tabelas ignoravam o alinhamento das colunas.
+- Modo Padrão: clicar abaixo de um título H5/H6 posicionava o cursor uma linha adiante (margem de linha não medida pelo CodeMirror).
+- Leitura: tags `#tag` não eram destacadas.
 - Falhas de disco no desktop apareciam como "Storage is unavailable"; agora mostram o erro real e, para pasta ausente, permissão negada, somente leitura e disco cheio, uma mensagem própria.
 - Contraste de tags e realce de código no tema claro; papéis ARIA de tabela inválidos dentro do editor.
 

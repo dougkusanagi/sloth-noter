@@ -43,6 +43,14 @@ export function isTableDivider(line) {
   return Boolean(cells?.length && cells.every((cell) => /^:?-+:?$/.test(cell)))
 }
 
+export function tableAlignments(divider) {
+  return divider.cells.map(({ value }) => {
+    const left = value.startsWith(':'),
+      right = value.endsWith(':')
+    return left && right ? 'center' : right ? 'right' : left ? 'left' : null
+  })
+}
+
 export function tableGroupDetails(lines, index) {
   const header = parseTableLine(lines[index] ?? '')
   const divider = parseTableLine(lines[index + 1] ?? '')
@@ -60,6 +68,7 @@ export function tableGroupDetails(lines, index) {
     end,
     header,
     divider,
+    alignments: tableAlignments(divider),
     rows,
     lines: lines.slice(index, end),
     columnCount: Math.max(header.cells.length, ...rows.map((row) => row.cells.length)),
