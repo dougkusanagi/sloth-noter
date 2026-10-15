@@ -6,6 +6,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Adicionado
 
+- Tab e Shift+Tab em listas criam e desfazem sublistas (quatro espaços), com um item ou vários selecionados, nos modos Padrão e Código; itens aninhados numerados agora aparecem recuados no modo Padrão.
+- Seções recolhíveis: seta ao lado de cada título H2–H6 (Padrão e Leitura) e comandos “Recolher/Expandir todas as seções” na paleta.
+- Recuo visual do conteúdo sob cada título, um nível por seção, desligável em Configurações → Editor.
 - `Welcome.md` virou uma página de ajuda e exemplos (títulos, estilos, links, tags, imagem, citações, listas, tarefas, tabela, código, notas de rodapé e dicas). Pode ser excluída sem perda: o comando **Recriar página de ajuda** (Ctrl+K ou menu → Aplicativo) cria outra, no idioma da interface.
 - Testes de todos os formatos Markdown nos modos Padrão e Leitura (E2E e unidade) e da página de ajuda.
 - Janela de Configurações (Ctrl+,) com tema, idioma, tamanho do texto, abas, pasta de notas, backup e atalhos.

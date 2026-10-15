@@ -24,6 +24,8 @@ import {
   Settings,
   Command,
   LifeBuoy,
+  ChevronsDownUp,
+  ChevronsUpDown,
 } from 'lucide-react'
 import { t, LANGUAGES } from './i18n.js'
 
@@ -32,7 +34,8 @@ import { t, LANGUAGES } from './i18n.js'
  * palette (Ctrl+K) lists them all, so rarely used actions stay one search away.
  * Entries: [id, label key or text, icon, shortcut, disabled, inMenu].
  */
-export function buildCommands({ active, activePinned, prefs, trashCount, desktop }) {
+export function buildCommands({ active, activePinned, prefs, trashCount, desktop, mode }) {
+  const noFold = !active || mode === 'source'
   const language = LANGUAGES[prefs.language] ?? LANGUAGES['pt-BR']
   return [
     [
@@ -74,6 +77,8 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
         ['visual', 'mode.visual', Eye, 'Alt+1', false, true],
         ['source', 'mode.source', Code, 'Alt+2', false, true],
         ['reading', 'mode.reading', BookOpen, 'Alt+3', false, true],
+        ['foldAll', 'menu.foldAll', ChevronsDownUp, undefined, noFold],
+        ['unfoldAll', 'menu.unfoldAll', ChevronsUpDown, undefined, noFold],
         ['tabs', prefs.tabsVisible ? 'menu.tabsHide' : 'menu.tabsShow', PanelsTopLeft],
         ['theme', t('menu.theme', { theme: t(`theme.${prefs.theme}`) }), SunMoon],
         ['smaller', 'menu.smaller', Minus, '-'],

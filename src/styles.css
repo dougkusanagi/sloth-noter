@@ -248,6 +248,19 @@ textarea:focus-visible {
 }
 .visual-editor .cm-line {
   padding: 0;
+  /* Section indent: purely visual, the Markdown text is untouched. */
+  margin-left: calc(var(--md-section, 0) * var(--section-step, 0px));
+}
+.app.section-indent {
+  --section-step: calc(var(--editor-size) * 1.5);
+}
+@media (max-width: 600px) {
+  .app.section-indent {
+    --section-step: calc(var(--editor-size) * 0.75);
+  }
+}
+.markdown .md-section {
+  margin-left: var(--section-step, 0px);
 }
 .visual-editor .cm-md-prefix:not(.cm-md-editing),
 .visual-editor .cm-md-syntax:not(.cm-md-editing) {
@@ -327,7 +340,7 @@ textarea:focus-visible {
   position: relative;
   display: grid;
   grid-template-columns: repeat(var(--table-columns), minmax(0, 1fr));
-  width: 100%;
+  width: calc(100% - var(--md-section, 0) * var(--section-step, 0px));
   background: var(--paper);
   font:
     0.9em/1.5 Georgia,
@@ -923,4 +936,86 @@ textarea:focus-visible {
 .image-insert button:disabled {
   opacity: 0.55;
   cursor: default;
+}
+
+/* Collapsible sections */
+.visual-editor .cm-md-h2,
+.visual-editor .cm-md-h3,
+.visual-editor .cm-md-h4,
+.visual-editor .cm-md-h5,
+.visual-editor .cm-md-h6,
+.markdown :is(h2, h3, h4, h5, h6) {
+  position: relative;
+}
+.cm-fold-toggle,
+.fold-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4em;
+  height: 1.4em;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.cm-fold-toggle,
+.fold-toggle {
+  position: absolute;
+  left: -1.7em;
+  top: 50%;
+  translate: 0 -50%;
+}
+.cm-fold-toggle svg,
+.fold-toggle svg {
+  width: 1em;
+  height: 1em;
+  transition: rotate 0.12s;
+}
+.cm-fold-toggle.folded svg,
+.fold-toggle[aria-expanded='false'] svg {
+  rotate: -90deg;
+}
+.cm-md-h2:hover .cm-fold-toggle,
+.cm-md-h3:hover .cm-fold-toggle,
+.cm-md-h4:hover .cm-fold-toggle,
+.cm-md-h5:hover .cm-fold-toggle,
+.cm-md-h6:hover .cm-fold-toggle,
+.markdown :is(h2, h3, h4, h5, h6):hover .fold-toggle,
+.cm-fold-toggle:focus-visible,
+.fold-toggle:focus-visible,
+.cm-fold-toggle.folded,
+.fold-toggle[aria-expanded='false'] {
+  opacity: 1;
+}
+.cm-fold-toggle:hover,
+.fold-toggle:hover {
+  background: var(--soft);
+  color: var(--ink, inherit);
+}
+@media (hover: none) {
+  .cm-fold-toggle,
+  .fold-toggle {
+    opacity: 0.6;
+  }
+}
+.cm-folded-pill {
+  margin-left: 0.5em;
+  padding: 0 0.6em;
+  border: 1px solid var(--soft);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--muted);
+  font: 0.75em/1.7 var(--mono);
+  cursor: pointer;
+}
+.cm-folded-pill:hover {
+  color: var(--accent-ink);
+}
+.markdown .md-section[data-collapsed] > :not(:first-child) {
+  display: none;
 }

@@ -16,7 +16,7 @@ A barra marca os estilos presentes na seleção; clicar em um botão ativo remov
 
 No modo Padrão, tabelas aparecem como células até o cursor entrar nelas. Entrar em um bloco de código revela as duas cercas Markdown para edição. Blocos com linguagem conhecida recebem realce de sintaxe também na Leitura. Trechos como `normal *itálico*` são Markdown válido; estilos separados e aninhados são renderizados fora da linha ativa.
 
-Enter no fim de uma lista continua o marcador ou a numeração; tarefas concluídas continuam com uma nova tarefa desmarcada; Enter em um item vazio encerra a lista. Isso também funciona para citações e no modo Código. No modo Padrão, as setas param nas cercas de um bloco de código antes de entrar no conteúdo. Clicar em uma célula da tabela revela o Markdown para editá-la. Links renderizados mostram a dica de abertura e abrem com Ctrl/Cmd + clique.
+Tab em um item de lista cria uma sublista (recuo de quatro espaços, no máximo um nível abaixo do item anterior) e Shift+Tab volta um nível; com vários itens selecionados, todos se movem juntos, nos modos Padrão e Código. O primeiro item de uma lista não recua, e Shift+Tab num item sem recuo continua voltando ao título. Enter no fim de uma lista continua o marcador ou a numeração; tarefas concluídas continuam com uma nova tarefa desmarcada; Enter em um item vazio encerra a lista. Isso também funciona para citações e no modo Código. No modo Padrão, as setas param nas cercas de um bloco de código antes de entrar no conteúdo. Clicar em uma célula da tabela revela o Markdown para editá-la. Links renderizados mostram a dica de abertura e abrem com Ctrl/Cmd + clique.
 
 Nos modos Padrão e Código, digitar `(`, `[`, `{`, aspas simples, aspas duplas ou crase com texto selecionado envolve a seleção com o par correspondente. O texto permanece selecionado dentro dos delimitadores.
 
@@ -25,6 +25,12 @@ A primeira linha é sempre o título H1 (`# Título`): o app adiciona e preserva
 Use Ctrl/Cmd+F ou “Find in note” no menu para localizar texto na nota atual. Enter avança entre ocorrências e Shift+Enter retorna.
 
 A Leitura usa `react-markdown` com `remark-gfm`: CommonMark, títulos H1–H6, listas aninhadas, tarefas, tabelas com alinhamento, texto riscado, links automáticos e de referência, notas de rodapé, imagens, separadores e blocos de código. HTML bruto não é executado. A edição sempre usa o texto original. Tarefas `- [ ]` e `- [x]` aparecem como checkboxes redondos e interativos na Leitura e nas linhas fora do cursor do modo Padrão. Tags `#tag` recebem destaque nos dois modos; citações aninhadas (`> > texto`), escapes com barra invertida (`\*`), quebras de linha com `\` no fim da linha e o alinhamento das colunas das tabelas (`:--`, `:-:`, `--:`) também aparecem renderizados no modo Padrão, fora da linha em edição.
+
+### Seções
+
+Os títulos H2–H6 organizam a nota em seções. Passe o mouse sobre um título (ou foque a seta com o teclado) e clique na seta para recolher a seção e suas subseções; no modo Padrão fica uma etiqueta “⋯ N linhas ocultas” que também expande. Mover o cursor ou a seleção para dentro do trecho recolhido o revela. **Recolher todas as seções** e **Expandir todas as seções** estão na paleta de comandos (Ctrl+K), nos modos Padrão e Leitura. Recolher é só da tela: o Markdown não muda, e na Leitura o estado é lembrado por nota enquanto o app está aberto.
+
+O texto sob cada título também aparece recuado, um nível por seção (H2 = 1, H3 = 2, …; o título H1 da nota não recua). O recuo é visual, não grava espaços nem tabs no arquivo, e pode ser desligado em **Configurações → Editor → Recuar seções**.
 
 ### Página de ajuda
 

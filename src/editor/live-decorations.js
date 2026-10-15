@@ -5,6 +5,8 @@ import { resolveImage } from '../images.js'
 import { t } from '../i18n.js'
 import { Decoration, ViewPlugin, WidgetType } from '@codemirror/view'
 import { classifyLine, inlineSyntax } from '../live-markdown.js'
+import { headingSections, lineLevels } from '../sections.js'
+import { FoldToggleWidget, foldField, foldRange, isFolded } from './folding.js'
 import { codeTokens, syntaxRanges } from '../syntax-highlight.js'
 
 class TaskWidget extends WidgetType {
@@ -71,8 +73,8 @@ export function lineAttributes(line, shape, active) {
   if (reserve) classes.push('cm-md-syntax')
   const attributes = { class: classes.join(' ') }
   if (reserve) attributes.style = `--md-syntax-reserve:${reserve}ch`
-  if (/^\s+[-*+]/.test(line.text))
-    attributes.style = `${attributes.style ?? ''};margin-left:${line.text.match(/^\s*/)[0].length}ch`
+  if (/^\s+(?:[-*+]|\d+[.)] )/.test(line.text))
+    attributes.style = `${attributes.style ?? ''};margin-left:calc(var(--md-section, 0) * var(--section-step, 0px) + ${line.text.match(/^\s*/)[0].length}ch)`
   return attributes
 }
 
@@ -87,7 +89,14 @@ export function decorationsFor(view) {
     selectedLines.push({ first, last })
     for (let number = first; number <= last; number++) editing.add(number)
   }
-  const tree = markdownTree(doc.toString())
+  const text = doc.toString()
+  const tree = markdownTree(text)
+  const levels = lineLevels(text, tree)
+  const foldable = new Map()
+  for (const heading of headingSections(text, tree)) {
+    const range = heading.level > 0 && foldRange(view.state, heading)
+    if (range) foldable.set(heading.line, isFolded(view.state, range.from))
+  }
   const definitions = []
   walk(tree, (node) => {
     if (node.type === 'definition' || node.type === 'footnoteDefinition')
@@ -177,6 +186,12 @@ export function decorationsFor(view) {
     const first = doc.lineAt(visible.from).number,
       last = doc.lineAt(visible.to).number
     for (let number = first; number <= last; number++) {
+      if (levels[number - 1])
+        ranges.push(
+          Decoration.line({ attributes: { style: `--md-section:${levels[number - 1]}` } }).range(
+            doc.line(number).from,
+          ),
+        )
       const line = { ...doc.line(number), definitions: definitionText },
         shape = blockShapes.get(number) ?? classifyLine(line.text, false)
       if (shape.kind === 'code') {
@@ -227,6 +242,13 @@ export function decorationsFor(view) {
         ranges.push(
           Decoration.replace({}).range(breakMarks.get(number), breakMarks.get(number) + 1),
         )
+      if (foldable.has(number))
+        ranges.push(
+          Decoration.widget({
+            widget: new FoldToggleWidget(number, foldable.get(number)),
+            side: -2,
+          }).range(line.from),
+        )
       const attrs = lineAttributes(line, shape, active)
       const block = codeBlocks.get(number)
       if (block) {
@@ -269,7 +291,12 @@ export const liveMarkdown = ViewPlugin.fromClass(
       this.decorations = decorationsFor(view)
     }
     update(update) {
-      if (update.docChanged || update.selectionSet || update.viewportChanged)
+      if (
+        update.docChanged ||
+        update.selectionSet ||
+        update.viewportChanged ||
+        update.startState.field(foldField) !== update.state.field(foldField)
+      )
         this.decorations = decorationsFor(update.view)
     }
   },

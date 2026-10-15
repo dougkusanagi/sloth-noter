@@ -146,6 +146,17 @@ export function SettingsDialog({
                   {t('settings.fontReset')}
                 </button>
               </Row>
+              <Row
+                id="settings-section-indent"
+                title={t('settings.sectionIndent')}
+                hint={t('settings.sectionIndentHint')}
+              >
+                <Switch
+                  id="settings-section-indent"
+                  checked={prefs.sectionIndent !== false}
+                  onChange={(sectionIndent) => onChange({ sectionIndent })}
+                />
+              </Row>
               <div className="setting-sample" style={{ '--editor-size': `${prefs.fontSize}px` }}>
                 <strong>{t('settings.sampleTitle')}</strong>
                 <p>{t('settings.sample')}</p>

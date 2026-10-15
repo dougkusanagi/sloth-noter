@@ -1,6 +1,7 @@
 import { EditorSelection } from '@codemirror/state'
 import { wrapSelection } from '../wrap-selection.js'
 import { continueBlock } from '../continue-block.js'
+import { listIndentChanges } from '../list-indent.js'
 
 export function wrapSelectedText(event, view) {
   if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return false
@@ -56,5 +57,17 @@ export function navigateToFence(view, direction) {
   const target = view.state.doc.line(next)
   if (!target.text.startsWith('```')) return false
   view.dispatch({ selection: { anchor: target.from }, scrollIntoView: true })
+  return true
+}
+
+/** Tab / Shift+Tab on list items. Swallows the key on a list so focus stays in the editor. */
+export function indentList(view, outdent = false) {
+  const { from, to } = view.state.selection.main
+  if (view.state.selection.ranges.length !== 1) return false
+  const changes = listIndentChanges(view.state.doc.toString(), from, to, outdent)
+  // At the margin, Shift+Tab keeps its other job: moving back to the title.
+  if (!changes || (outdent && !changes.length)) return false
+  if (changes.length)
+    view.dispatch({ changes, userEvent: outdent ? 'delete.dedent' : 'input.indent' })
   return true
 }

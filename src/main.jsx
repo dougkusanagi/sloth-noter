@@ -54,7 +54,10 @@ import {
 import { setLanguage, t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
 import { welcomeNote } from './welcome.js'
+import { foldableLines } from './sections.js'
+import { foldAll, unfoldAll } from './editor/folding.js'
 import { continueBlock } from './continue-block.js'
+import { applyChanges, listIndentChanges, mapPosition } from './list-indent.js'
 import { restoreWindowState } from './window-state.js'
 import { protectPendingSaves } from './save-lifecycle.js'
 import {
@@ -184,6 +187,7 @@ function Workspace({ persistence, loaded }) {
   const findInput = useRef(null)
   const editorRef = useRef(null)
   const visualRef = useRef(null)
+  const [readingFolds, setReadingFolds] = useState({ id: null, lines: new Set() })
   const closedTabs = useRef([])
   const clipboardBusy = useRef(false)
   const [middleClickPasteGuard] = useState(createMiddleClickPasteGuard)
@@ -390,6 +394,25 @@ function Workspace({ persistence, loaded }) {
   function wrapSourceSelection(event) {
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return
     const field = event.currentTarget
+    if (event.key === 'Tab') {
+      const changes = listIndentChanges(
+        field.value,
+        field.selectionStart,
+        field.selectionEnd,
+        event.shiftKey,
+      )
+      if (changes && (changes.length || !event.shiftKey)) {
+        event.preventDefault()
+        if (changes.length) {
+          const start = mapPosition(field.selectionStart, changes)
+          const end = mapPosition(field.selectionEnd, changes)
+          field.value = applyChanges(field.value, changes)
+          field.setSelectionRange(start, end)
+          updateBody(field.value)
+        }
+        return
+      }
+    }
     if (event.key === 'Tab') {
       const target = titleNavigationTarget(field.value, field.selectionStart, event.shiftKey)
       if (target !== null) {
@@ -1171,6 +1194,20 @@ function Workspace({ persistence, loaded }) {
     return () => document.removeEventListener('keydown', onKey, true)
   })
 
+  const folds = readingFolds.id === active?.id ? readingFolds.lines : undefined
+  function setFolds(lines) {
+    setReadingFolds({ id: active?.id ?? null, lines })
+  }
+  function toggleReadingFold(line) {
+    const lines = new Set(folds)
+    if (!lines.delete(line)) lines.add(line)
+    setFolds(lines)
+  }
+  function foldSections(collapse) {
+    if (mode === 'reading') setFolds(new Set(collapse && active ? foldableLines(active.body) : []))
+    else if (visualRef.current) (collapse ? foldAll : unfoldAll)(visualRef.current)
+  }
+
   const menuActions = {
     newNote: () => runMenu(() => createNote(), false),
     findNote: () => runMenu(openPalette, false),
@@ -1213,6 +1250,8 @@ function Workspace({ persistence, loaded }) {
     language: () =>
       runMenu(() => updatePrefs({ language: prefs.language === 'en' ? 'pt-BR' : 'en' })),
     shortcuts: () => runMenu(() => setShortcutsOpen(true), false),
+    foldAll: () => active && runMenu(() => foldSections(true), false),
+    unfoldAll: () => active && runMenu(() => foldSections(false), false),
     welcome: () =>
       runMenu(() => {
         const welcome = welcomeNote(prefs.language)
@@ -1227,7 +1266,7 @@ function Workspace({ persistence, loaded }) {
   }
   return (
     <main
-      className="app"
+      className={`app${prefs.sectionIndent === false ? '' : ' section-indent'}`}
       style={{ '--editor-size': `${prefs.fontSize}px` }}
       onDragOver={(event) => {
         if (event.dataTransfer.types.includes('Files')) event.preventDefault()
@@ -1486,6 +1525,8 @@ function Workspace({ persistence, loaded }) {
                   onChange={updateBody}
                   onOpenWiki={openWiki}
                   notes={data.notes}
+                  folds={folds}
+                  onToggleFold={toggleReadingFold}
                 />
               </div>
             ) : mode === 'source' ? (
@@ -1544,6 +1585,7 @@ function Workspace({ persistence, loaded }) {
             prefs,
             trashCount: data.trash.length,
             desktop: Boolean(persistence.invoke),
+            mode,
           })
             .flatMap(([, entries]) => entries)
             .filter(([id]) => id !== 'commands')
