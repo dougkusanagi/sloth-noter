@@ -17,10 +17,19 @@ test.beforeEach(async ({ page }) => {
       window.nativeClipboard = { kind: 'image', bytes: png }
       window.nativeClipboardReads = 0
       window.nativeImages = {}
+      window.nativeWindowActions = []
       window.__TAURI_INTERNALS__ = {
         metadata: { currentWindow: { label: 'main' }, currentWebview: { label: 'main' } },
         transformCallback: () => 1,
         invoke: async (command, args) => {
+          if (
+            ['minimize', 'toggle_maximize', 'close'].some(
+              (action) => command === `plugin:window|${action}`,
+            )
+          ) {
+            window.nativeWindowActions.push(command)
+            return null
+          }
           if (command === 'read_state') return JSON.stringify(window.nativeDocument)
           if (command === 'write_state') {
             window.nativeDocument = JSON.parse(args.contents)
@@ -56,6 +65,23 @@ test.beforeEach(async ({ page }) => {
   )
   await page.goto('/')
   await expect(page.locator('.cm-content')).toBeVisible()
+})
+
+test('desktop clicks invoke window actions only through their own controls', async ({ page }) => {
+  await page.locator('.cm-content').click()
+  await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Aparência do texto', exact: true }).click()
+  await page.keyboard.press('Escape')
+  expect(await page.evaluate(() => window.nativeWindowActions)).toEqual([])
+  await page.getByRole('button', { name: 'Minimizar', exact: true }).click()
+  await page.getByRole('button', { name: 'Maximizar ou restaurar', exact: true }).click()
+  await page.getByRole('button', { name: 'Fechar janela', exact: true }).click()
+  expect(await page.evaluate(() => window.nativeWindowActions)).toEqual([
+    'plugin:window|minimize',
+    'plugin:window|toggle_maximize',
+    'plugin:window|close',
+  ])
 })
 
 for (const mode of ['visual', 'source']) {

@@ -98,7 +98,7 @@ export async function replaceAppImage(source, target) {
   }
 }
 
-async function main() {
+export async function main() {
   if (process.platform !== 'linux') throw new Error('Este comando atualiza AppImages no Linux.')
   const args = process.argv.slice(2)
   for (const arg of args)

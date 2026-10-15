@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { t } from './i18n.js'
@@ -7,6 +7,8 @@ import { ChevronDown, Copy } from 'lucide-react'
 import { remarkTags, remarkWikiLinks, findNote } from './markdown-model.js'
 import { remarkSections, remarkSourceLayout } from './sections.js'
 import { resolveImage } from './images.js'
+import { sectionProgress } from './tasks.js'
+import { CIRCUMFERENCE, RADIUS } from './progress-badge.js'
 
 function highlightedCode(tokens) {
   return tokens.map((token, index) =>
@@ -173,10 +175,34 @@ function Section({ node, children, className, ...props }) {
     </section>
   )
 }
+function ProgressBadge({ done, total }) {
+  return (
+    <span
+      className="section-progress"
+      data-complete={done === total ? '' : undefined}
+      role="img"
+      aria-label={t('progress.label', { done, total })}
+    >
+      <svg viewBox="0 0 14 14" aria-hidden="true">
+        <circle className="section-progress-track" cx="7" cy="7" r={RADIUS} />
+        <circle
+          className="section-progress-fill"
+          cx="7"
+          cy="7"
+          r={RADIUS}
+          strokeDasharray={CIRCUMFERENCE}
+          strokeDashoffset={CIRCUMFERENCE * (1 - done / total)}
+        />
+      </svg>
+      <span className="section-progress-count" data-count={`${done}/${total}`} />
+    </span>
+  )
+}
 function Heading({ node, children, ...props }) {
   const Tag = node.tagName
   const section = useContext(SectionContext)
-  const { onToggleFold } = useContext(MarkdownContext)
+  const { onToggleFold, progress } = useContext(MarkdownContext)
+  const tasks = section && progress.get(section.line)
   return (
     <Tag {...props}>
       {section?.hasContent && onToggleFold && (
@@ -191,6 +217,7 @@ function Heading({ node, children, ...props }) {
         </button>
       )}
       {children}
+      {tasks && <ProgressBadge {...tasks} />}
     </Tag>
   )
 }
@@ -208,9 +235,10 @@ const components = {
   h6: Heading,
 }
 export function Markdown({ text, onCopy, onChange, onOpenWiki, notes, folds, onToggleFold }) {
+  const progress = useMemo(() => sectionProgress(text), [text])
   return (
     <MarkdownContext.Provider
-      value={{ text, onCopy, onChange, onOpenWiki, notes, folds, onToggleFold }}
+      value={{ text, onCopy, onChange, onOpenWiki, notes, folds, onToggleFold, progress }}
     >
       <article className="markdown">
         <ReactMarkdown

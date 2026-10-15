@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test'
 
-test('main menu adjusts and restores text without closing', async ({ page }) => {
+test('the appearance menu adjusts and restores text without closing', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('.cm-content')).toBeVisible()
   await expect(page.locator('.save-status')).toBeHidden()
-  await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
+  await page.getByRole('button', { name: 'Aparência do texto', exact: true }).click()
   const group = page.getByRole('group', { name: 'Tamanho do texto', exact: true })
   await group.getByRole('menuitem', { name: /Aumentar/ }).click()
   await expect(group.locator('output')).toHaveText('17px')
@@ -15,7 +15,7 @@ test('main menu adjusts and restores text without closing', async ({ page }) => 
   await expect(width.locator('output')).toHaveText('740px')
   await width.getByRole('menuitem', { name: /Restaurar/ }).click()
   await expect(width.locator('output')).toHaveText('760px')
-  await page.locator('.menu-adjustments').scrollIntoViewIfNeeded()
+  await expect(page.locator('.main-menu')).toHaveCount(0)
   await page.screenshot({ path: 'test-results/text-layout-menu.png' })
 })
 
@@ -85,8 +85,9 @@ test('sidebar layout updates rails and insert control, and short notes do not sc
   ).toBe(true)
   const mode = await bounds('.mode-switch')
   const status = await bounds('.document-info')
-  expect(status.top - mode.bottom).toBeGreaterThanOrEqual(12)
-  expect(Math.abs(mode.right - (1400 - 16))).toBeLessThan(2)
+  expect(mode.top).toBeGreaterThanOrEqual(status.top)
+  expect(mode.bottom).toBeLessThanOrEqual(status.bottom)
+  expect(Math.abs(mode.right - (1400 - 8))).toBeLessThan(2)
   await page.screenshot({ path: 'test-results/layout-refinements.png' })
 })
 
@@ -115,14 +116,14 @@ test('display controls expose working shortcuts and persistent system/light/dark
   await expect(page.locator('.cm-content')).toBeVisible()
   await expect(page.locator('.app-header .save-status')).toHaveCount(0)
   await expect(page.locator('.document-info .save-status')).toHaveCount(1)
-  await expect(page.locator('.mode-switch')).toHaveCSS('box-shadow', 'none')
-  await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
+  await expect(page.locator('.document-info .mode-switch')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Aparência do texto', exact: true }).click()
   const theme = page.getByRole('group', { name: 'Tema', exact: true })
   await theme.getByRole('menuitemradio', { name: 'Claro', exact: true }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
   expect(
-    await page.locator('.main-menu').evaluate((el) => getComputedStyle(el).backgroundColor),
-  ).not.toBe('rgb(255, 255, 255)')
+    await page.locator('.display-menu').evaluate((el) => getComputedStyle(el).backgroundImage),
+  ).not.toBe('none')
   await theme.getByRole('menuitemradio', { name: 'Escuro', exact: true }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await theme.getByRole('menuitemradio', { name: 'Sistema', exact: true }).click()
@@ -153,7 +154,7 @@ test('display controls expose working shortcuts and persistent system/light/dark
   await expect(page.locator('.app')).toHaveCSS('--editor-size', '17px')
   await page.reload()
   await expect(page.locator('.cm-content')).toBeVisible()
-  await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
+  await page.getByRole('button', { name: 'Aparência do texto', exact: true }).click()
   await expect(page.getByRole('menuitemradio', { name: 'Sistema', exact: true })).toHaveAttribute(
     'aria-checked',
     'true',

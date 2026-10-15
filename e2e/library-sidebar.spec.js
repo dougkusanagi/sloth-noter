@@ -41,7 +41,7 @@ test('images import sits beside search and keyboard shortcuts retain keycaps', a
   await expect(sidebar.getByRole('button', { name: 'Atualizar imagens', exact: true })).toHaveCount(
     0,
   )
-  await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
+  await page.getByRole('button', { name: 'Aparência do texto', exact: true }).click()
   const key = page.locator('.adjustment-buttons kbd').first()
   await key.scrollIntoViewIfNeeded()
   expect(await key.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(

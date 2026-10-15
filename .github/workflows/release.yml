@@ -15,7 +15,7 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            bundles: msi
+            bundles: nsis
           - os: ubuntu-22.04
             bundles: appimage
     runs-on: ${{ matrix.os }}

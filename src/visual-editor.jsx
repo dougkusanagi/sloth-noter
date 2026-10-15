@@ -137,7 +137,7 @@ export function VisualEditor({
       setToolbar(null)
       return
     }
-    if (start.top < 48 || start.top > window.innerHeight) {
+    if (start.top < 46 || start.top > window.innerHeight) {
       setToolbar(null)
       return
     }
@@ -161,7 +161,7 @@ export function VisualEditor({
         const line = view.state.doc.lineAt(view.state.selection.main.head)
         if (line.text.trim()) return null
         const coords = view.coordsAtPos(line.from)
-        if (!coords || coords.top < 48 || coords.top > window.innerHeight) return null
+        if (!coords || coords.top < 46 || coords.top > window.innerHeight) return null
         return { from: line.from, x: Math.max(5, coords.left - 34), y: coords.top }
       },
       write: (position) => {
