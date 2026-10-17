@@ -37,15 +37,24 @@ class TaskWidget extends WidgetType {
   toDOM(view) {
     const input = document.createElement('input')
     input.type = 'checkbox'
-    input.checked = this.checked
+    this.updateDOM(input)
     input.className = 'task-checkbox cm-task-checkbox'
-    input.setAttribute('aria-label', t(this.checked ? 'task.complete' : 'task.open'))
     input.addEventListener('change', () =>
       view.dispatch({
-        changes: { from: this.at, to: this.at + 1, insert: input.checked ? 'x' : ' ' },
+        changes: {
+          from: Number(input.dataset.mark),
+          to: Number(input.dataset.mark) + 1,
+          insert: input.checked ? 'x' : ' ',
+        },
       }),
     )
     return input
+  }
+  updateDOM(input) {
+    input.checked = this.checked
+    input.dataset.mark = String(this.at)
+    input.setAttribute('aria-label', t(this.checked ? 'task.complete' : 'task.open'))
+    return true
   }
   ignoreEvent() {
     return true

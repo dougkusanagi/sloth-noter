@@ -22,6 +22,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Corrigido
 
+- Linux (AppImage) em sessão Wayland: a janela rodava via XWayland e os cliques atravessavam o app para a janela de trás. O app agora usa o backend Wayland nativo; `SLOTH_NOTE_FORCE_X11=1` volta ao X11.
 - Padrão e Leitura agora têm exatamente o mesmo layout (espaços entre blocos, entrelinhas, listas, tarefas, citações, tabelas, código, imagens e rodapé), então trocar de modo não move o texto; a Leitura mostra quebras simples de linha como quebras.
 - Modo Padrão: tarefas e itens numerados aninhados ficavam sem recuo fora da linha em edição; o recuo segue a estrutura da lista e o texto de continuação de um item acompanha o item.
 - Modo Padrão: escapes (`\*`) e quebras de linha com `\` mostravam a barra invertida; citações vazias (`>`) e aninhadas (`> >`) apareciam como texto; tabelas ignoravam o alinhamento das colunas.

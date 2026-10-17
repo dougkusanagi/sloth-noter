@@ -2,6 +2,7 @@ import { EditorSelection } from '@codemirror/state'
 import { wrapSelection } from '../wrap-selection.js'
 import { continueBlock } from '../continue-block.js'
 import { listIndentChanges } from '../list-indent.js'
+import { moveListItems } from '../list-move.js'
 
 export function wrapSelectedText(event, view) {
   if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return false
@@ -68,5 +69,21 @@ export function indentList(view, outdent = false) {
   if (!changes) return false
   if (changes.length)
     view.dispatch({ changes, userEvent: outdent ? 'delete.dedent' : 'input.indent' })
+  return true
+}
+
+/** Keep the cursor/selection on the item as its entire subtree moves. */
+export function moveList(view, direction) {
+  if (view.state.selection.ranges.length !== 1) return false
+  const { anchor, head } = view.state.selection.main
+  const moved = moveListItems(view.state.doc.toString(), anchor, head, direction)
+  if (!moved) return false
+  if (moved.changes.length)
+    view.dispatch({
+      changes: moved.changes,
+      selection: EditorSelection.single(moved.anchor, moved.head),
+      scrollIntoView: true,
+      userEvent: 'input.move',
+    })
   return true
 }

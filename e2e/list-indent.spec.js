@@ -113,3 +113,51 @@ test('Shift+Tab removes quote indentation around the first two list items', asyn
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(box(page)).toHaveValue(source.replaceAll('> ', ''))
 })
+
+for (const mode of ['Código', 'Padrão']) {
+  test(`Ctrl+Shift+arrows moves list subtrees in ${mode}`, async ({ page }) => {
+    const source = '# Lista\n\n- a\n    - filho\n- b\n- c'
+    await box(page).fill(source)
+    if (mode === 'Padrão') {
+      await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+      await page.locator('.cm-line', { hasText: /^b$/ }).click()
+    } else await select(page, source.indexOf('- b') + 3)
+    await page.keyboard.press('Control+Shift+ArrowUp')
+    await page.keyboard.type('X')
+    if (mode === 'Padrão')
+      await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    await expect(box(page)).toHaveValue('# Lista\n\n- bX\n- a\n    - filho\n- c')
+    if (mode === 'Padrão') {
+      await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+      await page.locator('.cm-line', { hasText: /^bX$/ }).click()
+    } else await select(page, '# Lista\n\n- bX'.length)
+    await page.keyboard.press('Control+Shift+ArrowDown')
+    if (mode === 'Padrão')
+      await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    await expect(box(page)).toHaveValue(source.replace('- b', '- bX'))
+  })
+}
+
+test('typing before checked tasks does not replay check animations or stale their positions', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  const source = '# Lista\n\nTexto\n\n- [x] Feito\n- [ ] Pendente'
+  await box(page).fill(source)
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  await page.locator('.cm-line', { hasText: /^Texto$/ }).click()
+  await page.keyboard.press('End')
+  await page.keyboard.type(' digitado')
+  const checked = page.locator('.cm-task-checkbox').first()
+  expect(
+    await checked.evaluate((input) => ({
+      animation: getComputedStyle(input).animationName,
+      mark: getComputedStyle(input, '::after').animationName,
+    })),
+  ).toEqual({ animation: 'none', mark: 'none' })
+  await checked.uncheck()
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await expect(box(page)).toHaveValue(
+    source.replace('Texto', 'Texto digitado').replace('[x]', '[ ]'),
+  )
+})

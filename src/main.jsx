@@ -65,6 +65,7 @@ import { foldableLines } from './sections.js'
 import { foldAll, unfoldAll } from './editor/folding.js'
 import { continueBlock } from './continue-block.js'
 import { applyChanges, listIndentChanges, mapPosition } from './list-indent.js'
+import { moveListItems } from './list-move.js'
 import { restoreWindowState } from './window-state.js'
 import { protectPendingSaves } from './save-lifecycle.js'
 import {
@@ -448,6 +449,36 @@ function Workspace({ persistence, loaded }) {
     if (raw !== normalized) requestAnimationFrame(() => field.setSelectionRange(from, to))
   }
   function wrapSourceSelection(event) {
+    if (
+      !event.isComposing &&
+      event.ctrlKey &&
+      event.shiftKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      ['ArrowUp', 'ArrowDown'].includes(event.key)
+    ) {
+      const field = event.currentTarget
+      const backward = field.selectionDirection === 'backward'
+      const moved = moveListItems(
+        field.value,
+        backward ? field.selectionEnd : field.selectionStart,
+        backward ? field.selectionStart : field.selectionEnd,
+        event.key === 'ArrowUp' ? -1 : 1,
+      )
+      if (moved) {
+        event.preventDefault()
+        if (moved.changes.length) {
+          field.value = applyChanges(field.value, moved.changes)
+          field.setSelectionRange(
+            Math.min(moved.anchor, moved.head),
+            Math.max(moved.anchor, moved.head),
+            backward ? 'backward' : 'forward',
+          )
+          updateBody(field.value)
+        }
+        return
+      }
+    }
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return
     const field = event.currentTarget
     if (event.key === 'Tab') {

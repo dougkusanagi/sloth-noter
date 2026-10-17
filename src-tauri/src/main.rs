@@ -302,7 +302,21 @@ fn vault_write_aux(app: AppHandle, contents: String) -> Result<(), String> {
     store::write_state(&vault_aux_path(&app)?, &contents).map_err(|error| errors::describe(&error))
 }
 
+/// The AppImage GTK hook forces `GDK_BACKEND=x11`. On GNOME's Wayland session that
+/// runs the frameless window under XWayland, where mouse clicks pass through it to the
+/// window behind. Use the native Wayland backend there; `SLOTH_NOTE_FORCE_X11=1` opts out.
+#[cfg(target_os = "linux")]
+fn prefer_native_wayland() {
+    let wayland = std::env::var_os("WAYLAND_DISPLAY").is_some_and(|value| !value.is_empty())
+        && std::env::var("XDG_SESSION_TYPE").is_ok_and(|value| value == "wayland");
+    if wayland && std::env::var_os("SLOTH_NOTE_FORCE_X11").is_none() {
+        std::env::set_var("GDK_BACKEND", "wayland");
+    }
+}
+
 fn main() {
+    #[cfg(target_os = "linux")]
+    prefer_native_wayland();
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             if let Some(window) = app.get_webview_window("main") {

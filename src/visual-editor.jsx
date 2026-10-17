@@ -14,7 +14,13 @@ import {
   removeTableRowAt,
   tableAt,
 } from './editor/table.js'
-import { continueList, indentList, navigateToFence, wrapSelectedText } from './editor/keys.js'
+import {
+  continueList,
+  indentList,
+  moveList,
+  navigateToFence,
+  wrapSelectedText,
+} from './editor/keys.js'
 import { useEffect, useRef, useState } from 'react'
 import { t } from './i18n.js'
 import { flushSync } from 'react-dom'
@@ -279,6 +285,8 @@ export function VisualEditor({
           mandatoryTitle,
           history(),
           keymap.of([
+            { key: 'Ctrl-Shift-ArrowUp', run: (view) => moveList(view, -1) },
+            { key: 'Ctrl-Shift-ArrowDown', run: (view) => moveList(view, 1) },
             { key: 'Enter', run: (view) => moveTable(view, 'enter') },
             { key: 'Shift-Enter', run: (view) => moveTable(view, 'shift-enter') },
             { key: 'Tab', run: (view) => indentList(view) },
