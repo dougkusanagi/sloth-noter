@@ -1718,6 +1718,7 @@ function Workspace({ persistence, loaded }) {
   return (
     <main
       className={focusMode ? 'app focus-mode' : 'app'}
+      data-native-window={persistence.invoke ? (mac ? 'mac' : 'other') : undefined}
       style={{
         '--editor-size': `${prefs.fontSize}px`,
         '--content-width': `${contentWidth(prefs)}px`,

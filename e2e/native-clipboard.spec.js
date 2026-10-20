@@ -22,6 +22,8 @@ test.beforeEach(async ({ page }) => {
         metadata: { currentWindow: { label: 'main' }, currentWebview: { label: 'main' } },
         transformCallback: () => 1,
         invoke: async (command, args) => {
+          if (command === 'plugin:event|listen') return 1
+          if (command === 'plugin:event|unlisten') return null
           if (
             ['minimize', 'toggle_maximize', 'close'].some(
               (action) => command === `plugin:window|${action}`,
@@ -283,3 +285,53 @@ test('image library refreshes on focus and periodically without a refresh button
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
   expect(await page.evaluate(() => window.nativeImageListReads)).toBe(reads)
 })
+
+for (const platform of ['Linux x86_64', 'MacIntel']) {
+  test(`focus keeps native window controls usable and separate from the exit in ${platform}`, async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      (platform) => Object.defineProperty(navigator, 'platform', { value: platform }),
+      platform,
+    )
+    await page.reload()
+    await expect(page.locator('.cm-content')).toBeVisible()
+    await page.keyboard.press('Control+Shift+f')
+    await expect(page.locator('.app')).toHaveClass('app focus-mode')
+    await expect(page.locator('.app-header')).toBeVisible()
+    await expect(page.locator('.menu-trigger')).toBeHidden()
+    await expect(page.locator('.tabs')).toBeHidden()
+    await expect(page.locator('.document-info')).toBeHidden()
+    await expect(page.locator('.notes-sidebar')).toHaveCount(0)
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 800 })
+      await expect(page.getByRole('button', { name: 'Minimizar', exact: true })).toBeInViewport()
+      await expect(
+        page.getByRole('button', { name: 'Maximizar ou restaurar', exact: true }),
+      ).toBeInViewport()
+      await expect(
+        page.getByRole('button', { name: 'Fechar janela', exact: true }),
+      ).toBeInViewport()
+      await page.locator('.focus-exit-region').hover()
+      const controls = await page.locator('.window-controls').boundingBox()
+      const exit = await page.locator('.focus-exit').boundingBox()
+      expect(exit.x >= controls.x + controls.width || exit.x + exit.width <= controls.x).toBe(true)
+      expect(
+        await page
+          .locator('.window-drag-space')
+          .evaluate((el) => el.getBoundingClientRect().width > innerWidth / 2),
+      ).toBe(true)
+    }
+    await page.getByRole('button', { name: 'Minimizar', exact: true }).click()
+    await page.getByRole('button', { name: 'Maximizar ou restaurar', exact: true }).click()
+    await page.getByRole('button', { name: 'Fechar janela', exact: true }).click()
+    expect(await page.evaluate(() => window.nativeWindowActions)).toEqual([
+      'plugin:window|minimize',
+      'plugin:window|toggle_maximize',
+      'plugin:window|close',
+    ])
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.app')).toHaveClass('app')
+    await expect(page.locator('.menu-trigger')).toBeVisible()
+  })
+}

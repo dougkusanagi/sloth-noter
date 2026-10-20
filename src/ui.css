@@ -2570,3 +2570,34 @@ html:has(
 .focus-mode .source-search-mirror {
   padding-top: 64px;
 }
+
+/* Focus removes editor chrome, while native window actions stay available. */
+.focus-mode[data-native-window] .app-header {
+  display: flex;
+  position: fixed;
+  inset: 0 0 auto;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  pointer-events: none;
+}
+.focus-mode[data-native-window] .app-header > :not(.window-controls):not(.window-drag-space) {
+  display: none;
+}
+.focus-mode[data-native-window] .app-header > .window-controls,
+.focus-mode[data-native-window] .app-header > .window-drag-space {
+  pointer-events: auto;
+}
+.focus-mode[data-native-window] .app-header > .window-drag-space {
+  flex: 1;
+}
+.focus-mode[data-native-window='other'] .focus-exit-region {
+  right: 128px;
+  max-width: calc(100% - 128px);
+}
+.focus-mode[data-native-window='other'] .focus-exit {
+  right: 144px;
+}
