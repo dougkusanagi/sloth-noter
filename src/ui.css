@@ -2441,3 +2441,19 @@ html:has(
 .selection-statistics > :first-child {
   color: var(--ink);
 }
+.palette-group-label {
+  padding: 10px 12px 5px;
+  color: var(--muted);
+  font: 12px var(--ui);
+}
+.palette-note-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.palette-current {
+  color: var(--muted);
+  font-size: 12px;
+}

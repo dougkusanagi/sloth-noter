@@ -4,7 +4,7 @@ import { Pin, X } from 'lucide-react'
 import { moveTab, togglePinnedTab } from '../tabs.js'
 import { t } from '../i18n.js'
 import { displayName } from '../note-title.js'
-import { Shortcut } from './main-menu.jsx'
+import { Shortcut, shortcutText } from './main-menu.jsx'
 
 /**
  * Tab strip behaviour: drag to reorder, context menu, keeping the active tab in view.
@@ -156,6 +156,11 @@ export function useTabs({
         {data.openIds.map((id, index) => {
           const pinned = data.pinnedIds?.includes(id)
           const note = data.notes.find((item) => item.id === id)
+          const tabTitle = pinned
+            ? `${note?.name} · ${t('tabs.pinned')}`
+            : previewId === id
+              ? `${note?.name} · ${t('tabs.preview')}`
+              : note?.name
           return (
             note && (
               <div
@@ -176,13 +181,7 @@ export function useTabs({
                   .join(' ')}
               >
                 <button
-                  title={
-                    pinned
-                      ? `${note.name} · ${t('tabs.pinned')}`
-                      : previewId === id
-                        ? `${note.name} · ${t('tabs.preview')}`
-                        : note.name
-                  }
+                  title={index < 9 ? `${tabTitle} · ${shortcutText(String(index + 1))}` : tabTitle}
                   className={id === data.activeId ? 'tab active' : 'tab'}
                   aria-haspopup="menu"
                   aria-expanded={tabMenu?.id === id}

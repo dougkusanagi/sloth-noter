@@ -1,3 +1,4 @@
+import { quickOpenNotes } from './quick-open.js'
 import { textStatistics } from './text-statistics.js'
 import { ChangeSet } from '@codemirror/state'
 import { documentChanges, mapSearchScope } from './search-scope.js'
@@ -233,8 +234,9 @@ function Workspace({ persistence, loaded }) {
   const [middleClickPasteGuard] = useState(createMiddleClickPasteGuard)
   const returnFocus = useRef(null)
   const active = data.notes.find((note) => note.id === data.activeId) ?? null
-  const choices = data.notes.filter((note) =>
-    note.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
+  const choices = useMemo(
+    () => (palette ? quickOpenNotes(data.notes, data.openIds, query) : []),
+    [palette, data.notes, data.openIds, query],
   )
   const prefs = data.preferences
   const { tabStrip, tabContextMenu, openTabMenu } = useTabs({
@@ -301,8 +303,10 @@ function Workspace({ persistence, loaded }) {
     setAsking(null)
   }
   function commit(next) {
-    next = ensureDocumentTitles(next)
-    next = { ...next, notes: syncLinkedTasks(next.notes) }
+    if (next.notes !== current.current.notes) {
+      next = ensureDocumentTitles(next)
+      next = { ...next, notes: syncLinkedTasks(next.notes) }
+    }
     current.current = next
     setData(next)
     if (!blocked) writer.current.write(next)
@@ -1575,6 +1579,15 @@ function Workspace({ persistence, loaded }) {
     })
   }
   const menuActions = {
+    ...Object.fromEntries(
+      Array.from({ length: 9 }, (_, index) => [
+        `tab${index + 1}`,
+        () => {
+          const id = current.current.openIds[index]
+          if (id) runMenu(() => openNote(id), false)
+        },
+      ]),
+    ),
     newNote: () => runMenu(() => createNote(), false),
     findNote: () => runMenu(openPalette, false),
     findInNote: () => active && runMenu(openFind, false),
@@ -1655,17 +1668,19 @@ function Workspace({ persistence, loaded }) {
     setSidebarSection(section)
     setSidebarQuery('')
   }
-  const documentText = active?.body.replace(/^# /, '') ?? ''
-  const wordCount = documentText
-    .trim()
-    .split(/\s+/u)
-    .filter(Boolean)
-    .length.toLocaleString(prefs.language)
-  const characterCount = Array.from(documentText).length.toLocaleString(prefs.language)
-  const selectionStats =
-    selectedText.id === active?.id && selectedText.mode === mode && selectedText.text
-      ? textStatistics(selectedText.text)
-      : null
+  const documentStats = useMemo(
+    () => textStatistics(active?.body.replace(/^# /, '') ?? ''),
+    [active?.body],
+  )
+  const wordCount = documentStats.words.toLocaleString(prefs.language)
+  const characterCount = documentStats.characters.toLocaleString(prefs.language)
+  const selectionStats = useMemo(
+    () =>
+      selectedText.id === active?.id && selectedText.mode === mode && selectedText.text
+        ? textStatistics(selectedText.text)
+        : null,
+    [selectedText, active?.id, mode],
+  )
   const formatCount = (count) => count.toLocaleString(prefs.language)
   const selectedCount = (key, count) =>
     t(count === 1 ? `${key}.one` : key, { count: formatCount(count) })
@@ -2183,6 +2198,7 @@ function Workspace({ persistence, loaded }) {
           inputRef={search}
           query={query}
           choices={choices}
+          activeId={active?.id}
           selected={selected}
           onQuery={(value) => {
             setQuery(value)

@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-20",
+  "environment": {
+    "platform": "Linux",
+    "node": "24.22.0",
+    "browser": "Chromium via Playwright, Vite development server"
+  },
+  "markdownCache": {
+    "command": "node --expose-gc scripts/benchmark-markdown.mjs",
+    "baselineCommit": "0615bb9",
+    "scenario": "160 different revisions of a 10,283-character Markdown document; heap measured after explicit GC",
+    "beforeRetainedHeapMiB": 76.43,
+    "afterRetainedHeapMiB": 4.73,
+    "beforeElapsedMs": 2038.5,
+    "afterElapsedMs": 2049.5
+  },
+  "cursorUpdates": {
+    "command": "node scripts/benchmark-editor.mjs",
+    "scenario": "Five batches of 100 cursor moves within one line of a 10,783-character note with 30 JavaScript blocks",
+    "baseline": "Before decoration and highlighting optimizations; bounded cache, task fast paths and memoized statistics were already applied",
+    "beforeSamplesMs": [83.5, 71.5, 71.4, 72.8, 72.6],
+    "afterSamplesMs": [9.6, 5.3, 3.6, 3.2, 2.7],
+    "beforeMedianMs": 72.6,
+    "afterMedianMs": 3.6
+  },
+  "limitations": [
+    "These are isolated synthetic measurements, not native Tauri process RAM or end-to-end typing latency.",
+    "Actual savings depend on note structure, library size, images, platform and WebView.",
+    "The text cache bounds entry count and aggregate source length, not exact AST byte size; one oversized current document can remain cached."
+  ]
+}

@@ -116,7 +116,7 @@ test('long tab names are truncated, disclosed on hover, and can be closed', asyn
     'Uma nota com um título muito longo para caber inteiramente na barra de abas do aplicativo'
   await source(page, `# ${title}\n\nTexto`)
   const tab = page.locator('.tab')
-  await expect(tab).toHaveAttribute('title', `${title}.md`)
+  await expect(tab).toHaveAttribute('title', `${title}.md · ctrl+1`)
   expect(await tab.locator('span').evaluate((span) => span.scrollWidth > span.clientWidth)).toBe(
     true,
   )

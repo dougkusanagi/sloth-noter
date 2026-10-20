@@ -82,17 +82,20 @@ export function sectionProgress(body, tasks = noteTasks(body), collapsed = new S
 function cyclicChecklist(note, notes, path = new Set()) {
   if (path.has(note)) return true
   const next = new Set(path).add(note)
-  return noteTasks(note.body).some((task) =>
-    wikiReferences(task.text).some((link) => {
-      const target = findNote(notes, link.target)
-      return target && cyclicChecklist(target, notes, next)
-    }),
+  return noteTasks(note.body).some(
+    (task) =>
+      task.text.includes('[[') &&
+      wikiReferences(task.text).some((link) => {
+        const target = findNote(notes, link.target)
+        return target && cyclicChecklist(target, notes, next)
+      }),
   )
 }
 
 /** Resolve linked checklists without modifying source. Cycles retain their manual state. */
 export function resolvedTasks(body, notes = [], ancestors = new Set()) {
   return noteTasks(body).map((task) => {
+    if (!task.text.includes('[[')) return task
     const targets = [...new Set(wikiReferences(task.text).map((link) => link.target))]
     if (!targets.length) return task
     const children = []
@@ -143,6 +146,7 @@ export function resolvedTasks(body, notes = [], ancestors = new Set()) {
 /** Persist automatic task marks together with the edit that changed their checklist. */
 export function syncLinkedTasks(notes) {
   return notes.map((note) => {
+    if (!note.body.includes('[[')) return note
     let body = note.body
     for (const task of resolvedTasks(body, notes, new Set([note])).reverse()) {
       if (!task.progress) continue

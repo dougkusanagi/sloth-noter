@@ -9,6 +9,7 @@ export const SHORTCUTS = [
   ['PageDown', 'tabs.next'],
   ['Shift+Tab', 'tabs.previous'],
   ['Tab', 'tabs.next'],
+  ...Array.from({ length: 9 }, (_, index) => [String(index + 1), 'tabs.switchNumber']),
   ['I', 'menu.import'],
   ['E', 'menu.export'],
   ['F2', 'menu.rename'],
@@ -51,6 +52,7 @@ export function appShortcut(event) {
       }[key] ?? null
     )
   if (event.altKey || event.shiftKey) return null
+  if (/^[1-9]$/.test(key)) return `tab${key}`
   return (
     {
       pageup: 'previousTab',

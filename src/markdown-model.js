@@ -1,17 +1,16 @@
+import { createTextCache } from './text-cache.js'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
 
 export const TAG = /(?<![\p{L}\p{N}_])#[\p{L}\p{N}_/-]+/gu
 const parser = unified().use(remarkParse).use(remarkGfm)
-const cache = new Map()
+const cache = createTextCache()
 export function markdownTree(text) {
-  if (cache.has(text)) return cache.get(text)
+  const cached = cache.get(text)
+  if (cached) return cached
   const tree = parser.parse(text)
-  if (text.length < 500000) {
-    cache.set(text, tree)
-    if (cache.size > 128) cache.delete(cache.keys().next().value)
-  }
+  cache.set(text, tree)
   return tree
 }
 export function walk(node, visit) {

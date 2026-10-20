@@ -12,6 +12,14 @@ import { sectionProgress, resolvedTasks } from '../tasks.js'
 import { Facet } from '@codemirror/state'
 import { progressBadge } from '../progress-badge.js'
 
+const highlightedBlocks = new WeakMap()
+
+export function selectionLineSignature(state) {
+  return state.selection.ranges
+    .map((range) => `${state.doc.lineAt(range.from).number}:${state.doc.lineAt(range.to).number}`)
+    .join(',')
+}
+
 export const taskNotes = Facet.define({ combine: (values) => values[0] ?? [] })
 
 class ProgressWidget extends WidgetType {
@@ -190,10 +198,14 @@ export function decorationsFor(view) {
       const contentFrom = opening ? doc.line(first).to + 1 : doc.line(first).from
       const contentTo = closing ? doc.line(last).from : doc.line(last).to
       if (contentFrom < contentTo) {
-        const tokens = syntaxRanges(
-          codeTokens(doc.sliceString(contentFrom, contentTo), node.lang ?? ''),
-          contentFrom,
-        ).ranges
+        let tokens = highlightedBlocks.get(node)
+        if (!tokens) {
+          tokens = syntaxRanges(
+            codeTokens(doc.sliceString(contentFrom, contentTo), node.lang ?? ''),
+            contentFrom,
+          ).ranges
+          highlightedBlocks.set(node, tokens)
+        }
         for (const token of tokens) {
           const startLine = doc.lineAt(token.from).number
           const endLine = doc.lineAt(token.to - 1).number
@@ -381,7 +393,8 @@ export const liveMarkdown = ViewPlugin.fromClass(
       if (
         update.startState.facet(taskNotes) !== update.state.facet(taskNotes) ||
         update.docChanged ||
-        update.selectionSet ||
+        (update.selectionSet &&
+          selectionLineSignature(update.startState) !== selectionLineSignature(update.state)) ||
         update.viewportChanged ||
         update.startState.field(foldField) !== update.state.field(foldField)
       )

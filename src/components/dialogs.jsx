@@ -1,7 +1,7 @@
 import { SHORTCUTS } from '../shortcuts.js'
 import { Shortcut, shortcutText } from './main-menu.jsx'
 // Modal dialogs of the workspace. State lives in the parent; these only render and handle keys.
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import {
   Search,
   ChevronRight,
@@ -72,6 +72,7 @@ export function PaletteDialog({
   inputRef,
   query,
   choices,
+  activeId,
   selected,
   onQuery,
   onSelect,
@@ -108,14 +109,24 @@ export function PaletteDialog({
       <div className="results">
         {choices.length ? (
           choices.map((note, index) => (
-            <button
-              key={note.id}
-              className={index === selected ? 'selected' : ''}
-              aria-current={index === selected ? 'true' : undefined}
-              onClick={() => onOpen(note.id)}
-            >
-              {displayName(note.name)}
-            </button>
+            <Fragment key={note.id}>
+              {(index === 0 || note.isOpen !== choices[index - 1].isOpen) && (
+                <div className="palette-group-label">
+                  {t(note.isOpen ? 'palette.openTabs' : 'palette.otherNotes')}
+                </div>
+              )}
+              <button
+                className={index === selected ? 'selected' : ''}
+                aria-current={index === selected ? 'true' : undefined}
+                onClick={() => onOpen(note.id)}
+              >
+                <span className="palette-note-name">{displayName(note.name)}</span>
+                {note.id === activeId && (
+                  <span className="palette-current">{t('palette.current')}</span>
+                )}
+                {note.tabNumber && <Shortcut keys={String(note.tabNumber)} />}
+              </button>
+            </Fragment>
           ))
         ) : (
           <p>{t('palette.none')}</p>

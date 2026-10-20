@@ -206,6 +206,10 @@ const messages = {
 
     'palette.label': 'Buscar nota',
     'palette.search': 'Buscar notas',
+    'palette.openTabs': 'Abas abertas',
+    'palette.otherNotes': 'Outras notas',
+    'palette.current': 'Atual',
+    'tabs.switchNumber': 'Ir para a aba pelo número',
     'palette.placeholder': 'Buscar uma nota…',
     'palette.none': 'Nenhuma nota encontrada',
     'conflict.label': 'Conflito de importação',
@@ -503,6 +507,10 @@ const messages = {
 
     'palette.label': 'Find note',
     'palette.search': 'Search notes',
+    'palette.openTabs': 'Open tabs',
+    'palette.otherNotes': 'Other notes',
+    'palette.current': 'Current',
+    'tabs.switchNumber': 'Switch to tab by number',
     'palette.placeholder': 'Find a note…',
     'palette.none': 'No notes found',
     'conflict.label': 'Import conflict',

@@ -38,3 +38,11 @@ test('no shortcut collides with a combination the browser or webview owns', () =
   assert.equal(appShortcut({ key: 'i', ctrlKey: true, altKey: true }), null)
   assert.equal(appShortcut({ key: 'R', ctrlKey: true, shiftKey: true }), null)
 })
+
+test('number shortcuts address tabs without colliding with editor mode shortcuts', () => {
+  for (let number = 1; number <= 9; number++)
+    assert.equal(appShortcut({ key: String(number), ctrlKey: true }), `tab${number}`)
+  assert.equal(appShortcut({ key: '2', ctrlKey: true, altKey: true }), 'source')
+  assert.equal(appShortcut({ key: '2', ctrlKey: true, shiftKey: true }), null)
+  assert.equal(appShortcut({ key: '2', ctrlKey: true, isComposing: true }), null)
+})
