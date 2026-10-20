@@ -38,7 +38,7 @@ for (const name of ['Padrão', 'Leitura']) {
       await page.keyboard.press('Control+End')
     }
     const root = page.locator(name === 'Padrão' ? '.visual-editor' : '.markdown')
-    const boxes = root.locator('.task-checkbox')
+    const boxes = root.locator('.task-checkbox:not(.section-checkbox)')
     await expect(boxes).toHaveCount(2)
     if (name === 'Leitura') await expect(root).not.toContainText('[-]')
     await expect(boxes.nth(0)).toHaveJSProperty('indeterminate', true)
@@ -55,14 +55,17 @@ for (const name of ['Padrão', 'Leitura']) {
     await expect(page.locator('textarea')).toHaveValue(/- \[x\] \[\[Filho/)
     await mode(page, name)
     await expect(root.locator('.section-progress-count[data-count="2/2"]')).toHaveCount(2)
-    await expect(root.locator('.task-checkbox').first()).toBeChecked()
+    await expect(root.locator('.task-checkbox:not(.section-checkbox)').first()).toBeChecked()
     await mode(page, 'Código')
     await page.getByRole('button', { name: 'Filho.md', exact: true }).click()
     await page.locator('textarea').fill(child)
     await page.getByRole('button', { name: 'Projetos.md', exact: true }).click()
     await expect(page.locator('textarea')).toHaveValue(/- \[-\] \[\[Filho/)
     await mode(page, name)
-    await expect(root.locator('.task-checkbox').first()).toHaveJSProperty('indeterminate', true)
+    await expect(root.locator('.task-checkbox:not(.section-checkbox)').first()).toHaveJSProperty(
+      'indeterminate',
+      true,
+    )
     await page.screenshot({ path: test.info().outputPath('desktop.png') })
     await page.setViewportSize({ width: 390, height: 844 })
     await page.getByRole('button', { name: 'Mostrar/ocultar biblioteca' }).click()

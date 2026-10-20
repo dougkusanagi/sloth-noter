@@ -1,3 +1,4 @@
+import { isolateHistory } from '@codemirror/commands'
 import { markdownTree, walk, imageReferences } from '../markdown-model.js'
 import { tableAt, tableDecorations } from './table.js'
 import { addInlineDecorations } from './inline-decorations.js'
@@ -8,7 +9,7 @@ import { classifyLine, inlineSyntax } from '../live-markdown.js'
 import { headingSections } from '../sections.js'
 import { FoldToggleWidget, foldField, foldRange, isFolded } from './folding.js'
 import { codeTokens, syntaxRanges } from '../syntax-highlight.js'
-import { sectionProgress, resolvedTasks } from '../tasks.js'
+import { sectionProgress, resolvedTasks, sectionChecklists, sectionTaskChanges } from '../tasks.js'
 import { Facet } from '@codemirror/state'
 import { progressBadge } from '../progress-badge.js'
 
@@ -33,6 +34,59 @@ class ProgressWidget extends WidgetType {
   }
   toDOM() {
     return progressBadge(this.done, this.total)
+  }
+}
+
+class SectionChecklistWidget extends WidgetType {
+  constructor(line, checklist) {
+    super()
+    this.line = line
+    this.checklist = checklist
+  }
+  eq(other) {
+    return (
+      this.line === other.line && JSON.stringify(this.checklist) === JSON.stringify(other.checklist)
+    )
+  }
+  toDOM(view) {
+    const wrap = document.createElement('span')
+    wrap.className = 'section-checklist'
+    wrap.contentEditable = 'false'
+    const input = document.createElement('input')
+    input.type = 'checkbox'
+    input.className = 'task-checkbox section-checkbox'
+    input.addEventListener('mousedown', (event) => event.preventDefault())
+    input.addEventListener('change', () => {
+      const changes = sectionTaskChanges(
+        view.state.doc.toString(),
+        Number(input.dataset.line),
+        input.checked,
+        view.state.facet(taskNotes),
+      )
+      if (changes.length)
+        view.dispatch({
+          changes,
+          userEvent: 'input.sectionTasks',
+          annotations: isolateHistory.of('full'),
+        })
+    })
+    wrap.append(input)
+    this.updateDOM(wrap)
+    return wrap
+  }
+  updateDOM(wrap) {
+    const input = wrap.querySelector('input')
+    const { done, total, partial, title } = this.checklist
+    input.checked = done === total
+    input.indeterminate = partial
+    input.dataset.line = String(this.line)
+    input.setAttribute('aria-checked', partial ? 'mixed' : String(input.checked))
+    input.setAttribute('aria-label', t('task.sectionToggle', { title }))
+    input.title = t(input.checked ? 'task.sectionClear' : 'task.sectionComplete', { title })
+    return true
+  }
+  ignoreEvent() {
+    return true
   }
 }
 
@@ -149,6 +203,7 @@ export function decorationsFor(view) {
     resolvedTasks(text, view.state.facet(taskNotes)).map((task) => [task.line, task]),
   )
   const progress = sectionProgress(text, [...tasks.values()], collapsed)
+  const checklists = sectionChecklists(text, [...tasks.values()])
   const definitions = []
   walk(tree, (node) => {
     if (node.type === 'definition' || node.type === 'footnoteDefinition')
@@ -349,6 +404,14 @@ export function decorationsFor(view) {
         if (fenceStarts.has(number)) attrs.class += ' cm-md-fence-start'
         if (fenceEnds.has(number)) attrs.class += ' cm-md-fence-end'
       }
+      const checklist = checklists.get(number)
+      if (checklist)
+        ranges.push(
+          Decoration.widget({
+            widget: new SectionChecklistWidget(number, checklist),
+            side: -2,
+          }).range(line.to),
+        )
       if (active) {
         if (shape.kind === 'bullet') {
           const indent = line.text.match(/^\s*/)[0].length

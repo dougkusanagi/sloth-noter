@@ -78,6 +78,47 @@ export function sectionProgress(body, tasks = noteTasks(body), collapsed = new S
   return progress
 }
 
+/** Editable tasks below each H2–H6, including nested subsections. */
+export function sectionChecklists(body, tasks = noteTasks(body)) {
+  if (!tasks.some((task) => !task.progress)) return new Map()
+  const tree = markdownTree(body)
+  const titles = new Map()
+  for (const node of tree.children) {
+    if (node.type !== 'heading') continue
+    let title = ''
+    walk(node, (child) => {
+      if (child.type === 'text' || child.type === 'inlineCode') title += child.value
+    })
+    titles.set(node.position.start.line, title)
+  }
+  const checklists = new Map()
+  for (const heading of headingSections(body, tree)) {
+    if (heading.level === 0) continue
+    const editable = tasks.filter(
+      (task) => !task.progress && task.line > heading.titleEnd && task.line <= heading.end,
+    )
+    if (!editable.length) continue
+    const done = editable.filter((task) => task.done).length
+    checklists.set(heading.line, {
+      title: titles.get(heading.line) ?? '',
+      done,
+      total: editable.length,
+      partial: done < editable.length && editable.some((task) => task.done || task.partial),
+      marks: editable.map((task) => task.mark),
+    })
+  }
+  return checklists
+}
+
+/** Only explicit checkboxes in this note change; linked summaries remain derived. */
+export function sectionTaskChanges(body, line, checked, notes = []) {
+  const section = sectionChecklists(body, resolvedTasks(body, notes)).get(line)
+  const insert = checked ? 'x' : ' '
+  return (section?.marks ?? [])
+    .filter((mark) => body[mark] !== insert)
+    .map((mark) => ({ from: mark, to: mark + 1, insert }))
+}
+
 // A cyclic dependency cannot supply an automatic completion state.
 function cyclicChecklist(note, notes, path = new Set()) {
   if (path.has(note)) return true

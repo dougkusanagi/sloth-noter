@@ -65,7 +65,7 @@ test('CommonMark and GFM render with interactive round tasks', async ({ page }) 
     '# Markdown completo\n\n- [ ] Pendente\n- [x] Concluída\n  - Item aninhado\n\n~~Riscado~~ e **forte** e *ênfase* e `inline`\n\n---\n\n##### Cinco\n###### Seis\n\n> Citação\n\n| Nome | Valor |\n| :--- | ---: |\n| teste | 42 |\n\n[referência][site]\n\n[site]: https://example.com\n\nNota[^1]\n\n[^1]: Rodapé\n\n```js\nconst answer = 42\n```',
   )
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  await expect(page.locator('.markdown input[type=checkbox]')).toHaveCount(2)
+  await expect(page.locator('.markdown input[type=checkbox]:not(.section-checkbox)')).toHaveCount(2)
   await expect(page.locator('.markdown del')).toHaveText('Riscado')
   await expect(page.locator('.markdown h5')).toHaveText('Cinco')
   await expect(page.locator('.markdown h6')).toHaveText('Seis')
@@ -95,7 +95,7 @@ test('live editor tasks update Markdown and imported images survive a reload', a
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
   await expect(page.locator('.markdown img')).toBeVisible()
   await expect(page.locator('.markdown img')).toHaveJSProperty('naturalWidth', 1)
-  await expect(page.locator('.markdown input[type=checkbox]')).toBeChecked()
+  await expect(page.locator('.markdown input[type=checkbox]:not(.section-checkbox)')).toBeChecked()
 })
 
 test('external images render and unsafe links do not execute', async ({ page }) => {

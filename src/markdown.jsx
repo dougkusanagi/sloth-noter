@@ -1,3 +1,4 @@
+import { applyChanges } from './list-indent.js'
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -7,7 +8,14 @@ import { ChevronDown, Copy } from 'lucide-react'
 import { remarkTags, remarkWikiLinks, findNote } from './markdown-model.js'
 import { remarkSections, remarkSourceLayout } from './sections.js'
 import { resolveImage } from './images.js'
-import { sectionProgress, resolvedTasks, remarkPartialTasks, toggleTask } from './tasks.js'
+import {
+  sectionProgress,
+  resolvedTasks,
+  remarkPartialTasks,
+  toggleTask,
+  sectionChecklists,
+  sectionTaskChanges,
+} from './tasks.js'
 import { CIRCUMFERENCE, RADIUS } from './progress-badge.js'
 
 function highlightedCode(tokens) {
@@ -209,10 +217,32 @@ function ProgressBadge({ done, total }) {
     </span>
   )
 }
+function SectionChecklist({ line, checklist }) {
+  const { text, notes, onChange } = useContext(MarkdownContext)
+  const { done, total, partial, title } = checklist
+  return (
+    <span className="section-checklist">
+      <input
+        type="checkbox"
+        className="task-checkbox section-checkbox"
+        checked={done === total}
+        ref={(input) => {
+          if (input) input.indeterminate = partial
+        }}
+        aria-checked={partial ? 'mixed' : done === total}
+        aria-label={t('task.sectionToggle', { title })}
+        title={t(done === total ? 'task.sectionClear' : 'task.sectionComplete', { title })}
+        onChange={(event) =>
+          onChange(applyChanges(text, sectionTaskChanges(text, line, event.target.checked, notes)))
+        }
+      />
+    </span>
+  )
+}
 function Heading({ node, children, ...props }) {
   const Tag = node.tagName
   const section = useContext(SectionContext)
-  const { onToggleFold, progress } = useContext(MarkdownContext)
+  const { onToggleFold, progress, checklists, onChange } = useContext(MarkdownContext)
   const tasks = section && progress.get(section.line)
   return (
     <Tag {...props}>
@@ -228,6 +258,9 @@ function Heading({ node, children, ...props }) {
         </button>
       )}
       {children}
+      {onChange && checklists.get(section?.line) && (
+        <SectionChecklist line={section.line} checklist={checklists.get(section.line)} />
+      )}
       {tasks && <ProgressBadge {...tasks} />}
     </Tag>
   )
@@ -251,13 +284,25 @@ export function Markdown({ text, onCopy, onChange, onOpenWiki, notes, folds, onT
     () => new Map(resolvedTasks(text, notes).map((task) => [task.line, task])),
     [text, notes],
   )
+  const checklists = useMemo(() => sectionChecklists(text, [...tasks.values()]), [text, tasks])
   const progress = useMemo(
     () => sectionProgress(text, [...tasks.values()], folds),
     [text, tasks, folds],
   )
   return (
     <MarkdownContext.Provider
-      value={{ text, onCopy, onChange, onOpenWiki, notes, folds, onToggleFold, progress, tasks }}
+      value={{
+        text,
+        onCopy,
+        onChange,
+        onOpenWiki,
+        notes,
+        folds,
+        onToggleFold,
+        progress,
+        tasks,
+        checklists,
+      }}
     >
       <article className="markdown">
         <ReactMarkdown

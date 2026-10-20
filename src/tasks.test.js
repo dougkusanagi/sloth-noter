@@ -1,6 +1,15 @@
+import { applyChanges } from './list-indent.js'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { noteTasks, resolvedTasks, syncLinkedTasks, sectionProgress, toggleTask } from './tasks.js'
+import {
+  noteTasks,
+  resolvedTasks,
+  syncLinkedTasks,
+  sectionProgress,
+  toggleTask,
+  sectionChecklists,
+  sectionTaskChanges,
+} from './tasks.js'
 
 const BODY = `# Lista
 
@@ -131,4 +140,51 @@ test('missing, empty and circular references keep manual state', () => {
     { name: 'B.md', body: '- [ ] [[A]]', revision: 0 },
   ]
   assert.deepEqual(syncLinkedTasks(notes), notes)
+})
+
+test('section bulk checkboxes include nested tasks, skip fences and stop at sibling headings', () => {
+  const body =
+    '# Note\n## Work\n- [x] First\n### Child\n- [-] Partial\n- [ ] Open\n```md\n- [ ] Example\n```\n## Other\n- [ ] Outside'
+  const section = sectionChecklists(body).get(2)
+  assert.deepEqual(
+    [section.title, section.done, section.total, section.partial],
+    ['Work', 1, 3, true],
+  )
+  const completed = applyChanges(body, sectionTaskChanges(body, 2, true))
+  assert.equal(sectionChecklists(completed).get(2).done, 3)
+  assert.ok(completed.includes('- [ ] Example'))
+  assert.ok(completed.endsWith('- [ ] Outside'))
+  const reset = applyChanges(completed, sectionTaskChanges(completed, 2, false))
+  assert.equal(sectionChecklists(reset).get(2).done, 0)
+  assert.equal(sectionChecklists(reset).get(2).partial, false)
+  assert.deepEqual(sectionTaskChanges(body, 1, true), [])
+})
+
+test('section bulk changes leave linked task summaries and their source notes alone', () => {
+  const child = { name: 'Child.md', body: '- [ ] Linked' }
+  const body = '## Work\n- [ ] [[Child]]\n- [ ] Local'
+  const state = sectionChecklists(body, resolvedTasks(body, [child])).get(1)
+  assert.equal(state.total, 1)
+  assert.equal(
+    applyChanges(body, sectionTaskChanges(body, 1, true, [child])),
+    '## Work\n- [ ] [[Child]]\n- [x] Local',
+  )
+  assert.equal(child.body, '- [ ] Linked')
+  assert.equal(
+    sectionChecklists(
+      '## Work\n- [ ] [[Child]]',
+      resolvedTasks('## Work\n- [ ] [[Child]]', [child]),
+    ).size,
+    0,
+  )
+})
+
+test('section bulk checkboxes support setext and formatted subtitles without changing heading syntax', () => {
+  const body = '# Note\n**Work**\n----\n- [ ] A'
+  const state = sectionChecklists(body).get(2)
+  assert.equal(state.title, 'Work')
+  assert.equal(
+    applyChanges(body, sectionTaskChanges(body, 2, true)),
+    '# Note\n**Work**\n----\n- [x] A',
+  )
 })

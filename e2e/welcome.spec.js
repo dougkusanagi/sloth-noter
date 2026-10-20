@@ -55,7 +55,7 @@ test('the help page renders its sloth image and every example in reading mode', 
   for (const level of [3, 4, 5, 6]) await expect(read.locator(`h${level}`)).toHaveCount(1)
   await expect(read.locator('del')).toHaveText('riscado')
   await expect(read.locator('table')).toBeVisible()
-  await expect(read.locator('input[type=checkbox]')).toHaveCount(3)
+  await expect(read.locator('input[type=checkbox]:not(.section-checkbox)')).toHaveCount(3)
   await expect(read.locator('blockquote blockquote')).toContainText('aninhadas')
   await expect(read.locator('hr')).toHaveCount(1)
   await expect(read.locator('[data-footnotes]')).toContainText('fim do documento')

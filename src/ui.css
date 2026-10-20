@@ -2601,3 +2601,24 @@ html:has(
 .focus-mode[data-native-window='other'] .focus-exit {
   right: 144px;
 }
+.section-checklist {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.6em;
+  vertical-align: middle;
+}
+.section-checklist .section-checkbox {
+  margin: 0;
+  border-radius: 4px;
+}
+.section-checklist .section-checkbox:indeterminate {
+  background: var(--accent-fill);
+}
+.section-checklist .section-checkbox:indeterminate::after {
+  content: '';
+  width: 8px;
+  height: 2px;
+  border: 0;
+  background: var(--bg);
+  transform: none;
+}

@@ -167,8 +167,8 @@ test('Leitura renders every Markdown format', async ({ page }) => {
   await expect(read.locator('blockquote blockquote')).toHaveText('aninhada')
   await expect(read.locator('ul ul')).toContainText('filho')
   await expect(read.locator('ol:not([data-footnotes] ol) > li')).toHaveText(['um', 'dois'])
-  await expect(read.locator('input[type=checkbox]')).toHaveCount(2)
-  await expect(read.locator('input[type=checkbox]:checked')).toHaveCount(1)
+  await expect(read.locator('input[type=checkbox]:not(.section-checkbox)')).toHaveCount(2)
+  await expect(read.locator('input[type=checkbox]:not(.section-checkbox):checked')).toHaveCount(1)
 
   await expect(read.locator('th').nth(0)).toHaveCSS('text-align', 'left')
   await expect(read.locator('th').nth(1)).toHaveCSS('text-align', 'center')
