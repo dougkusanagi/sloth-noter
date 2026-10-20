@@ -257,10 +257,10 @@ function Heading({ node, children, ...props }) {
           <ChevronDown aria-hidden="true" />
         </button>
       )}
-      {children}
       {onChange && checklists.get(section?.line) && (
         <SectionChecklist line={section.line} checklist={checklists.get(section.line)} />
       )}
+      {children}
       {tasks && <ProgressBadge {...tasks} />}
     </Tag>
   )

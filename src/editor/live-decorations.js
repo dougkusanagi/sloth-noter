@@ -409,8 +409,8 @@ export function decorationsFor(view) {
         ranges.push(
           Decoration.widget({
             widget: new SectionChecklistWidget(number, checklist),
-            side: -2,
-          }).range(line.to),
+            side: -1,
+          }).range(line.from),
         )
       if (active) {
         if (shape.kind === 'bullet') {

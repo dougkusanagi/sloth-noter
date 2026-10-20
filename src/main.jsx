@@ -2157,23 +2157,27 @@ function Workspace({ persistence, loaded }) {
                     </div>
                   </details>
                 )}
-                {selectionStats ? (
+                {selectionStats && (
                   <span
                     className="selection-statistics"
                     aria-label={t('document.selection')}
-                    title={`${t('document.charactersNoSpaces', { count: formatCount(selectionStats.charactersNoSpaces) })} · ${t('document.total', { words: wordCount, characters: characterCount })}`}
+                    title={t('document.charactersNoSpaces', {
+                      count: formatCount(selectionStats.charactersNoSpaces),
+                    })}
                   >
                     <span>{t('document.selection')}:</span>
                     <span>{selectedCount('document.words', selectionStats.words)}</span>
                     <span>{selectedCount('document.characters', selectionStats.characters)}</span>
                     <span>{selectedCount('document.lines', selectionStats.lines)}</span>
                   </span>
-                ) : (
-                  <>
-                    <span>{t('document.words', { count: wordCount })}</span>
-                    <span>{t('document.characters', { count: characterCount })}</span>
-                  </>
                 )}
+                <span
+                  className="document-statistics"
+                  aria-label={t('document.total', { words: wordCount, characters: characterCount })}
+                >
+                  <span>{t('document.words', { count: wordCount })}</span>
+                  <span>{t('document.characters', { count: characterCount })}</span>
+                </span>
               </>
             )}
             <fieldset className="mode-switch">

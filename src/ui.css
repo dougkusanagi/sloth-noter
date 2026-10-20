@@ -2435,11 +2435,19 @@ html:has(
   background: color-mix(in srgb, var(--accent) 9%, transparent);
   box-shadow: inset 0 -1px color-mix(in srgb, var(--accent) 40%, transparent);
 }
+.document-statistics,
 .selection-statistics {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 4px 12px;
   align-items: center;
+}
+.document-statistics {
+  flex-shrink: 0;
+}
+.selection-statistics {
+  padding-right: 14px;
+  border-right: 1px solid var(--line);
 }
 .selection-statistics > :first-child {
   color: var(--ink);
@@ -2604,12 +2612,12 @@ html:has(
 .section-checklist {
   display: inline-flex;
   align-items: center;
-  margin-left: 0.6em;
+  margin-right: 0.45em;
   vertical-align: middle;
 }
 .section-checklist .section-checkbox {
   margin: 0;
-  border-radius: 4px;
+  border-radius: 50%;
 }
 .section-checklist .section-checkbox:indeterminate {
   background: var(--accent-fill);
