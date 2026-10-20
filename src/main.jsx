@@ -98,6 +98,7 @@ import {
   ListChecks,
   NotebookText,
   Trash2,
+  Minimize2,
 } from 'lucide-react'
 import './styles.css'
 import './ui.css'
@@ -193,6 +194,7 @@ function Workspace({ persistence, loaded }) {
   const conflictQueue = useRef([])
   const [menuOpen, setMenuOpen] = useState(false)
   const [selectedText, setSelectedText] = useState({ id: null, mode: null, text: '' })
+  const [focusMode, setFocusMode] = useState(false)
   const [findOpen, setFindOpen] = useState(false)
   const [findQuery, setFindQuery] = useState('')
   const [findIndex, setFindIndex] = useState(0)
@@ -251,7 +253,8 @@ function Workspace({ persistence, loaded }) {
     close: closeTab,
     trash: deleteNote,
   })
-  const sidebarVisible = prefs.sidebarVisible ?? !window.matchMedia('(max-width: 600px)').matches
+  const sidebarVisible =
+    !focusMode && (prefs.sidebarVisible ?? !window.matchMedia('(max-width: 600px)').matches)
   setLanguage(prefs.language)
   const images = useMemo(() => libraryImages(data, diskImages), [data, diskImages])
   const openTasks = useMemo(
@@ -1368,6 +1371,24 @@ function Workspace({ persistence, loaded }) {
         if (!document.querySelector('[role="dialog"]')) menuButton.current?.focus()
       }, 0)
   }
+  function toggleFocusMode() {
+    const view = mode === 'visual' ? visualRef.current : null
+    const position = view?.state.selection.main.head
+    const before = view && view.coordsAtPos(position)
+    setFocusMode((value) => !value)
+    setMenuOpen(false)
+    requestAnimationFrame(() => {
+      if (mode !== 'reading') focusEditor()
+      else document.querySelector('.editor-shell')?.focus({ preventScroll: true })
+      if (view && before)
+        view.requestMeasure({
+          read: () => view.coordsAtPos(position),
+          write: (after) => {
+            if (after) window.scrollBy({ top: after.top - before.top, behavior: 'instant' })
+          },
+        })
+    })
+  }
   function changeMode(next) {
     setMode(next)
     setMenuOpen(false)
@@ -1551,6 +1572,15 @@ function Workspace({ persistence, loaded }) {
         updatePrefs({ fontSize: FONT_SIZE.default })
       }
       if (event.key === 'Escape' && palette) closePalette()
+      else if (
+        event.key === 'Escape' &&
+        focusMode &&
+        !findOpen &&
+        !document.querySelector('[role="dialog"], [role="menu"], .image-insert')
+      ) {
+        event.preventDefault()
+        toggleFocusMode()
+      }
     }
     document.addEventListener('keydown', onKey, true)
     return () => document.removeEventListener('keydown', onKey, true)
@@ -1588,6 +1618,7 @@ function Workspace({ persistence, loaded }) {
         },
       ]),
     ),
+    focus: () => active && toggleFocusMode(),
     newNote: () => runMenu(() => createNote(), false),
     findNote: () => runMenu(openPalette, false),
     findInNote: () => active && runMenu(openFind, false),
@@ -1686,7 +1717,7 @@ function Workspace({ persistence, loaded }) {
     t(count === 1 ? `${key}.one` : key, { count: formatCount(count) })
   return (
     <main
-      className="app"
+      className={focusMode ? 'app focus-mode' : 'app'}
       style={{
         '--editor-size': `${prefs.fontSize}px`,
         '--content-width': `${contentWidth(prefs)}px`,
@@ -1704,6 +1735,19 @@ function Workspace({ persistence, loaded }) {
           addImages(others, insertionPoint(event))
       }}
     >
+      {focusMode && (
+        <button
+          type="button"
+          className="focus-exit"
+          aria-label={t('focus.exit')}
+          title={`${t('focus.exit')} (Esc)`}
+          onClick={toggleFocusMode}
+        >
+          <Minimize2 size={16} aria-hidden="true" />
+          <span>{t('focus.exit')}</span>
+          <kbd>Esc</kbd>
+        </button>
+      )}
       <header className="app-header" data-tauri-drag-region inert={switching ? true : undefined}>
         {persistence.invoke && mac && <WindowControls mac />}
         <div className="main-menu-wrap" ref={menuWrap}>
@@ -1761,7 +1805,12 @@ function Workspace({ persistence, loaded }) {
         />
         {tabStrip}
         <div className="window-drag-space" data-tauri-drag-region />
-        <DisplayMenu prefs={prefs} onChange={updatePrefs} />
+        <DisplayMenu
+          prefs={prefs}
+          onChange={updatePrefs}
+          focusMode={focusMode}
+          onToggleFocus={active ? toggleFocusMode : null}
+        />
         {persistence.invoke && !mac && <WindowControls />}
         <input
           ref={importInput}
@@ -1941,6 +1990,7 @@ function Workspace({ persistence, loaded }) {
         )}
         <section
           className="editor-shell"
+          tabIndex={-1}
           onMouseDownCapture={middleClickPasteGuard.mouse}
           onMouseUpCapture={middleClickPasteGuard.mouse}
           onAuxClickCapture={middleClickPasteGuard.mouse}

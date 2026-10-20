@@ -1,5 +1,6 @@
 import {
   FilePlus,
+  Focus,
   Search,
   ScanSearch,
   Replace,
@@ -76,6 +77,7 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
     [
       'menu.view',
       [
+        ['focus', 'focus.toggle', Focus, 'Shift+F', !active, true],
         ['sidebar', 'sidebar.toggle', PanelLeft, 'B', false, true],
         ['visual', 'mode.visual', Eye, 'Alt+1'],
         ['source', 'mode.source', Code, 'Alt+2'],

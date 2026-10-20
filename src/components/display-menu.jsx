@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { Minus, Plus, RotateCcw, Type, MoveHorizontal, Monitor, Sun, Moon } from 'lucide-react'
+import {
+  Minus,
+  Plus,
+  RotateCcw,
+  Type,
+  MoveHorizontal,
+  Monitor,
+  Sun,
+  Moon,
+  Focus,
+} from 'lucide-react'
 import { FONT_SIZE, CONTENT_WIDTH, contentWidth } from '../storage.js'
 import { t } from '../i18n.js'
 import { Shortcut } from './main-menu.jsx'
@@ -8,7 +18,7 @@ import { Shortcut } from './main-menu.jsx'
  * The "Aa" popover in the header: theme, text size and text width. Appearance lives here
  * so the main menu only holds actions.
  */
-export function DisplayMenu({ prefs, onChange }) {
+export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
   const [open, setOpen] = useState(false)
   const wrap = useRef(null)
   const trigger = useRef(null)
@@ -72,6 +82,20 @@ export function DisplayMenu({ prefs, onChange }) {
           }}
         >
           <div role="menu" aria-label={t('display.title')}>
+            <button
+              className="display-focus-toggle"
+              role="menuitemcheckbox"
+              aria-checked={focusMode}
+              disabled={!onToggleFocus}
+              onClick={() => {
+                close(false)
+                onToggleFocus?.()
+              }}
+            >
+              <Focus size={16} aria-hidden="true" />
+              <span>{t('focus.toggle')}</span>
+              <Shortcut keys="Shift+F" />
+            </button>
             <div className="menu-heading" role="presentation">
               {t('settings.theme')}
             </div>

@@ -46,3 +46,8 @@ test('number shortcuts address tabs without colliding with editor mode shortcuts
   assert.equal(appShortcut({ key: '2', ctrlKey: true, shiftKey: true }), null)
   assert.equal(appShortcut({ key: '2', ctrlKey: true, isComposing: true }), null)
 })
+
+test('focus mode has a direct shortcut without overriding note search', () => {
+  assert.equal(appShortcut({ key: 'F', ctrlKey: true, shiftKey: true }), 'focus')
+  assert.equal(appShortcut({ key: 'f', ctrlKey: true }), 'findInNote')
+})
