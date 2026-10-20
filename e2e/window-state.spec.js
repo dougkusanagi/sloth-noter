@@ -1,4 +1,12 @@
 import { expect, test } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+
+test('the native main window is created maximized', () => {
+  const config = JSON.parse(
+    readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'),
+  )
+  expect(config.app.windows.find((window) => window.label === 'main').maximized).toBe(true)
+})
 
 test('minimizing and transient zero-size events preserve usable window geometry', async ({
   page,
@@ -61,3 +69,33 @@ test('minimizing and transient zero-size events preserve usable window geometry'
     maximized: false,
   })
 })
+
+for (const maximized of [false, true, null]) {
+  test(`startup preserves native maximization with saved state ${maximized}`, async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('.cm-content')).toBeVisible()
+    const commands = await page.evaluate(async (maximized) => {
+      const key = 'sloth-note:window-state'
+      if (maximized === null) localStorage.removeItem(key)
+      else
+        localStorage.setItem(
+          key,
+          JSON.stringify({ version: 2, x: 60, y: 80, width: 980, height: 780, maximized }),
+        )
+      const commands = []
+      window.__TAURI_INTERNALS__ = {
+        metadata: { currentWindow: { label: 'main' } },
+        transformCallback: () => 1,
+        async invoke(command) {
+          commands.push(command)
+          if (command === 'plugin:event|listen') return 1
+          throw new Error(`Unexpected startup command: ${command}`)
+        },
+      }
+      const { restoreWindowState } = await import('/src/window-state.js')
+      await restoreWindowState()
+      return commands
+    }, maximized)
+    expect(commands).toEqual(['plugin:event|listen', 'plugin:event|listen'])
+  })
+}

@@ -21,12 +21,13 @@ test('app shortcuts respect modifiers and composition', () => {
   assert.equal(appShortcut({ key: ',', metaKey: true }), 'settings')
   assert.equal(appShortcut({ key: 'k', ctrlKey: true, shiftKey: true }), null)
   assert.equal(appShortcut({ key: 'r', ctrlKey: true }), null)
+  assert.equal(appShortcut({ key: 'h', ctrlKey: true }), 'replaceInNote')
   assert.equal(appShortcut({ key: 't', ctrlKey: true, isComposing: true }), null)
 })
 
 // Combinations owned by the browser or webview: developer tools, hard reload, view source,
-// downloads, history and bookmarks. The app must never bind them.
-const RESERVED = ['Shift+I', 'Alt+I', 'Shift+R', 'Shift+C', 'Shift+J', 'R', 'U', 'H', 'J', 'D']
+// downloads and bookmarks. Ctrl+H intentionally opens replacement, as in VS Code.
+const RESERVED = ['Shift+I', 'Alt+I', 'Shift+R', 'Shift+C', 'Shift+J', 'R', 'U', 'J', 'D']
 
 test('no shortcut collides with a combination the browser or webview owns', () => {
   assert.deepEqual(

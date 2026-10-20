@@ -1,8 +1,9 @@
+import { searchHighlights } from './editor/search.js'
 import { clipboardImageFiles } from './clipboard.js'
 import { ImageInsert } from './components/image-insert.jsx'
 import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
-import { liveMarkdown } from './editor/live-decorations.js'
+import { liveMarkdown, taskNotes } from './editor/live-decorations.js'
 import { foldField } from './editor/folding.js'
 import { railsLayer } from './editor/rails.js'
 import { codeCopyHandler, stickyCodeCopy } from './editor/code-copy.js'
@@ -24,7 +25,7 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { t } from './i18n.js'
 import { flushSync } from 'react-dom'
-import { EditorSelection, EditorState } from '@codemirror/state'
+import { Compartment, EditorSelection, EditorState } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { EditorView, keymap } from '@codemirror/view'
 import { activeFormats, formatSelection } from './format-selection.js'
@@ -98,15 +99,19 @@ function BlockIcon({ action }) {
 
 export function VisualEditor({
   noteId,
+  notes = [],
   body,
   onChange,
   onReady,
+  onSelectionChange,
+  onStatisticsSelection,
   onOpenWiki,
   onImageFiles,
   onImageUrl,
   onCopy,
   imageBusy,
 }) {
+  const notesCompartment = useRef(new Compartment())
   const host = useRef(null),
     viewRef = useRef(null),
     syncing = useRef(false)
@@ -123,13 +128,25 @@ export function VisualEditor({
   const callbacks = useRef({
     onChange,
     onReady,
+    onSelectionChange,
+    onStatisticsSelection,
     onOpenWiki,
     onImageFiles,
     onImageUrl,
     imageBusy,
     onCopy,
   })
-  callbacks.current = { onChange, onReady, onOpenWiki, onImageFiles, onImageUrl, imageBusy, onCopy }
+  callbacks.current = {
+    onChange,
+    onReady,
+    onSelectionChange,
+    onStatisticsSelection,
+    onOpenWiki,
+    onImageFiles,
+    onImageUrl,
+    imageBusy,
+    onCopy,
+  }
 
   function positionToolbar(view) {
     const selection = view.state.selection.main
@@ -443,12 +460,31 @@ export function VisualEditor({
           }),
           foldField,
           railsLayer,
+          notesCompartment.current.of(taskNotes.of(notes)),
           liveMarkdown,
+          searchHighlights,
           stickyCodeCopy,
           codeCopyHandler.of((source) => callbacks.current.onCopy?.(source)),
           EditorView.updateListener.of((update) => {
+            if (update.selectionSet || update.docChanged) {
+              callbacks.current.onStatisticsSelection?.(
+                update.state.selection.ranges
+                  .filter((range) => !range.empty)
+                  .map((range) => update.state.doc.sliceString(range.from, range.to))
+                  .join('\n'),
+              )
+            }
             if (update.docChanged && !syncing.current)
-              callbacks.current.onChange(update.state.doc.toString())
+              callbacks.current.onChange(update.state.doc.toString(), update.changes)
+            if (
+              update.selectionSet &&
+              update.view.hasFocus &&
+              update.transactions.some(
+                (transaction) =>
+                  transaction.isUserEvent('select') && !transaction.isUserEvent('select.pointer'),
+              )
+            )
+              callbacks.current.onSelectionChange?.(update.state.selection.main)
             if (
               update.selectionSet ||
               update.docChanged ||
@@ -464,6 +500,11 @@ export function VisualEditor({
       parent: host.current,
     })
     viewRef.current = view
+    const capturePointerSelection = (event) => {
+      if (event.target.closest?.('button')) return
+      queueMicrotask(() => callbacks.current.onSelectionChange?.(view.state.selection.main))
+    }
+    view.dom.addEventListener('pointerup', capturePointerSelection)
     const focusBlankArea = (event) => {
       if (
         event.target.closest?.(
@@ -494,6 +535,7 @@ export function VisualEditor({
     view.scrollDOM.addEventListener('mousedown', focusBlankArea)
     callbacks.current.onReady(view)
     return () => {
+      view.dom.removeEventListener('pointerup', capturePointerSelection)
       callbacks.current.onReady(null)
       viewRef.current = null
       window.removeEventListener('scroll', reposition, true)
@@ -513,6 +555,12 @@ export function VisualEditor({
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: body } })
     syncing.current = false
   }, [body])
+
+  useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: notesCompartment.current.reconfigure(taskNotes.of(notes)),
+    })
+  }, [notes])
 
   return (
     <div className="visual-editor" ref={host}>

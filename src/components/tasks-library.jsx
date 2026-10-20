@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, CircleCheck, ExternalLink } from 'lucide-react'
-import { noteTasks } from '../tasks.js'
+import { resolvedTasks } from '../tasks.js'
 import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
 
@@ -23,7 +23,7 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
     const needle = query.trim().toLocaleLowerCase()
     return notes
       .map((note) => {
-        const tasks = noteTasks(note.body)
+        const tasks = resolvedTasks(note.body, notes)
         return {
           note,
           open: tasks.filter((task) => !task.done).length,
@@ -93,6 +93,11 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
                     type="checkbox"
                     className="task-checkbox"
                     checked={task.done}
+                    ref={(input) => {
+                      if (input) input.indeterminate = task.partial
+                    }}
+                    aria-checked={task.partial ? 'mixed' : task.done}
+                    disabled={Boolean(task.progress)}
                     aria-label={plain(task.text) || t('task.open')}
                     onChange={() => onToggle(note.id, task.mark)}
                   />

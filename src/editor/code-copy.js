@@ -48,22 +48,56 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
       this.layer.className = 'code-copy-layer'
       this.layer.contentEditable = 'false'
       view.dom.append(this.layer)
-      this.schedule = () =>
+      this.schedule = () => {
+        if (this.inlineButton) this.inlineButton.hidden = true
         view.requestMeasure({
           key: this,
           read: () => this.measure(),
           write: (positions) => this.position(positions),
         })
+      }
       window.addEventListener('scroll', this.schedule, true)
       window.addEventListener('resize', this.schedule)
+      this.inlineButton = new CodeCopyWidget('', '').toDOM(view)
+      this.inlineButton.className = 'copy-inline-code cm-copy-inline-code'
+      this.inlineButton.hidden = true
+      this.layer.append(this.inlineButton)
+      this.hover = (event) => {
+        if (this.inlineButton.contains(event.target)) return
+        const token = event.target.closest?.('.cm-md-inline-code')
+        if (!token) {
+          this.inlineButton.hidden = true
+          return
+        }
+        const pos = view.posAtDOM(token)
+        const node = this.inlineNodes.find(
+          (node) => pos >= node.position.start.offset && pos < node.position.end.offset,
+        )
+        if (!node) return
+        const button = new CodeCopyWidget(node.value, '').toDOM(view)
+        button.className = 'copy-inline-code cm-copy-inline-code'
+        this.inlineButton.replaceWith(button)
+        this.inlineButton = button
+        const rect = token.getBoundingClientRect()
+        button.style.top = `${rect.top}px`
+        button.style.left = `${Math.min(rect.right - 2, window.innerWidth - 28)}px`
+      }
+      this.leave = () => {
+        this.inlineButton.hidden = true
+      }
+      view.dom.addEventListener('mouseover', this.hover)
+      view.dom.addEventListener('mouseleave', this.leave)
       this.build()
       this.schedule()
     }
     build() {
       this.blocks = []
-      this.layer.replaceChildren()
+      this.layer.replaceChildren(this.inlineButton)
+      this.inlineButton.hidden = true
+      this.inlineNodes = []
       const doc = this.view.state.doc
       walk(markdownTree(doc.toString()), (node) => {
+        if (node.type === 'inlineCode') this.inlineNodes.push(node)
         if (node.type !== 'code') return
         const first = doc.line(node.position.start.line)
         if (!/^\s{0,3}(`{3,}|~{3,})/.test(first.text)) return
@@ -107,6 +141,8 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
     destroy() {
       window.removeEventListener('scroll', this.schedule, true)
       window.removeEventListener('resize', this.schedule)
+      this.view.dom.removeEventListener('mouseover', this.hover)
+      this.view.dom.removeEventListener('mouseleave', this.leave)
       this.layer.remove()
     }
   },

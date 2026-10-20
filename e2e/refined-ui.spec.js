@@ -148,3 +148,45 @@ test('the main menu holds actions only and the status bar switches modes', async
   await expect(page.locator('textarea')).toBeVisible()
   await expect(status).not.toContainText('links inversos')
 })
+
+for (const mode of ['Padrão', 'Leitura']) {
+  test(`${mode} shows useful task totals and restores a collapsed parent's summary`, async ({
+    page,
+  }) => {
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    await page
+      .getByRole('textbox', { name: 'Editor Markdown em texto puro' })
+      .fill(
+        '# Tarefas\n\n## Projeto\n\n### Etapa\n\n#### Grupo\n\n##### Detalhes\n\n###### Ações\n\n- [ ] A\n- [x] B\n\n## Outro\n\n- [ ] C',
+      )
+    await page.getByRole('radio', { name: mode, exact: true }).check({ force: true })
+    const surface = page.locator(mode === 'Padrão' ? '.cm-content' : '.markdown')
+    const badges = surface.locator('.section-progress:visible')
+    const parent = surface
+      .locator(mode === 'Padrão' ? '.cm-md-h2' : 'h2')
+      .filter({ hasText: 'Projeto' })
+    const leaf = surface.locator(mode === 'Padrão' ? '.cm-md-h6' : 'h6')
+    await expect(badges).toHaveCount(2)
+    await expect(parent.locator('.section-progress')).toHaveCount(0)
+    await expect(leaf.locator('.section-progress')).toHaveAttribute(
+      'aria-label',
+      '1 de 2 tarefas concluídas',
+    )
+    await parent.hover()
+    await parent.getByRole('button', { name: 'Recolher seção' }).click()
+    await expect(parent.locator('.section-progress')).toHaveAttribute(
+      'aria-label',
+      '1 de 2 tarefas concluídas',
+    )
+    await expect(badges).toHaveCount(2)
+    await parent.getByRole('button', { name: 'Expandir seção', exact: true }).click()
+    await expect(parent.locator('.section-progress')).toHaveCount(0)
+    await expect(badges).toHaveCount(2)
+    await surface.getByRole('checkbox').first().check()
+    await expect(leaf.locator('.section-progress')).toHaveAttribute(
+      'aria-label',
+      '2 de 2 tarefas concluídas',
+    )
+    await expect(parent.locator('.section-progress')).toHaveCount(0)
+  })
+}

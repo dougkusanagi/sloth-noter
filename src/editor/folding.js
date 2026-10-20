@@ -14,33 +14,6 @@ export const unfoldSection = StateEffect.define({
   map: (value, mapping) => ({ from: mapping.mapPos(value.from) }),
 })
 
-class FoldedWidget extends WidgetType {
-  constructor(lines, from) {
-    super()
-    this.lines = lines
-    this.from = from
-  }
-  eq(other) {
-    return this.lines === other.lines && this.from === other.from
-  }
-  toDOM(view) {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = 'cm-folded-pill'
-    const hidden = t('fold.hidden', { count: this.lines })
-    button.textContent = `⋯ ${hidden}`
-    button.setAttribute('aria-label', `${t('fold.expand')} (${hidden})`)
-    button.addEventListener('mousedown', (event) => event.preventDefault())
-    button.addEventListener('click', () =>
-      view.dispatch({ effects: unfoldSection.of({ from: this.from }) }),
-    )
-    return button
-  }
-  ignoreEvent() {
-    return true
-  }
-}
-
 export class FoldToggleWidget extends WidgetType {
   constructor(line, folded) {
     super()
@@ -64,11 +37,6 @@ export class FoldToggleWidget extends WidgetType {
   ignoreEvent() {
     return true
   }
-}
-
-function foldDecoration(state, from, to) {
-  const lines = state.doc.lineAt(to).number - state.doc.lineAt(from).number
-  return Decoration.replace({ widget: new FoldedWidget(lines, from) }).range(from, to)
 }
 
 /** The range a heading would hide, or null when its section has no content. */
@@ -114,7 +82,7 @@ export const foldField = StateField.define({
       if (effect.is(foldSection)) {
         const { from, to } = effect.value
         if (to > from && !hasFold(folds, from))
-          folds = folds.update({ add: [foldDecoration(state, from, to)] })
+          folds = folds.update({ add: [Decoration.replace({}).range(from, to)] })
       } else if (effect.is(unfoldSection)) {
         folds = folds.update({ filter: (from) => from !== effect.value.from })
       }

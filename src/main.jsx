@@ -1,3 +1,7 @@
+import { textStatistics } from './text-statistics.js'
+import { ChangeSet } from '@codemirror/state'
+import { documentChanges, mapSearchScope } from './search-scope.js'
+import { SourceSearchHighlights } from './components/source-search-highlights.jsx'
 import { clipboardImageFiles, readNativeClipboard } from './clipboard.js'
 import { createMiddleClickPasteGuard } from './middle-click-paste.js'
 import { listenNativeImageDrops, routeNativeImageDrop } from './native-image-drop.js'
@@ -27,13 +31,14 @@ import { MainMenu } from './components/main-menu.jsx'
 import { WindowControls, isMac } from './components/window-controls.jsx'
 import { DisplayMenu } from './components/display-menu.jsx'
 import { TasksLibrary } from './components/tasks-library.jsx'
-import { noteTasks, toggleTask } from './tasks.js'
+import { resolvedTasks, syncLinkedTasks, toggleTask } from './tasks.js'
 import { displayName } from './note-title.js'
 import { useTabs } from './components/tabs.jsx'
 import { ImageLibrary } from './components/image-library.jsx'
 import { readNoteFile, splitDrop } from './note-drop.js'
 import { appShortcut } from './shortcuts.js'
-import { findMatches } from './find.js'
+import { searchNote, replacementText } from './find.js'
+import { setSearchHighlights, revealSearchMatch } from './editor/search.js'
 import {
   headingFileName,
   isDiscardableEmptyNote,
@@ -186,9 +191,20 @@ function Workspace({ persistence, loaded }) {
   const conflictRef = useRef(null)
   const conflictQueue = useRef([])
   const [menuOpen, setMenuOpen] = useState(false)
+  const [selectedText, setSelectedText] = useState({ id: null, mode: null, text: '' })
   const [findOpen, setFindOpen] = useState(false)
   const [findQuery, setFindQuery] = useState('')
   const [findIndex, setFindIndex] = useState(0)
+  const [replaceOpen, setReplaceOpen] = useState(false)
+  const [replacement, setReplacement] = useState('')
+  const [findOptions, setFindOptions] = useState({
+    caseSensitive: false,
+    wholeWord: false,
+    regex: false,
+    preserveCase: false,
+    selectionOnly: false,
+    scope: null,
+  })
   const damaged = useRef(loaded.raw)
   const writer = useRef(null)
   if (!writer.current)
@@ -206,6 +222,9 @@ function Workspace({ persistence, loaded }) {
   const menuWrap = useRef(null)
   const menuFirst = useRef(null)
   const findInput = useRef(null)
+  const replaceInput = useRef(null)
+  const findNavigation = useRef(null)
+  const pendingSearchChanges = useRef(null)
   const editorRef = useRef(null)
   const visualRef = useRef(null)
   const [readingFolds, setReadingFolds] = useState({ id: null, lines: new Set() })
@@ -236,7 +255,8 @@ function Workspace({ persistence, loaded }) {
   const openTasks = useMemo(
     () =>
       data.notes.reduce(
-        (sum, note) => sum + noteTasks(note.body).filter((task) => !task.done).length,
+        (sum, note) =>
+          sum + resolvedTasks(note.body, data.notes).filter((task) => !task.done).length,
         0,
       ),
     [data.notes],
@@ -282,6 +302,7 @@ function Workspace({ persistence, loaded }) {
   }
   function commit(next) {
     next = ensureDocumentTitles(next)
+    next = { ...next, notes: syncLinkedTasks(next.notes) }
     current.current = next
     setData(next)
     if (!blocked) writer.current.write(next)
@@ -394,9 +415,17 @@ function Workspace({ persistence, loaded }) {
       }
     }, 0)
   }
-  function updateBody(body) {
+  function updateBody(body, editorChanges) {
     body = ensureTitle(body)
     const old = current.current
+    const previousBody = old.notes.find((note) => note.id === old.activeId)?.body ?? ''
+    if (previousBody !== body) {
+      const changes =
+        editorChanges ?? pendingSearchChanges.current ?? documentChanges(previousBody, body)
+      setFindOptions((options) =>
+        options.scope ? { ...options, scope: mapSearchScope(options.scope, changes) } : options,
+      )
+    }
     if (old.activeId === previewId) setPreviewId(null)
     const name = nameFromHeading(body, old.notes, old.activeId)
     const previousName = old.notes.find((note) => note.id === old.activeId)?.name
@@ -1146,36 +1175,187 @@ function Workspace({ persistence, loaded }) {
         if (!document.querySelector('[role="dialog"]')) menuButton.current?.focus()
       }, 0)
   }
-  function openFind() {
+  useEffect(() => {
+    setSelectedText({ id: null, mode: null, text: '' })
+  }, [active?.id, mode])
+  function updateSelectionStatistics(text) {
+    setSelectedText((previous) =>
+      previous.id === active?.id && previous.mode === mode && previous.text === text
+        ? previous
+        : { id: active?.id, mode, text },
+    )
+  }
+  useEffect(() => {
+    if (mode !== 'reading') return
+    const update = () => {
+      const selection = window.getSelection()
+      const article = document.querySelector('.reading .markdown')
+      const text =
+        selection &&
+        article?.contains(selection.anchorNode) &&
+        article.contains(selection.focusNode)
+          ? selection.toString()
+          : ''
+      setSelectedText((previous) =>
+        previous.id === active?.id && previous.mode === mode && previous.text === text
+          ? previous
+          : { id: active?.id, mode, text },
+      )
+    }
+    document.addEventListener('selectionchange', update)
+    return () => document.removeEventListener('selectionchange', update)
+  }, [mode, active?.id])
+  function captureSearchSelection(selection) {
+    if (!findOpen || !selection || selection.to <= selection.from) return
+    setFindOptions((options) => ({ ...options, scope: { from: selection.from, to: selection.to } }))
+  }
+  function openFind(replace = false) {
+    setReplaceOpen(replace)
+    const selection =
+      mode === 'visual'
+        ? visualRef.current?.state.selection.main
+        : mode === 'source' && editorRef.current
+          ? { from: editorRef.current.selectionStart, to: editorRef.current.selectionEnd }
+          : null
+    const editorFocused =
+      mode === 'visual' ? visualRef.current?.hasFocus : document.activeElement === editorRef.current
+    if (!findOpen || editorFocused) {
+      const selectedText =
+        selection && selection.to > selection.from
+          ? active?.body.slice(selection.from, selection.to)
+          : mode === 'reading'
+            ? window.getSelection()?.toString()
+            : ''
+      if (selectedText) setFindQuery(selectedText)
+    }
+    if (!findOpen || (editorFocused && selection && selection.to > selection.from)) {
+      setFindOptions((options) => ({
+        ...options,
+        selectionOnly: findOpen && options.selectionOnly,
+        scope:
+          selection && selection.to > selection.from
+            ? { from: selection.from, to: selection.to }
+            : null,
+      }))
+    }
     setMenuOpen(false)
     if (mode === 'reading') setMode('visual')
     setFindOpen(true)
     setFindIndex(0)
-    setTimeout(() => findInput.current?.focus(), 0)
+    setTimeout(() => {
+      const input = replace ? replaceInput.current : findInput.current
+      input?.focus({ preventScroll: true })
+      input?.select()
+    }, 0)
   }
   function closeFind() {
     setFindOpen(false)
     setTimeout(focusEditor, 0)
   }
   function currentMatches() {
-    return active ? findMatches(active.body, findQuery) : []
+    return active ? searchNote(active.body, findQuery, findOptions).matches : []
+  }
+  function revealSourceMatch(match, index) {
+    const field = editorRef.current
+    const marker = document.querySelector(`[data-search-index="${index}"]`)
+    if (!field || !marker) return
+    field.setSelectionRange(match.start, match.end)
+    field.scrollTop = marker.offsetTop - field.clientHeight / 2
+    field.previousElementSibling.scrollTop = field.scrollTop
+    const rect = marker.getBoundingClientRect()
+    const top = (document.querySelector('.find-dialog')?.getBoundingClientRect().bottom ?? 80) + 24
+    const bottom = window.innerHeight - 70
+    if (rect.top < top || rect.bottom > bottom)
+      window.scrollBy({ top: rect.top - (top + bottom) / 2, behavior: 'instant' })
   }
   function selectFind(index = findIndex) {
     const matches = currentMatches()
     if (!matches.length) return
     const safeIndex = (index + matches.length) % matches.length
-    if (mode === 'source' && editorRef.current) {
-      editorRef.current.focus()
-      editorRef.current.setSelectionRange(matches[safeIndex].start, matches[safeIndex].end)
-    } else if (visualRef.current) {
-      visualRef.current.dispatch({
-        selection: { anchor: matches[safeIndex].start, head: matches[safeIndex].end },
-        scrollIntoView: true,
-      })
-    }
-    findInput.current?.focus()
+    const match = matches[safeIndex]
+    if (mode === 'source' && editorRef.current) revealSourceMatch(match, safeIndex)
+    else if (visualRef.current) revealSearchMatch(visualRef.current, match)
+    findInput.current?.focus({ preventScroll: true })
     setFindIndex(safeIndex)
   }
+  function replaceFind(all = false) {
+    if (!active) return
+    const matches = currentMatches()
+    if (!matches.length) return
+    findNavigation.current = null
+    const selected = all ? matches : [matches[Math.min(findIndex, matches.length - 1)]]
+    const changes = selected.map((match) => ({
+      from: match.start,
+      to: match.end,
+      insert: replacementText(active.body, match, replacement, findOptions),
+    }))
+    const changeSet = ChangeSet.of(changes, active.body.length)
+    const nextOptions = { ...findOptions, scope: mapSearchScope(findOptions.scope, changeSet) }
+    if (mode === 'visual' && visualRef.current) {
+      visualRef.current.dispatch({ changes: changeSet, userEvent: 'input.replace' })
+    } else {
+      let body = active.body
+      for (const change of [...changes].reverse())
+        body = body.slice(0, change.from) + change.insert + body.slice(change.to)
+      const field = editorRef.current
+      pendingSearchChanges.current = changeSet
+      if (field && body.startsWith('# ')) {
+        field.focus({ preventScroll: true })
+        field.setSelectionRange(2, active.body.length)
+        if (!document.execCommand('insertText', false, body.slice(2))) updateBody(body)
+        findInput.current?.focus({ preventScroll: true })
+      } else updateBody(body)
+      pendingSearchChanges.current = null
+    }
+    if (!all) {
+      const nextStart = changes[0].from + changes[0].insert.length
+      let body =
+        active.body.slice(0, changes[0].from) + changes[0].insert + active.body.slice(changes[0].to)
+      const next = searchNote(body, findQuery, nextOptions).matches.findIndex(
+        (match) =>
+          match.start >= nextStart &&
+          (match.start > changes[0].from || changes[0].to > changes[0].from),
+      )
+      setFindIndex(Math.max(0, next))
+    } else setFindIndex(0)
+  }
+  useEffect(() => {
+    setFindOptions((options) =>
+      options.scope ? { ...options, scope: null, selectionOnly: false } : options,
+    )
+  }, [active?.id])
+  const findResult = useMemo(
+    () => searchNote(active?.body ?? '', findQuery, findOptions),
+    [active?.body, findQuery, findOptions],
+  )
+  useEffect(() => {
+    const view = mode === 'visual' ? visualRef.current : null
+    const matches = findOpen ? findResult.matches : []
+    const index = Math.min(findIndex, Math.max(0, matches.length - 1))
+    if (index !== findIndex) setFindIndex(index)
+    const navigationKey = JSON.stringify([
+      findOpen,
+      findQuery,
+      { ...findOptions, scope: null },
+      index,
+      mode,
+      active?.id,
+    ])
+    const navigate = navigationKey !== findNavigation.current
+    findNavigation.current = navigationKey
+    if (view) {
+      view.dispatch({
+        effects: setSearchHighlights.of({
+          matches,
+          index,
+          scope: findOpen && findOptions.selectionOnly ? findOptions.scope : null,
+        }),
+      })
+      if (navigate && matches[index]) revealSearchMatch(view, matches[index])
+    } else if (navigate && findOpen && matches[index]) {
+      revealSourceMatch(matches[index], index)
+    }
+  }, [findOpen, findQuery, findOptions, findResult, findIndex, mode, active?.id])
   function runMenu(action, restoreFocus = true) {
     setMenuOpen(false)
     action()
@@ -1398,6 +1578,7 @@ function Workspace({ persistence, loaded }) {
     newNote: () => runMenu(() => createNote(), false),
     findNote: () => runMenu(openPalette, false),
     findInNote: () => active && runMenu(openFind, false),
+    replaceInNote: () => active && runMenu(() => openFind(true), false),
     rename: () => active && runMenu(renameNote, false),
     reopenTab: () => runMenu(reopenTab, false),
     previousTab: () => runMenu(() => selectAdjacentTab(-1), false),
@@ -1481,6 +1662,13 @@ function Workspace({ persistence, loaded }) {
     .filter(Boolean)
     .length.toLocaleString(prefs.language)
   const characterCount = Array.from(documentText).length.toLocaleString(prefs.language)
+  const selectionStats =
+    selectedText.id === active?.id && selectedText.mode === mode && selectedText.text
+      ? textStatistics(selectedText.text)
+      : null
+  const formatCount = (count) => count.toLocaleString(prefs.language)
+  const selectedCount = (key, count) =>
+    t(count === 1 ? `${key}.one` : key, { count: formatCount(count) })
   return (
     <main
       className="app"
@@ -1795,26 +1983,62 @@ function Workspace({ persistence, loaded }) {
                 />
               </div>
             ) : mode === 'source' ? (
-              <textarea
-                ref={editorRef}
-                key={active.id}
-                aria-label={t('mode.sourceEditor')}
-                spellCheck="false"
-                value={active.body}
-                onChange={changeSource}
-                onSelect={(event) => {
-                  const field = event.currentTarget
-                  if (field.selectionStart < 2)
-                    field.setSelectionRange(
-                      2,
-                      Math.max(2, field.selectionEnd),
-                      field.selectionDirection,
+              <div className="source-editor-wrap">
+                <div className="source-search-mirror" aria-hidden="true">
+                  <SourceSearchHighlights
+                    body={active.body}
+                    matches={findOpen ? findResult.matches : []}
+                    index={findIndex}
+                    scope={findOpen && findOptions.selectionOnly ? findOptions.scope : null}
+                  />
+                  {'\n'}
+                </div>
+                <textarea
+                  ref={editorRef}
+                  key={active.id}
+                  aria-label={t('mode.sourceEditor')}
+                  spellCheck="false"
+                  value={active.body}
+                  onChange={changeSource}
+                  onSelect={(event) => {
+                    const field = event.currentTarget
+                    if (field.selectionStart < 2)
+                      field.setSelectionRange(
+                        2,
+                        Math.max(2, field.selectionEnd),
+                        field.selectionDirection,
+                      )
+                    updateSelectionStatistics(
+                      field.value.slice(field.selectionStart, field.selectionEnd),
                     )
-                }}
-                onKeyDown={wrapSourceSelection}
-              />
+                  }}
+                  onKeyDown={wrapSourceSelection}
+                  onKeyUp={(event) => {
+                    if (
+                      event.shiftKey ||
+                      ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a')
+                    )
+                      captureSearchSelection({
+                        from: event.currentTarget.selectionStart,
+                        to: event.currentTarget.selectionEnd,
+                      })
+                  }}
+                  onPointerUp={(event) =>
+                    captureSearchSelection({
+                      from: event.currentTarget.selectionStart,
+                      to: event.currentTarget.selectionEnd,
+                    })
+                  }
+                  onScroll={(event) => {
+                    const mirror = event.currentTarget.previousElementSibling
+                    mirror.scrollTop = event.currentTarget.scrollTop
+                    mirror.scrollLeft = event.currentTarget.scrollLeft
+                  }}
+                />
+              </div>
             ) : (
               <VisualEditor
+                notes={data.notes}
                 onCopy={copyCode}
                 imageBusy={imageBusy}
                 onImageFiles={addImages}
@@ -1824,6 +2048,8 @@ function Workspace({ persistence, loaded }) {
                 noteId={active.id}
                 body={active.body}
                 onChange={updateBody}
+                onSelectionChange={captureSearchSelection}
+                onStatisticsSelection={updateSelectionStatistics}
                 onReady={(view) => {
                   visualRef.current = view
                 }}
@@ -1855,8 +2081,23 @@ function Workspace({ persistence, loaded }) {
                     </div>
                   </details>
                 )}
-                <span>{t('document.words', { count: wordCount })}</span>
-                <span>{t('document.characters', { count: characterCount })}</span>
+                {selectionStats ? (
+                  <span
+                    className="selection-statistics"
+                    aria-label={t('document.selection')}
+                    title={`${t('document.charactersNoSpaces', { count: formatCount(selectionStats.charactersNoSpaces) })} · ${t('document.total', { words: wordCount, characters: characterCount })}`}
+                  >
+                    <span>{t('document.selection')}:</span>
+                    <span>{selectedCount('document.words', selectionStats.words)}</span>
+                    <span>{selectedCount('document.characters', selectionStats.characters)}</span>
+                    <span>{selectedCount('document.lines', selectionStats.lines)}</span>
+                  </span>
+                ) : (
+                  <>
+                    <span>{t('document.words', { count: wordCount })}</span>
+                    <span>{t('document.characters', { count: characterCount })}</span>
+                  </>
+                )}
               </>
             )}
             <fieldset className="mode-switch">
@@ -1963,8 +2204,21 @@ function Workspace({ persistence, loaded }) {
       {findOpen && (
         <FindDialog
           inputRef={findInput}
+          replacementRef={replaceInput}
           query={findQuery}
-          matchCount={currentMatches().length}
+          matchCount={findResult.matches.length}
+          index={findIndex}
+          error={findResult.error}
+          options={findOptions}
+          onOptions={(key) => {
+            setFindOptions((options) => ({ ...options, [key]: !options[key] }))
+            setFindIndex(0)
+          }}
+          replaceOpen={replaceOpen}
+          onToggleReplace={() => setReplaceOpen((open) => !open)}
+          replacement={replacement}
+          onReplacement={setReplacement}
+          onReplace={replaceFind}
           onQuery={(value) => {
             setFindQuery(value)
             setFindIndex(0)

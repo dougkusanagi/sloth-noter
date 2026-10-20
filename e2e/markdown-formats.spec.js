@@ -196,3 +196,28 @@ test('Leitura keeps raw HTML inert and unsafe links unclickable', async ({ page 
   ).toHaveCount(0)
   expect(await page.evaluate(() => window.pwned)).toBeUndefined()
 })
+
+test('Padrão alternates a separator between its source and rendered line', async ({ page }) => {
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  await page.locator('.cm-content').click()
+  await page.keyboard.press('Control+End')
+  const rule = page.locator('.cm-md-rule')
+  await expect(rule).not.toContainText('---')
+  await expect(rule).toHaveCSS('background-size', '100% 1px')
+  await expect(rule).toHaveCSS('background-position', '50% 50%')
+  const rendered = await rule.boundingBox()
+  const following = await rule.evaluate((line) => line.nextElementSibling.getBoundingClientRect().y)
+  await rule.click()
+  await expect(rule).toHaveText('---')
+  await expect(rule).toHaveCSS('background-image', 'none')
+  const editing = await rule.boundingBox()
+  expect(editing.height).toBe(rendered.height)
+  expect(editing.y).toBe(rendered.y)
+  expect(await rule.evaluate((line) => line.nextElementSibling.getBoundingClientRect().y)).toBe(
+    following,
+  )
+  await page.keyboard.press('ArrowDown')
+  await expect(rule).not.toContainText('---')
+  await expect(rule).toHaveCSS('background-size', '100% 1px')
+  await expect(rule).toHaveCSS('background-position', '50% 50%')
+})

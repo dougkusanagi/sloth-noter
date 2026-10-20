@@ -19,7 +19,7 @@ export function continueBlock(text, position) {
   const quote = list ? null : line.match(/^(\s*)(> )(.*)$/)
   const match = list ?? quote
   if (!match) return null
-  const task = list && match[3].match(/^\[([ xX])\]\s*(.*)$/)
+  const task = list && match[3].match(/^\[([ xX-])\]\s*(.*)$/)
   if (!match[3].trim() || (task && !task[2].trim()))
     return { from: lineStart, to: lineEnd, insert: '', cursor: lineStart }
   const marker = /^\d/.test(match[2])

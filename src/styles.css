@@ -739,8 +739,7 @@ textarea:focus-visible {
 .markdown hr {
   height: var(--line);
   border: 0;
-  border-bottom: 1px solid var(--soft);
-  box-sizing: content-box;
+  background: linear-gradient(var(--soft), var(--soft)) center / 100% 1px no-repeat;
 }
 .markdown a {
   color: var(--accent);
@@ -963,7 +962,9 @@ textarea:focus-visible {
 }
 .visual-editor .cm-md-rule {
   color: var(--muted);
-  border-bottom: 1px solid var(--soft);
+}
+.visual-editor .cm-md-rule:not(.cm-md-editing) {
+  background: linear-gradient(var(--soft), var(--soft)) center / 100% 1px no-repeat;
 }
 .visual-editor .cm-md-setext-marker:not(.cm-md-editing) {
   font-size: 0;
@@ -1129,22 +1130,6 @@ textarea:focus-visible {
     opacity: 0.6;
   }
 }
-.cm-folded-pill {
-  margin-left: 0.5em;
-  padding: 0 0.6em;
-  border: 0;
-  border-radius: 999px;
-  background: var(--control);
-  box-shadow:
-    var(--bevel),
-    0 0 0 1px var(--edge);
-  color: var(--muted);
-  font: 0.75em/1.7 var(--mono);
-  cursor: pointer;
-}
-.cm-folded-pill:hover {
-  color: var(--accent-ink);
-}
 .markdown .md-section[data-collapsed] > :not(:first-child) {
   display: none;
 }
@@ -1219,4 +1204,15 @@ textarea:focus-visible {
 }
 .section-progress[data-complete] .section-progress-fill {
   stroke: var(--ok);
+}
+
+.task-checkbox:indeterminate {
+  border-color: var(--accent);
+  background: linear-gradient(to right, var(--accent) 50%, transparent 50%);
+}
+.task-checkbox:indeterminate::after {
+  content: none;
+}
+.task-checkbox:disabled {
+  cursor: default;
 }

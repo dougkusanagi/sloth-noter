@@ -1,5 +1,5 @@
 import { isTauri } from '@tauri-apps/api/core'
-import { getCurrentWindow, PhysicalPosition, PhysicalSize } from '@tauri-apps/api/window'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 
 const STORAGE_KEY = 'sloth-note:window-state'
 const STATE_VERSION = 2
@@ -44,17 +44,8 @@ export async function restoreWindowState() {
         height: Math.max(MIN_HEIGHT, saved.height),
       }
     : null
-  if (saved) {
-    try {
-      if (saved.maximized) await appWindow.maximize()
-      else {
-        await appWindow.setPosition(new PhysicalPosition(normal.x, normal.y))
-        await appWindow.setSize(new PhysicalSize(normal.width, normal.height))
-      }
-    } catch {
-      normal = null
-    }
-  }
+  // The native window starts maximized. Keep saved normal bounds for persistence,
+  // without resizing or maximizing the visible window after the webview loads.
   const save = async () => {
     try {
       // A minimized window can report zero size or an off-screen position.

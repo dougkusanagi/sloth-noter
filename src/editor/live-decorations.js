@@ -8,8 +8,11 @@ import { classifyLine, inlineSyntax } from '../live-markdown.js'
 import { headingSections } from '../sections.js'
 import { FoldToggleWidget, foldField, foldRange, isFolded } from './folding.js'
 import { codeTokens, syntaxRanges } from '../syntax-highlight.js'
-import { sectionProgress } from '../tasks.js'
+import { sectionProgress, resolvedTasks } from '../tasks.js'
+import { Facet } from '@codemirror/state'
 import { progressBadge } from '../progress-badge.js'
+
+export const taskNotes = Facet.define({ combine: (values) => values[0] ?? [] })
 
 class ProgressWidget extends WidgetType {
   constructor(done, total) {
@@ -26,13 +29,20 @@ class ProgressWidget extends WidgetType {
 }
 
 class TaskWidget extends WidgetType {
-  constructor(checked, at) {
+  constructor(checked, at, partial = false, automatic = false) {
     super()
     this.checked = checked
     this.at = at
+    this.partial = partial
+    this.automatic = automatic
   }
   eq(other) {
-    return this.checked === other.checked && this.at === other.at
+    return (
+      this.checked === other.checked &&
+      this.at === other.at &&
+      this.partial === other.partial &&
+      this.automatic === other.automatic
+    )
   }
   toDOM(view) {
     const input = document.createElement('input')
@@ -52,6 +62,9 @@ class TaskWidget extends WidgetType {
   }
   updateDOM(input) {
     input.checked = this.checked
+    input.indeterminate = this.partial
+    input.disabled = this.automatic
+    input.setAttribute('aria-checked', this.partial ? 'mixed' : String(this.checked))
     input.dataset.mark = String(this.at)
     input.setAttribute('aria-label', t(this.checked ? 'task.complete' : 'task.open'))
     return true
@@ -123,7 +136,11 @@ export function decorationsFor(view) {
     const range = heading.level > 0 && foldRange(view.state, heading)
     if (range) foldable.set(heading.line, isFolded(view.state, range.from))
   }
-  const progress = sectionProgress(text)
+  const collapsed = new Set([...foldable].filter(([, folded]) => folded).map(([line]) => line))
+  const tasks = new Map(
+    resolvedTasks(text, view.state.facet(taskNotes)).map((task) => [task.line, task]),
+  )
+  const progress = sectionProgress(text, [...tasks.values()], collapsed)
   const definitions = []
   walk(tree, (node) => {
     if (node.type === 'definition' || node.type === 'footnoteDefinition')
@@ -245,7 +262,7 @@ export function decorationsFor(view) {
         continue
       }
       const active = editing.has(number)
-      const task = line.text.match(/^(\s*(?:[-*+]|\d+[.)])\s+)\[([ xX])\]\s+/)
+      const task = line.text.match(/^(\s*(?:[-*+]|\d+[.)])\s+)\[([ xX-])\](?:\s+|$)/)
       if (task && !active) {
         ranges.push(
           Decoration.line({
@@ -257,9 +274,22 @@ export function decorationsFor(view) {
         )
         ranges.push(
           Decoration.replace({
-            widget: new TaskWidget(task[2].toLowerCase() === 'x', line.from + task[1].length + 1),
+            widget: new TaskWidget(
+              tasks.get(number)?.done ?? false,
+              line.from + task[1].length + 1,
+              tasks.get(number)?.partial,
+              Boolean(tasks.get(number)?.progress),
+            ),
           }).range(line.from, line.from + task[0].length),
         )
+        const linked = tasks.get(number)?.progress
+        if (linked)
+          ranges.push(
+            Decoration.widget({
+              widget: new ProgressWidget(linked.done, linked.total),
+              side: 1,
+            }).range(line.to),
+          )
         addInlineDecorations(ranges, line, { prefix: task[0].length }, false)
         continue
       }
@@ -349,6 +379,7 @@ export const liveMarkdown = ViewPlugin.fromClass(
     }
     update(update) {
       if (
+        update.startState.facet(taskNotes) !== update.state.facet(taskNotes) ||
         update.docChanged ||
         update.selectionSet ||
         update.viewportChanged ||

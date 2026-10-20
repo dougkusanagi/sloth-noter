@@ -50,7 +50,9 @@ test('Leitura wraps each H2–H6 and its content in a nested section', async ({ 
   await expect(read.locator('.md-section .md-section')).toContainText('texto sub')
 })
 
-test('Padrão collapses a section and expands it from the heading or the pill', async ({ page }) => {
+test('Padrão collapses a section and expands it from the heading without a hidden-line counter', async ({
+  page,
+}) => {
   await mode(page, 'Padrão')
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+End')
@@ -62,7 +64,7 @@ test('Padrão collapses a section and expands it from the heading or the pill', 
   await expect(page.locator('.cm-line', { hasText: 'texto um' })).toHaveCount(0)
   await expect(page.locator('.cm-line', { hasText: 'texto sub' })).toHaveCount(0)
   await expect(page.locator('.cm-line', { hasText: 'texto dois' })).toBeVisible()
-  await expect(page.locator('.cm-folded-pill')).toHaveText('⋯ 6 linhas ocultas')
+  await expect(page.locator('.cm-folded-pill')).toHaveCount(0)
   await expect(
     heading.getByRole('button', { name: 'Expandir seção', exact: true }),
   ).toHaveAttribute('aria-expanded', 'false')
@@ -75,7 +77,10 @@ test('Padrão collapses a section and expands it from the heading or the pill', 
   await expect(page.locator('.cm-folded-pill')).toHaveCount(0)
   await page.locator('.cm-line', { hasText: 'Seção um' }).hover()
   await page.getByRole('button', { name: 'Recolher seção' }).first().click()
-  await page.locator('.cm-folded-pill').click()
+  await page
+    .locator('.cm-line', { hasText: 'Seção um' })
+    .getByRole('button', { name: 'Expandir seção' })
+    .click()
   await expect(page.locator('.cm-line', { hasText: 'texto um' })).toBeVisible()
   await expect(page.locator('.cm-folded-pill')).toHaveCount(0)
 })
@@ -89,10 +94,16 @@ test('a nested fold stays closed when its parent is expanded', async ({ page }) 
   await expect(page.locator('.cm-line', { hasText: 'texto sub' })).toHaveCount(0)
   await page.locator('.cm-line', { hasText: 'Seção um' }).hover()
   await page.locator('.cm-line', { hasText: 'Seção um' }).getByRole('button').click()
-  await page.locator('.cm-folded-pill').click()
+  await page
+    .locator('.cm-line', { hasText: 'Seção um' })
+    .getByRole('button', { name: 'Expandir seção' })
+    .click()
   await expect(page.locator('.cm-line', { hasText: 'texto um' })).toBeVisible()
   await expect(page.locator('.cm-line', { hasText: 'texto sub' })).toHaveCount(0)
-  await expect(page.locator('.cm-folded-pill')).toHaveText('⋯ 2 linhas ocultas')
+  await expect(page.locator('.cm-line', { hasText: 'Sub um' }).getByRole('button')).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  )
 })
 
 test('moving the cursor into a collapsed section reveals it', async ({ page }) => {
@@ -111,7 +122,7 @@ test('the palette collapses and expands every section in Padrão and in Leitura'
 }) => {
   await mode(page, 'Padrão')
   await runCommand(page, 'Recolher todas')
-  await expect(page.locator('.cm-folded-pill')).toHaveCount(2)
+  await expect(page.locator('.cm-fold-toggle.folded')).toHaveCount(2)
   await expect(page.locator('.cm-line', { hasText: 'texto dois' })).toHaveCount(0)
   await runCommand(page, 'Expandir todas')
   await expect(page.locator('.cm-folded-pill')).toHaveCount(0)

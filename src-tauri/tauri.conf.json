@@ -14,6 +14,7 @@
       {
         "label": "main",
         "title": "Sloth Note",
+        "maximized": true,
         "width": 980,
         "height": 780,
         "minWidth": 360,

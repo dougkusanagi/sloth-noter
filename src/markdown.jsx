@@ -7,7 +7,7 @@ import { ChevronDown, Copy } from 'lucide-react'
 import { remarkTags, remarkWikiLinks, findNote } from './markdown-model.js'
 import { remarkSections, remarkSourceLayout } from './sections.js'
 import { resolveImage } from './images.js'
-import { sectionProgress } from './tasks.js'
+import { sectionProgress, resolvedTasks, remarkPartialTasks, toggleTask } from './tasks.js'
 import { CIRCUMFERENCE, RADIUS } from './progress-badge.js'
 
 function highlightedCode(tokens) {
@@ -86,14 +86,6 @@ function Link({ children, href, title }) {
     </a>
   )
 }
-function taskInput(node) {
-  if (node.tagName === 'input') return node
-  for (const child of node.children ?? []) {
-    const input = taskInput(child)
-    if (input) return input
-  }
-  return null
-}
 /** The whitespace between tags in the HTML would add a space after the task checkbox. */
 function dropLeadingSpace(children) {
   const parts = React.Children.toArray(children)
@@ -103,31 +95,50 @@ function dropLeadingSpace(children) {
   return parts.filter((part, index) => index >= text || typeof part !== 'string')
 }
 function ListItem({ children, className, node, style }) {
-  const { text, onChange } = useContext(MarkdownContext)
-  const task = className?.includes('task-list-item')
-  const checked = task ? Boolean(taskInput(node)?.properties.checked) : false
+  const { text, onChange, tasks } = useContext(MarkdownContext)
+  const task = tasks.get(node.position.start.line)
+  const checked = task?.done ?? false
   const toggle = () => {
-    const offset = node.position.start.offset
-    const match = text.slice(offset).match(/^([-*+]\s+|\d+[.)]\s+)\[([ xX])\]/)
-    if (match && onChange) {
-      const at = offset + match[1].length + 1
-      onChange(text.slice(0, at) + (checked ? ' ' : 'x') + text.slice(at + 1))
-    }
+    if (task && onChange && !task.progress) onChange(toggleTask(text, task.mark))
   }
   return (
-    <li className={className} style={style}>
+    <li className={task ? 'task-list-item' : className} style={style}>
       {task && (
         <input
           type="checkbox"
           className="task-checkbox"
           checked={checked}
-          disabled={!onChange}
+          ref={(input) => {
+            if (input) input.indeterminate = task.partial
+          }}
+          aria-checked={task.partial ? 'mixed' : checked}
+          disabled={!onChange || Boolean(task.progress)}
           aria-label={t(checked ? 'task.complete' : 'task.open')}
           onChange={toggle}
         />
       )}
       {dropLeadingSpace(children)}
+      {task?.progress && <ProgressBadge {...task.progress} />}
     </li>
+  )
+}
+function InlineCode({ children, className }) {
+  const { onCopy } = useContext(MarkdownContext)
+  // Fenced code is rendered by CodeBlock from the original child props.
+  if (className) return <code className={className}>{children}</code>
+  return (
+    <span className="inline-code-wrap">
+      <code>{children}</code>
+      <button
+        type="button"
+        className="copy-inline-code"
+        aria-label={t('code.copy')}
+        title={t('code.copy')}
+        onClick={() => onCopy?.(String(children))}
+      >
+        <Copy size={12} aria-hidden="true" />
+      </button>
+    </span>
   )
 }
 function CodeBlock({ children }) {
@@ -227,6 +238,7 @@ const components = {
   li: ListItem,
   input: () => null,
   pre: CodeBlock,
+  code: InlineCode,
   section: Section,
   h2: Heading,
   h3: Heading,
@@ -235,16 +247,24 @@ const components = {
   h6: Heading,
 }
 export function Markdown({ text, onCopy, onChange, onOpenWiki, notes, folds, onToggleFold }) {
-  const progress = useMemo(() => sectionProgress(text), [text])
+  const tasks = useMemo(
+    () => new Map(resolvedTasks(text, notes).map((task) => [task.line, task])),
+    [text, notes],
+  )
+  const progress = useMemo(
+    () => sectionProgress(text, [...tasks.values()], folds),
+    [text, tasks, folds],
+  )
   return (
     <MarkdownContext.Provider
-      value={{ text, onCopy, onChange, onOpenWiki, notes, folds, onToggleFold, progress }}
+      value={{ text, onCopy, onChange, onOpenWiki, notes, folds, onToggleFold, progress, tasks }}
     >
       <article className="markdown">
         <ReactMarkdown
           remarkPlugins={[
             remarkGfm,
             remarkWikiLinks,
+            remarkPartialTasks,
             remarkTags,
             remarkSections,
             remarkSourceLayout,

@@ -2,7 +2,21 @@ import { SHORTCUTS } from '../shortcuts.js'
 import { Shortcut, shortcutText } from './main-menu.jsx'
 // Modal dialogs of the workspace. State lives in the parent; these only render and handle keys.
 import { useEffect, useRef, useState } from 'react'
-import { Search } from 'lucide-react'
+import {
+  Search,
+  ChevronRight,
+  ChevronDown,
+  ArrowUp,
+  ArrowDown,
+  X,
+  CaseSensitive,
+  WholeWord,
+  Regex,
+  Replace,
+  ReplaceAll,
+  CaseUpper,
+  TextSelect,
+} from 'lucide-react'
 import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
 
@@ -127,39 +141,176 @@ export function ConflictDialog({ firstRef, name, onResolve, onClose }) {
   )
 }
 
-export function FindDialog({ inputRef, query, matchCount, onQuery, onStep, onClose }) {
+export function FindDialog({
+  inputRef,
+  replacementRef,
+  query,
+  matchCount,
+  index,
+  error,
+  options,
+  onOptions,
+  replaceOpen,
+  onToggleReplace,
+  replacement,
+  onReplacement,
+  onReplace,
+  onQuery,
+  onStep,
+  onClose,
+}) {
+  const toggle = (key, Icon) => (
+    <button
+      type="button"
+      className="find-toggle"
+      aria-label={t(`find.${key}`)}
+      title={t(`find.${key}`)}
+      aria-pressed={options[key]}
+      onClick={() => onOptions(key)}
+    >
+      <Icon size={16} aria-hidden="true" />
+    </button>
+  )
   return (
-    <Modal
-      label={t('find.label')}
+    <section
       className="find-dialog"
-      backdropClose={onClose}
-      onEscape={onClose}
+      role="dialog"
+      aria-label={t('find.label')}
       onKeyDown={(event) => {
-        if (event.key === 'Enter') {
+        if (event.key === 'Escape') {
           event.preventDefault()
-          onStep(event.shiftKey ? -1 : 1)
+          event.stopPropagation()
+          onClose()
+        }
+        if (event.key === 'Enter' && event.target.tagName === 'INPUT') {
+          event.preventDefault()
+          if (event.target === inputRef.current) onStep(event.shiftKey ? -1 : 1)
+          else onReplace(event.ctrlKey || event.metaKey)
+        }
+        if (event.altKey) {
+          const key = { c: 'caseSensitive', w: 'wholeWord', r: 'regex', p: 'preserveCase' }[
+            event.key.toLowerCase()
+          ]
+          if (key) {
+            event.preventDefault()
+            onOptions(key)
+          }
         }
       }}
-      focusables={(dialog) => [inputRef.current, ...buttonsOf(dialog, 'button:not(:disabled)')]}
     >
-      <input
-        ref={inputRef}
-        aria-label={t('find.input')}
-        value={query}
-        onChange={(event) => onQuery(event.target.value)}
-        placeholder={t('find.placeholder')}
-      />
-      <p role="status">{query ? t('find.matches', { count: matchCount }) : t('find.hint')}</p>
-      <button disabled={!matchCount} onClick={() => onStep(-1)}>
-        {t('find.previous')}
+      <button
+        type="button"
+        className="find-expand"
+        aria-label={t('find.toggleReplace')}
+        title={t('find.toggleReplace')}
+        aria-expanded={replaceOpen}
+        onClick={onToggleReplace}
+      >
+        {replaceOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
       </button>
-      <button disabled={!matchCount} onClick={() => onStep(1)}>
-        {t('find.next')}
-      </button>
-      <button className="dialog-close" onClick={onClose}>
-        {t('dialog.close')}
-      </button>
-    </Modal>
+      <div className="find-fields">
+        <div className="find-row">
+          <div className="find-input-wrap" data-invalid={error ? '' : undefined}>
+            <input
+              ref={inputRef}
+              aria-label={t('find.input')}
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? 'find-error' : undefined}
+              value={query}
+              onChange={(event) => onQuery(event.target.value)}
+              placeholder={t('find.placeholder')}
+            />
+            {toggle('caseSensitive', CaseSensitive)}
+            {toggle('wholeWord', WholeWord)}
+            {toggle('regex', Regex)}
+          </div>
+          <span
+            className="find-count"
+            role="status"
+            aria-label={query ? t('find.matches', { count: matchCount }) : t('find.hint')}
+          >
+            {query
+              ? matchCount
+                ? `${index + 1} / ${matchCount}`
+                : t('find.none')
+              : t('find.hint')}
+          </span>
+          <button
+            type="button"
+            aria-label={t('find.previous')}
+            title={`${t('find.previous')} (Shift+Enter)`}
+            disabled={!matchCount}
+            onClick={() => onStep(-1)}
+          >
+            <ArrowUp size={16} />
+          </button>
+          <button
+            type="button"
+            aria-label={t('find.next')}
+            title={`${t('find.next')} (Enter)`}
+            disabled={!matchCount}
+            onClick={() => onStep(1)}
+          >
+            <ArrowDown size={16} />
+          </button>
+          <button
+            type="button"
+            aria-label={t('find.selectionOnly')}
+            title={t('find.selectionOnly')}
+            aria-pressed={options.selectionOnly}
+            disabled={!options.scope}
+            onClick={() => onOptions('selectionOnly')}
+          >
+            <TextSelect size={16} />
+          </button>
+          <button
+            type="button"
+            aria-label={t('dialog.close')}
+            title={t('dialog.close')}
+            onClick={onClose}
+          >
+            <X size={16} />
+          </button>
+        </div>
+        {replaceOpen && (
+          <div className="find-row">
+            <div className="find-input-wrap">
+              <input
+                ref={replacementRef}
+                aria-label={t('find.replacement')}
+                placeholder={t('find.replacement')}
+                value={replacement}
+                onChange={(event) => onReplacement(event.target.value)}
+              />
+              {toggle('preserveCase', CaseUpper)}
+            </div>
+            <button
+              type="button"
+              aria-label={t('find.replace')}
+              title={`${t('find.replace')} (Enter)`}
+              disabled={!matchCount}
+              onClick={() => onReplace(false)}
+            >
+              <Replace size={16} />
+            </button>
+            <button
+              type="button"
+              aria-label={t('find.replaceAll')}
+              title={`${t('find.replaceAll')} (Ctrl+Enter)`}
+              disabled={!matchCount}
+              onClick={() => onReplace(true)}
+            >
+              <ReplaceAll size={16} />
+            </button>
+          </div>
+        )}
+        {error && (
+          <p id="find-error" role="alert">
+            {t('find.regexError')}
+          </p>
+        )}
+      </div>
+    </section>
   )
 }
 

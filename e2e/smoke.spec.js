@@ -40,7 +40,7 @@ test('find in note reports matches and closes with Escape', async ({ page }) => 
   const dialog = page.getByRole('dialog', { name: 'Buscar na nota' })
   await expect(dialog).toBeVisible()
   await dialog.getByLabel('Texto a buscar').fill('Sloth')
-  await expect(dialog.getByRole('status')).toContainText('ocorrência')
+  await expect(dialog.getByRole('status')).toHaveText(/1 \/ \d+/)
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
 })
