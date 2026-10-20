@@ -1736,17 +1736,27 @@ function Workspace({ persistence, loaded }) {
       }}
     >
       {focusMode && (
-        <button
-          type="button"
-          className="focus-exit"
-          aria-label={t('focus.exit')}
-          title={`${t('focus.exit')} (Esc)`}
-          onClick={toggleFocusMode}
+        <div
+          className="focus-exit-region"
+          onPointerDown={(event) => {
+            if (event.pointerType === 'touch' && event.target === event.currentTarget) {
+              event.preventDefault()
+              event.currentTarget.querySelector('button')?.focus({ preventScroll: true })
+            }
+          }}
         >
-          <Minimize2 size={16} aria-hidden="true" />
-          <span>{t('focus.exit')}</span>
-          <kbd>Esc</kbd>
-        </button>
+          <button
+            type="button"
+            className="focus-exit"
+            aria-label={t('focus.exit')}
+            title={`${t('focus.exit')} (Esc)`}
+            onClick={toggleFocusMode}
+          >
+            <Minimize2 size={16} aria-hidden="true" />
+            <span>{t('focus.exit')}</span>
+            <kbd>Esc</kbd>
+          </button>
+        </div>
       )}
       <header className="app-header" data-tauri-drag-region inert={switching ? true : undefined}>
         {persistence.invoke && mac && <WindowControls mac />}

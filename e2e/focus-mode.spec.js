@@ -41,7 +41,11 @@ for (const mode of ['Padrão', 'Código', 'Leitura']) {
     await expect(
       page.getByRole('radio', { name: mode, exact: true, includeHidden: true }),
     ).toBeChecked()
-    await expect(page.getByRole('button', { name: 'Sair do modo foco', exact: true })).toBeVisible()
+    await page.mouse.move(100, 200)
+    await expect(page.getByRole('button', { name: 'Sair do modo foco', exact: true })).toHaveCSS(
+      'opacity',
+      '0',
+    )
     await page.keyboard.press('Escape')
     await expect(page.locator('.app')).toHaveClass('app')
     await expect(page.locator('.app-header')).toBeVisible()
@@ -73,6 +77,11 @@ test('focus preserves the writing selection and supports tab navigation, find an
   await expect(page.getByRole('dialog', { name: 'Buscar na nota', exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.locator('.app')).toHaveClass('app focus-mode')
+  await page.locator('.focus-exit-region').hover()
+  await expect(page.getByRole('button', { name: 'Sair do modo foco', exact: true })).toHaveCSS(
+    'opacity',
+    '1',
+  )
   await page.getByRole('button', { name: 'Sair do modo foco', exact: true }).click()
   await expect(page.locator('.app')).toHaveClass('app')
 })
@@ -87,6 +96,11 @@ test('focus is discoverable in the main menu and command palette and remains acc
   await expect(
     page.getByRole('button', { name: 'Sair do modo foco', exact: true }),
   ).toBeInViewport()
+  await page.getByRole('button', { name: 'Sair do modo foco', exact: true }).focus()
+  await expect(page.getByRole('button', { name: 'Sair do modo foco', exact: true })).toHaveCSS(
+    'opacity',
+    '1',
+  )
   const { violations } = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze()
@@ -95,4 +109,50 @@ test('focus is discoverable in the main menu and command palette and remains acc
   await page.getByRole('combobox').fill('Modo foco')
   await page.keyboard.press('Enter')
   await expect(page.locator('.app')).toHaveClass('app')
+})
+
+test('the exit control disappears when writing and appears only on corner hover or keyboard focus', async ({
+  page,
+}) => {
+  await page.keyboard.press('Control+Shift+f')
+  const button = page.getByRole('button', { name: 'Sair do modo foco', exact: true })
+  await page.mouse.move(100, 200)
+  await expect(button).toHaveCSS('opacity', '0')
+  await page.locator('.focus-exit-region').hover()
+  await expect(button).toHaveCSS('opacity', '1')
+  await page.mouse.move(100, 200)
+  await expect(button).toHaveCSS('opacity', '0')
+  await button.focus()
+  await expect(button).toHaveCSS('opacity', '1')
+  await page.locator('.cm-content').focus()
+  await expect(button).toHaveCSS('opacity', '0')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.app')).toHaveClass('app')
+})
+
+test('touch reveals the exit without leaving focus until the button is tapped', async ({
+  page,
+  browser,
+}) => {
+  const context = await browser.newContext({
+    storageState: await page.context().storageState(),
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 844 },
+  })
+  try {
+    const touch = await context.newPage()
+    await touch.goto('/')
+    await expect(touch.locator('.cm-content')).toBeVisible()
+    await touch.keyboard.press('Control+Shift+f')
+    const button = touch.getByRole('button', { name: 'Sair do modo foco', exact: true })
+    await expect(button).toHaveCSS('opacity', '0')
+    await touch.locator('.focus-exit-region').tap({ position: { x: 10, y: 8 } })
+    await expect(button).toHaveCSS('opacity', '1')
+    await expect(touch.locator('.app')).toHaveClass('app focus-mode')
+    await button.tap()
+    await expect(touch.locator('.app')).toHaveClass('app')
+  } finally {
+    await context.close()
+  }
 })

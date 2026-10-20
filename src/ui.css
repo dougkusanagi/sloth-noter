@@ -2509,6 +2509,15 @@ html:has(
 .focus-mode .editor-shell:focus {
   outline: none;
 }
+.focus-exit-region {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 240px;
+  height: 56px;
+  max-width: 100%;
+  z-index: 6;
+}
 .focus-exit {
   position: fixed;
   top: 12px;
@@ -2524,11 +2533,21 @@ html:has(
   color: var(--muted);
   font: 12px var(--ui);
   cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+}
+.focus-exit-region:focus-within .focus-exit {
   opacity: 1;
+  pointer-events: auto;
+}
+@media (hover: hover) {
+  .focus-exit-region:hover .focus-exit {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 .focus-exit:hover,
 .focus-exit:focus-visible {
-  opacity: 1;
   color: var(--ink);
 }
 .focus-exit:focus-visible {
