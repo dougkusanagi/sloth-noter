@@ -169,12 +169,12 @@
 .segmented > button,
 .segmented > label {
   position: relative;
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-width: 0;
+  min-width: max-content;
   height: 28px;
   padding: 0 10px;
   border: 0;
@@ -2204,6 +2204,9 @@ html:has(
   }
   .settings-nav button {
     flex: none;
+  }
+  .setting-control .segmented > label {
+    padding-inline: 8px;
   }
   .setting {
     flex-direction: column;
