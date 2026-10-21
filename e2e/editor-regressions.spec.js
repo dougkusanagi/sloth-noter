@@ -259,44 +259,59 @@ test('global search shows body snippets and opens matches from another note', as
     .toBe('edição')
 })
 
-test('task text keeps its position when focus moves, including nested tasks', async ({ page }) => {
-  const body =
-    '# Tarefas\n\n- [ ] Adicionar edição\n- [ ] Adicionar opções\n    - [ ] Adicionar filho\n    - [ ] Adicionar outro filho'
-  await source(page, body)
-  await visual(page)
-  const measure = () =>
-    page.evaluate(() =>
-      [...document.querySelectorAll('.cm-md-task')].map((line) => {
-        const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT)
-        let node
-        while ((node = walker.nextNode())) {
-          const index = node.textContent.indexOf('Adicionar')
-          if (index < 0) continue
-          const range = document.createRange()
-          range.setStart(node, index)
-          range.setEnd(node, index + 1)
-          const rect = range.getBoundingClientRect()
-          return { x: rect.x, y: rect.y, height: line.getBoundingClientRect().height }
-        }
-      }),
+for (const width of [1280, 390]) {
+  test(`task text keeps its position when focus moves, including nested tasks (${width}px)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 })
+    const body =
+      '# Tarefas\n\n- [x] Adicionar edição\n- [ ] Adicionar opções\n    - [ ] Adicionar filho\n    - [ ] Adicionar outro filho'
+    await source(page, body)
+    await visual(page)
+    const measure = () =>
+      page.evaluate(() =>
+        [...document.querySelectorAll('.cm-md-task')].map((line) => {
+          const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT)
+          let node
+          while ((node = walker.nextNode())) {
+            const index = node.textContent.indexOf('Adicionar')
+            if (index < 0) continue
+            const range = document.createRange()
+            range.setStart(node, index)
+            range.setEnd(node, index + 1)
+            const rect = range.getBoundingClientRect()
+            return { x: rect.x, y: rect.y, height: line.getBoundingClientRect().height }
+          }
+        }),
+      )
+    const before = await measure()
+    for (const word of ['edição', 'opções', 'filho']) {
+      await page.evaluate(async (word) => {
+        const { EditorView } = await import('/node_modules/.vite/deps/@codemirror_view.js')
+        const view = EditorView.findFromDOM(document.querySelector('.cm-editor'))
+        view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf(word) } })
+        view.focus()
+      }, word)
+      await expect(page.locator('.cm-task-source-marker')).toHaveCount(1)
+      expect(await measure()).toEqual(before)
+      const gap = await page.locator('.cm-task-source-marker').evaluate((marker) => {
+        const range = document.createRange()
+        range.selectNodeContents(marker)
+        const markerEnd = range.getBoundingClientRect().right
+        range.setStart(marker.nextSibling, 0)
+        range.setEnd(marker.nextSibling, 1)
+        return range.getBoundingClientRect().left - markerEnd
+      })
+      expect(gap).toBeCloseTo(3, 0)
+    }
+    await page.screenshot({ path: `/tmp/task-marker-${width}.png` })
+    await page.keyboard.type('Nova ')
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    await expect(page.locator('textarea')).toHaveValue(
+      body.replace('Adicionar filho', 'Adicionar Nova filho'),
     )
-  const before = await measure()
-  for (const word of ['edição', 'opções', 'filho']) {
-    await page.evaluate(async (word) => {
-      const { EditorView } = await import('/node_modules/.vite/deps/@codemirror_view.js')
-      const view = EditorView.findFromDOM(document.querySelector('.cm-editor'))
-      view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf(word) } })
-      view.focus()
-    }, word)
-    await expect(page.locator('.cm-task-source-marker')).toHaveCount(1)
-    expect(await measure()).toEqual(before)
-  }
-  await page.keyboard.type('Nova ')
-  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
-  await expect(page.locator('textarea')).toHaveValue(
-    body.replace('Adicionar filho', 'Adicionar Nova filho'),
-  )
-})
+  })
+}
 
 test('welcome art loads from the app for new and legacy notes without GitHub access', async ({
   page,
