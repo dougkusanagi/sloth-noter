@@ -2,6 +2,7 @@
 name: page-brief
 description: Build the SEO brief for one target keyword. Use when asked to rank for a keyword, optimise a page, or before creating any new page.
 ---
+
 1. Send ChatSEO (send_message, siteId), word for word:
    "I want to rank first on <keyword>. Read the live top 10. Tell me
    which page type wins, which secondary keywords the top 3 also rank

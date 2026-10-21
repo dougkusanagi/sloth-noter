@@ -2,6 +2,7 @@
 name: money-keywords
 description: Find the commercial keyword patterns for this site. Use when asked which keywords to target, for an SEO strategy, or "where is the money".
 ---
+
 1. Call ChatSEO list_sites and pick this site's ID.
 2. Send ChatSEO (send_message, with the siteId), word for word:
    "Give me the best SEO strategy for my site. Group the opportunities
