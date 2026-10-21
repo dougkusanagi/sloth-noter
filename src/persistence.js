@@ -18,6 +18,7 @@ export function createPersistence(adapter, label = adapter.label) {
     kind: adapter.kind,
     label,
     sync: adapter.sync ?? null,
+    externals: adapter.externals ?? null,
     async load() {
       let current = null
       let legacy = null

@@ -96,9 +96,7 @@ pub fn list(root: &Path) -> io::Result<Vec<VaultFile>> {
 
 const MAX_DROPPED_NOTE: u64 = 5 * 1024 * 1024;
 
-/// Reads a Markdown or text file the user dropped on the window. The caller has
-/// already checked that the path came from a native drop.
-pub fn read_dropped(source: &Path) -> Result<String, String> {
+fn read_external_note(source: &Path) -> Result<String, String> {
     let extension = source
         .extension()
         .and_then(|extension| extension.to_str())
@@ -114,6 +112,43 @@ pub fn read_dropped(source: &Path) -> Result<String, String> {
         io::ErrorKind::InvalidData => "The file is not valid UTF-8 text".to_string(),
         _ => crate::errors::describe(&error),
     })
+}
+
+/// Writes a file the user opened from outside the notes folder, only while it still
+/// holds `expected`, the text Sloth Note last saw there.
+pub fn write_external(source: &Path, contents: &str, expected: &str) -> Result<(), String> {
+    if contents.len() as u64 > MAX_DROPPED_NOTE {
+        return Err("The note is larger than 5 MB".into());
+    }
+    let current = read_external_note(source)?;
+    if current != expected {
+        let name = source.file_name().unwrap_or_default().to_string_lossy();
+        return Err(changed_outside(&name));
+    }
+    let name = source.file_name().unwrap_or_default().to_string_lossy();
+    let temporary = source.with_file_name(format!(".{name}{TEMPORARY_SUFFIX}"));
+    // Swapping in a finished copy keeps the file whole if the write is cut short and keeps
+    // its permissions. When the folder does not allow new files, write the file itself.
+    let replaced = fs::metadata(source).and_then(|metadata| {
+        fs::write(&temporary, contents.as_bytes())?;
+        fs::set_permissions(&temporary, metadata.permissions())?;
+        fs::rename(&temporary, source)
+    });
+    if replaced.is_ok() {
+        return Ok(());
+    }
+    let _ = fs::remove_file(&temporary);
+    fs::write(source, contents.as_bytes()).map_err(|error| crate::errors::describe(&error))
+}
+
+/// Reads a Markdown or text file whose path came from a native window drop.
+pub fn read_dropped(source: &Path) -> Result<String, String> {
+    read_external_note(source)
+}
+
+/// Reads a Markdown or text file whose path came from the operating system.
+pub fn read_opened(source: &Path) -> Result<String, String> {
+    read_external_note(source)
 }
 
 pub fn stamps(root: &Path) -> io::Result<Vec<VaultStamp>> {
@@ -267,6 +302,19 @@ mod tests {
         assert!(read_dropped(&root.join("b.png")).is_err());
         assert!(read_dropped(&root.join("bad.txt")).is_err());
         assert!(read_dropped(&root).is_err());
+    }
+
+    #[test]
+    fn an_opened_file_is_written_only_while_it_matches_the_last_seen_text() {
+        let root = folder("external");
+        let file = root.join("ideias.md");
+        fs::write(&file, "# Ideias").unwrap();
+        assert!(write_external(&file, "# Nova", "# Antiga").is_err());
+        assert_eq!(fs::read_to_string(&file).unwrap(), "# Ideias");
+        write_external(&file, "# Nova", "# Ideias").unwrap();
+        assert_eq!(fs::read_to_string(&file).unwrap(), "# Nova");
+        assert!(!root.join(format!(".ideias.md{TEMPORARY_SUFFIX}")).exists());
+        fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]

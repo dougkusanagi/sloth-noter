@@ -1,6 +1,12 @@
 import { isDiscardableEmptyNote } from './notes.js'
 import { newDocument, validateDocument } from './storage.js'
 import { mergeExternal, resolveConflict } from './vault-sync.js'
+import {
+  externalsApi,
+  isExternalNote,
+  readExternalNotes,
+  writeExternalNotes,
+} from './external-notes.js'
 
 export const VAULT_STATUS = 'vault_status'
 export const VAULT_CHOOSE = 'vault_choose'
@@ -32,9 +38,13 @@ function newId() {
 export function createVaultAdapter(invoke, path) {
   let known = new Map()
   let lastStamps = null
+  // Text last seen in each file opened in place (outside the folder); see external-notes.js.
+  const seen = new Map()
+  const paths = new Map()
 
   return {
     kind: 'vault',
+    externals: externalsApi(invoke, seen),
     label: path,
     // Bringing outside changes in: cheap stamp check first, full read only on change.
     sync: {
@@ -57,13 +67,17 @@ export function createVaultAdapter(invoke, path) {
       const aux = rawAux === null ? {} : JSON.parse(rawAux)
       const trash = Array.isArray(aux.trash) ? aux.trash : []
       const taken = new Set(trash.map((entry) => entry?.note?.id))
-      const notes = files.map(({ name, contents }) => {
+      const folderNotes = files.map(({ name, contents }) => {
         let id = aux.ids?.[name]
         if (typeof id !== 'string' || taken.has(id)) id = newId()
         taken.add(id)
         known.set(name, { id, body: contents })
         return { id, name, body: contents, revision: 0 }
       })
+      const externals = Array.isArray(aux.externals) ? aux.externals.filter(isExternalNote) : []
+      seen.clear()
+      paths.clear()
+      const notes = [...folderNotes, ...(await readExternalNotes(invoke, externals, seen, paths))]
       const present = new Set(notes.map((note) => note.id))
       let openIds = Array.isArray(aux.openIds) ? aux.openIds.filter((id) => present.has(id)) : []
       if (openIds.length === 0 && notes.length) openIds = [notes[0].id]
@@ -85,7 +99,9 @@ export function createVaultAdapter(invoke, path) {
       return null
     },
     async writeState(contents) {
-      const document = JSON.parse(contents)
+      const parsed = JSON.parse(contents)
+      const externals = parsed.notes.filter(isExternalNote)
+      const document = { ...parsed, notes: parsed.notes.filter((note) => !isExternalNote(note)) }
       const kept = new Set(document.notes.map((note) => note.id))
       const trashed = new Set(document.trash.map((entry) => entry.note.id))
       const byId = new Map([...known].map(([name, entry]) => [entry.id, { name, ...entry }]))
@@ -107,6 +123,10 @@ export function createVaultAdapter(invoke, path) {
         } else writes.push({ note, expected: null })
       }
 
+      // Files opened in place are written before the auxiliary state, which records
+      // their text: it must never hold text that did not reach the file.
+      await writeExternalNotes(invoke, parsed, seen, paths)
+
       // The auxiliary state goes first: a failure part-way leaves files intact and
       // the trash body saved, so at worst the newest keystrokes stay in memory.
       await invoke(VAULT_WRITE_AUX, {
@@ -119,6 +139,7 @@ export function createVaultAdapter(invoke, path) {
           activeId: document.activeId,
           preferences: document.preferences,
           trash: document.trash,
+          externals,
         }),
       })
 

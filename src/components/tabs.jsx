@@ -223,7 +223,7 @@ export function useTabs({
                   }}
                 >
                   {pinned && <Pin size={12} className="tab-pin-icon" aria-hidden="true" />}
-                  <span>{displayName(note.name, true)}</span>
+                  <span title={note.external?.path}>{displayName(note.name, true)}</span>
                 </button>
                 {!pinned && (
                   <button

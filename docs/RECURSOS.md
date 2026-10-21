@@ -44,7 +44,7 @@ Mudar entre Padrão e Leitura não move nada: o espaço antes de cada bloco é o
 
 ### Importar notas arrastando
 
-Soltar arquivos `.md`, `.markdown` ou `.txt` (UTF-8, até 5 MB) em qualquer ponto da janela os importa como notas, como o item **Importar** do menu: o nome segue o primeiro H1 e um nome já existente abre o diálogo de conflito, um arquivo por vez. Imagens soltas continuam seguindo o fluxo de imagens abaixo; uma seleção mista faz as duas coisas.
+Soltar arquivos `.md`, `.markdown` ou `.txt` (UTF-8, até 5 MB) na janela, fora do texto, os abre no próprio local: a nota é editada no arquivo original, mesmo fora da pasta de notas, e não é renomeada nem apagada pelo app. Soltá-los sobre o texto pergunta se o original deve ser editado ou se uma cópia deve ser importada, como o item **Importar** do menu: o nome segue o primeiro H1 e um nome já existente abre o diálogo de conflito. No desktop, o instalador também associa esses formatos ao Sloth Note para que você os abra pelo sistema ou por **Abrir com**; o app encaminha os arquivos para a janela já aberta, e arquivos `.md` da pasta de notas abrem a nota existente. Na versão web, soltar arquivos continua importando cópias, já que o navegador não permite editar o arquivo original. Imagens soltas continuam seguindo o fluxo de imagens abaixo; uma seleção mista faz as duas coisas. Limitação atual: o app confere mudanças feitas fora dele ao carregar e ao salvar, não em tempo real; se o arquivo mudar enquanto está aberto, o salvamento é recusado e o texto da nota é mantido.
 
 ### Busca em todas as notas
 

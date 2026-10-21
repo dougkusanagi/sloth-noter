@@ -8,6 +8,7 @@ import { createMiddleClickPasteGuard } from './middle-click-paste.js'
 import { listenNativeImageDrops, routeNativeImageDrop } from './native-image-drop.js'
 import { ensureTitle, ensureDocumentTitles, titlePosition, titleNavigationTarget } from './title.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { listen } from '@tauri-apps/api/event'
 import { createRoot } from 'react-dom/client'
 import { Toaster, toast } from 'sonner'
 import { Markdown } from './markdown.jsx'
@@ -37,6 +38,7 @@ import { displayName } from './note-title.js'
 import { useTabs } from './components/tabs.jsx'
 import { ImageLibrary } from './components/image-library.jsx'
 import { readNoteFile, splitDrop } from './note-drop.js'
+import { externalNote, isExternalNote } from './external-notes.js'
 import { appShortcut } from './shortcuts.js'
 import { searchNote, replacementText } from './find.js'
 import { setSearchHighlights, revealSearchMatch } from './editor/search.js'
@@ -436,8 +438,10 @@ function Workspace({ persistence, loaded }) {
     }, 0)
   }
   function updateBody(body, editorChanges) {
-    body = ensureTitle(body)
     const old = current.current
+    // A file opened in place keeps its own first line.
+    const active = old.notes.find((note) => note.id === old.activeId)
+    if (!isExternalNote(active ?? {})) body = ensureTitle(body)
     const previousBody = old.notes.find((note) => note.id === old.activeId)?.body ?? ''
     if (previousBody !== body) {
       const changes =
@@ -447,7 +451,10 @@ function Workspace({ persistence, loaded }) {
       )
     }
     if (old.activeId === previewId) setPreviewId(null)
-    const name = nameFromHeading(body, old.notes, old.activeId)
+    // The name of a file opened in place is its file name; the title never renames it.
+    const name = isExternalNote(active ?? {})
+      ? null
+      : nameFromHeading(body, old.notes, old.activeId)
     const previousName = old.notes.find((note) => note.id === old.activeId)?.name
     const rewrite = (note) => {
       const active = note.id === old.activeId
@@ -632,6 +639,10 @@ function Workspace({ persistence, loaded }) {
   async function renameNote(id = active?.id) {
     const note = data.notes.find((item) => item.id === id)
     if (!note) return
+    if (isExternalNote(note)) {
+      toast.info(t('external.noRename'))
+      return
+    }
     const proposed = (
       await ask({ kind: 'prompt', label: t('dialog.renameLabel'), initial: note.name })
     )?.trim()
@@ -746,25 +757,136 @@ function Workspace({ persistence, loaded }) {
       }
     }, 0)
   }
-  async function importFiles(files) {
+  async function importFiles(files, { openExistingIfSame = false } = {}) {
     setImportError('')
+    const failures = []
     for (const file of files) {
       try {
         const body = await readNoteFile(file, persistence.invoke)
-        const name =
-          headingFileName(body) ??
-          (file.name.toLowerCase().endsWith('.md') ? file.name : `${file.name}.md`)
+        const baseName = file.name.replace(/\.(md|markdown|txt)$/i, '') || 'new note'
+        const name = headingFileName(body) ?? `${baseName}.md`
         const existing = current.current.notes.find(
           (note) => note.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
         )
         if (!existing) createNote(name, body)
+        else if (
+          (typeof openExistingIfSame === 'function'
+            ? openExistingIfSame(file)
+            : openExistingIfSame) &&
+          existing.body === body
+        )
+          openNote(existing.id)
         else if (conflictRef.current) conflictQueue.current.push({ name, body, id: existing.id })
         else openConflict({ name, body, id: existing.id })
       } catch (cause) {
-        setImportError(friendlyError(cause, t('error.readFile')))
+        failures.push(`${file.name}: ${friendlyError(cause, t('error.readFile'))}`)
       }
     }
+    if (failures.length) setImportError(failures.join('\n'))
+    return failures
   }
+  /** Copies a file opened in place into the notes; the original stays where it is. */
+  function copyExternalToNotes(id = current.current.activeId) {
+    const note = current.current.notes.find((item) => item.id === id)
+    if (!note || !isExternalNote(note)) return
+    createNote(note.name, note.body)
+  }
+  const importFilesRef = useRef(importFiles)
+  importFilesRef.current = importFiles
+  /** Opens files in place: the note keeps saving to the file it came from. */
+  function openExternalFiles(files) {
+    const old = current.current
+    let notes = old.notes
+    const ids = []
+    for (const file of files) {
+      const existing = notes.find((note) => note.external?.path === file.path)
+      if (existing) {
+        ids.push(existing.id)
+        continue
+      }
+      const note = externalNote({
+        id: crypto.randomUUID(),
+        name: uniqueName(notes, file.name),
+        path: file.path,
+        contents: file.contents,
+      })
+      notes = [...notes, note]
+      ids.push(note.id)
+    }
+    if (!ids.length) return
+    commit({
+      ...old,
+      notes,
+      openIds: [...old.openIds, ...ids.filter((id) => !old.openIds.includes(id))],
+      activeId: ids.at(-1),
+    })
+    if (mode === 'reading') setMode('visual')
+    setTimeout(focusEditor, 0)
+  }
+  const openExternalFilesRef = useRef(openExternalFiles)
+  openExternalFilesRef.current = openExternalFiles
+
+  useEffect(() => {
+    if (!persistence.invoke) return
+    let active = true
+    let unlisten = () => {}
+    let draining = false
+    let drainAgain = false
+
+    async function drainOpenedFiles() {
+      if (draining) {
+        drainAgain = true
+        return
+      }
+      draining = true
+      do {
+        drainAgain = false
+        try {
+          const files = await persistence.invoke('take_opened_files')
+          if (!active || files.length === 0) continue
+          const failures = []
+          const importable = []
+          const inPlace = []
+          for (const file of files) {
+            if (file.error)
+              failures.push(`${file.name}: ${friendlyError(file.error, t('error.readFile'))}`)
+            else if (file.sameNotesFolder)
+              importable.push({
+                name: file.name,
+                sameNotesFolder: true,
+                text: async () => file.contents,
+              })
+            else inPlace.push(file)
+          }
+          if (inPlace.length) openExternalFilesRef.current(inPlace)
+          failures.push(
+            ...(await importFilesRef.current(importable, {
+              openExistingIfSame: (file) => file.sameNotesFolder,
+            })),
+          )
+          if (active && failures.length) setImportError(failures.join('\n'))
+        } catch (cause) {
+          if (active) setImportError(friendlyError(cause, t('error.readFile')))
+        }
+      } while (active && drainAgain)
+      draining = false
+    }
+
+    listen('open-note-files', drainOpenedFiles)
+      .then((stop) => {
+        if (!active) return stop()
+        unlisten = stop
+        drainOpenedFiles()
+      })
+      .catch((cause) => {
+        if (active) setImportError(friendlyError(cause, t('error.readFile')))
+      })
+
+    return () => {
+      active = false
+      unlisten()
+    }
+  }, [persistence])
   function openConflict(next) {
     conflictRef.current = next
     setConflict(next)
@@ -814,10 +936,35 @@ function Workspace({ persistence, loaded }) {
     clearImageCache()
     setImageVersion((value) => value + 1)
   }
+  async function openDroppedNotes(files) {
+    const opened = []
+    const failures = []
+    for (const file of files) {
+      try {
+        opened.push(await persistence.invoke('note_open_dropped', { path: file.nativePath }))
+      } catch (cause) {
+        failures.push(`${file.name}: ${friendlyError(cause, t('error.readFile'))}`)
+      }
+    }
+    if (opened.length) openExternalFilesRef.current(opened)
+    if (failures.length) setImportError(failures.join('\n'))
+  }
+  function routeNoteDrop(files, position) {
+    const target = document.elementFromPoint(position.x, position.y)
+    if (!target?.closest('.editor-shell')) return openDroppedNotes(files)
+    // Dropped into the text, the intent is unclear: editing the original and importing a
+    // copy both make sense, so the user decides.
+    toast(t('drop.ask'), {
+      id: 'note-drop',
+      duration: 15000,
+      action: { label: t('drop.openInPlace'), onClick: () => openDroppedNotes(files) },
+      cancel: { label: t('drop.import'), onClick: () => importFilesRef.current(files) },
+    })
+  }
   const nativeDropHandler = useRef(null)
   nativeDropHandler.current = (dropped, position) => {
     const { notes, others } = splitDrop(dropped)
-    if (notes.length && !blocked && !switching) importFiles(notes)
+    if (notes.length && !blocked && !switching) routeNoteDrop(notes, position)
     if (others.length)
       routeNativeImageDrop(others, position, (files, point) =>
         addImages(
@@ -1486,6 +1633,77 @@ function Workspace({ persistence, loaded }) {
     // commit only touches refs and state setters, so it is stable enough to skip here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [persistence, switching])
+  // Files opened in place can change on disk: follow them, and ask when both sides changed.
+  useEffect(() => {
+    const externals = persistence.externals
+    if (!externals) return
+    let stopped = false
+    let running = false
+    async function check() {
+      if (running || stopped || switching || document.visibilityState === 'hidden') return
+      if (!current.current.notes.some(isExternalNote)) return
+      running = true
+      try {
+        await writer.current.whenIdle({ flush: false })
+        const result = await externals.check(current.current)
+        if (stopped) return
+        if (result.document !== current.current) commit(result.document)
+        for (const { id, name, disk } of result.conflicts) {
+          const settle = (useDisk) => {
+            externals.accept(id, disk)
+            const doc = current.current
+            commit(
+              useDisk
+                ? {
+                    ...doc,
+                    notes: doc.notes.map((note) =>
+                      note.id === id
+                        ? {
+                            ...note,
+                            body: disk,
+                            revision: note.revision + 1,
+                            external: { ...note.external, seen: disk },
+                          }
+                        : note,
+                    ),
+                  }
+                : {
+                    ...doc,
+                    notes: doc.notes.map((note) =>
+                      note.id === id
+                        ? {
+                            ...note,
+                            revision: note.revision + 1,
+                            external: { ...note.external, seen: disk },
+                          }
+                        : note,
+                    ),
+                  },
+            )
+          }
+          toast(t('external.changed', { name }), {
+            id: `external-${id}`,
+            duration: Infinity,
+            action: { label: t('external.useDisk'), onClick: () => settle(true) },
+            cancel: { label: t('external.keepMine'), onClick: () => settle(false) },
+          })
+        }
+      } catch {
+        // A file that cannot be read is reported by the next save.
+      } finally {
+        running = false
+      }
+    }
+    const timer = setInterval(check, 4000)
+    window.addEventListener('focus', check)
+    return () => {
+      stopped = true
+      clearInterval(timer)
+      window.removeEventListener('focus', check)
+    }
+    // commit only touches refs and state setters, so it is stable enough to skip here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persistence, switching])
   const toastActions = useRef({})
   toastActions.current = {
     downloadBackup,
@@ -1679,6 +1897,7 @@ function Workspace({ persistence, loaded }) {
     findInNote: () => active && runMenu(openFind, false),
     replaceInNote: () => active && runMenu(() => openFind(true), false),
     rename: () => active && runMenu(renameNote, false),
+    copyToNotes: () => active?.external && runMenu(() => copyExternalToNotes(), false),
     reopenTab: () => runMenu(reopenTab, false),
     previousTab: () => runMenu(() => selectAdjacentTab(-1), false),
     nextTab: () => runMenu(() => selectAdjacentTab(1), false),
@@ -2106,6 +2325,16 @@ function Workspace({ persistence, loaded }) {
           }}
         >
           <WidthFeedback width={contentWidth(prefs)} mode={mode} />
+          {active?.external && (
+            <div className="external-bar">
+              <span className="external-path" title={active.external.path}>
+                {t('external.path', { path: active.external.path })}
+              </span>
+              <button type="button" onClick={() => copyExternalToNotes(active.id)}>
+                {t('external.copy')}
+              </button>
+            </div>
+          )}
           {active ? (
             mode === 'reading' ? (
               <div className="reading">

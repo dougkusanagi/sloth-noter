@@ -1,5 +1,6 @@
 import {
   FilePlus,
+  Copy,
   Focus,
   Search,
   ScanSearch,
@@ -49,7 +50,8 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
         ['searchAllNotes', 'menu.searchAllNotes', Search, 'Alt+F', false, true],
         ['findInNote', 'menu.findInNote', ScanSearch, 'F', !active, true],
         ['replaceInNote', 'find.replace', Replace, 'H', !active, true],
-        ['rename', 'menu.rename', Pencil, 'F2', !active, true],
+        ['rename', 'menu.rename', Pencil, 'F2', !active || Boolean(active.external), true],
+        ['copyToNotes', 'external.copy', Copy, undefined, !active?.external, true],
         ['closeTab', 'tabs.close', X, 'W', !active || activePinned, true],
         ['trashMove', 'menu.trashMove', Trash2, 'Shift+Delete', !active, true],
         ['undoDelete', 'menu.undoDelete', Undo2, undefined, !trashCount, true],

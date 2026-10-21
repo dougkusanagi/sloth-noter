@@ -6,6 +6,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Adicionado
 
+- No desktop, arquivos `.md`, `.markdown` e `.txt` podem ser abertos pelo sistema no Sloth Note, inclusive com o app já em execução. Arquivos abertos assim são editados no próprio local, inclusive fora da pasta de notas. Eles não são renomeados nem removidos pelo app; excluí-los na lista só tira a nota do Sloth Note. O caminho aparece na aba e acima do editor, mudanças feitas fora do app são detectadas (com escolha em caso de conflito) e "Copiar para minhas notas" importa uma cópia.
 - Busca global no conteúdo das notas (`Ctrl+Alt+F`), com prévias dos resultados e navegação até o trecho encontrado.
 - Controles nos títulos de seção para concluir ou reabrir as tarefas locais da seção.
 - Modo de foco para escrever, com saída acessível pelo teclado e controles nativos da janela preservados.
@@ -18,7 +19,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 - Janela de Configurações (Ctrl+,) com tema, idioma, tamanho do texto, abas, pasta de notas, backup e atalhos.
 - Paleta de comandos (Ctrl+K) com todas as ações do app, separada da busca de notas (Ctrl+P). Substitui a busca dentro do menu.
 - Alertas em toasts empilháveis (sonner): erros de gravação e de pasta com ações, importação e cópia de código.
-- Arrastar arquivos `.md`, `.markdown` ou `.txt` para a janela os importa como notas (vários de uma vez; nomes repetidos pedem decisão, um por vez). No desktop o arquivo é lido pelo backend, só se veio do drop nativo.
+- Arrastar arquivos `.md`, `.markdown` ou `.txt` para a janela os abre no próprio local. Soltá-los sobre o texto pergunta se o original deve ser editado ou se uma cópia deve ser importada como nota. No desktop o arquivo é lido pelo backend, só se veio do drop nativo.
 - CI (versão, lint, formatação, testes, build, `cargo test`) e workflow de release com `.msi` e `.AppImage`.
 - ESLint, Prettier e `.editorconfig`.
 - Testes E2E (Playwright) e verificação de acessibilidade (axe) no CI.

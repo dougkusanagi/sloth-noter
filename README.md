@@ -22,6 +22,8 @@ O aplicativo desktop usa **Tauri 2**. O fluxo de release prepara instaladores pa
 2. Crie uma nota. A primeira linha com `# Título` também dá nome ao arquivo.
 3. Para trabalhar com arquivos `.md` em uma pasta sua, abra **Configurações → Dados** e escolha a pasta de notas.
 
+No desktop, você também pode associar `.md`, `.markdown` e `.txt` ao Sloth Note e abri-los pelo sistema. Arquivos abertos pelo sistema ou soltados na janela são editados no próprio local, mesmo fora da pasta de notas. Para que os arquivos de uma pasta sejam notas do app, escolha-a em **Configurações → Dados**. Solte um arquivo sobre o texto e o app pergunta se você quer editar o original ou importar uma cópia.
+
 A página Welcome pode ser excluída. Para gerar uma cópia atualizada, abra a paleta com `Ctrl+K` e escolha **Recriar página de ajuda**.
 
 ### Atalhos para começar
