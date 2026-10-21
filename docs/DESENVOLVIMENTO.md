@@ -29,6 +29,8 @@ Em ambos os sistemas, use `bun run desktop:update --dry-run` para conferir os ca
 
 ## Release
 
+Toda alteração de comportamento do app deve atualizar a seção **Não lançado** do `CHANGELOG.md` no mesmo conjunto de commits, descrevendo o efeito para o usuário. Mudanças de planejamento também devem atualizar o roteiro e ser identificadas como futuras, sem serem apresentadas como recursos disponíveis.
+
 A versão fica em `package.json` (o `tauri.conf.json` a lê de lá) e deve coincidir com `src-tauri/Cargo.toml`; `bun run version:check` confere.
 
 ```sh

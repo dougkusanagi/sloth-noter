@@ -6,6 +6,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Adicionado
 
+- Busca global no conteúdo das notas (`Ctrl+Alt+F`), com prévias dos resultados e navegação até o trecho encontrado.
+- Controles nos títulos de seção para concluir ou reabrir as tarefas locais da seção.
+- Modo de foco para escrever, com saída acessível pelo teclado e controles nativos da janela preservados.
 - Tab e Shift+Tab em listas criam e desfazem sublistas (quatro espaços), com um item ou vários selecionados, nos modos Padrão e Código. Shift+Tab em itens sem recuo não faz nada; um item numerado que inicia uma sublista recomeça em 1.
 - Seções recolhíveis: seta ao lado de cada título H2–H6 (Padrão e Leitura) e comandos “Recolher/Expandir todas as seções” na paleta.
 - Linha pontilhada discreta que mostra o aninhamento das sublistas (Padrão e Leitura).
@@ -22,6 +25,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Corrigido
 
+- Eventos de colagem em segundo plano ou sem conteúdo não leem mais automaticamente a área de transferência. Leituras nativas pendentes são canceladas se a janela perder o foco, inclusive ao voltar para o app antes de a leitura terminar.
+- Cliques da rodinha nas margens e espaços do editor também são bloqueados para impedir colagens involuntárias; atalhos de colagem continuam disponíveis.
+- Controles de tarefas de seção permanecem na linha do título, e as estatísticas da seleção continuam visíveis.
 - Linux (AppImage) em sessão Wayland: a janela rodava via XWayland e os cliques atravessavam o app para a janela de trás. O app agora usa o backend Wayland nativo; `SLOTH_NOTE_FORCE_X11=1` volta ao X11.
 - Padrão e Leitura agora têm exatamente o mesmo layout (espaços entre blocos, entrelinhas, listas, tarefas, citações, tabelas, código, imagens e rodapé), então trocar de modo não move o texto; a Leitura mostra quebras simples de linha como quebras.
 - Modo Padrão: tarefas e itens numerados aninhados ficavam sem recuo fora da linha em edição; o recuo segue a estrutura da lista e o texto de continuação de um item acompanha o item.
@@ -38,6 +44,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Alterado
 
+- Ilustração da página de ajuda acompanha o app e funciona offline.
+- Busca de notas prioriza abas abertas; editor reduz consumo de memória e trabalho durante atualizações.
+- Planejamento passa a incluir listas de tarefas dedicadas, histórico, recorrência, lembretes, sincronização opcional (GitHub e alternativa gratuita a avaliar) e versão mobile, antes da proposta de IA. Esses recursos futuros ainda não estão implementados.
 - Interface refeita: tipografia sem monoespaçada, janela de Configurações em duas colunas (tema, idioma e tamanho do texto com prévia, abas, biblioteca, dados, atalhos), paleta de comandos, biblioteca com prévia e busca no texto, grade de imagens, diálogos, menus, abas e toasts com o mesmo sistema visual (`src/ui.css`).
 - Texto mais denso: títulos H1–H4 com diferença menor de tamanho e corpo padrão de 16 px (antes 18); o tamanho já salvo é mantido, use Restaurar nas Configurações.
 - Atalhos que colidiam com ferramentas do navegador mudaram: biblioteca de imagens Ctrl+Shift+L (era Ctrl+Shift+I, que abre o inspetor), renomear F2 (era Ctrl+Shift+R, recarga forçada); "adicionar imagens" perdeu o atalho Ctrl+Alt+I e fica na paleta de comandos.

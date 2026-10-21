@@ -234,6 +234,18 @@ function Workspace({ persistence, loaded }) {
   const [readingFolds, setReadingFolds] = useState({ id: null, lines: new Set() })
   const closedTabs = useRef([])
   const clipboardBusy = useRef(false)
+  const clipboardFocusEpoch = useRef(0)
+  useEffect(() => {
+    const cancelPendingPaste = () => {
+      clipboardFocusEpoch.current++
+    }
+    window.addEventListener('blur', cancelPendingPaste)
+    document.addEventListener('visibilitychange', cancelPendingPaste)
+    return () => {
+      window.removeEventListener('blur', cancelPendingPaste)
+      document.removeEventListener('visibilitychange', cancelPendingPaste)
+    }
+  }, [])
   const [middleClickPasteGuard] = useState(createMiddleClickPasteGuard)
   const returnFocus = useRef(null)
   const active = data.notes.find((note) => note.id === data.activeId) ?? null
@@ -910,7 +922,17 @@ function Workspace({ persistence, loaded }) {
     }
   }
   async function pasteNativeClipboard() {
-    if (clipboardBusy.current || imageBusy || blocked || switching || !active) return
+    if (
+      clipboardBusy.current ||
+      imageBusy ||
+      blocked ||
+      switching ||
+      !active ||
+      !document.hasFocus() ||
+      document.visibilityState === 'hidden'
+    )
+      return
+    const focusEpoch = clipboardFocusEpoch.current
     const point = insertionPoint()
     const noteId = active.id
     const editorMode = mode
@@ -920,6 +942,12 @@ function Workspace({ persistence, loaded }) {
     setImportError('')
     try {
       const contents = await readNativeClipboard(persistence.invoke)
+      if (
+        focusEpoch !== clipboardFocusEpoch.current ||
+        !document.hasFocus() ||
+        document.visibilityState === 'hidden'
+      )
+        return
       if (contents?.kind === 'image') {
         await addImages(contents.files, point, noteId)
       } else if (contents?.kind === 'text' && current.current.activeId === noteId) {
@@ -2056,16 +2084,16 @@ function Workspace({ persistence, loaded }) {
           }}
           onPasteCapture={(event) => {
             if (middleClickPasteGuard.paste(event)) return
+            // Empty webview paste events are not permission to read the system
+            // clipboard. Only the explicit keyboard handler does that.
             if (
-              persistence.invoke &&
-              !clipboardBusy.current &&
-              event.target.closest?.('.cm-content, textarea') &&
-              !clipboardImageFiles(event.clipboardData).length &&
-              !event.clipboardData.getData('text/plain')
+              !document.hasFocus() ||
+              document.visibilityState === 'hidden' ||
+              (!clipboardImageFiles(event.clipboardData).length &&
+                !event.clipboardData?.getData('text/plain'))
             ) {
               event.preventDefault()
               event.stopPropagation()
-              pasteNativeClipboard()
             }
           }}
           onPaste={(event) => {
