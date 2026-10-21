@@ -18,6 +18,7 @@
 - **MVP web:** persistência versionada (v1→v3) com migração, bloqueio em dados corrompidos e fila de gravação; importação/exportação, backup, lixeira, busca, leitura, editor visual.
 - **Desktop, base:** projeto Tauri V2 com versões fixadas; estado em arquivo com gravação temporária e cópia `.previous`; capability sem plugin de filesystem.
 - **Pasta de notas:** `.md` como fonte de verdade, estado auxiliar no diretório de dados, comandos restritos à pasta escolhida no diálogo nativo, importação de alterações externas com resolução de conflitos.
+- **Abrir arquivos pelo sistema:** associações para `.md`, `.markdown` e `.txt`; argumentos encaminhados à janela existente. `.md`, `.markdown` e `.txt` abertos ou soltados na janela são editados no próprio arquivo, inclusive fora da pasta de notas; soltá-los sobre o texto pergunta se o original deve ser editado ou se uma cópia deve ser importada.
 - **Interface:** Configurações (Ctrl+,), paleta de comandos (Ctrl+K) separada da busca de notas (Ctrl+P), toasts, biblioteca com prévia e busca no texto, tipografia de interface sem monoespaçada, atalhos sem colisão com ferramentas do navegador (ver `docs/RECURSOS.md`).
 - **Erros de disco:** pasta ausente, permissão negada, somente leitura e disco cheio têm mensagens próprias (código estável vindo do Rust, texto no idioma da interface). Uma instância por vez cobre o caso de duas janelas na mesma pasta.
 - **Interface:** pt-BR por padrão, English opcional; confirmações e renomeação em diálogos próprios do app.
@@ -39,7 +40,6 @@
 
 Ideias avaliadas contra o contrato acima, em ordem de valor:
 
-- **Abrir arquivo pelo sistema** (duplo clique em `.md`/`.txt` e "Abrir com"): é o que faz o app substituir o Notepad de verdade. Exige associação de arquivo no instalador e um argumento de linha de comando.
 - **Nota nova ao abrir** (opção): o app já abre na última nota; quem quer anotar rápido prefere uma página em branco.
 - **Substituir (Ctrl+H)** na busca da nota.
 - **Contador discreto** de palavras/caracteres e quebra de linha opcional.

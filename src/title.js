@@ -32,7 +32,8 @@ export function navigateTitle(view, backwards = false) {
 }
 export function ensureDocumentTitles(document) {
   const notes = document.notes.map((note) => {
-    const body = ensureTitle(note.body)
+    // Files opened in place keep their own text; the app must not rewrite them.
+    const body = note.external ? note.body : ensureTitle(note.body)
     return body === note.body ? note : { ...note, body, revision: note.revision + 1 }
   })
   return notes.some((note, index) => note !== document.notes[index])

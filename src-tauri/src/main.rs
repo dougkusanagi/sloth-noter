@@ -7,7 +7,15 @@ mod migration;
 mod store;
 mod vault;
 
-use std::{collections::HashSet, path::PathBuf, sync::Mutex};
+use serde::Serialize;
+use std::{
+    collections::{HashSet, VecDeque},
+    env,
+    path::{Path, PathBuf},
+    sync::Mutex,
+};
+use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_dialog::DialogExt;
 
 #[derive(Default)]
 struct DroppedFiles(Mutex<HashSet<PathBuf>>);
@@ -40,9 +48,214 @@ impl DroppedFiles {
 #[derive(Default)]
 struct PendingVault(Mutex<Option<PathBuf>>);
 
-use serde::Serialize;
-use tauri::{AppHandle, Manager};
-use tauri_plugin_dialog::DialogExt;
+#[derive(Default)]
+struct PendingOpenFiles(Mutex<VecDeque<PathBuf>>);
+
+impl PendingOpenFiles {
+    fn new(paths: Vec<PathBuf>) -> Self {
+        Self(Mutex::new(paths.into()))
+    }
+
+    fn enqueue(&self, paths: Vec<PathBuf>) -> bool {
+        if paths.is_empty() {
+            return false;
+        }
+        match self.0.lock() {
+            Ok(mut pending) => {
+                pending.extend(paths);
+                true
+            }
+            Err(_) => false,
+        }
+    }
+
+    fn take(&self) -> Result<Vec<PathBuf>, String> {
+        let mut pending = self.0.lock().map_err(|error| error.to_string())?;
+        Ok(std::mem::take(&mut *pending).into())
+    }
+}
+
+fn openable_paths(paths: impl IntoIterator<Item = PathBuf>, cwd: &Path) -> Vec<PathBuf> {
+    paths
+        .into_iter()
+        .filter_map(|path| {
+            let extension = path.extension()?.to_str()?.to_ascii_lowercase();
+            if !matches!(extension.as_str(), "md" | "markdown" | "txt") {
+                return None;
+            }
+            Some(if path.is_absolute() {
+                path
+            } else {
+                cwd.join(path)
+            })
+        })
+        .collect()
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OpenedNoteFile {
+    name: String,
+    path: String,
+    contents: Option<String>,
+    error: Option<String>,
+    same_notes_folder: bool,
+}
+
+fn external_registry_path(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(app_data_dir(app)?.join("external-files.json"))
+}
+
+/// Files the user opened from outside the notes folder, by canonical path. Only these
+/// may be read or written later, so the webview cannot reach arbitrary paths.
+fn registered_files(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
+    let contents = store::read_state(&external_registry_path(app)?)
+        .map_err(|error| errors::describe(&error))?;
+    let paths: Vec<String> = contents
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .unwrap_or_default();
+    Ok(paths.into_iter().map(PathBuf::from).collect())
+}
+
+fn register_file(app: &AppHandle, source: &Path) -> Result<(), String> {
+    let mut files = registered_files(app)?;
+    if files.iter().any(|file| file == source) {
+        return Ok(());
+    }
+    files.push(source.to_path_buf());
+    let paths: Vec<String> = files
+        .iter()
+        .map(|file| file.to_string_lossy().into_owned())
+        .collect();
+    let text = serde_json::to_string(&paths).map_err(|error| error.to_string())?;
+    store::write_state(&external_registry_path(app)?, &text)
+        .map_err(|error| errors::describe(&error))
+}
+
+fn registered_path(app: &AppHandle, path: &str) -> Result<PathBuf, String> {
+    let source = std::fs::canonicalize(path).map_err(|e| errors::describe(&e))?;
+    if registered_files(app)?.contains(&source) {
+        Ok(source)
+    } else {
+        Err("This file was not opened in Sloth Note".into())
+    }
+}
+
+#[tauri::command]
+fn external_read(app: AppHandle, path: String) -> Result<String, String> {
+    let source = registered_path(&app, &path)?;
+    vault::read_opened(&source)
+}
+
+#[tauri::command]
+fn external_write(
+    app: AppHandle,
+    path: String,
+    contents: String,
+    expected: String,
+) -> Result<(), String> {
+    let source = registered_path(&app, &path)?;
+    vault::write_external(&source, &contents, &expected)
+}
+
+/// Drops the permission to write a file once no note refers to it any more.
+#[tauri::command]
+fn external_release(app: AppHandle, path: String) -> Result<(), String> {
+    let released = std::fs::canonicalize(&path).ok();
+    let mut files = registered_files(&app)?;
+    let before = files.len();
+    files.retain(|file| file != Path::new(&path) && Some(file) != released.as_ref());
+    if files.len() == before {
+        return Ok(());
+    }
+    let paths: Vec<String> = files
+        .iter()
+        .map(|file| file.to_string_lossy().into_owned())
+        .collect();
+    let text = serde_json::to_string(&paths).map_err(|error| error.to_string())?;
+    store::write_state(&external_registry_path(&app)?, &text)
+        .map_err(|error| errors::describe(&error))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExternalNote {
+    name: String,
+    path: String,
+    contents: String,
+}
+
+/// Opens a Markdown or text file dropped onto the window in place, keeping it registered.
+#[tauri::command]
+fn note_open_dropped(
+    app: AppHandle,
+    dropped: tauri::State<'_, DroppedFiles>,
+    path: String,
+) -> Result<ExternalNote, String> {
+    let source = dropped.take(&path)?;
+    let contents = vault::read_opened(&source)?;
+    register_file(&app, &source)?;
+    Ok(ExternalNote {
+        name: source
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+        path: source.to_string_lossy().into_owned(),
+        contents,
+    })
+}
+
+#[tauri::command]
+fn take_opened_files(
+    app: AppHandle,
+    pending: tauri::State<'_, PendingOpenFiles>,
+) -> Result<Vec<OpenedNoteFile>, String> {
+    let notes_folder = configured_vault(&app)
+        .ok()
+        .flatten()
+        .and_then(|path| PathBuf::from(path).canonicalize().ok());
+    Ok(pending
+        .take()?
+        .into_iter()
+        .map(|path| {
+            let source = std::fs::canonicalize(&path).unwrap_or(path);
+            let name = source
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            let same_notes_folder = source
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
+                && notes_folder
+                    .as_ref()
+                    .is_some_and(|folder| source.parent() == Some(folder.as_path()));
+            let opened = vault::read_opened(&source).and_then(|contents| {
+                if !same_notes_folder {
+                    register_file(&app, &source)?;
+                }
+                Ok(contents)
+            });
+            let path = source.to_string_lossy().into_owned();
+            match opened {
+                Ok(contents) => OpenedNoteFile {
+                    name,
+                    path,
+                    contents: Some(contents),
+                    error: None,
+                    same_notes_folder,
+                },
+                Err(error) => OpenedNoteFile {
+                    name,
+                    path,
+                    contents: None,
+                    error: Some(error),
+                    same_notes_folder,
+                },
+            }
+        })
+        .collect())
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -317,8 +530,16 @@ fn prefer_native_wayland() {
 fn main() {
     #[cfg(target_os = "linux")]
     prefer_native_wayland();
+    let cwd = env::current_dir().unwrap_or_default();
+    let initial_files = openable_paths(env::args_os().skip(1).map(PathBuf::from), &cwd);
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+        .manage(PendingOpenFiles::new(initial_files))
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            let paths =
+                openable_paths(args.into_iter().skip(1).map(PathBuf::from), Path::new(&cwd));
+            if app.state::<PendingOpenFiles>().enqueue(paths) {
+                let _ = app.emit("open-note-files", ());
+            }
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.unminimize();
@@ -349,13 +570,18 @@ fn main() {
             image_write,
             image_import_drop,
             note_read_dropped,
+            note_open_dropped,
+            external_read,
+            external_write,
+            external_release,
             image_delete,
             vault_disconnect,
             vault_list,
             vault_stamps,
             vault_apply,
             vault_read_aux,
-            vault_write_aux
+            vault_write_aux,
+            take_opened_files
         ])
         .run(tauri::generate_context!())
         .expect("Sloth Note could not start");

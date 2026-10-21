@@ -30,6 +30,20 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "fileAssociations": [
+      {
+        "ext": ["md", "markdown"],
+        "name": "Markdown",
+        "description": "Markdown document",
+        "mimeType": "text/markdown"
+      },
+      {
+        "ext": ["txt"],
+        "name": "Text",
+        "description": "Text document",
+        "mimeType": "text/plain"
+      }
+    ],
     "shortDescription": "Offline Markdown editor",
     "longDescription": "Sloth Note keeps Markdown notes in files the user controls and works without network access.",
     "icon": [
