@@ -41,6 +41,10 @@ test.beforeEach(async ({ page }) => {
           if (command === 'persistence_info') return { statePath: '/native/state.json' }
           if (command === 'clipboard_read') {
             window.nativeClipboardReads++
+            if (window.holdClipboardRead)
+              await new Promise((resolve) => {
+                window.releaseClipboardRead = resolve
+              })
             if (window.clipboardDelay)
               await new Promise((resolve) => setTimeout(resolve, window.clipboardDelay))
             return window.nativeClipboard
@@ -87,6 +91,126 @@ test('desktop clicks invoke window actions only through their own controls', asy
 })
 
 for (const mode of ['visual', 'source']) {
+  test(`unsolicited empty paste events never read the native clipboard in ${mode}`, async ({
+    page,
+  }) => {
+    if (mode === 'source')
+      await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    const editor = page.locator(mode === 'visual' ? '.cm-content' : 'textarea')
+    await editor.focus()
+    for (const kind of ['text', 'image']) {
+      await page.evaluate((kind) => {
+        if (kind === 'text') window.nativeClipboard = { kind, text: 'Unrequested text' }
+        else window.nativeClipboard = { kind, bytes: [1, 2, 3] }
+      }, kind)
+      for (let i = 0; i < 3; i++) {
+        await editor.evaluate((element) =>
+          element.dispatchEvent(
+            new ClipboardEvent('paste', {
+              clipboardData: new DataTransfer(),
+              bubbles: true,
+              cancelable: true,
+            }),
+          ),
+        )
+        expect(await page.evaluate(() => window.nativeClipboardReads)).toBe(0)
+      }
+    }
+    expect(await page.evaluate(() => window.nativeDocument.notes[0].body)).toBe(
+      '# Clipboard\n\nAntes\n\nDepois',
+    )
+    expect(await page.evaluate(() => Object.keys(window.nativeImages))).toEqual([])
+  })
+
+  test(`background paste events cannot insert text or images in ${mode}`, async ({ page }) => {
+    if (mode === 'source')
+      await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    const editor = page.locator(mode === 'visual' ? '.cm-content' : 'textarea')
+    await editor.focus()
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hasFocus', { value: () => false, configurable: true })
+    })
+    const allowed = await editor.evaluate((element) => {
+      return ['empty', 'text', 'image'].map((kind) => {
+        const clipboardData = new DataTransfer()
+        if (kind === 'text') clipboardData.setData('text/plain', 'Background text')
+        if (kind === 'image')
+          clipboardData.items.add(new File(['image'], 'background.png', { type: 'image/png' }))
+        return element.dispatchEvent(
+          new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }),
+        )
+      })
+    })
+    expect(allowed).toEqual([false, false, false])
+    await page.keyboard.press('Control+v')
+    expect(await page.evaluate(() => window.nativeClipboardReads)).toBe(0)
+    expect(await page.evaluate(() => window.nativeDocument.notes[0].body)).toBe(
+      '# Clipboard\n\nAntes\n\nDepois',
+    )
+    expect(await page.evaluate(() => Object.keys(window.nativeImages))).toEqual([])
+  })
+
+  for (const kind of ['text', 'image']) {
+    test(`pending native ${kind} paste is cancelled after losing window focus in ${mode}`, async ({
+      page,
+    }) => {
+      if (mode === 'source')
+        await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+      await page.evaluate((kind) => {
+        window.holdClipboardRead = true
+        if (kind === 'text') window.nativeClipboard = { kind, text: 'Delayed text' }
+      }, kind)
+      const editor = page.locator(mode === 'visual' ? '.cm-content' : 'textarea')
+      await editor.focus()
+      await page.keyboard.press('Control+v')
+      await expect.poll(() => page.evaluate(() => window.nativeClipboardReads)).toBe(1)
+      await page.evaluate(async () => {
+        window.dispatchEvent(new Event('blur'))
+        window.dispatchEvent(new Event('focus'))
+        window.releaseClipboardRead()
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      })
+      expect(await page.evaluate(() => window.nativeDocument.notes[0].body)).toBe(
+        '# Clipboard\n\nAntes\n\nDepois',
+      )
+      expect(await page.evaluate(() => Object.keys(window.nativeImages))).toEqual([])
+    })
+  }
+
+  test(`middle-click on editor padding cannot paste clipboard text in ${mode}`, async ({
+    page,
+  }) => {
+    await page.evaluate(() => {
+      window.nativeClipboard = { kind: 'text', text: 'Unexpected clipboard text' }
+    })
+    if (mode === 'source')
+      await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    const editor = page.locator(mode === 'visual' ? '.cm-content' : 'textarea')
+    await editor.focus()
+    await page.locator('.editor-shell').evaluate((shell) => {
+      // The webview can target padding for the mouse event, then paste into the focused editor.
+      for (const type of ['mousedown', 'mouseup', 'auxclick']) {
+        shell.dispatchEvent(new MouseEvent(type, { button: 1, bubbles: true, cancelable: true }))
+      }
+    })
+    const allowed = await editor.evaluate((element) => {
+      const clipboardData = new DataTransfer()
+      const emptyAllowed = element.dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }),
+      )
+      clipboardData.setData('text/plain', 'Unexpected selection text')
+      const textAllowed = element.dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }),
+      )
+      return { emptyAllowed, textAllowed }
+    })
+    expect(allowed).toEqual({ emptyAllowed: false, textAllowed: false })
+    expect(await page.evaluate(() => window.nativeClipboardReads)).toBe(0)
+    expect(await page.evaluate(() => window.nativeDocument.notes[0].body)).toBe(
+      '# Clipboard\n\nAntes\n\nDepois',
+    )
+  })
+
   test(`middle-click paste cannot import native images or selection text in ${mode}`, async ({
     page,
   }) => {

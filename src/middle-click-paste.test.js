@@ -31,6 +31,16 @@ test('middle click blocks native selection paste and empty-paste clipboard fallb
   assert.equal(paste.prevented, true)
 })
 
+test('middle clicks on editor padding also block paste into the focused editor', () => {
+  const guard = createMiddleClickPasteGuard()
+  const mouse = event('mousedown', 1)
+  mouse.target.closest = () => false
+  guard.mouse(mouse)
+  assert.equal(mouse.prevented, true)
+  assert.equal(mouse.stopped, true)
+  assert.equal(guard.paste(event('paste')), true)
+})
+
 test('keyboard paste, context menu paste and middle-click links remain available', () => {
   const guard = createMiddleClickPasteGuard()
   guard.mouse(event('mousedown', 1))

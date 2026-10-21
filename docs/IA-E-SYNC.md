@@ -1,6 +1,7 @@
 # IA local, sincronização com GitHub e assistente de trabalho
 
 > Status: **ideia / proposta** para implementação futura. Nada disto está implementado.
+> Prioridade: tarefas, recorrência, lembretes, sincronização e mobile vêm antes da IA local, conforme o [roteiro do projeto](ROADMAP.md#tarefas-sincronização-e-mobile).
 > Protótipo navegável: [`ai-prototype/prototype.html`](ai-prototype/prototype.html) (dados fictícios; capturas na mesma pasta).
 
 ## 1. Objetivo
@@ -35,11 +36,11 @@ A interface mostra as etapas em andamento ("Buscando por tags… Lendo 4 resumos
 
 ## 4. Armazenamento
 
-| Dado | Onde | Sincroniza? |
-| --- | --- | --- |
-| `title`, `tags`, `id` estável — **só o que o usuário aceitou** | Frontmatter YAML da nota | Sim |
+| Dado                                                                    | Onde                                          | Sincroniza?                                                               |
+| ----------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------- |
+| `title`, `tags`, `id` estável — **só o que o usuário aceitou**          | Frontmatter YAML da nota                      | Sim                                                                       |
 | Resumo, título sugerido, tags sugeridas, hash do conteúdo, modelo usado | `.sloth/meta/<id>.json` (um arquivo por nota) | Sim; conflito resolvido automaticamente (vence o mais recente / regenera) |
-| Índice FTS5, cache | Banco SQLite local | Não (fora do git, reconstruível) |
+| Índice FTS5, cache                                                      | Banco SQLite local                            | Não (fora do git, reconstruível)                                          |
 
 - Metadados de IA ficam fora do markdown para não poluir o texto nem gerar conflitos de sync.
 - O resumo é invalidado pelo hash do conteúdo e regenerado em segundo plano.
@@ -48,8 +49,8 @@ A interface mostra as etapas em andamento ("Buscando por tags… Lendo 4 resumos
 
 - **Painel direito "Assistente"** (toggle ✦ no cabeçalho), usando o espaço horizontal livre:
   - abas **Esta nota | Histórico** (mesmo componente segmentado da barra esquerda);
-  - *Esta nota:* Resumo, Tags (aceitas + sugeridas tracejadas, clique aceita com desfazer), Relacionadas; botões Regenerar e "Perguntar às notas"; rodapé com o modelo em uso;
-  - *Histórico:* perguntas anteriores com busca, agrupadas por dia; clicar reabre a resposta com as fontes. Estado vazio ≠ "nenhum resultado".
+  - _Esta nota:_ Resumo, Tags (aceitas + sugeridas tracejadas, clique aceita com desfazer), Relacionadas; botões Regenerar e "Perguntar às notas"; rodapé com o modelo em uso;
+  - _Histórico:_ perguntas anteriores com busca, agrupadas por dia; clicar reabre a resposta com as fontes. Estado vazio ≠ "nenhum resultado".
   - Ícones consistentes: ✦ só no cabeçalho do Assistente; cada seção com seu ícone de linha.
 - **Título sugerido** sob o H1 com "Usar" / "Ignorar" (Usar atualiza H1, aba e barra lateral, com desfazer).
 - Notas sem título mostram o título sugerido em itálico com ✦ na barra lateral.
@@ -59,7 +60,11 @@ A interface mostra as etapas em andamento ("Buscando por tags… Lendo 4 resumos
 - Responsivo: < 1180px o painel vira sobreposição; < 720px vira bottom sheet.
 - **Status de sync só na barra de status inferior**, com popover abrindo para cima.
 
-## 6. Sincronização com GitHub para usuários leigos
+## 6. Sincronização opcional e provedor GitHub
+
+O app continua local e sem conta por padrão. GitHub é um provedor planejado; também será avaliada uma alternativa gratuita que não exija conta no GitHub. A escolha dessa alternativa permanece em aberto. Backup remoto e sincronização entre dispositivos são entregas distintas.
+
+O contrato de sincronização deve incluir notas, imagens, exclusões, metadados das tarefas e histórico de conclusão, com IDs estáveis, tratamento de conflitos e deduplicação de eventos. O histórico de tarefas é independente dos commits. As escolhas abaixo são a proposta específica para o provedor GitHub:
 
 - Login por **OAuth device flow** (código + abrir navegador; sem tokens manuais).
 - Cria automaticamente um **repositório privado** (ex.: `sloth-notes`).
@@ -70,21 +75,24 @@ A interface mostra as etapas em andamento ("Buscando por tags… Lendo 4 resumos
 
 ## 7. Evolução: assistente que sabe no que estou trabalhando
 
-Exemplo de pergunta: *"quais projetos e o que fiz em cada um deles na última terça?"*
+Exemplo de pergunta: _"quais projetos e o que fiz em cada um deles na última terça?"_
 
 O gargalo não é o tamanho do modelo, e sim ter os dados organizados. Essa pergunta é basicamente uma consulta por data + agregação; o LLM só redige.
 
 **Fontes**
+
 - GitHub: API GraphQL (`contributionsCollection`) e busca de commits/PRs/issues por autor e data (inclui privados com o token do usuário).
 - Repositórios locais: `git log --author --since/--until` em pastas configuradas (pega o que ainda não foi enviado).
 - As próprias notas: criadas/editadas no dia, tarefas concluídas.
 
 **Diário automático (passo principal)**
+
 - Job diário coleta as fontes num log de atividades SQLite (com data, projeto, tipo) e gera `Diário/AAAA-MM-DD.md` com uma seção por projeto.
 - Perguntas por período viram "ler a nota do dia" — o modelo pequeno resolve com o RAG da seção 3.
 - O diário é uma nota normal: editável e sincronizada.
 
 **Dois níveis de modelo**
+
 - Local pequeno: título, tags, resumos, perguntas simples.
 - Nuvem opcional (ex.: Claude, chave do usuário no keychain): perguntas que cruzam períodos ou exigem raciocínio, usando **ferramentas** (buscar notas, consultar log de atividades, GitHub) em vez de receber tudo no prompt.
 - A UI deixa claro quando algo vai para a nuvem e o que será enviado; opt-in explícito.
@@ -93,11 +101,17 @@ O gargalo não é o tamanho do modelo, e sim ter os dados organizados. Essa perg
 
 ## 8. Ordem sugerida
 
-1. IA local fase 1: sidecar llama.cpp, título sugerido, resumo, explicar seleção, frontmatter + `.sloth/meta`.
-2. Índice FTS5 + tags + "Perguntar às notas" com fontes e histórico.
-3. Sync GitHub (device flow, repo privado, auto-commit, conflitos).
-4. Diário automático (GitHub + git local + notas).
-5. Modelo na nuvem com ferramentas e/ou servidor MCP.
+1. Listas de tarefas dedicadas e histórico de conclusão.
+2. Recorrência diária e por dias da semana, com ocorrências independentes.
+3. Prazo, lembretes e notificações no desktop.
+4. Backup remoto e sincronização opcionais: proposta GitHub acima e avaliação de alternativa gratuita sem GitHub.
+5. Versão mobile, com funcionamento offline, sincronização e validação de notificações e alarmes na plataforma escolhida.
+6. IA local fase 1: sidecar llama.cpp, título sugerido, resumo, explicar seleção, frontmatter + `.sloth/meta`.
+7. Índice FTS5 + tags + "Perguntar às notas" com fontes e histórico.
+8. Diário automático (GitHub + git local + notas), aproveitando o histórico de tarefas já registrado.
+9. Modelo na nuvem com ferramentas e/ou servidor MCP.
+
+O detalhamento das cinco primeiras etapas e suas decisões em aberto está no [roteiro](ROADMAP.md#tarefas-sincronização-e-mobile). A IA não é requisito para tarefas, histórico ou sincronização.
 
 ## 9. Questões em aberto
 
