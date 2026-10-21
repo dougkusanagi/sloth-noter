@@ -46,6 +46,7 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
       [
         ['newNote', 'menu.newNote', FilePlus, 'T', false, true],
         ['findNote', 'menu.findNote', Search, 'P', false, true],
+        ['searchAllNotes', 'menu.searchAllNotes', Search, 'Alt+F', false, true],
         ['findInNote', 'menu.findInNote', ScanSearch, 'F', !active, true],
         ['replaceInNote', 'find.replace', Replace, 'H', !active, true],
         ['rename', 'menu.rename', Pencil, 'F2', !active, true],

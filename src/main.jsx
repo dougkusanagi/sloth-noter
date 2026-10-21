@@ -165,6 +165,7 @@ function Workspace({ persistence, loaded }) {
   const [error, setError] = useState(loaded.error)
   const [blocked, setBlocked] = useState(loaded.blocked)
   const [sidebarQuery, setSidebarQuery] = useState('')
+  const sidebarSearchRef = useRef(null)
   const [sidebarSection, setSidebarSection] = useState('notes')
   const [previewId, setPreviewId] = useState(null)
   const [showDoneTasks, setShowDoneTasks] = useState(false)
@@ -1216,6 +1217,31 @@ function Workspace({ persistence, loaded }) {
     if (!findOpen || !selection || selection.to <= selection.from) return
     setFindOptions((options) => ({ ...options, scope: { from: selection.from, to: selection.to } }))
   }
+  function searchAllNotes() {
+    updatePrefs({ sidebarVisible: true })
+    setSidebarSection('notes')
+    setFocusMode(false)
+    setTimeout(() => {
+      sidebarSearchRef.current?.focus()
+      sidebarSearchRef.current?.select()
+    }, 0)
+  }
+  function openNoteSearch(noteId, query) {
+    openNote(noteId)
+    if (mode === 'reading') setMode('visual')
+    setFindQuery(query)
+    setFindOptions({
+      caseSensitive: false,
+      wholeWord: false,
+      regex: false,
+      preserveCase: false,
+      selectionOnly: false,
+      scope: null,
+    })
+    setFindIndex(0)
+    setReplaceOpen(false)
+    setFindOpen(true)
+  }
   function openFind(replace = false) {
     setReplaceOpen(replace)
     const selection =
@@ -1621,6 +1647,7 @@ function Workspace({ persistence, loaded }) {
     focus: () => active && toggleFocusMode(),
     newNote: () => runMenu(() => createNote(), false),
     findNote: () => runMenu(openPalette, false),
+    searchAllNotes: () => runMenu(searchAllNotes, false),
     findInNote: () => active && runMenu(openFind, false),
     replaceInNote: () => active && runMenu(() => openFind(true), false),
     rename: () => active && runMenu(renameNote, false),
@@ -1900,8 +1927,13 @@ function Workspace({ persistence, loaded }) {
               <div className="search-field">
                 <Search size={14} aria-hidden="true" />
                 <input
-                  aria-label={t('sidebar.search')}
-                  placeholder={t('sidebar.search')}
+                  ref={sidebarSearchRef}
+                  aria-label={t(
+                    sidebarSection === 'notes' ? 'sidebar.searchNotes' : 'sidebar.search',
+                  )}
+                  placeholder={t(
+                    sidebarSection === 'notes' ? 'sidebar.searchNotes' : 'sidebar.search',
+                  )}
                   value={sidebarQuery}
                   onChange={(event) => setSidebarQuery(event.target.value)}
                 />
@@ -1937,6 +1969,7 @@ function Workspace({ persistence, loaded }) {
                   openIds={data.openIds}
                   onOpen={previewNote}
                   onKeep={keepNote}
+                  onSearchOpen={openNoteSearch}
                   onMenu={openTabMenu}
                 />
               ) : sidebarSection === 'tasks' ? (

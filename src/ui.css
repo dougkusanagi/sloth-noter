@@ -2630,3 +2630,20 @@ html:has(
   background: var(--bg);
   transform: none;
 }
+
+.note-search-snippet {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.note-search-snippet mark {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-radius: 2px;
+}
+.note-search-count {
+  color: var(--muted);
+  font: 11px/1.5 var(--ui);
+}

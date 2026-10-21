@@ -1,0 +1,6 @@
+Asset: welcome-sloth.png
+Generated with: built-in image_gen tool (2026-10-20)
+Used by: Welcome.md (Portuguese and English) and README.md
+
+Prompt:
+Use case: illustration-story. Asset type: landscape welcome illustration for Sloth Note, a calm offline Markdown notebook app, also suitable for its GitHub README. Create a polished editorial illustration of a friendly sloth quietly writing in an open paper notebook with a pencil, resting comfortably on a tree branch. Warm ivory paper background, restrained cocoa brown, muted terracotta and sage leaves, soft natural light. Tactile fine gouache and colored-pencil artwork with rich deliberate shapes and beautiful subtle material texture, sophisticated and welcoming rather than childish. Wide landscape composition roughly 3:2, entire sloth and notebook visible, restrained botanical detail, generous breathing room, strong legibility at 600px wide. No text, no letters, no logos, no watermark, no UI mockup, no border. One coherent charming scene that communicates unhurried writing. This is a brand-new illustration, not an edit of the existing mascot.

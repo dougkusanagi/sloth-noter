@@ -330,25 +330,33 @@ export function decorationsFor(view) {
       }
       const active = editing.has(number)
       const task = line.text.match(/^(\s*(?:[-*+]|\d+[.)])\s+)\[([ xX-])\](?:\s+|$)/)
-      if (task && !active) {
+      if (task) {
         ranges.push(
           Decoration.line({
             attributes: {
-              class: 'cm-md-paragraph cm-md-task',
+              class: `cm-md-paragraph cm-md-task${active ? ' cm-md-editing' : ''}`,
               ...(listDepths.get(number) ? { style: listMargin(listDepths.get(number)) } : {}),
             },
           }).range(line.from),
         )
-        ranges.push(
-          Decoration.replace({
-            widget: new TaskWidget(
-              tasks.get(number)?.done ?? false,
-              line.from + task[1].length + 1,
-              tasks.get(number)?.partial,
-              Boolean(tasks.get(number)?.progress),
+        if (active) {
+          ranges.push(
+            Decoration.mark({ class: 'cm-task-source-marker' }).range(
+              line.from,
+              line.from + task[0].length,
             ),
-          }).range(line.from, line.from + task[0].length),
-        )
+          )
+        } else
+          ranges.push(
+            Decoration.replace({
+              widget: new TaskWidget(
+                tasks.get(number)?.done ?? false,
+                line.from + task[1].length + 1,
+                tasks.get(number)?.partial,
+                Boolean(tasks.get(number)?.progress),
+              ),
+            }).range(line.from, line.from + task[0].length),
+          )
         const linked = tasks.get(number)?.progress
         if (linked)
           ranges.push(
@@ -357,7 +365,7 @@ export function decorationsFor(view) {
               side: 1,
             }).range(line.to),
           )
-        addInlineDecorations(ranges, line, { prefix: task[0].length }, false)
+        addInlineDecorations(ranges, line, { prefix: task[0].length }, active)
         continue
       }
       const image = imageByLine.get(number)

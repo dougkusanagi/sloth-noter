@@ -1,6 +1,11 @@
 import { desktopInvoke } from './persistence-desktop.js'
 import { imageReferences, replaceImageSource, normalizeImageSource } from './markdown-model.js'
 import { t } from './i18n.js'
+import { WELCOME_IMAGE } from './welcome.js'
+
+const welcomeIllustration = new URL('./assets/welcome-sloth.png', import.meta.url).href
+const legacyWelcomeImage =
+  'https://raw.githubusercontent.com/dougkusanagi/sloth-noter/main/motion/assets/sloth-hero.png'
 
 export const IMAGE_TYPES = /\.(png|jpe?g|gif|webp|avif|bmp)$/i
 export const IMAGE_DATA = /^data:image\/(png|jpeg|gif|webp|avif|bmp);base64,[A-Za-z0-9+/=]+$/i
@@ -31,6 +36,7 @@ export function dataUrlBytes(src) {
 export async function resolveImage(src) {
   src = normalizeImageSource(src)
   if (!src) return null
+  if (src === WELCOME_IMAGE || src === legacyWelcomeImage) return welcomeIllustration
   if (/^https?:\/\//i.test(src) || IMAGE_DATA.test(src)) return src
   if (cache.has(src)) return cache.get(src)
   const version = generation

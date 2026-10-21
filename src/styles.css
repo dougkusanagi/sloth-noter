@@ -1159,6 +1159,15 @@ textarea:focus-visible {
   margin-left: -25px;
 }
 
+.visual-editor .cm-task-source-marker {
+  display: inline-block;
+  width: 25px;
+  margin-left: -25px;
+  white-space: pre;
+  text-align: right;
+  color: var(--muted);
+}
+
 /* Task progress after a section heading. */
 .section-progress {
   display: inline-flex;

@@ -1,52 +1,76 @@
 # Sloth Note
 
-Editor Markdown local e offline, em português (Brasil) ou inglês, com abas opcionais, busca de notas e de texto, e três modos: Padrão (estilo ao vivo), Código (Markdown puro) e Leitura.
+Um bloco de notas com Markdown para escrever, organizar ideias e fechar a janela sem pensar em salvar. Local, sem conta e com salvamento automático.
 
-## Ideia
+![Uma preguiça escrevendo com calma em um caderno](src/assets/welcome-sloth.png)
 
-Um **bloco de notas com Markdown**: o fluxo simples do Notepad do Windows — criar uma nota, escrever, fechar sem pensar em salvar — mas com compatibilidade real com Markdown, que é justamente o que o Notepad faz mal. Sem contas, sem nuvem, sem plugins. Cada decisão de produto passa por esta pergunta: isso deixa a nota mais rápida de criar e de fechar?
+## Escreva do seu jeito
 
-O produto final é um aplicativo desktop Tauri V2 que lê e grava arquivos `.md` em uma pasta escolhida pelo usuário. A versão web é a base funcional e um fallback com importação e exportação. Sincronização em nuvem está fora do escopo.
+- **Três modos para a mesma nota:** Padrão, com Markdown formatado enquanto você escreve; Código, com o texto original; e Leitura.
+- **Notas conectadas:** abas, links `[[Nota]]`, referências a títulos e lista de notas que apontam para o documento atual.
+- **Busca onde precisar:** encontre notas pelo nome, pesquise no conteúdo de todas elas com trechos destacados ou busque e substitua dentro de uma nota.
+- **Listas e tarefas:** sublistas, reordenação pelo teclado, visão de tarefas na biblioteca e controles para concluir as tarefas de uma seção.
+- **Markdown além do básico:** tabelas editáveis, citações, notas de rodapé, blocos de código com realce de sintaxe e botão de copiar.
+- **Imagens junto das ideias:** cole ou arraste arquivos, reutilize imagens da biblioteca e encontre as que estão sem uso.
+- **Um espaço para se concentrar:** modo de foco, temas claro e escuro, fonte, tamanho e largura do texto ajustáveis. Interface em português do Brasil ou inglês.
 
-## Estado
+## Primeiros passos
 
-- **Web:** as notas são gravadas no armazenamento do navegador a cada alteração.
-- **Desktop:** o app abre offline, sem `localStorage`. Por padrão grava um arquivo de estado versionado (`state.v3.json`) no diretório de dados do aplicativo. Em **Configurações → Dados** (Ctrl+,) você escolhe uma pasta: cada nota vira um `.md` nela, e abas, preferências e lixeira ficam no diretório de dados do app. Nessa pasta, o salvamento aguarda 1,2 segundo de pausa na edição (no máximo 5 segundos durante digitação contínua), agrupando também as renomeações do título para evitar uma movimentação de arquivo a cada tecla em pastas sincronizadas. Ao sair da janela ou fechá-la, as alterações pendentes são gravadas; uma falha ao salvar impede o fechamento. Alterações feitas por fora na pasta são importadas automaticamente. Veja o [roteiro](docs/ROADMAP.md) para o que falta.
-- **Em ambos:** falhas de gravação aparecem como alertas empilháveis (toasts) com as ações possíveis; há importação/exportação `.md`, backup completo `.json` com imagens locais, lixeira persistente e renomeação. Links `[[Nota]]` conectam documentos; a biblioteca de imagens oferece busca, renomeação e exclusão de arquivos sem uso. Faça exportações para manter uma cópia fora do aplicativo.
+O aplicativo desktop usa **Tauri 2**. O fluxo de release prepara instaladores para **Windows** (`.exe`, NSIS) e **Linux** (`.AppImage`). Consulte as [releases do projeto](https://github.com/dougkusanagi/sloth-noter/releases) para os artefatos publicados. Os pacotes ainda não são assinados.
 
-Detalhes de comportamento, atalhos e limites do Markdown: [docs/RECURSOS.md](docs/RECURSOS.md).
+1. Abra o app e explore a nota **Welcome**, com exemplos editáveis dos recursos de Markdown.
+2. Crie uma nota. A primeira linha com `# Título` também dá nome ao arquivo.
+3. Para trabalhar com arquivos `.md` em uma pasta sua, abra **Configurações → Dados** e escolha a pasta de notas.
 
-## Desenvolvimento
+A página Welcome pode ser excluída. Para gerar uma cópia atualizada, abra a paleta com `Ctrl+K` e escolha **Recriar página de ajuda**.
 
-Requisitos: [Bun](https://bun.sh) 1.4, Node.js 24 (executa os testes) e, para o desktop, Rust 1.82+ com as [dependências do Tauri](https://tauri.app/start/prerequisites/).
+### Atalhos para começar
+
+Use `Ctrl` no Windows/Linux e `Cmd` no macOS. Atalhos como criar e fechar abas podem ser interceptados pelo navegador; no desktop, pertencem ao app.
+
+| Ação                                 | Atalho                   |
+| ------------------------------------ | ------------------------ |
+| Nova nota                            | `Ctrl+T`                 |
+| Encontrar nota pelo nome             | `Ctrl+P`                 |
+| Buscar no conteúdo de todas as notas | `Ctrl+Alt+F`             |
+| Buscar / substituir na nota atual    | `Ctrl+F` / `Ctrl+H`      |
+| Paleta de comandos                   | `Ctrl+K`                 |
+| Padrão / Código / Leitura            | `Ctrl+Alt+1` / `2` / `3` |
+| Modo de foco                         | `Ctrl+Shift+F`           |
+| Configurações                        | `Ctrl+,`                 |
+
+A lista completa está em **Configurações → Atalhos** e na [documentação de recursos](docs/RECURSOS.md).
+
+## Seus dados
+
+**No desktop**, as notas ficam inicialmente no diretório de dados do aplicativo. Ao conectar uma pasta, cada nota vira um arquivo `.md`; imagens locais ficam em `assets/`. Preferências, abas e lixeira continuam no diretório do app. Alterações externas na pasta são detectadas, e conflitos de edição pedem uma escolha antes de sobrescrever o conteúdo.
+
+**Na versão web**, as notas ficam no armazenamento do navegador. É possível importar e exportar Markdown e baixar um backup completo, mas a versão web não mantém uma pasta de arquivos sincronizada como o desktop.
+
+**Em ambos**, você pode exportar notas `.md`, baixar e restaurar um backup `.json` com imagens locais e recuperar notas da lixeira. Imagens externas dependem de conexão; a ilustração da ajuda acompanha o app e carrega offline. Mantenha um backup fora do aplicativo, especialmente antes de limpar dados do navegador.
+
+Não há conta nem sincronização em nuvem integrada. A pasta de notas pode ser mantida por uma ferramenta de sincronização escolhida por você.
+
+## Rodar localmente
+
+Requisitos da versão web: **Bun 1.4.2** e **Node.js 24 ou superior**.
 
 ```sh
 bun install
-bun run dev            # site: porta 5173 ou próxima livre
-bun run test           # testes de domínio (Node)
-bun run e2e            # Playwright: fluxos principais e acessibilidade (axe); 1ª vez: bunx playwright install chromium
-bun run lint           # ESLint; `bun run format` aplica o Prettier
-bun run build          # gera dist/, sem exigir Rust
-bun run desktop:dev    # Vite em porta livre + janela Tauri no mesmo endereço
-bun run desktop:build  # AppImage no Linux; NSIS no Windows
-bun run desktop:test   # testes Rust do armazenamento nativo
-bun run desktop:update # atualiza o AppImage (Linux) ou instala silenciosamente no Windows (NSIS)
+bun run dev
 ```
 
-No Linux, `desktop:update` encontra o Sloth Note pelo `TryExec` do atalho `.desktop` (respeitando `XDG_DATA_HOME`), independentemente da pasta escolhida no Gear Lever. Ele preserva o atalho, guarda o binário anterior em `.previous` e substitui o arquivo de forma atômica. Feche e reabra o app após atualizar.
-
-No Windows, o comando compila um instalador NSIS (`.exe`) e o executa com `/S`, sem assistente de instalação. A instalação é feita para o usuário atual, normalmente em `%LOCALAPPDATA%\Sloth Note`, sem exigir administrador para instalar o aplicativo. Também funciona na primeira instalação e ao recompilar a mesma versão. Feche o Sloth Note antes de executar: se o editor estiver aberto, a instalação é interrompida para preservar alterações ainda não salvas. São necessários os pré-requisitos de build do Tauri para Windows (Rust, Visual Studio Build Tools com C++ e WebView2).
-
-Se houver uma instalação MSI anterior, desinstale-a uma vez pelas Configurações do Windows antes de usar o comando; essa remoção pode exigir administrador. O comando detecta esse caso antes de compilar e informa como migrar. A pasta de notas e os dados do aplicativo continuam usando o mesmo identificador (`dev.slothnote.app`).
-
-Em ambos os sistemas, use `bun run desktop:update --dry-run` para conferir os caminhos sem compilar nem instalar, ou `bun run desktop:update --skip-build` para usar o artefato já compilado da versão e arquitetura atuais. No Windows, o arquivo esperado fica em `src-tauri/target/release/bundle/nsis/Sloth Note_<versão>_<arquitetura>-setup.exe`.
-
-## Release
-
-A versão fica em `package.json` (o `tauri.conf.json` a lê de lá) e deve coincidir com `src-tauri/Cargo.toml`; `bun run version:check` confere.
+Abra o endereço mostrado pelo Vite, normalmente `http://localhost:5173`.
 
 ```sh
-git tag vX.Y.Z && git push --tags
+bun run test   # testes de domínio
+bun run build  # build web em dist/
 ```
 
-O workflow de release gera um rascunho no GitHub com o instalador NSIS `.exe` por usuário (Windows) e o `.AppImage` (Linux). Os artefatos ainda não são assinados. O CI (`.github/workflows/ci.yml`) roda versão, testes e build a cada push e PR.
+Para desenvolver o desktop, instale também Rust e os pré-requisitos do Tauri e execute `bun run desktop:dev`. Comandos de teste, instalação local, atualização e publicação estão no [guia de desenvolvimento](docs/DESENVOLVIMENTO.md).
+
+## Documentação
+
+- [Recursos, comportamento e atalhos](docs/RECURSOS.md)
+- [Desenvolvimento, testes e releases](docs/DESENVOLVIMENTO.md)
+- [Roteiro do projeto](docs/ROADMAP.md)

@@ -234,3 +234,94 @@ test('list text and wrapping keep their horizontal position when the cursor move
   await page.locator('.cm-line').filter({ hasText: 'Outro texto' }).click()
   expect((await textPosition()).left).toBeCloseTo(before.left, 0)
 })
+
+test('global search shows body snippets and opens matches from another note', async ({ page }) => {
+  await source(
+    page,
+    '# Planejamento\n\nIntrodução sem o termo.\n\nAdicionar opções de edição.\nRever edição.',
+  )
+  await page.keyboard.press('Control+t')
+  await source(page, '# Outra nota\n\nConteúdo diferente.')
+  await page.keyboard.press('Control+Alt+f')
+  const search = page.getByRole('textbox', { name: 'Buscar em todas as notas…' })
+  await expect(search).toBeFocused()
+  await search.fill('edicao')
+  await expect(page.locator('.note-item')).toHaveCount(1)
+  await expect(page.locator('.note-search-snippet mark')).toHaveText('edição')
+  await expect(page.locator('.note-search-count')).toHaveText('2 ocorrências')
+  await page.locator('.note-item').click()
+  await expect(page.locator('.tab.active')).toHaveText('Planejamento.md')
+  await expect(page.locator('.find-dialog')).toBeVisible()
+  await expect
+    .poll(() =>
+      page.locator('textarea').evaluate((el) => el.value.slice(el.selectionStart, el.selectionEnd)),
+    )
+    .toBe('edição')
+})
+
+test('task text keeps its position when focus moves, including nested tasks', async ({ page }) => {
+  const body =
+    '# Tarefas\n\n- [ ] Adicionar edição\n- [ ] Adicionar opções\n    - [ ] Adicionar filho\n    - [ ] Adicionar outro filho'
+  await source(page, body)
+  await visual(page)
+  const measure = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('.cm-md-task')].map((line) => {
+        const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT)
+        let node
+        while ((node = walker.nextNode())) {
+          const index = node.textContent.indexOf('Adicionar')
+          if (index < 0) continue
+          const range = document.createRange()
+          range.setStart(node, index)
+          range.setEnd(node, index + 1)
+          const rect = range.getBoundingClientRect()
+          return { x: rect.x, y: rect.y, height: line.getBoundingClientRect().height }
+        }
+      }),
+    )
+  const before = await measure()
+  for (const word of ['edição', 'opções', 'filho']) {
+    await page.evaluate(async (word) => {
+      const { EditorView } = await import('/node_modules/.vite/deps/@codemirror_view.js')
+      const view = EditorView.findFromDOM(document.querySelector('.cm-editor'))
+      view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf(word) } })
+      view.focus()
+    }, word)
+    await expect(page.locator('.cm-task-source-marker')).toHaveCount(1)
+    expect(await measure()).toEqual(before)
+  }
+  await page.keyboard.type('Nova ')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await expect(page.locator('textarea')).toHaveValue(
+    body.replace('Adicionar filho', 'Adicionar Nova filho'),
+  )
+})
+
+test('welcome art loads from the app for new and legacy notes without GitHub access', async ({
+  page,
+}) => {
+  const external = []
+  await page.route('https://raw.githubusercontent.com/**', (route) => {
+    external.push(route.request().url())
+    return route.abort()
+  })
+  await page.reload()
+  const image = page.locator('.cm-image-preview').first()
+  await expect(image).toBeVisible()
+  await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true)
+  await expect(image).toHaveAttribute('src', /\/src\/assets\/welcome-sloth\.png/)
+  await source(
+    page,
+    '# Welcome antigo\n\n![Preguiça](https://raw.githubusercontent.com/dougkusanagi/sloth-noter/main/motion/assets/sloth-hero.png)',
+  )
+  await visual(page)
+  await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true)
+  await expect(image).toHaveAttribute('src', /\/src\/assets\/welcome-sloth\.png/)
+  await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
+  const readingImage = page.locator('.reading img').first()
+  await expect
+    .poll(() => readingImage.evaluate((el) => el.complete && el.naturalWidth > 0))
+    .toBe(true)
+  expect(external).toEqual([])
+})

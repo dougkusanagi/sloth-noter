@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { importImage, bytesDataUrl, markdownImage, libraryImages } from './images.js'
+import { importImage, bytesDataUrl, markdownImage, libraryImages, resolveImage } from './images.js'
 test('imports actual raster bytes even without a browser MIME type and rejects disguised text', async () => {
   const bytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 1])
   const file = { name: 'photo.png', size: bytes.length, arrayBuffer: async () => bytes.buffer }
@@ -46,4 +46,17 @@ test('library paths are normalized so usage and deletion agree for legacy images
   assert.deepEqual(libraryImages(document, disk)[0].noteIds, ['active'])
   document.trash = []
   assert.deepEqual(libraryImages(document, disk)[0].noteIds, [])
+})
+
+test('current and legacy help illustrations resolve locally without a network request', async () => {
+  const { WELCOME_IMAGE } = await import('./welcome.js')
+  const expected = new URL('./assets/welcome-sloth.png', import.meta.url).href
+  assert.equal(await resolveImage(WELCOME_IMAGE), expected)
+  assert.equal(
+    await resolveImage(
+      'https://raw.githubusercontent.com/dougkusanagi/sloth-noter/main/motion/assets/sloth-hero.png',
+    ),
+    expected,
+  )
+  assert.equal(await resolveImage('https://example.com/photo.png'), 'https://example.com/photo.png')
 })

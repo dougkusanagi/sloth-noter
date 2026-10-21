@@ -51,3 +51,9 @@ test('focus mode has a direct shortcut without overriding note search', () => {
   assert.equal(appShortcut({ key: 'F', ctrlKey: true, shiftKey: true }), 'focus')
   assert.equal(appShortcut({ key: 'f', ctrlKey: true }), 'findInNote')
 })
+
+test('global search keeps the existing focus shortcut', () => {
+  assert.equal(appShortcut({ key: 'f', ctrlKey: true, altKey: true }), 'searchAllNotes')
+  assert.equal(appShortcut({ key: 'f', metaKey: true, altKey: true }), 'searchAllNotes')
+  assert.equal(appShortcut({ key: 'f', ctrlKey: true, shiftKey: true }), 'focus')
+})

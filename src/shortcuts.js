@@ -2,6 +2,7 @@ export const SHORTCUTS = [
   ['T', 'menu.newNote'],
   ['P', 'menu.findNote'],
   ['F', 'menu.findInNote'],
+  ['Alt+F', 'menu.searchAllNotes'],
   ['H', 'find.replace'],
   ['Shift+F', 'focus.toggle'],
   ['W', 'tabs.close'],
@@ -38,7 +39,7 @@ export function appShortcut(event) {
   if (!(event.ctrlKey || event.metaKey) || event.isComposing) return null
   const key = event.key.toLowerCase()
   if (event.altKey && !event.shiftKey)
-    return { 1: 'visual', 2: 'source', 3: 'reading' }[key] ?? null
+    return { 1: 'visual', 2: 'source', 3: 'reading', f: 'searchAllNotes' }[key] ?? null
   if (event.shiftKey && !event.altKey)
     return (
       {

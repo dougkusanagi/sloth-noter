@@ -1,6 +1,6 @@
-/** Public mascot art hosted with the project; external images need a connection to load. */
+/** Portable public reference; the app resolves this illustration from its bundled assets offline. */
 export const WELCOME_IMAGE =
-  'https://raw.githubusercontent.com/dougkusanagi/sloth-noter/main/motion/assets/sloth-hero.png'
+  'https://raw.githubusercontent.com/dougkusanagi/sloth-noter/main/src/assets/welcome-sloth.png'
 
 export const WELCOME_NAME = 'Welcome.md'
 
@@ -11,7 +11,7 @@ const pt = [
   '',
   '**Pode excluir esta nota sem medo.** Ela existe só para ajudar e não ocupa espaço na sua lista se você não precisar dela. Para trazê-la de volta, abra a paleta de comandos (Ctrl+K) e escolha **Recriar página de ajuda**; o mesmo item está no menu ☰, em Aplicativo.',
   '',
-  `![Preguiça pendurada em um galho](${WELCOME_IMAGE})`,
+  `![Preguiça escrevendo em um caderno sobre um galho](${WELCOME_IMAGE})`,
   '',
   '## Primeiros passos',
   '',
@@ -19,6 +19,7 @@ const pt = [
   '- A primeira linha é o título e dá nome à nota.',
   '- Alterne entre **Padrão** (estilo ao vivo), **Código** (Markdown puro) e **Leitura** com Ctrl+Alt+1, 2 e 3.',
   '- Selecione um texto para abrir a barra de formatação, ou clique em **+** numa linha vazia para inserir blocos.',
+  '- Busque no conteúdo de todas as notas com Ctrl+Alt+F; Ctrl+F busca na nota atual e Ctrl+H abre a substituição.',
   '- Ctrl+K abre a paleta com todas as ações; Ctrl+Shift+/ lista os atalhos.',
   '',
   '## Títulos',
@@ -169,7 +170,7 @@ const en = [
   '',
   '**You can safely delete this note.** It only exists to help and takes no room in your list if you do not need it. To bring it back, open the command palette (Ctrl+K) and pick **Recreate help page**; the same item is in the ☰ menu, under App.',
   '',
-  `![Sloth hanging from a branch](${WELCOME_IMAGE})`,
+  `![Sloth writing in a notebook on a branch](${WELCOME_IMAGE})`,
   '',
   '## Getting started',
   '',
@@ -177,6 +178,7 @@ const en = [
   '- The first line is the title and names the note.',
   '- Switch between **Default** (live style), **Code** (plain Markdown) and **Reading** with Ctrl+Alt+1, 2 and 3.',
   '- Select text to open the formatting bar, or click **+** on an empty line to insert blocks.',
+  '- Search the content of all notes with Ctrl+Alt+F; Ctrl+F searches the current note and Ctrl+H opens replacement.',
   '- Ctrl+K opens the palette with every action; Ctrl+Shift+/ lists the shortcuts.',
   '',
   '## Headings',
