@@ -125,7 +125,7 @@ function ListItem({ children, className, node, style }) {
           onChange={toggle}
         />
       )}
-      {dropLeadingSpace(children)}
+      {task ? dropLeadingSpace(children) : children}
       {task?.progress && <ProgressBadge {...task.progress} />}
     </li>
   )
