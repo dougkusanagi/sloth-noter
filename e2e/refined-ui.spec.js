@@ -97,7 +97,7 @@ test('the tasks view lists open tasks across notes, toggles and jumps to them', 
   expect(
     await page.evaluate(() => {
       const selection = getSelection()
-      return selection.anchorNode.textContent
+      return selection.anchorNode.parentElement.closest('.cm-line').textContent
     }),
   ).toContain('Subtarefa')
   expect(

@@ -19,7 +19,7 @@ bun run desktop:test   # testes Rust do armazenamento nativo
 bun run desktop:update # atualiza o AppImage (Linux) ou instala silenciosamente no Windows (NSIS)
 ```
 
-No Linux, `desktop:update` encontra o Sloth Note pelo `TryExec` do atalho `.desktop` (respeitando `XDG_DATA_HOME`), independentemente da pasta escolhida no Gear Lever. Ele preserva o atalho, guarda o binário anterior em `.previous` e substitui o arquivo de forma atômica. Feche e reabra o app após atualizar.
+No Linux, `desktop:update` encontra o Sloth Note pelo `TryExec` do atalho `.desktop` (respeitando `XDG_DATA_HOME`), independentemente da pasta escolhida no Gear Lever. Ele mantém os argumentos e ações do atalho, atualiza os tipos de arquivo aceitos e acrescenta o repasse de arquivos ao app quando ausente. A lista de aplicativos do sistema é renovada com `update-desktop-database` (pacote `desktop-file-utils`). O binário anterior e o atalho alterado ficam em `.previous`; a substituição do binário é atômica. Feche e reabra o app após atualizar.
 
 No Windows, o comando compila um instalador NSIS (`.exe`) e o executa com `/S`, sem assistente de instalação. A instalação é feita para o usuário atual, normalmente em `%LOCALAPPDATA%\Sloth Note`, sem exigir administrador para instalar o aplicativo. Também funciona na primeira instalação e ao recompilar a mesma versão. Feche o Sloth Note antes de executar: se o editor estiver aberto, a instalação é interrompida para preservar alterações ainda não salvas. São necessários os pré-requisitos de build do Tauri para Windows (Rust, Visual Studio Build Tools com C++ e WebView2).
 

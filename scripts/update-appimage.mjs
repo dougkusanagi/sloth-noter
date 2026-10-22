@@ -10,6 +10,7 @@ import {
   rename,
   stat,
   unlink,
+  writeFile,
 } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
@@ -54,6 +55,57 @@ export async function installedAppImage(directory, productName) {
       `Encontradas ${candidates.size} instalações de ${productName} em ${directory}; esperado exatamente uma com TryExec apontando para o AppImage.`,
     )
   return [...candidates][0]
+}
+
+// Updating an AppImage does not refresh launchers previously created by Gear Lever.
+export function associatedDesktopEntry(text, mimeTypes) {
+  const entry = desktopEntry(text)
+  if (!entry.Exec) throw new Error('O atalho instalado não contém Exec.')
+  const types = new Set([...(entry.MimeType || '').split(';').filter(Boolean), ...mimeTypes])
+  const exec = /%(?:f|F|u|U)\b/.test(entry.Exec) ? entry.Exec : `${entry.Exec} %F`
+  const values = { Exec: exec, MimeType: `${[...types].join(';')};` }
+  values.Categories = (entry.Categories || '').split(';').some(Boolean)
+    ? entry.Categories
+    : 'Utility;TextEditor;'
+  const lines = text.split(/\r?\n/)
+  const start = lines.findIndex((line) => line.trim() === '[Desktop Entry]')
+  let end = lines.findIndex((line, index) => index > start && line.startsWith('['))
+  if (end < 0) end = lines.length
+  const section = lines.slice(start + 1, end).filter((line) => {
+    const key = line.slice(0, line.indexOf('='))
+    return !Object.hasOwn(values, key)
+  })
+  section.push(...Object.entries(values).map(([key, value]) => `${key}=${value}`))
+  lines.splice(start + 1, end - start - 1, ...section)
+  return lines.join('\n')
+}
+
+export async function refreshDesktopEntries(directory, target, mimeTypes) {
+  const installed = await realpath(target)
+  for (const name of await readdir(directory)) {
+    if (!name.endsWith('.desktop')) continue
+    const path = join(directory, name)
+    const text = await readFile(path, 'utf8')
+    const entry = desktopEntry(text)
+    if (entry.Type !== 'Application' || entry.Hidden === 'true') continue
+    const executable = desktopString(entry.TryExec || '')
+    if (!isAbsolute(executable)) continue
+    const resolved = await realpath(executable).catch(() => null)
+    if (resolved !== installed) continue
+    const updated = associatedDesktopEntry(text, mimeTypes)
+    if (updated === text) continue
+    await copyFile(path, `${path}.previous`)
+    await writeFile(path, updated)
+  }
+  const child = spawn('update-desktop-database', [directory], { stdio: 'inherit' })
+  await new Promise((resolve, reject) => {
+    child.once('error', reject)
+    child.once('exit', (code) =>
+      code === 0
+        ? resolve()
+        : reject(new Error('Não foi possível atualizar a lista de aplicativos.')),
+    )
+  })
 }
 
 export async function replaceAppImage(source, target) {
@@ -138,6 +190,11 @@ export async function main() {
     return
   }
   await replaceAppImage(source, target)
+  await refreshDesktopEntries(
+    join(dataHome, 'applications'),
+    target,
+    config.bundle.fileAssociations.map((association) => association.mimeType).filter(Boolean),
+  )
   console.log(`Atualizado. Versão anterior: ${target}.previous`)
   console.log('Feche e abra novamente o Sloth Note para usar a nova versão.')
 }

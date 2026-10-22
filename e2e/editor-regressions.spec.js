@@ -120,7 +120,54 @@ test('internal links have plain text styling and no click action on the active l
   await expect(page.locator('.tab.active')).toHaveText('Welcome.md')
 })
 
+test('clipboard protection preserves paste into the link address form', async ({ page }) => {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await source(page, '# Link\n\nTexto do link')
+  await visual(page)
+  await page.locator('.cm-content').focus()
+  await page.keyboard.press('Control+End')
+  await page.keyboard.press('Shift+Home')
+  await page.getByRole('toolbar').getByRole('button', { name: 'Link', exact: true }).click()
+  const address = 'https://example.com/anotacoes'
+  await page.evaluate((text) => navigator.clipboard.writeText(text), address)
+  const field = page.getByRole('textbox', { name: 'Endereço do link' })
+  await expect(field).toBeFocused()
+  await page.keyboard.press('Control+v')
+  await expect(field).toHaveValue(address)
+  await page.getByRole('button', { name: 'Aplicar link' }).click()
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await expect(page.locator('textarea')).toHaveValue(`# Link\n\n[Texto do link](${address})`)
+})
+
 for (const mode of ['visual', 'source']) {
+  test(`browser keyboard paste replaces the selection and supports undo in ${mode}`, async ({
+    page,
+  }, testInfo) => {
+    const body = '# Colagem\n\nAntes\n\nDepois'
+    const pasted = 'Colagem voluntária com acentuação 日本語 👋'
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+    await source(page, body)
+    if (mode === 'visual') await visual(page)
+    const editor = page.locator(mode === 'visual' ? '.cm-content' : 'textarea')
+    await page.evaluate((text) => navigator.clipboard.writeText(text), pasted)
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 844 })
+      await editor.focus()
+      await page.keyboard.press('Control+End')
+      await page.keyboard.press('Shift+Home')
+      await page.keyboard.press('Control+v')
+      if (mode === 'source') await expect(editor).toHaveValue(body.replace('Depois', pasted))
+      else await expect(editor).toContainText(pasted)
+      await page.screenshot({ path: testInfo.outputPath(`clipboard-${mode}-${width}.png`) })
+      await page.keyboard.press('Control+z')
+      if (mode === 'source') await expect(editor).toHaveValue(body)
+      else {
+        await expect(editor).toContainText('Depois')
+        await expect(editor).not.toContainText(pasted)
+      }
+    }
+  })
+
   test(`clipboard image imports at the ${mode} cursor with undo`, async ({ page }) => {
     await source(page, '# Colagem\n\nAntes\n\nDepois')
     if (mode === 'visual') await visual(page)
@@ -130,6 +177,8 @@ for (const mode of ['visual', 'source']) {
     await page.keyboard.press('Home')
     await editor.evaluate(
       (element, bytes) => {
+        // The payload stands in for choosing Paste from the native context menu.
+        element.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }))
         const clipboardData = new DataTransfer()
         clipboardData.items.add(
           new File([new Uint8Array(bytes)], 'clipboard.png', { type: 'image/png' }),
