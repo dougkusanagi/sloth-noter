@@ -3,6 +3,7 @@ import { ViewPlugin, WidgetType } from '@codemirror/view'
 import { markdownTree, walk } from '../markdown-model.js'
 import { codeLanguageName } from '../syntax-highlight.js'
 import { t } from '../i18n.js'
+import { foldField } from './folding.js'
 
 export const codeCopyHandler = Facet.define()
 
@@ -116,13 +117,18 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
       const top = Math.max(0, scroller.top, headerBottom) + 12
       const footerTop = document.querySelector('.document-info')?.getBoundingClientRect().top
       const bottom = Math.min(window.innerHeight, scroller.bottom, footerTop ?? Infinity)
+      const folds = view.state.field(foldField, false)
       return this.blocks.map(({ from, to, button }) => {
+        let folded = false
+        folds?.between(from, from, (a, b) => {
+          if (a <= from && b > from) folded = true
+        })
         const start = view.documentTop + view.lineBlockAt(from).top
         const end = view.documentTop + view.lineBlockAt(to).bottom
         return {
           top: Math.min(Math.max(start + 12, top), end - 38),
           right: window.innerWidth - Math.min(content.right, scroller.right) + 10,
-          visible: end > top + 26 && start + 38 < bottom,
+          visible: !folded && end > top + 26 && start + 38 < bottom,
           button,
         }
       })
@@ -136,7 +142,10 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
     }
     update(update) {
       if (update.docChanged) this.build()
-      if (update.docChanged || update.viewportChanged || update.geometryChanged) this.schedule()
+      const foldsChanged =
+        update.startState.field(foldField, false) !== update.state.field(foldField, false)
+      if (update.docChanged || update.viewportChanged || update.geometryChanged || foldsChanged)
+        this.schedule()
     }
     destroy() {
       window.removeEventListener('scroll', this.schedule, true)
