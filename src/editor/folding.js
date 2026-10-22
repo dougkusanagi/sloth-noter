@@ -15,20 +15,35 @@ export const unfoldSection = StateEffect.define({
 })
 
 export class FoldToggleWidget extends WidgetType {
-  constructor(line, folded) {
+  constructor(line, folded, level, foldable = true) {
     super()
     this.line = line
     this.folded = folded
+    this.level = level
+    this.foldable = foldable
   }
   eq(other) {
-    return this.line === other.line && this.folded === other.folded
+    return (
+      this.line === other.line &&
+      this.folded === other.folded &&
+      this.level === other.level &&
+      this.foldable === other.foldable
+    )
   }
   toDOM(view) {
+    if (!this.foldable) {
+      const badge = document.createElement('span')
+      badge.className = 'cm-fold-toggle cm-level-badge'
+      badge.setAttribute('aria-hidden', 'true')
+      badge.dataset.level = String(this.level)
+      return badge
+    }
     const button = document.createElement('button')
     button.type = 'button'
     button.className = `cm-fold-toggle${this.folded ? ' folded' : ''}`
     button.setAttribute('aria-label', t(this.folded ? 'fold.expand' : 'fold.collapse'))
     button.setAttribute('aria-expanded', String(!this.folded))
+    button.dataset.level = String(this.level)
     button.innerHTML = chevron
     button.addEventListener('mousedown', (event) => event.preventDefault())
     button.addEventListener('click', () => toggleFold(view, this.line))
