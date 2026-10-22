@@ -50,7 +50,7 @@ test('the insert button hides on selection, typing and blur, and inserts at the 
   await page.keyboard.press('End')
   for (let index = 0; index < 5; index++) await page.keyboard.press('Backspace')
   await expect(trigger(page)).toBeVisible()
-  await page.getByRole('textbox', { name: 'Buscar na biblioteca…' }).click()
+  await page.getByRole('textbox', { name: 'Buscar em todas as notas…' }).click()
   await page.locator('.cm-line').nth(3).hover()
   await expect(trigger(page)).toBeHidden()
   await page.locator('.cm-content').click()

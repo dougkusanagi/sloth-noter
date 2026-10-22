@@ -2140,6 +2140,17 @@ html:has(
 .app-toast [data-description] {
   color: var(--muted);
 }
+[data-sonner-toast][data-styled='true'].app-toast {
+  --toast-close-button-start: auto;
+  --toast-close-button-end: 8px;
+  --toast-close-button-transform: none;
+  padding-right: 44px;
+}
+[data-sonner-toast][data-styled='true'].app-toast [data-close-button] {
+  top: 8px;
+  width: 28px;
+  height: 28px;
+}
 .toast-buttons {
   display: flex;
   flex-wrap: wrap;

@@ -26,6 +26,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ### Corrigido
 
+- A atualização do AppImage renova a associação com Markdown e texto no atalho instalado, incluindo o repasse dos arquivos ao app e a lista de “Abrir com”.
+
 - Eventos de colagem em segundo plano ou sem conteúdo não leem mais automaticamente a área de transferência. Leituras nativas pendentes são canceladas se a janela perder o foco, inclusive ao voltar para o app antes de a leitura terminar.
 - Cliques da rodinha nas margens e espaços do editor também são bloqueados para impedir colagens involuntárias; atalhos de colagem continuam disponíveis.
 - Controles de tarefas de seção permanecem na linha do título, e as estatísticas da seleção continuam visíveis.

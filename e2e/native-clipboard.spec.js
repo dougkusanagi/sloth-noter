@@ -91,6 +91,63 @@ test('desktop clicks invoke window actions only through their own controls', asy
 })
 
 for (const mode of ['visual', 'source']) {
+  test(`opening or refocusing the editor cannot paste populated clipboard events in ${mode}`, async ({
+    page,
+  }) => {
+    if (mode === 'source')
+      await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    const editor = page.locator(mode === 'visual' ? '.cm-content' : 'textarea')
+    await editor.focus()
+    for (const refocus of [false, true]) {
+      if (refocus)
+        await editor.evaluate((element) => {
+          // A context menu from the previous visit must not authorize a paste on return.
+          element.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }))
+          window.dispatchEvent(new Event('blur'))
+          window.dispatchEvent(new Event('focus'))
+        })
+      const allowed = await editor.evaluate((element) =>
+        ['text', 'image'].map((kind) => {
+          const clipboardData = new DataTransfer()
+          if (kind === 'text') clipboardData.setData('text/plain', 'Unrequested text')
+          else
+            clipboardData.items.add(new File(['image'], 'unrequested.png', { type: 'image/png' }))
+          return element.dispatchEvent(
+            new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }),
+          )
+        }),
+      )
+      expect(allowed).toEqual([false, false])
+    }
+    expect(await page.evaluate(() => window.nativeClipboardReads)).toBe(0)
+    expect(await page.evaluate(() => window.nativeDocument.notes[0].body)).toBe(
+      '# Clipboard\n\nAntes\n\nDepois',
+    )
+    expect(await page.evaluate(() => Object.keys(window.nativeImages))).toEqual([])
+  })
+
+  test(`paste input without an authorized paste event is blocked in ${mode}`, async ({ page }) => {
+    if (mode === 'source')
+      await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    const editor = page.locator(mode === 'visual' ? '.cm-content' : 'textarea')
+    await editor.focus()
+    expect(
+      await editor.evaluate((element) =>
+        element.dispatchEvent(
+          new InputEvent('beforeinput', {
+            inputType: 'insertFromPaste',
+            data: 'Unrequested text',
+            bubbles: true,
+            cancelable: true,
+          }),
+        ),
+      ),
+    ).toBe(false)
+    expect(await page.evaluate(() => window.nativeDocument.notes[0].body)).toBe(
+      '# Clipboard\n\nAntes\n\nDepois',
+    )
+  })
+
   test(`unsolicited empty paste events never read the native clipboard in ${mode}`, async ({
     page,
   }) => {

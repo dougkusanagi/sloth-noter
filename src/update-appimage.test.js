@@ -3,7 +3,12 @@ import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, writeFile, readFile, stat, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { installedAppImage, replaceAppImage } from '../scripts/update-appimage.mjs'
+import {
+  associatedDesktopEntry,
+  desktopEntry,
+  installedAppImage,
+  replaceAppImage,
+} from '../scripts/update-appimage.mjs'
 
 async function fixture(t) {
   const root = await mkdtemp(join(tmpdir(), 'sloth-update-'))
@@ -62,4 +67,21 @@ test('refuses ambiguous installations rather than replacing an arbitrary one', a
     `[Desktop Entry]\nType=Application\nName=Sloth Note\nTryExec=${second}\n`,
   )
   await assert.rejects(installedAppImage(apps, 'Sloth Note'), /Encontradas 2 instalações/)
+})
+
+test('refreshes file associations while preserving launcher arguments and desktop actions', () => {
+  const original =
+    '[Desktop Entry]\nType=Application\nExec=env FLAG=1 "/apps/Sloth Note.appimage"\nMimeType=application/custom;\n[Desktop Action Other]\nExec=/other\n'
+  const updated = associatedDesktopEntry(original, ['text/markdown', 'text/plain'])
+  assert.equal(desktopEntry(updated).Exec, 'env FLAG=1 "/apps/Sloth Note.appimage" %F')
+  assert.equal(desktopEntry(updated).Categories, 'Utility;TextEditor;')
+  assert.equal(desktopEntry(updated).MimeType, 'application/custom;text/markdown;text/plain;')
+  assert.ok(updated.endsWith('[Desktop Action Other]\nExec=/other\n'))
+  assert.equal(associatedDesktopEntry(updated, ['text/markdown', 'text/plain']), updated)
+  assert.equal(
+    desktopEntry(
+      associatedDesktopEntry(original.replace('appimage"', 'appimage" %U'), ['text/markdown']),
+    ).Exec,
+    'env FLAG=1 "/apps/Sloth Note.appimage" %U',
+  )
 })

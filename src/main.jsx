@@ -5,6 +5,7 @@ import { documentChanges, mapSearchScope } from './search-scope.js'
 import { SourceSearchHighlights } from './components/source-search-highlights.jsx'
 import { clipboardImageFiles, readNativeClipboard } from './clipboard.js'
 import { createMiddleClickPasteGuard } from './middle-click-paste.js'
+import { createPasteIntentGuard } from './paste-intent.js'
 import { listenNativeImageDrops, routeNativeImageDrop } from './native-image-drop.js'
 import { ensureTitle, ensureDocumentTitles, titlePosition, titleNavigationTarget } from './title.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -237,17 +238,32 @@ function Workspace({ persistence, loaded }) {
   const closedTabs = useRef([])
   const clipboardBusy = useRef(false)
   const clipboardFocusEpoch = useRef(0)
+  const [pasteIntentGuard] = useState(createPasteIntentGuard)
   useEffect(() => {
     const cancelPendingPaste = () => {
       clipboardFocusEpoch.current++
+      pasteIntentGuard.reset()
     }
     window.addEventListener('blur', cancelPendingPaste)
+    window.addEventListener('focus', pasteIntentGuard.reset)
     document.addEventListener('visibilitychange', cancelPendingPaste)
+    document.addEventListener('keydown', pasteIntentGuard.keyboard, true)
+    document.addEventListener('contextmenu', pasteIntentGuard.contextMenu, true)
+    document.addEventListener('pointerdown', pasteIntentGuard.reset, true)
+    document.addEventListener('focusout', pasteIntentGuard.reset, true)
+    // Use the native event: React's onBeforeInput is a text-input polyfill.
+    document.addEventListener('beforeinput', pasteIntentGuard.beforeInput, true)
     return () => {
       window.removeEventListener('blur', cancelPendingPaste)
+      window.removeEventListener('focus', pasteIntentGuard.reset)
       document.removeEventListener('visibilitychange', cancelPendingPaste)
+      document.removeEventListener('keydown', pasteIntentGuard.keyboard, true)
+      document.removeEventListener('contextmenu', pasteIntentGuard.contextMenu, true)
+      document.removeEventListener('pointerdown', pasteIntentGuard.reset, true)
+      document.removeEventListener('focusout', pasteIntentGuard.reset, true)
+      document.removeEventListener('beforeinput', pasteIntentGuard.beforeInput, true)
     }
-  }, [])
+  }, [pasteIntentGuard])
   const [middleClickPasteGuard] = useState(createMiddleClickPasteGuard)
   const returnFocus = useRef(null)
   const active = data.notes.find((note) => note.id === data.activeId) ?? null
@@ -1103,7 +1119,8 @@ function Workspace({ persistence, loaded }) {
           view.dispatch({ selection: { anchor: point.from, head: point.to } })
           const clipboardData = new DataTransfer()
           clipboardData.setData('text/plain', contents.text)
-          view.contentDOM.dispatchEvent(
+          pasteIntentGuard.dispatchPaste(
+            view.contentDOM,
             new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }),
           )
         } else if (editorMode === 'source' && field === editorRef.current && field) {
@@ -2302,7 +2319,10 @@ function Workspace({ persistence, loaded }) {
             }
           }}
           onPasteCapture={(event) => {
-            if (middleClickPasteGuard.paste(event)) return
+            if (middleClickPasteGuard.paste(event)) {
+              pasteIntentGuard.reset()
+              return
+            }
             // Empty webview paste events are not permission to read the system
             // clipboard. Only the explicit keyboard handler does that.
             if (
@@ -2311,9 +2331,12 @@ function Workspace({ persistence, loaded }) {
               (!clipboardImageFiles(event.clipboardData).length &&
                 !event.clipboardData?.getData('text/plain'))
             ) {
+              pasteIntentGuard.reset()
               event.preventDefault()
               event.stopPropagation()
+              return
             }
+            pasteIntentGuard.paste(event)
           }}
           onPaste={(event) => {
             if (event.defaultPrevented) return
@@ -2631,7 +2654,10 @@ function Workspace({ persistence, loaded }) {
         offset={{ top: 58, right: 16 }}
         visibleToasts={4}
         closeButton
-        toastOptions={{ classNames: { toast: 'app-toast' } }}
+        toastOptions={{
+          classNames: { toast: 'app-toast' },
+          closeButtonAriaLabel: t('dialog.close'),
+        }}
       />
     </main>
   )

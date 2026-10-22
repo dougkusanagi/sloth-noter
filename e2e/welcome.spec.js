@@ -2,17 +2,11 @@ import { expect, test } from '@playwright/test'
 import { newDocument, STORAGE_KEY } from '../src/storage.js'
 import { welcomeBody } from '../src/welcome.js'
 
-const png = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1Z0AAAAASUVORK5CYII=',
-  'base64',
-)
-const heroUrl = /raw\.githubusercontent\.com\/dougkusanagi\/sloth-noter\/.*sloth-hero\.png$/
 const sourceBox = (page) =>
   page.getByRole('textbox', { name: /Editor Markdown em texto puro|Plain text Markdown editor/ })
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1100, height: 4500 })
-  await page.route(heroUrl, (route) => route.fulfill({ contentType: 'image/png', body: png }))
   await page.goto('/')
   await expect(page.locator('.cm-content')).toBeVisible()
 })
@@ -46,10 +40,8 @@ test('the help page renders its sloth image and every example in reading mode', 
 }) => {
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
   const read = page.locator('.markdown')
-  await expect(read.getByRole('img', { name: 'Preguiça pendurada em um galho' })).toHaveJSProperty(
-    'naturalWidth',
-    1,
-  )
+  const image = read.getByRole('img', { name: 'Preguiça escrevendo em um caderno sobre um galho' })
+  await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true)
   await expect(read.locator('.image-missing')).toHaveCount(0)
   await expect(read.locator('h2:not(.sr-only)')).toHaveCount(14)
   for (const level of [3, 4, 5, 6]) await expect(read.locator(`h${level}`)).toHaveCount(1)
@@ -77,7 +69,8 @@ test('the help page renders in the live editor away from the cursor', async ({ p
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+End')
   const live = page.locator('.cm-content')
-  await expect(live.locator('.cm-image-preview')).toHaveJSProperty('naturalWidth', 1)
+  const image = live.locator('.cm-image-preview')
+  await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true)
   for (const level of [1, 2, 3, 4, 5, 6])
     await expect(live.locator(`.cm-md-h${level}`).first()).toBeVisible()
   await expect(live.locator('.cm-md-inline-strong').first()).toBeVisible()
