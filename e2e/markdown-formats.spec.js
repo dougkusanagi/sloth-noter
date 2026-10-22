@@ -224,9 +224,11 @@ test('Padrão alternates a separator between its source and rendered line', asyn
 
 test('Padrão keeps list text readable when hidden link targets are very long', async ({ page }) => {
   const target = `https://example.com/${'a'.repeat(900)}`
-  await page.getByRole('textbox', { name: 'Editor Markdown em texto puro' }).fill(
-    `# Título\n\n- **Rótulo:** texto de apoio com [link](${target}) e mais palavras para quebrar linha\n\nFim`,
-  )
+  await page
+    .getByRole('textbox', { name: 'Editor Markdown em texto puro' })
+    .fill(
+      `# Título\n\n- **Rótulo:** texto de apoio com [link](${target}) e mais palavras para quebrar linha\n\nFim`,
+    )
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+End')
