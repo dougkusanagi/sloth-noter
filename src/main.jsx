@@ -2654,7 +2654,10 @@ function Workspace({ persistence, loaded }) {
         offset={{ top: 58, right: 16 }}
         visibleToasts={4}
         closeButton
-        toastOptions={{ classNames: { toast: 'app-toast' } }}
+        toastOptions={{
+          classNames: { toast: 'app-toast' },
+          closeButtonAriaLabel: t('dialog.close'),
+        }}
       />
     </main>
   )
