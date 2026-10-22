@@ -47,7 +47,7 @@ for (const theme of ['dark', 'light']) {
       path: `/tmp/shots/${theme}-images.png`,
       clip: { x: 0, y: 0, width: 640, height: 620 },
     })
-    await page.keyboard.press('Control+k')
+    await page.keyboard.press('Control+Shift+p')
     await page.waitForTimeout(350)
     await page.screenshot({ path: `/tmp/shots/${theme}-palette.png` })
   })

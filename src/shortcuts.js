@@ -1,10 +1,12 @@
+import { EDITOR_SHORTCUTS } from './editor-shortcuts.js'
+
 export const SHORTCUTS = [
   ['T', 'menu.newNote'],
   ['P', 'menu.findNote'],
   ['F', 'menu.findInNote'],
-  ['Alt+F', 'menu.searchAllNotes'],
+  ['Shift+F', 'menu.searchAllNotes'],
   ['H', 'find.replace'],
-  ['Shift+F', 'focus.toggle'],
+  ['Alt+F', 'focus.toggle'],
   ['W', 'tabs.close'],
   ['Shift+T', 'tabs.reopen'],
   ['PageUp', 'tabs.previous'],
@@ -12,16 +14,16 @@ export const SHORTCUTS = [
   ['Shift+Tab', 'tabs.previous'],
   ['Tab', 'tabs.next'],
   ...Array.from({ length: 9 }, (_, index) => [String(index + 1), 'tabs.switchNumber']),
-  ['I', 'menu.import'],
+  ['O', 'menu.import'],
   ['E', 'menu.export'],
   ['F2', 'menu.rename'],
   ['Shift+Delete', 'menu.trashMove'],
   ['Shift+L', 'images.title'],
   ['Shift+S', 'menu.backupDownload'],
   ['Shift+O', 'menu.folder'],
-  ['K', 'menu.commands'],
+  ['Shift+P', 'menu.commands'],
   [',', 'menu.settings'],
-  ['B', 'sidebar.toggle'],
+  ['\\', 'sidebar.toggle'],
   ['Alt+1', 'mode.visual'],
   ['Alt+2', 'mode.source'],
   ['Alt+3', 'mode.reading'],
@@ -29,6 +31,7 @@ export const SHORTCUTS = [
   ['-', 'menu.smaller'],
   ['0', 'menu.resetText'],
   ['+', 'menu.larger'],
+  ...EDITOR_SHORTCUTS,
   ['Alt+-', 'menu.narrower'],
   ['Alt+0', 'menu.resetWidth'],
   ['Alt++', 'menu.wider'],
@@ -39,11 +42,12 @@ export function appShortcut(event) {
   if (!(event.ctrlKey || event.metaKey) || event.isComposing) return null
   const key = event.key.toLowerCase()
   if (event.altKey && !event.shiftKey)
-    return { 1: 'visual', 2: 'source', 3: 'reading', f: 'searchAllNotes' }[key] ?? null
+    return { 1: 'visual', 2: 'source', 3: 'reading', f: 'focus' }[key] ?? null
   if (event.shiftKey && !event.altKey)
     return (
       {
-        f: 'focus',
+        f: 'searchAllNotes',
+        p: 'commands',
         t: 'reopenTab',
         tab: 'previousTab',
         delete: 'trashMove',
@@ -66,11 +70,10 @@ export function appShortcut(event) {
       f: 'findInNote',
       h: 'replaceInNote',
       w: 'closeTab',
-      i: 'import',
+      o: 'import',
       e: 'export',
-      k: 'commands',
       ',': 'settings',
-      b: 'sidebar',
+      '\\': 'sidebar',
     }[key] ?? null
   )
 }

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 for (const mode of ['visual', 'source']) {
   for (const modifier of ['Control', 'Meta']) {
-    test(`${modifier}+B preserves ${mode} editor focus and selection while toggling the library`, async ({
+    test(`${modifier}+\\ preserves ${mode} editor focus and selection while toggling the library`, async ({
       page,
     }) => {
       await page.goto('/')
@@ -24,7 +24,7 @@ for (const mode of ['visual', 'source']) {
       expect(await selectedText()).toBe('texto selecionado')
 
       for (const visible of [false, true]) {
-        await page.keyboard.press(`${modifier}+b`)
+        await page.keyboard.press(`${modifier}+Backslash`)
         const library = page.locator('.notes-sidebar')
         if (visible) await expect(library).toBeVisible()
         else await expect(library).toBeHidden()

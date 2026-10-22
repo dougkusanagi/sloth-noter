@@ -66,6 +66,19 @@ fn text(path: &Path) -> Result<String, String> {
 fn note(root: &Path, id: &str) -> PathBuf {
     root.join(hash(id))
 }
+static RETENTION_DAYS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(30);
+static LIMIT_MB: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(20);
+/// Sets how long and how much history is kept. Values are clamped to sane bounds.
+pub fn configure(days: u64, megabytes: u64) {
+    RETENTION_DAYS.store(days.clamp(1, 365), std::sync::atomic::Ordering::Relaxed);
+    LIMIT_MB.store(megabytes.clamp(5, 500), std::sync::atomic::Ordering::Relaxed);
+}
+fn max_age() -> u64 {
+    RETENTION_DAYS.load(std::sync::atomic::Ordering::Relaxed) * 86400
+}
+fn max_bytes() -> u64 {
+    LIMIT_MB.load(std::sync::atomic::Ordering::Relaxed) * 1024 * 1024
+}
 pub fn maintenance(root: &Path) -> Result<(), String> {
     let _guard = LOCK.lock().map_err(|e| e.to_string())?;
     maintain(root)
@@ -132,7 +145,7 @@ pub fn append(root: &Path, entries: Vec<Value>) -> Result<(), String> {
     }
     // Appending never parses old journals or decompresses old objects. Full
     // maintenance runs at startup/daily, or when the storage budget is exceeded.
-    if size(root) > 20 * 1024 * 1024 {
+    if size(root) > max_bytes() {
         maintain(root)?;
     }
     Ok(())
@@ -293,7 +306,7 @@ pub fn maintain(root: &Path) -> Result<(), String> {
     // Count objects too, and collect unreferenced content after pruning each journal.
     for (timestamp, path) in journals {
         let size = size(root);
-        if now.saturating_sub(timestamp) > 30 * 86400 || size > 20 * 1024 * 1024 {
+        if now.saturating_sub(timestamp) > max_age() || size > max_bytes() {
             if let Some(time) = protected.get(&path) {
                 let raw = text(&path)?;
                 let kept: Vec<String> = raw

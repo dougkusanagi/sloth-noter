@@ -1,3 +1,4 @@
+import { formatShortcut, shortcutEdit } from './editor-shortcuts.js'
 import { transactionHistory } from './editor/history-log.js'
 import { searchHighlights } from './editor/search.js'
 import { clipboardImageFiles } from './clipboard.js'
@@ -324,7 +325,8 @@ export function VisualEditor({
             { key: 'Enter', run: continueList },
             { key: 'ArrowDown', run: (view) => navigateToFence(view, 1) },
             { key: 'ArrowUp', run: (view) => navigateToFence(view, -1) },
-            ...defaultKeymap,
+            // Ctrl+I is italic here, not "select parent syntax".
+            ...defaultKeymap.filter((binding) => binding.key !== 'Mod-i'),
             ...historyKeymap,
           ]),
           EditorView.lineWrapping,
@@ -347,6 +349,20 @@ export function VisualEditor({
                   callbacks.current.onOpenWiki?.(token.target)
                   return true
                 }
+              }
+              const shortcut = formatShortcut(event)
+              if (shortcut) {
+                const { from, to } = view.state.selection.main
+                const edit = shortcutEdit(view.state.doc.toString(), from, to, shortcut)
+                if (!edit) return false
+                event.preventDefault()
+                event.stopPropagation()
+                view.dispatch({
+                  changes: { from: edit.from, to: edit.to, insert: edit.insert },
+                  selection: EditorSelection.single(edit.selectionFrom, edit.selectionTo),
+                  userEvent: 'formatacao',
+                })
+                return true
               }
               return wrapSelectedText(event, view)
             },

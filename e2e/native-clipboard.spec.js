@@ -477,7 +477,7 @@ for (const platform of ['Linux x86_64', 'MacIntel']) {
     )
     await page.reload()
     await expect(page.locator('.cm-content')).toBeVisible()
-    await page.keyboard.press('Control+Shift+f')
+    await page.keyboard.press('Control+Alt+f')
     await expect(page.locator('.app')).toHaveClass('app focus-mode')
     await expect(page.locator('.app-header')).toBeVisible()
     await expect(page.locator('.menu-trigger')).toBeHidden()

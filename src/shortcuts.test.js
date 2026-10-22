@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { SHORTCUTS, appShortcut } from './shortcuts.js'
+import { formatShortcut, shortcutEdit } from './editor-shortcuts.js'
 test('app shortcuts respect modifiers and composition', () => {
   assert.equal(appShortcut({ key: 'T', ctrlKey: true, shiftKey: true }), 'reopenTab')
   assert.equal(appShortcut({ key: 'PageUp', ctrlKey: true }), 'previousTab')
@@ -16,10 +17,12 @@ test('app shortcuts respect modifiers and composition', () => {
   assert.equal(appShortcut({ key: 'F2', ctrlKey: true }), null)
   assert.equal(appShortcut({ key: '2', metaKey: true, altKey: true }), 'source')
   assert.equal(appShortcut({ key: '?', ctrlKey: true, shiftKey: true }), 'shortcuts')
-  assert.equal(appShortcut({ key: 'b', ctrlKey: true }), 'sidebar')
-  assert.equal(appShortcut({ key: 'k', ctrlKey: true }), 'commands')
+  assert.equal(appShortcut({ key: '\\', ctrlKey: true }), 'sidebar')
+  assert.equal(appShortcut({ key: 'P', ctrlKey: true, shiftKey: true }), 'commands')
+  assert.equal(appShortcut({ key: 'o', ctrlKey: true }), 'import')
   assert.equal(appShortcut({ key: ',', metaKey: true }), 'settings')
-  assert.equal(appShortcut({ key: 'k', ctrlKey: true, shiftKey: true }), null)
+  for (const key of ['b', 'i', 'k'])
+    assert.equal(appShortcut({ key, ctrlKey: true }), null, `Ctrl+${key} belongs to the editor`)
   assert.equal(appShortcut({ key: 'r', ctrlKey: true }), null)
   assert.equal(appShortcut({ key: 'h', ctrlKey: true }), 'replaceInNote')
   assert.equal(appShortcut({ key: 't', ctrlKey: true, isComposing: true }), null)
@@ -47,13 +50,64 @@ test('number shortcuts address tabs without colliding with editor mode shortcuts
   assert.equal(appShortcut({ key: '2', ctrlKey: true, isComposing: true }), null)
 })
 
-test('focus mode has a direct shortcut without overriding note search', () => {
-  assert.equal(appShortcut({ key: 'F', ctrlKey: true, shiftKey: true }), 'focus')
+test('focus mode uses Ctrl+Alt+F and Ctrl+Shift+F searches every note, as in VS Code', () => {
+  assert.equal(appShortcut({ key: 'f', ctrlKey: true, altKey: true }), 'focus')
+  assert.equal(appShortcut({ key: 'f', metaKey: true, altKey: true }), 'focus')
+  assert.equal(appShortcut({ key: 'F', ctrlKey: true, shiftKey: true }), 'searchAllNotes')
   assert.equal(appShortcut({ key: 'f', ctrlKey: true }), 'findInNote')
 })
 
-test('global search keeps the existing focus shortcut', () => {
-  assert.equal(appShortcut({ key: 'f', ctrlKey: true, altKey: true }), 'searchAllNotes')
-  assert.equal(appShortcut({ key: 'f', metaKey: true, altKey: true }), 'searchAllNotes')
-  assert.equal(appShortcut({ key: 'f', ctrlKey: true, shiftKey: true }), 'focus')
+test('formatting shortcuts follow other Markdown editors', () => {
+  const key = (event) => formatShortcut({ ctrlKey: true, ...event })
+  assert.equal(key({ key: 'b' }), 'bold')
+  assert.equal(key({ key: 'i' }), 'italic')
+  assert.equal(key({ key: 'k' }), 'link')
+  assert.equal(key({ key: '`' }), 'code')
+  assert.equal(key({ key: 'X', shiftKey: true }), 'strike')
+  assert.equal(key({ key: '*', code: 'Digit8', shiftKey: true }), 'list')
+  assert.equal(key({ key: '>', code: 'Period', shiftKey: true }), 'quote')
+  assert.equal(key({ key: 'b', altKey: true }), null)
+  assert.equal(formatShortcut({ key: 'b' }), null)
+  assert.equal(key({ key: 'b', isComposing: true }), null)
+})
+
+test('formatting shortcuts edit selections and empty cursors', () => {
+  const apply = (text, from, to, action) => {
+    const edit = shortcutEdit(text, from, to, action)
+    return (
+      edit && [text.slice(0, edit.from) + edit.insert + text.slice(edit.to), edit.selectionFrom]
+    )
+  }
+  assert.deepEqual(apply('abc def', 0, 3, 'bold'), ['**abc** def', 2])
+  assert.deepEqual(apply('abc def', 3, 3, 'bold'), ['abc**** def', 5])
+  assert.deepEqual(apply('abc', 0, 3, 'strike'), ['~~abc~~', 2])
+  assert.deepEqual(apply('abc', 0, 3, 'link'), ['[abc]()', 6])
+  assert.deepEqual(apply('abc', 1, 1, 'link'), ['a[]()bc', 2])
+  assert.deepEqual(apply('abc', 1, 1, 'list'), ['- abc', 3])
+})
+
+test('bold and italic combine and unwind without piling up asterisks', () => {
+  let text = 'texto',
+    from = 0,
+    to = 5
+  const steps = []
+  for (const action of ['bold', 'italic', 'italic', 'bold', 'italic', 'bold', 'italic', 'bold']) {
+    const edit = shortcutEdit(text, from, to, action)
+    text = text.slice(0, edit.from) + edit.insert + text.slice(edit.to)
+    ;[from, to] = [edit.selectionFrom, edit.selectionTo]
+    steps.push(text)
+  }
+  assert.deepEqual(steps, [
+    '**texto**',
+    '***texto***',
+    '**texto**',
+    'texto',
+    '*texto*',
+    '***texto***',
+    '**texto**',
+    'texto',
+  ])
+  // Selecting the markers too behaves the same as selecting only the text.
+  const edit = shortcutEdit('**texto**', 0, 9, 'italic')
+  assert.equal(edit.insert, '***texto***')
 })
