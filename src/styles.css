@@ -396,6 +396,8 @@ textarea:focus-visible {
   background: var(--paper);
   font: 0.85em/1.7 var(--mono);
   padding-left: 1em;
+  /* The sticky copy badge can float over any line, so keep its column clear. */
+  padding-right: var(--copy-reserve);
 }
 .visual-editor .cm-md-table-row {
   position: relative;
@@ -760,6 +762,9 @@ textarea:focus-visible {
   margin: 0;
   position: relative;
   border-radius: var(--radius);
+  /* Overflow clips at the padding box, so the border keeps scrolled text out of
+     the sticky copy badge's column. */
+  border-right: var(--copy-reserve) solid var(--paper);
 }
 .code-block {
   position: relative;
@@ -784,7 +789,7 @@ textarea:focus-visible {
   display: block;
   white-space: pre;
   background: transparent;
-  padding: 0 45px 0 0;
+  padding: 0;
 }
 .copy-code {
   position: absolute;
@@ -830,7 +835,19 @@ textarea:focus-visible {
   display: none;
 }
 .visual-editor .cm-code-copy-anchor.cm-md-editing {
-  padding-right: 120px;
+  padding-right: var(--copy-reserve);
+}
+:root {
+  --copy-reserve: 120px;
+}
+@media (max-width: 600px) {
+  /* Narrow screens keep the text width: the badge shows only its icon. */
+  :root {
+    --copy-reserve: 44px;
+  }
+  .copy-code span {
+    display: none;
+  }
 }
 .copy-code:focus-visible {
   outline: 2px solid var(--accent);
@@ -1097,7 +1114,7 @@ textarea:focus-visible {
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
-  font: 600 10.5px/1 var(--ui);
+  font: 400 10.5px/1 var(--ui);
   font-style: normal;
   letter-spacing: 0;
   white-space: nowrap;
