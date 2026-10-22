@@ -97,3 +97,29 @@ O menu **Atalhos de teclado** (e **Configurações → Atalhos**) lista as combi
 | Padrão / Código / Leitura                         | Ctrl+Alt+1 / Ctrl+Alt+2 / Ctrl+Alt+3 |
 | Ajuda de atalhos                                  | Ctrl+Shift+/                         |
 | Tamanho de texto: aumentar / diminuir / restaurar | Ctrl++ / Ctrl+- / Ctrl+0             |
+
+## Histórico local de alterações (desktop)
+
+No menu principal ou na paleta de comandos, abra **Histórico da nota**. A tela mostra
+horário, origem, texto removido e inserido e alertas de remoção grande ou colagem sem gesto.
+**Restaurar esta versão** recupera o texto e registra a restauração como outra alteração.
+Nas configurações, em Dados, há um atalho para a mesma tela.
+
+O histórico fica em `<app_data_dir>/history/`, fora do vault. Os diários JSONL são
+compactados nos dias seguintes; cópias completas usam gzip e SHA-256 para não repetir conteúdo.
+O limite é de 30 dias ou 20 MB, preservando a última cópia de abertura de arquivos externos.
+Essa cópia protegida pode exceder os limites até outra abertura substituí-la.
+
+O histórico começa desligado, inclusive para preferências antigas sem essa opção. Para usá-lo,
+ative **Guardar histórico neste dispositivo** na tela de histórico. A escolha fica salva.
+Com a captura desligada, o app não prepara transações nem calcula diferenças para o histórico.
+
+Com a captura ligada, os envios aguardam dois segundos sem alterações, com envio em até dez
+segundos durante digitação contínua. O salvamento das notas não aguarda esses envios. Abrir o
+histórico ou fechar a janela força o envio pendente. A limpeza completa roda ao iniciar,
+uma vez por dia ou ao ultrapassar o limite de espaço, sem reler todos os diários a cada acréscimo.
+
+A tela permite desligar a captura e apagar o histórico de uma nota ou de todas as notas.
+O histórico contém textos apagados, inclusive dados sensíveis. Ele não faz parte do backup
+exportado nem é sincronizado pelo app. Falhas no histórico mostram um aviso por sessão e não
+impedem o salvamento das notas. A versão web não oferece histórico nesta entrega.

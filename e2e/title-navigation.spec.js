@@ -40,6 +40,7 @@ for (const mode of ['visual', 'source']) {
     page,
   }) => {
     await page.goto('/')
+    await expect(page.locator('.cm-content')).toBeVisible()
     await page.keyboard.press('Control+t')
     if (mode === 'source')
       await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })

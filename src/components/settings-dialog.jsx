@@ -178,6 +178,14 @@ export function SettingsDialog({
             <>
               {desktop && (
                 <Action
+                  title="Histórico local"
+                  hint="Consulte versões, restaure textos e controle o histórico neste dispositivo."
+                  label="Histórico da nota"
+                  onClick={() => onRun('history')}
+                />
+              )}
+              {desktop && (
+                <Action
                   title={t('menu.folder')}
                   hint={folder || t('settings.folderHint')}
                   label={t('settings.change')}

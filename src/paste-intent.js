@@ -1,3 +1,8 @@
+let lastGesture = { name: 'nenhum', until: 0 }
+export const pasteGesture = () => (Date.now() <= lastGesture.until ? lastGesture.name : 'nenhum')
+export function rememberPasteGesture(name) {
+  lastGesture = { name, until: Date.now() + 1000 }
+}
 const EDITOR = '.editor-shell .cm-content, .editor-shell textarea'
 
 function stop(event) {
@@ -27,12 +32,17 @@ export function createPasteIntentGuard(now = Date.now) {
       if (
         ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') ||
         (event.shiftKey && !event.ctrlKey && !event.metaKey && event.key === 'Insert')
-      )
+      ) {
         intent = permit(event, 1000)
+        rememberPasteGesture(event.key === 'Insert' ? 'shift+insert' : 'ctrl+v')
+      }
     },
     contextMenu(event) {
       reset()
-      if (editor(event)) intent = permit(event, 60_000)
+      if (editor(event)) {
+        intent = permit(event, 60_000)
+        lastGesture = { name: 'menu', until: Date.now() + 60_000 }
+      }
     },
     paste(event) {
       const allowed = internal.has(event.nativeEvent ?? event) || matches(intent, event)

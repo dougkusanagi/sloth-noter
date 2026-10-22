@@ -1,3 +1,6 @@
+import { createHistory } from './history.js'
+import { pasteGesture } from './paste-intent.js'
+import { HistoryDialog } from './components/history-dialog.jsx'
 import { quickOpenNotes } from './quick-open.js'
 import { textStatistics } from './text-statistics.js'
 import { ChangeSet } from '@codemirror/state'
@@ -17,7 +20,7 @@ import { createFullBackup, readBackupBundle, restoreBackupImages } from './backu
 import {
   findNote,
   wikiParts,
-  wikiReferences,
+  noteReferences,
   renameWikiReferences,
   normalizeImageSource,
 } from './markdown-model.js'
@@ -165,6 +168,24 @@ function App() {
 function Workspace({ persistence, loaded }) {
   const current = useRef(loaded.document)
   const [data, setData] = useState(loaded.document)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [noteHistory] = useState(
+    () =>
+      persistence.history ??
+      createHistory(persistence.invoke, (message) => setImportError(message)),
+  )
+  useEffect(() => {
+    noteHistory.onWarning = (message) => setImportError(message)
+    noteHistory.observe(loaded.document, loaded.document)
+    const timer = setInterval(() => void noteHistory.flushIfDue(), 1000)
+    const flush = () => void noteHistory.flush()
+    window.addEventListener('pagehide', flush)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('pagehide', flush)
+      flush()
+    }
+  }, [noteHistory, loaded.document])
   const [error, setError] = useState(loaded.error)
   const [blocked, setBlocked] = useState(loaded.blocked)
   const [sidebarQuery, setSidebarQuery] = useState('')
@@ -283,6 +304,7 @@ function Workspace({ persistence, loaded }) {
     rename: renameNote,
     close: closeTab,
     trash: deleteNote,
+    create: () => createNote(),
   })
   const sidebarVisible =
     !focusMode && (prefs.sidebarVisible ?? !window.matchMedia('(max-width: 600px)').matches)
@@ -301,7 +323,16 @@ function Workspace({ persistence, loaded }) {
   useEffect(() => {
     let disposed = false
     let cleanup = () => {}
-    protectPendingSaves(writer.current, persistence.kind !== 'web')
+    protectPendingSaves(
+      {
+        whenIdle: async (...args) => {
+          const failure = await writer.current.whenIdle(...args)
+          await noteHistory.flush()
+          return failure
+        },
+      },
+      persistence.kind !== 'web',
+    )
       .then((stop) => {
         if (disposed) stop()
         else cleanup = stop
@@ -311,7 +342,7 @@ function Workspace({ persistence, loaded }) {
       disposed = true
       cleanup()
     }
-  }, [persistence])
+  }, [persistence, noteHistory])
 
   useEffect(() => {
     let disposed = false
@@ -336,11 +367,12 @@ function Workspace({ persistence, loaded }) {
     asking.resolve(value)
     setAsking(null)
   }
-  function commit(next) {
+  function commit(next, historyOrigin = mode === 'source' ? 'codigo' : 'sistema') {
     if (next.notes !== current.current.notes) {
       next = ensureDocumentTitles(next)
       next = { ...next, notes: syncLinkedTasks(next.notes) }
     }
+    noteHistory.observe(current.current, next, historyOrigin)
     current.current = next
     setData(next)
     if (!blocked) writer.current.write(next)
@@ -453,12 +485,13 @@ function Workspace({ persistence, loaded }) {
       }
     }, 0)
   }
-  function updateBody(body, editorChanges) {
+  function updateBody(body, editorChanges, readTransactions = () => []) {
     const old = current.current
     // A file opened in place keeps its own first line.
     const active = old.notes.find((note) => note.id === old.activeId)
     if (!isExternalNote(active ?? {})) body = ensureTitle(body)
     const previousBody = old.notes.find((note) => note.id === old.activeId)?.body ?? ''
+    const transactions = noteHistory.enabled ? readTransactions(previousBody, body) : []
     if (previousBody !== body) {
       const changes =
         editorChanges ?? pendingSearchChanges.current ?? documentChanges(previousBody, body)
@@ -477,7 +510,12 @@ function Workspace({ persistence, loaded }) {
       const content = active ? body : note.body
       const nextBody =
         name && previousName && name !== previousName
-          ? renameWikiReferences(content, previousName, name)
+          ? renameWikiReferences(
+              content,
+              previousName,
+              name,
+              active ? undefined : noteReferences(note).wiki,
+            )
           : content
       return active || nextBody !== note.body
         ? {
@@ -488,6 +526,15 @@ function Workspace({ persistence, loaded }) {
           }
         : note
     }
+    for (const tr of noteHistory.enabled ? transactions : [])
+      noteHistory.record(
+        { ...active, revision: active.revision + 1 },
+        tr.before,
+        tr.after,
+        tr.origin,
+        pasteGesture(),
+        tr.changes,
+      )
     commit({
       ...old,
       notes: old.notes.map(rewrite),
@@ -745,9 +792,11 @@ function Workspace({ persistence, loaded }) {
     if (mode === 'visual' && current.current.activeId === noteId && view) {
       view.dispatch({
         changes: { from: mark, to: mark + 1, insert: note.body[mark] === ' ' ? 'x' : ' ' },
+        userEvent: 'tarefa',
       })
       return
     }
+    noteHistory.record(note, note.body, toggleTask(note.body, mark), 'tarefa')
     commit({
       ...current.current,
       notes: current.current.notes.map((item) =>
@@ -805,6 +854,7 @@ function Workspace({ persistence, loaded }) {
   function copyExternalToNotes(id = current.current.activeId) {
     const note = current.current.notes.find((item) => item.id === id)
     if (!note || !isExternalNote(note)) return
+    noteHistory.record(note, note.body, note.body, 'copia')
     createNote(note.name, note.body)
   }
   const importFilesRef = useRef(importFiles)
@@ -1277,7 +1327,13 @@ function Workspace({ persistence, loaded }) {
   function resolveSync(choice) {
     const [conflict, ...rest] = syncConflicts
     setSyncConflicts(rest)
-    commit(persistence.sync.resolve(current.current, conflict, choice))
+    const note = current.current.notes.find((note) => note.id === conflict.id)
+    if (note) {
+      noteHistory.record(note, note.body, note.body, 'conflito')
+      if (typeof conflict.external === 'string')
+        noteHistory.record(note, conflict.external, conflict.external, 'conflito')
+    }
+    commit(persistence.sync.resolve(current.current, conflict, choice), 'disco')
   }
   async function downloadBackup() {
     try {
@@ -1631,7 +1687,7 @@ function Workspace({ persistence, loaded }) {
         const files = await sync.scan()
         if (files === null || stopped) return
         const result = sync.merge(current.current, files)
-        if (result.changed) commit(result.document)
+        if (result.changed) commit(result.document, 'disco')
         setSyncConflicts(result.conflicts)
         setFolderError('')
       } catch (cause) {
@@ -1664,9 +1720,16 @@ function Workspace({ persistence, loaded }) {
         await writer.current.whenIdle({ flush: false })
         const result = await externals.check(current.current)
         if (stopped) return
-        if (result.document !== current.current) commit(result.document)
+        if (result.document !== current.current) commit(result.document, 'disco-externo')
         for (const { id, name, disk } of result.conflicts) {
+          const existing = current.current.notes.find((note) => note.id === id)
+          if (existing) {
+            noteHistory.record(existing, existing.body, existing.body, 'conflito')
+            noteHistory.record(existing, disk, disk, 'conflito')
+          }
           const settle = (useDisk) => {
+            const note = current.current.notes.find((note) => note.id === id)
+            if (useDisk && note) noteHistory.record(note, note.body, disk, 'disco-externo')
             externals.accept(id, disk)
             const doc = current.current
             commit(
@@ -1966,6 +2029,7 @@ function Workspace({ persistence, loaded }) {
         const welcome = welcomeNote(prefs.language)
         createNote(welcome.name, welcome.body)
       }, false),
+    history: () => runMenu(() => setHistoryOpen(true), false),
     settings: () => runMenu(() => setSettingsOpen(true), false),
     commands: () =>
       runMenu(() => {
@@ -1979,7 +2043,7 @@ function Workspace({ persistence, loaded }) {
         ? data.notes.filter(
             (note) =>
               note.id !== active.id &&
-              wikiReferences(note.body).some(
+              noteReferences(note).wiki.some(
                 (link) => findNote(data.notes, link.target)?.id === active.id,
               ),
           )
@@ -2520,6 +2584,31 @@ function Workspace({ persistence, loaded }) {
           </footer>
         </section>
       </div>
+      {historyOpen && active && (
+        <HistoryDialog
+          note={active}
+          history={noteHistory}
+          theme={prefs.theme}
+          onTheme={(theme) => updatePrefs({ theme })}
+          enabled={prefs.historyEnabled === true}
+          onToggle={() => updatePrefs({ historyEnabled: prefs.historyEnabled !== true })}
+          onClose={() => {
+            setHistoryOpen(false)
+            focusEditor()
+          }}
+          onRestore={(body) => {
+            noteHistory.record(
+              { ...active, revision: active.revision + 1 },
+              active.body,
+              body,
+              'restauracao',
+            )
+            updateBody(body)
+            setHistoryOpen(false)
+            focusEditor()
+          }}
+        />
+      )}
       {shortcutsOpen && (
         <ShortcutsDialog
           onClose={() => {

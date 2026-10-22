@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm'
 export const TAG = /(?<![\p{L}\p{N}_])#[\p{L}\p{N}_/-]+/gu
 const parser = unified().use(remarkParse).use(remarkGfm)
 const cache = createTextCache()
+const referencesByNote = new WeakMap()
 export function markdownTree(text) {
   const cached = cache.get(text)
   if (cached) return cached
@@ -35,6 +36,7 @@ export function findNote(notes, value) {
   )
 }
 export function wikiReferences(text) {
+  if (!text.includes('[[')) return []
   const result = []
   function visit(node) {
     if (
@@ -60,8 +62,8 @@ export function wikiReferences(text) {
   visit(markdownTree(text))
   return result
 }
-export function renameWikiReferences(text, oldName, newName) {
-  const matching = wikiReferences(text).filter((link) => findNote([{ name: oldName }], link.target))
+export function renameWikiReferences(text, oldName, newName, links = wikiReferences(text)) {
+  const matching = links.filter((link) => findNote([{ name: oldName }], link.target))
   for (const link of matching.reverse()) {
     const extension = /\.md$/i.test(link.name) ? '.md' : ''
     const target =
@@ -147,6 +149,7 @@ export function normalizeImageSource(src) {
   }
 }
 export function imageReferences(text) {
+  if (!text.includes('![')) return []
   const tree = markdownTree(text)
   const definitions = new Map()
   walk(tree, (node) => {
@@ -168,6 +171,19 @@ export function imageReferences(text) {
   })
   return result
 }
+
+/** Keep derived references with each note, independently of the small tree LRU.
+ * Editing one note must not reparse the rest of the library on every key. Weak
+ * keys let replaced/deleted notes and their previous references be collected.
+ */
+export function noteReferences(note) {
+  const cached = referencesByNote.get(note)
+  if (cached?.body === note.body) return cached.references
+  const references = { wiki: wikiReferences(note.body), images: imageReferences(note.body) }
+  referencesByNote.set(note, { body: note.body, references })
+  return references
+}
+
 export function replaceImageSource(text, source, target) {
   const replacements = new Map()
   for (const entry of imageReferences(text)) {

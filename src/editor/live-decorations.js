@@ -66,7 +66,7 @@ class SectionChecklistWidget extends WidgetType {
       if (changes.length)
         view.dispatch({
           changes,
-          userEvent: 'input.sectionTasks',
+          userEvent: 'tarefa',
           annotations: isolateHistory.of('full'),
         })
     })

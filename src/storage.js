@@ -33,6 +33,7 @@ export function newDocument() {
     preferences: {
       tabsVisible: true,
       theme: 'system',
+      historyEnabled: false,
       fontSize: FONT_SIZE.default,
       language: DEFAULT_LANGUAGE,
     },
@@ -134,6 +135,7 @@ function migrateV1(value) {
     preferences: {
       tabsVisible: true,
       theme: 'system',
+      historyEnabled: false,
       fontSize: FONT_SIZE.default,
       language: DEFAULT_LANGUAGE,
     },

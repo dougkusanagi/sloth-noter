@@ -1,5 +1,5 @@
 import { desktopInvoke } from './persistence-desktop.js'
-import { imageReferences, replaceImageSource, normalizeImageSource } from './markdown-model.js'
+import { noteReferences, replaceImageSource, normalizeImageSource } from './markdown-model.js'
 import { t } from './i18n.js'
 import { WELCOME_IMAGE } from './welcome.js'
 
@@ -95,7 +95,7 @@ export function allNotes(document) {
 export function noteImages(notes) {
   const found = new Map()
   for (const note of notes)
-    for (const reference of imageReferences(note.body)) {
+    for (const reference of noteReferences(note).images) {
       const image = { ...reference, src: normalizeImageSource(reference.src) }
       const existing = found.get(image.src)
       if (existing) {

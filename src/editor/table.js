@@ -348,7 +348,7 @@ export function replaceTable(view, table, lines, row, column) {
   view.dispatch({
     changes: { from, to, insert: lines.join(lineBreak) },
     selection: EditorSelection.range(range.from, range.to),
-    userEvent: 'input.type',
+    userEvent: 'formatacao',
     scrollIntoView: true,
   })
   view.focus()

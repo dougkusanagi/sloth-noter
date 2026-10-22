@@ -19,6 +19,9 @@ percent-encoding = "2"
 arboard = { version = "3.6.1", features = ["wayland-data-control"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 
+sha2 = "0.10"
+flate2 = "1"
+
 [profile.release]
 codegen-units = 1
 lto = true

@@ -2,6 +2,7 @@
 
 mod clipboard;
 mod errors;
+mod history;
 mod images;
 mod migration;
 mod store;
@@ -267,6 +268,59 @@ struct PersistenceInfo {
 
 fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
     app.path().app_data_dir().map_err(|error| error.to_string())
+}
+
+async fn history_job<T: Send + 'static>(
+    job: impl FnOnce() -> Result<T, String> + Send + 'static,
+) -> Result<T, String> {
+    tauri::async_runtime::spawn_blocking(job)
+        .await
+        .map_err(|e| e.to_string())?
+}
+#[tauri::command]
+async fn history_maintain(app: AppHandle) -> Result<(), String> {
+    let root = app_data_dir(&app)?.join("history");
+    history_job(move || history::maintenance(&root)).await
+}
+#[tauri::command]
+async fn history_snapshot(app: AppHandle, text: String) -> Result<String, String> {
+    let root = app_data_dir(&app)?.join("history");
+    history_job(move || history::save_snapshot(&root, &text)).await
+}
+#[tauri::command]
+async fn history_read(
+    app: AppHandle,
+    id: String,
+    day: String,
+) -> Result<Vec<serde_json::Value>, String> {
+    let root = app_data_dir(&app)?.join("history");
+    history_job(move || {
+        Ok(history::list(&root, &id)?
+            .into_iter()
+            .filter(|e| e["dia"].as_str() == Some(day.as_str()))
+            .collect())
+    })
+    .await
+}
+#[tauri::command]
+async fn history_append(app: AppHandle, entries: Vec<serde_json::Value>) -> Result<(), String> {
+    let root = app_data_dir(&app)?.join("history");
+    history_job(move || history::append(&root, entries)).await
+}
+#[tauri::command]
+async fn history_list(app: AppHandle, id: String) -> Result<Vec<serde_json::Value>, String> {
+    let root = app_data_dir(&app)?.join("history");
+    history_job(move || history::list(&root, &id)).await
+}
+#[tauri::command]
+async fn history_object(app: AppHandle, hash: String) -> Result<String, String> {
+    let root = app_data_dir(&app)?.join("history");
+    history_job(move || history::object(&root, &hash)).await
+}
+#[tauri::command]
+async fn history_clear(app: AppHandle, id: Option<String>) -> Result<(), String> {
+    let root = app_data_dir(&app)?.join("history");
+    history_job(move || history::clear(&root, id.as_deref())).await
 }
 
 #[tauri::command]
@@ -547,6 +601,7 @@ fn main() {
             }
         }))
         .setup(|app| {
+            let _ = history::maintain(&app.path().app_data_dir()?.join("history"));
             migration::recover(&app.path().app_data_dir()?.join("migration.json"))
                 .map_err(std::io::Error::other)?;
             Ok(())
@@ -558,6 +613,13 @@ fn main() {
         })
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
+            history_maintain,
+            history_snapshot,
+            history_read,
+            history_append,
+            history_list,
+            history_object,
+            history_clear,
             read_state,
             write_state,
             persistence_info,

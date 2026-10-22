@@ -5,6 +5,8 @@ import {
   wikiReferences,
   renameWikiReferences,
   imageReferences,
+  noteReferences,
+  markdownTree,
   replaceImageSource,
   remarkWikiLinks,
   remarkTags,
@@ -12,6 +14,43 @@ import {
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import { inlineSyntax } from './live-markdown.js'
+
+test('library references survive tree cache eviction while another note is edited', () => {
+  const notes = Array.from({ length: 36 }, (_, index) => ({
+    id: String(index),
+    body: `# Projeto ${index}\n\n[[Destino#Etapa|Abrir]]\n\n![Foto][image]\n\n[image]: assets/${index}.png`,
+  }))
+  const references = notes.map(noteReferences)
+  for (let revision = 0; revision < 20; revision++) {
+    markdownTree(`# Nota em edição\n\n${'a'.repeat(revision)}`)
+    for (const [index, note] of notes.entries()) {
+      assert.equal(noteReferences(note), references[index])
+      assert.equal(noteReferences(note).wiki[0].target, 'Destino#Etapa|Abrir')
+      assert.equal(noteReferences(note).images[0].src, `assets/${index}.png`)
+    }
+  }
+  const renamed = renameWikiReferences(notes[0].body, 'Destino.md', 'Novo.md', references[0].wiki)
+  assert.equal(renamed, notes[0].body.replace('Destino#', 'Novo#'))
+  assert.equal(noteReferences(notes[0]), references[0])
+  assert.equal(noteReferences(notes[0]).wiki[0].target, 'Destino#Etapa|Abrir')
+})
+
+test('edited references update their targets and offsets without changing untouched notes', () => {
+  const original = { id: 'one', body: '# Nota\n\n[[Antes]]\n\n![Foto](assets/antes.png)' }
+  const previous = noteReferences(original)
+  const edited = {
+    ...original,
+    body: '# Nota\n\nTexto novo\n\n[[Depois]]\n\n![Foto](assets/depois.png)',
+  }
+  const references = noteReferences(edited)
+  assert.equal(references.wiki[0].target, 'Depois')
+  assert.equal(references.wiki[0].start, edited.body.indexOf('[[Depois]]'))
+  assert.equal(references.images[0].src, 'assets/depois.png')
+  assert.equal(references.images[0].node.position.start.offset, edited.body.indexOf('![Foto]'))
+  assert.equal(noteReferences(original), previous)
+  edited.body = '# Nota sem referências'
+  assert.deepEqual(noteReferences(edited), { wiki: [], images: [] })
+})
 
 test('wiki links handle aliases, headings, filenames and exclude code, escaped and regular links', () => {
   const text =

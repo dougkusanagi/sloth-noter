@@ -27,7 +27,7 @@ export async function desktopInvoke(
  * Native state lives in the application data directory. The webview never
  * receives a filesystem handle: it can only call the commands below.
  */
-export function createDesktopAdapter(invoke) {
+export function createDesktopAdapter(invoke, history = null) {
   // Text last seen in each file opened in place; see external-notes.js.
   const seen = new Map()
   const paths = new Map()
@@ -45,8 +45,11 @@ export function createDesktopAdapter(invoke) {
         return contents // a corrupt payload is reported and kept by the storage layer
       }
       if (!Array.isArray(document.notes)) return contents
-      const notes = await readExternalNotes(invoke, document.notes, seen, paths)
-      return JSON.stringify({ ...document, notes })
+      history?.setEnabled(document.preferences?.historyEnabled === true)
+      const notes = await readExternalNotes(invoke, document.notes, seen, paths, history)
+      const previous = { ...document, notes }
+      history?.observe(previous, previous)
+      return JSON.stringify(previous)
     },
     async readLegacy() {
       return null
