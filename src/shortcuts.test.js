@@ -85,3 +85,29 @@ test('formatting shortcuts edit selections and empty cursors', () => {
   assert.deepEqual(apply('abc', 1, 1, 'link'), ['a[]()bc', 2])
   assert.deepEqual(apply('abc', 1, 1, 'list'), ['- abc', 3])
 })
+
+test('bold and italic combine and unwind without piling up asterisks', () => {
+  let text = 'texto',
+    from = 0,
+    to = 5
+  const steps = []
+  for (const action of ['bold', 'italic', 'italic', 'bold', 'italic', 'bold', 'italic', 'bold']) {
+    const edit = shortcutEdit(text, from, to, action)
+    text = text.slice(0, edit.from) + edit.insert + text.slice(edit.to)
+    ;[from, to] = [edit.selectionFrom, edit.selectionTo]
+    steps.push(text)
+  }
+  assert.deepEqual(steps, [
+    '**texto**',
+    '***texto***',
+    '**texto**',
+    'texto',
+    '*texto*',
+    '***texto***',
+    '**texto**',
+    'texto',
+  ])
+  // Selecting the markers too behaves the same as selecting only the text.
+  const edit = shortcutEdit('**texto**', 0, 9, 'italic')
+  assert.equal(edit.insert, '***texto***')
+})
