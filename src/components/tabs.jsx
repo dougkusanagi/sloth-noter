@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom'
 import { useEffect, useRef, useState } from 'react'
-import { Pin, X } from 'lucide-react'
+import { Pin, Plus, X } from 'lucide-react'
 import { moveTab, togglePinnedTab } from '../tabs.js'
 import { t } from '../i18n.js'
 import { displayName } from '../note-title.js'
@@ -22,6 +22,7 @@ export function useTabs({
   rename,
   close,
   trash,
+  create,
 }) {
   const [tabMenu, setTabMenu] = useState(null)
   const [draggingTab, setDraggingTab] = useState(null)
@@ -240,6 +241,14 @@ export function useTabs({
           )
         })}
       </div>
+      <button
+        className="tab-new"
+        aria-label={t('menu.newNote')}
+        title={t('menu.newNote')}
+        onClick={() => create()}
+      >
+        <Plus size={15} aria-hidden="true" />
+      </button>
     </nav>
   )
 

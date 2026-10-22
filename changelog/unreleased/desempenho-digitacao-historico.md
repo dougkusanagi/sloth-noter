@@ -1,0 +1,1 @@
+Corrigido: a digitação reutiliza as consultas de imagens e links das notas sem alterações, evitando reprocessar a biblioteca inteira a cada tecla; o histórico também agrupa digitação, acentos e pequenas correções.

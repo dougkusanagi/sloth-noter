@@ -3331,11 +3331,13 @@ name = "sloth-note"
 version = "0.1.0"
 dependencies = [
  "arboard",
+ "flate2",
  "image",
  "percent-encoding",
  "pulldown-cmark",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

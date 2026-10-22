@@ -35,7 +35,7 @@ function newId() {
  * to an existing file carries that text so the native side can refuse to
  * overwrite an edit made outside the app.
  */
-export function createVaultAdapter(invoke, path) {
+export function createVaultAdapter(invoke, path, history = null) {
   let known = new Map()
   let lastStamps = null
   // Text last seen in each file opened in place (outside the folder); see external-notes.js.
@@ -74,15 +74,19 @@ export function createVaultAdapter(invoke, path) {
         known.set(name, { id, body: contents })
         return { id, name, body: contents, revision: 0 }
       })
+      history?.setEnabled(aux.preferences?.historyEnabled === true)
       const externals = Array.isArray(aux.externals) ? aux.externals.filter(isExternalNote) : []
       seen.clear()
       paths.clear()
-      const notes = [...folderNotes, ...(await readExternalNotes(invoke, externals, seen, paths))]
+      const notes = [
+        ...folderNotes,
+        ...(await readExternalNotes(invoke, externals, seen, paths, history)),
+      ]
       const present = new Set(notes.map((note) => note.id))
       let openIds = Array.isArray(aux.openIds) ? aux.openIds.filter((id) => present.has(id)) : []
       if (openIds.length === 0 && notes.length) openIds = [notes[0].id]
       const activeId = openIds.includes(aux.activeId) ? aux.activeId : (openIds.at(-1) ?? null)
-      return JSON.stringify({
+      const previous = {
         version: 3,
         ...(aux.assets ? { assets: aux.assets } : {}),
         notes,
@@ -93,7 +97,9 @@ export function createVaultAdapter(invoke, path) {
           : [],
         activeId,
         preferences: aux.preferences ?? newDocument().preferences,
-      })
+      }
+      history?.observe(previous, previous)
+      return JSON.stringify(previous)
     },
     async readLegacy() {
       return null

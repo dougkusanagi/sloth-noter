@@ -49,7 +49,7 @@ export async function writeExternalNotes(invoke, document, seen, paths = new Map
  * wins: the app only saves text it has written, so a difference means an outside edit.
  * A file that cannot be read keeps its stored text; the next save reports the problem.
  */
-export async function readExternalNotes(invoke, notes, seen, paths = new Map()) {
+export async function readExternalNotes(invoke, notes, seen, paths = new Map(), history = null) {
   const result = []
   for (const note of notes) {
     if (!isExternalNote(note)) {
@@ -65,6 +65,8 @@ export async function readExternalNotes(invoke, notes, seen, paths = new Map()) 
       result.push(note)
       continue
     }
+    history?.record(note, disk, disk, 'abertura')
+    if (note.body !== disk) history?.record(note, note.body, disk, 'disco-externo')
     seen.set(note.id, disk)
     result.push(
       note.body === disk && note.external.seen === disk

@@ -1,3 +1,4 @@
+import { transactionHistory } from './editor/history-log.js'
 import { searchHighlights } from './editor/search.js'
 import { clipboardImageFiles } from './clipboard.js'
 import { ImageInsert } from './components/image-insert.jsx'
@@ -204,7 +205,7 @@ export function VisualEditor({
         insertAt.from + template.selectionFrom,
         insertAt.from + template.selectionTo,
       ),
-      userEvent: 'input.type',
+      userEvent: 'bloco',
     })
     setBlockMenu(false)
     setInsertAt(null)
@@ -226,7 +227,7 @@ export function VisualEditor({
     view.dispatch({
       changes: { from: result.from, to: result.to, insert: result.insert },
       selection: EditorSelection.single(result.selectionFrom, result.selectionTo),
-      userEvent: 'input.type',
+      userEvent: 'formatacao',
     })
     view.focus()
     setLinkEditing(false)
@@ -475,7 +476,11 @@ export function VisualEditor({
               )
             }
             if (update.docChanged && !syncing.current)
-              callbacks.current.onChange(update.state.doc.toString(), update.changes)
+              callbacks.current.onChange(
+                update.state.doc.toString(),
+                update.changes,
+                (before, after) => transactionHistory(update.transactions, before, after),
+              )
             if (
               update.selectionSet &&
               update.view.hasFocus &&

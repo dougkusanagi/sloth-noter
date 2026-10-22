@@ -57,7 +57,7 @@ test('Padrão collapses a section and expands it from the heading without a hidd
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+End')
   // Only H2–H6 sections with content get a toggle: not the title, not the empty one.
-  await expect(page.locator('.cm-fold-toggle')).toHaveCount(3)
+  await expect(page.locator('button.cm-fold-toggle')).toHaveCount(3)
   const heading = page.locator('.cm-line', { hasText: 'Seção um' })
   await heading.hover()
   await heading.getByRole('button', { name: 'Recolher seção' }).click()
@@ -170,4 +170,15 @@ test('Leitura task checkboxes inside a section keep working', async ({ page }) =
   await page.getByRole('checkbox', { name: 'Marcar como concluída' }).check()
   await mode(page, 'Código')
   await expect(box(page)).toHaveValue('# T\n\n## A\n\n- [x] item')
+})
+
+test('headings show their level as a pill without changing the heading text', async ({ page }) => {
+  await mode(page, 'Leitura')
+  await expect(page.locator('.markdown h3 .fold-toggle')).toHaveAttribute('data-level', '3')
+  await expect(page.locator('.markdown h3')).toHaveText('Sub um')
+  const pill = await page
+    .locator('.markdown h3 .fold-toggle')
+    .evaluate((el) => getComputedStyle(el, '::before').content)
+  expect(pill).toBe('"H3"')
+  await expect(page.locator('.markdown h1 .fold-toggle')).toHaveCount(0)
 })

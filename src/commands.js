@@ -50,6 +50,7 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
         ['searchAllNotes', 'menu.searchAllNotes', Search, 'Alt+F', false, true],
         ['findInNote', 'menu.findInNote', ScanSearch, 'F', !active, true],
         ['replaceInNote', 'find.replace', Replace, 'H', !active, true],
+        ...(desktop ? [['history', 'Histórico da nota', Undo2, undefined, !active, true]] : []),
         ['rename', 'menu.rename', Pencil, 'F2', !active || Boolean(active.external), true],
         ['copyToNotes', 'external.copy', Copy, undefined, !active?.external, true],
         ['closeTab', 'tabs.close', X, 'W', !active || activePinned, true],

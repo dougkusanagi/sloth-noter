@@ -506,12 +506,12 @@ html:has(
   overflow: hidden;
   margin-left: 6px;
   font: 13px/1 var(--ui);
-  /* Tabs that scroll away fade out at the edges instead of being cut. */
-  mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 18px), transparent);
 }
 .tab-list {
+  /* Tabs that scroll away fade out at the edges instead of being cut. */
+  mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 18px), transparent);
   min-width: 0;
-  width: 100%;
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   gap: 3px;
@@ -596,6 +596,27 @@ html:has(
 .tab-pin-icon {
   flex: none;
   color: var(--accent);
+}
+.tab-new {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tab-new:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.tab-new:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 .tab-close {
   position: absolute;
@@ -2363,7 +2384,7 @@ html:has(
   white-space: pre-wrap;
   overflow-wrap: break-word;
   color: transparent;
-  padding: 28px max(24px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
+  padding: 28px max(44px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
   font:
     var(--editor-size)/1.55 Georgia,
     serif;
@@ -2663,7 +2684,7 @@ html:has(
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6px max(24px, calc((100% - var(--content-width, 760px)) / 2));
+  padding: 6px max(44px, calc((100% - var(--content-width, 760px)) / 2));
   font-size: 12px;
   color: var(--muted, inherit);
   border-bottom: 1px solid var(--line, rgba(128, 128, 128, 0.25));
@@ -2682,4 +2703,112 @@ html:has(
   background: transparent;
   color: inherit;
   cursor: pointer;
+}
+
+.history-dialog {
+  width: min(760px, calc(100vw - 24px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 24px;
+}
+.history-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.history-dialog h2 {
+  margin: 0;
+}
+.history-dialog p,
+.history-name {
+  overflow-wrap: anywhere;
+}
+.history-dialog label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.history-versions {
+  margin-block: 24px;
+}
+.history-version {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  min-height: 44px;
+}
+.history-version time {
+  font-variant-numeric: tabular-nums;
+}
+.history-version strong {
+  flex-basis: 100%;
+}
+.history-detail {
+  padding: 16px;
+}
+.history-detail pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.history-dialog details button {
+  display: block;
+  margin-block: 12px;
+  min-height: 44px;
+}
+@media (max-width: 520px) {
+  .history-dialog {
+    padding: 16px;
+  }
+  .history-version {
+    flex-direction: column;
+  }
+}
+.history-theme {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.history-theme button {
+  min-height: 44px;
+}
+.history-theme button[aria-pressed='true'] {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.history-dialog .button {
+  min-height: 44px;
+  height: auto;
+  white-space: normal;
+}
+.history-dialog .history-version {
+  justify-content: flex-start;
+  line-height: 1.5;
+}
+.history-version strong {
+  color: var(--danger);
+}
+.history-dialog h3 {
+  font-size: 14px;
+  margin-top: 24px;
+}
+.history-detail pre {
+  padding: 12px;
+  background: var(--well-bg);
+  border-radius: var(--radius-sm);
+}
+.palette-backdrop:has(> .history-dialog) {
+  padding: 16px;
+  place-items: center;
+}
+.history-dialog .history-version {
+  text-align: left;
+  align-items: flex-start;
 }

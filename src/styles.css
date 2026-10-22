@@ -172,7 +172,7 @@ textarea {
   border: 0;
   background: transparent;
   color: var(--ink);
-  padding: 28px max(24px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
+  padding: 28px max(44px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
   font:
     var(--editor-size)/1.55 Georgia,
     serif;
@@ -309,7 +309,7 @@ textarea:focus-visible {
 .visual-editor .cm-scroller {
   overflow: auto;
   font-family: Georgia, serif;
-  padding: 28px max(24px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
+  padding: 28px max(44px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
 }
 .visual-editor .cm-content {
   min-height: 100%;
@@ -396,6 +396,8 @@ textarea:focus-visible {
   background: var(--paper);
   font: 0.85em/1.7 var(--mono);
   padding-left: 1em;
+  /* The sticky copy badge can float over any line, so keep its column clear. */
+  padding-right: var(--copy-reserve);
 }
 .visual-editor .cm-md-table-row {
   position: relative;
@@ -670,12 +672,12 @@ textarea:focus-visible {
 .reading {
   flex: 1;
   min-width: 0;
-  padding: 28px max(24px, calc((100% - var(--content-width, 760px)) / 2)) 0;
+  padding: 28px max(44px, calc((100% - var(--content-width, 760px)) / 2)) 0;
   cursor: text;
 }
 .empty-note {
   flex: 1;
-  padding: 28px max(24px, calc((100% - var(--content-width, 760px)) / 2));
+  padding: 28px max(44px, calc((100% - var(--content-width, 760px)) / 2));
   color: var(--muted);
 }
 .markdown {
@@ -760,6 +762,9 @@ textarea:focus-visible {
   margin: 0;
   position: relative;
   border-radius: var(--radius);
+  /* Overflow clips at the padding box, so the border keeps scrolled text out of
+     the sticky copy badge's column. */
+  border-right: var(--copy-reserve) solid var(--paper);
 }
 .code-block {
   position: relative;
@@ -784,7 +789,7 @@ textarea:focus-visible {
   display: block;
   white-space: pre;
   background: transparent;
-  padding: 0 45px 0 0;
+  padding: 0;
 }
 .copy-code {
   position: absolute;
@@ -830,7 +835,19 @@ textarea:focus-visible {
   display: none;
 }
 .visual-editor .cm-code-copy-anchor.cm-md-editing {
-  padding-right: 120px;
+  padding-right: var(--copy-reserve);
+}
+:root {
+  --copy-reserve: 120px;
+}
+@media (max-width: 600px) {
+  /* Narrow screens keep the text width: the badge shows only its icon. */
+  :root {
+    --copy-reserve: 44px;
+  }
+  .copy-code span {
+    display: none;
+  }
 }
 .copy-code:focus-visible {
   outline: 2px solid var(--accent);
@@ -849,15 +866,20 @@ textarea:focus-visible {
   }
 }
 @media (max-width: 600px) {
+  /* The left gutter holds the heading level pill. */
   textarea {
-    padding: 28px 16px 70px;
+    padding: 28px 16px 70px 40px;
   }
   .visual-editor .cm-scroller {
-    padding: 28px 16px 70px;
+    padding: 28px 16px 70px 40px;
   }
   .reading,
   .empty-note {
-    padding: 28px 16px 70px;
+    padding: 28px 16px 70px 40px;
+  }
+  .cm-fold-toggle,
+  .fold-toggle {
+    right: calc(100% + 3px);
   }
 }
 .workspace-layout {
@@ -1077,57 +1099,100 @@ textarea:focus-visible {
 }
 .cm-fold-toggle,
 .fold-toggle {
+  position: absolute;
+  right: calc(100% + 0.45rem);
+  top: 50%;
+  translate: 0 -50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.4em;
-  height: 1.4em;
-  padding: 0;
-  border: 0;
+  gap: 2px;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 4px;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
+  font: 400 10.5px/1 var(--ui);
+  font-style: normal;
+  letter-spacing: 0;
+  white-space: nowrap;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
 }
-.cm-fold-toggle,
-.fold-toggle {
+.cm-fold-toggle::before,
+.fold-toggle::before {
+  content: 'H' attr(data-level);
+}
+.cm-fold-toggle[data-level='1']::before,
+.fold-toggle[data-level='1']::before {
+  content: none;
+}
+.cm-fold-toggle::after,
+.fold-toggle::after {
+  /* Touch target taller than the pill. */
+  content: '';
   position: absolute;
-  left: -1.7em;
-  top: 50%;
-  translate: 0 -50%;
+  inset: -6px -4px;
 }
 .cm-fold-toggle svg,
 .fold-toggle svg {
-  width: 1em;
-  height: 1em;
-  transition: rotate 0.12s;
+  flex: none;
+  width: 0;
+  height: 10px;
+  opacity: 0;
+  transition:
+    width 0.12s,
+    opacity 0.12s,
+    rotate 0.12s;
 }
 .cm-fold-toggle.folded svg,
 .fold-toggle[aria-expanded='false'] svg {
   rotate: -90deg;
 }
-.cm-md-h2:hover .cm-fold-toggle,
-.cm-md-h3:hover .cm-fold-toggle,
-.cm-md-h4:hover .cm-fold-toggle,
-.cm-md-h5:hover .cm-fold-toggle,
-.cm-md-h6:hover .cm-fold-toggle,
-.markdown :is(h2, h3, h4, h5, h6):hover .fold-toggle,
+.cm-level-badge,
+.level-badge {
+  cursor: default;
+  pointer-events: none;
+}
+.cm-md-h2:hover .cm-fold-toggle:not(.cm-level-badge),
+.cm-md-h3:hover .cm-fold-toggle:not(.cm-level-badge),
+.cm-md-h4:hover .cm-fold-toggle:not(.cm-level-badge),
+.cm-md-h5:hover .cm-fold-toggle:not(.cm-level-badge),
+.cm-md-h6:hover .cm-fold-toggle:not(.cm-level-badge),
+.markdown :is(h1, h2, h3, h4, h5, h6):hover .fold-toggle:not(.level-badge),
 .cm-fold-toggle:focus-visible,
-.fold-toggle:focus-visible,
-.cm-fold-toggle.folded,
-.fold-toggle[aria-expanded='false'] {
+.fold-toggle:focus-visible {
+  background: var(--soft);
+  color: var(--ink);
+}
+.cm-md-h1:hover .cm-fold-toggle svg,
+.cm-md-h2:hover .cm-fold-toggle svg,
+.cm-md-h3:hover .cm-fold-toggle svg,
+.cm-md-h4:hover .cm-fold-toggle svg,
+.cm-md-h5:hover .cm-fold-toggle svg,
+.cm-md-h6:hover .cm-fold-toggle svg,
+.markdown :is(h1, h2, h3, h4, h5, h6):hover .fold-toggle svg,
+.cm-fold-toggle:focus-visible svg,
+.fold-toggle:focus-visible svg,
+.cm-fold-toggle.folded svg,
+.fold-toggle[aria-expanded='false'] svg {
+  width: 10px;
   opacity: 1;
 }
-.cm-fold-toggle:hover,
-.fold-toggle:hover {
-  background: var(--soft);
-  color: var(--ink, inherit);
+.cm-fold-toggle.folded,
+.fold-toggle[aria-expanded='false'] {
+  border-color: color-mix(in srgb, var(--muted) 35%, transparent);
+  padding-left: 5px;
+  padding-right: 3px;
 }
 @media (hover: none) {
-  .cm-fold-toggle,
-  .fold-toggle {
+  .cm-fold-toggle svg,
+  .fold-toggle svg {
+    width: 10px;
     opacity: 0.6;
   }
 }

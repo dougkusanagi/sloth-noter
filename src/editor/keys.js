@@ -32,7 +32,7 @@ export function wrapSelectedText(event, view) {
   view.dispatch({
     changes,
     selection: EditorSelection.create(selections, view.state.selection.mainIndex),
-    userEvent: 'input.type',
+    userEvent: 'lista',
   })
   event.preventDefault()
   return true
@@ -45,7 +45,7 @@ export function continueList(view) {
   view.dispatch({
     changes: { from: continued.from, to: continued.to, insert: continued.insert },
     selection: { anchor: continued.cursor },
-    userEvent: 'input.type',
+    userEvent: 'lista',
   })
   return true
 }
@@ -67,8 +67,7 @@ export function indentList(view, outdent = false) {
   if (view.state.selection.ranges.length !== 1) return false
   const changes = listIndentChanges(view.state.doc.toString(), from, to, outdent)
   if (!changes) return false
-  if (changes.length)
-    view.dispatch({ changes, userEvent: outdent ? 'delete.dedent' : 'input.indent' })
+  if (changes.length) view.dispatch({ changes, userEvent: 'lista' })
   return true
 }
 
@@ -83,7 +82,7 @@ export function moveList(view, direction) {
       changes: moved.changes,
       selection: EditorSelection.single(moved.anchor, moved.head),
       scrollIntoView: true,
-      userEvent: 'input.move',
+      userEvent: 'lista',
     })
   return true
 }

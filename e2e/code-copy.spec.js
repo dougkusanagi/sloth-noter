@@ -74,3 +74,44 @@ for (const mode of ['Padrão', 'Leitura']) {
     await expect(page.locator('textarea')).toHaveValue(body)
   })
 }
+
+for (const [mode, width] of [
+  ['Padrão', 1280],
+  ['Leitura', 1280],
+  ['Padrão', 390],
+  ['Leitura', 390],
+]) {
+  test(`copy badge never covers code text in ${mode} at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 })
+    await page.goto('/')
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    const line =
+      'Faça um html teste com versões que acha valer a pena testar, faça um screenshot e analise'
+    await page.locator('textarea').fill(`# Prompt\n\n\`\`\`markdown\n${line}\n${line}\n\`\`\`\n`)
+    await page.getByRole('radio', { name: mode, exact: true }).check({ force: true })
+    const button = page.locator('.copy-code').first()
+    await expect(button).toBeVisible()
+    const overlap = await button.evaluate((badge) => {
+      const box = badge.getBoundingClientRect()
+      const root =
+        document.querySelector('.markdown pre code') ?? document.querySelector('.cm-content')
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+      const range = document.createRange()
+      // Text scrolled past the block's visible area is clipped, not covered.
+      const pre = root.closest('pre')
+      const clip = pre
+        ? pre.getBoundingClientRect().left + pre.clientLeft + pre.clientWidth
+        : Infinity
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (!node.textContent.includes('Faça')) continue
+        range.selectNodeContents(node)
+        for (const rect of range.getClientRects()) {
+          const visible = Math.min(rect.right, clip) > box.left && rect.left < box.right
+          if (visible && rect.bottom > box.top && rect.top < box.bottom) return true
+        }
+      }
+      return false
+    })
+    expect(overlap).toBe(false)
+  })
+}
