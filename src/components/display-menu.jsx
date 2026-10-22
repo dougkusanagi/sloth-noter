@@ -94,7 +94,7 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
             >
               <Focus size={16} aria-hidden="true" />
               <span>{t('focus.toggle')}</span>
-              <Shortcut keys="Shift+F" />
+              <Shortcut keys="Alt+F" />
             </button>
             <div className="menu-heading" role="presentation">
               {t('settings.theme')}

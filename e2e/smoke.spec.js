@@ -112,7 +112,7 @@ test('settings change the theme, font size and tabs immediately', async ({ page 
 test('the command palette runs any action and is separate from the note finder', async ({
   page,
 }) => {
-  await page.keyboard.press('Control+k')
+  await page.keyboard.press('Control+Shift+p')
   const commands = page.getByRole('dialog', { name: 'Paleta de comandos' })
   await commands.getByRole('combobox').fill('backup')
   await expect(commands.getByRole('option')).toHaveCount(2)

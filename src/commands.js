@@ -9,6 +9,8 @@ import {
   X,
   Trash2,
   Undo2,
+  History,
+  PanelBottom,
   Image,
   Upload,
   Download,
@@ -47,10 +49,10 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
       [
         ['newNote', 'menu.newNote', FilePlus, 'T', false, true],
         ['findNote', 'menu.findNote', Search, 'P', false, true],
-        ['searchAllNotes', 'menu.searchAllNotes', Search, 'Alt+F', false, true],
+        ['searchAllNotes', 'menu.searchAllNotes', Search, 'Shift+F', false, true],
         ['findInNote', 'menu.findInNote', ScanSearch, 'F', !active, true],
         ['replaceInNote', 'find.replace', Replace, 'H', !active, true],
-        ...(desktop ? [['history', 'Histórico da nota', Undo2, undefined, !active, true]] : []),
+        ...(desktop ? [['history', 'history.title', History, undefined, !active, true]] : []),
         ['rename', 'menu.rename', Pencil, 'F2', !active || Boolean(active.external), true],
         ['copyToNotes', 'external.copy', Copy, undefined, !active?.external, true],
         ['closeTab', 'tabs.close', X, 'W', !active || activePinned, true],
@@ -63,7 +65,7 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
       [
         ['images', 'images.title', Image, 'Shift+L', false, true],
         ['addImage', 'images.import', Plus, undefined, false, true],
-        ['import', 'menu.import', Upload, 'I', false, true],
+        ['import', 'menu.import', Upload, 'O', false, true],
         ['export', 'menu.export', Download, 'E', !active, true],
         [
           'trash',
@@ -81,14 +83,19 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
     [
       'menu.view',
       [
-        ['focus', 'focus.toggle', Focus, 'Shift+F', !active, true],
-        ['sidebar', 'sidebar.toggle', PanelLeft, 'B', false, true],
+        ['focus', 'focus.toggle', Focus, 'Alt+F', !active, true],
+        ['sidebar', 'sidebar.toggle', PanelLeft, '\\', false, true],
         ['visual', 'mode.visual', Eye, 'Alt+1'],
         ['source', 'mode.source', Code, 'Alt+2'],
         ['reading', 'mode.reading', BookOpen, 'Alt+3'],
         ['foldAll', 'menu.foldAll', ChevronsDownUp, undefined, noFold],
         ['unfoldAll', 'menu.unfoldAll', ChevronsUpDown, undefined, noFold],
         ['tabs', prefs.tabsVisible ? 'menu.tabsHide' : 'menu.tabsShow', PanelsTopLeft],
+        [
+          'status',
+          prefs.statusVisible === false ? 'menu.statusShow' : 'menu.statusHide',
+          PanelBottom,
+        ],
         ['theme', t('menu.theme', { theme: t(`theme.${prefs.theme}`) }), SunMoon],
         ['smaller', 'menu.smaller', Minus, '-'],
         ['larger', 'menu.larger', Plus, '+'],
@@ -100,7 +107,7 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
     [
       'menu.app',
       [
-        ['commands', 'menu.commands', Command, 'K', false, true],
+        ['commands', 'menu.commands', Command, 'Shift+P', false, true],
         ['settings', 'menu.settings', Settings, ',', false, true],
         ['shortcuts', 'menu.shortcuts', Keyboard, 'Shift+/', false, true],
         ['welcome', 'menu.welcome', LifeBuoy, undefined, false, true],

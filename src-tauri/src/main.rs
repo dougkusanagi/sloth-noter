@@ -283,6 +283,10 @@ async fn history_maintain(app: AppHandle) -> Result<(), String> {
     history_job(move || history::maintenance(&root)).await
 }
 #[tauri::command]
+fn history_configure(days: u64, megabytes: u64) {
+    history::configure(days, megabytes);
+}
+#[tauri::command]
 async fn history_snapshot(app: AppHandle, text: String) -> Result<String, String> {
     let root = app_data_dir(&app)?.join("history");
     history_job(move || history::save_snapshot(&root, &text)).await
@@ -614,6 +618,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             history_maintain,
+            history_configure,
             history_snapshot,
             history_read,
             history_append,

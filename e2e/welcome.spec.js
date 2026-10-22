@@ -18,7 +18,7 @@ async function deleteActiveNote(page) {
 }
 
 async function runCommand(page, query) {
-  await page.keyboard.press('Control+k')
+  await page.keyboard.press('Control+Shift+p')
   const commands = page.getByRole('dialog', { name: /Paleta de comandos|Command palette/ })
   await commands.getByRole('combobox').fill(query)
   await expect(commands.getByRole('option')).toHaveCount(1)

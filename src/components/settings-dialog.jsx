@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Monitor, Sun, Moon, Palette, Type, Database, Keyboard, X } from 'lucide-react'
+import { Monitor, Sun, Moon, Palette, Type, Database, Keyboard, History, X } from 'lucide-react'
+import { HistoryPanel } from './history-panel.jsx'
 import { Modal, ShortcutList } from './dialogs.jsx'
 import { FontSlider, RangeSlider, Segmented, Switch } from './controls.jsx'
 import { CONTENT_WIDTH, FONT_SIZE, contentWidth } from '../storage.js'
@@ -15,6 +16,7 @@ const SECTIONS = [
   ['appearance', Palette],
   ['editor', Type],
   ['data', Database],
+  ['history', History],
   ['shortcuts', Keyboard],
 ]
 
@@ -54,11 +56,15 @@ export function SettingsDialog({
   sidebarVisible,
   desktop,
   folder,
+  note,
+  history,
+  initialSection = 'appearance',
+  onRestore,
   onChange,
   onRun,
   onClose,
 }) {
-  const [section, setSection] = useState('appearance')
+  const [section, setSection] = useState(initialSection)
   return (
     <Modal
       label={t('menu.settings')}
@@ -78,7 +84,7 @@ export function SettingsDialog({
           {SECTIONS.map(([id, Icon]) => (
             <button
               key={id}
-              autoFocus={id === 'appearance'}
+              autoFocus={id === section}
               aria-current={section === id ? 'page' : undefined}
               onClick={() => setSection(id)}
             >
@@ -114,6 +120,17 @@ export function SettingsDialog({
                   id="settings-tabs"
                   checked={prefs.tabsVisible}
                   onChange={(tabsVisible) => onChange({ tabsVisible })}
+                />
+              </Row>
+              <Row
+                id="settings-status"
+                title={t('settings.status')}
+                hint={t('settings.statusHint')}
+              >
+                <Switch
+                  id="settings-status"
+                  checked={prefs.statusVisible !== false}
+                  onChange={(statusVisible) => onChange({ statusVisible })}
                 />
               </Row>
               <Row
@@ -178,14 +195,6 @@ export function SettingsDialog({
             <>
               {desktop && (
                 <Action
-                  title="Histórico local"
-                  hint="Consulte versões, restaure textos e controle o histórico neste dispositivo."
-                  label="Histórico da nota"
-                  onClick={() => onRun('history')}
-                />
-              )}
-              {desktop && (
-                <Action
                   title={t('menu.folder')}
                   hint={folder || t('settings.folderHint')}
                   label={t('settings.change')}
@@ -206,6 +215,18 @@ export function SettingsDialog({
               />
             </>
           )}
+          {section === 'history' &&
+            (desktop ? (
+              <HistoryPanel
+                prefs={prefs}
+                note={note}
+                history={history}
+                onChange={onChange}
+                onRestore={onRestore}
+              />
+            ) : (
+              <p className="setting-empty">{t('history.desktopOnly')}</p>
+            ))}
           {section === 'shortcuts' && <ShortcutList />}
         </div>
       </div>

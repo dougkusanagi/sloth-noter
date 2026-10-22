@@ -34,7 +34,7 @@ async function mode(page, name) {
 }
 
 async function runCommand(page, query) {
-  await page.keyboard.press('Control+k')
+  await page.keyboard.press('Control+Shift+p')
   const commands = page.getByRole('dialog', { name: 'Paleta de comandos' })
   await commands.getByRole('combobox').fill(query)
   await expect(commands.getByRole('option')).toHaveCount(1)
@@ -136,7 +136,7 @@ test('the palette collapses and expands every section in Padrão and in Leitura'
 })
 
 test('the fold commands are hidden in the Código editor', async ({ page }) => {
-  await page.keyboard.press('Control+k')
+  await page.keyboard.press('Control+Shift+p')
   const commands = page.getByRole('dialog', { name: 'Paleta de comandos' })
   await commands.getByRole('combobox').fill('Recolher todas')
   await expect(commands.getByRole('option')).toHaveCount(0)

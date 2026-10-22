@@ -70,12 +70,19 @@ export function canGroup(a, b) {
     a.depois === b.antes
   )
 }
+export const HISTORY_DAYS = [7, 30, 90]
+export const HISTORY_LIMITS = [20, 50, 100]
+export const historyDays = (prefs) =>
+  HISTORY_DAYS.includes(prefs.historyDays) ? prefs.historyDays : 30
+export const historyLimit = (prefs) =>
+  HISTORY_LIMITS.includes(prefs.historyLimit) ? prefs.historyLimit : 20
 export function createHistory(invoke, warn = () => {}) {
   let queue = [],
     running = Promise.resolve(),
     sending = false,
     warned = false,
-    enabled = false
+    enabled = false,
+    policy = '30|20'
   let maintainedAt = Date.now()
   let lastEditAt = 0
   let queuedAt = null
@@ -135,6 +142,18 @@ export function createHistory(invoke, warn = () => {}) {
   function observe(previous, next, origin = 'sistema') {
     enabled = Boolean(invoke) && next.preferences.historyEnabled === true
     if (!enabled) return
+    const wanted = `${historyDays(next.preferences)}|${historyLimit(next.preferences)}`
+    if (wanted !== policy) {
+      policy = wanted
+      const [days, megabytes] = wanted.split('|').map(Number)
+      // Apply the new limits first, then let the next flush prune with them.
+      running = running
+        .then(() => invoke('history_configure', { days, megabytes }))
+        .then(() => {
+          maintainedAt = 0
+        })
+        .catch(fail)
+    }
     const openIds = new Set(next.openIds ?? next.notes.map((n) => n.id))
     const old = new Map(previous.notes.map((n) => [n.id, n]))
     for (const note of next.notes) {

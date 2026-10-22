@@ -291,7 +291,7 @@ test('global search shows body snippets and opens matches from another note', as
   )
   await page.keyboard.press('Control+t')
   await source(page, '# Outra nota\n\nConteúdo diferente.')
-  await page.keyboard.press('Control+Alt+f')
+  await page.keyboard.press('Control+Shift+f')
   const search = page.getByRole('textbox', { name: 'Buscar em todas as notas…' })
   await expect(search).toBeFocused()
   await search.fill('edicao')

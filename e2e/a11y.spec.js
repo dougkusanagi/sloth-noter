@@ -43,7 +43,7 @@ test('settings and the command palette have no detectable violations', async ({ 
   await expect(page.getByRole('dialog', { name: 'Configurações' })).toBeVisible()
   expect(await violations(page)).toEqual([])
   await page.keyboard.press('Escape')
-  await page.keyboard.press('Control+k')
+  await page.keyboard.press('Control+Shift+p')
   await expect(page.getByRole('dialog', { name: 'Paleta de comandos' })).toBeVisible()
   expect(await violations(page)).toEqual([])
 })

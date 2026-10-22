@@ -24,22 +24,23 @@ O aplicativo desktop usa **Tauri 2**. O fluxo de release prepara instaladores pa
 
 No desktop, você também pode associar `.md`, `.markdown` e `.txt` ao Sloth Note e abri-los pelo sistema. Arquivos abertos pelo sistema ou soltados na janela são editados no próprio local, mesmo fora da pasta de notas. Para que os arquivos de uma pasta sejam notas do app, escolha-a em **Configurações → Dados**. Solte um arquivo sobre o texto e o app pergunta se você quer editar o original ou importar uma cópia.
 
-A página Welcome pode ser excluída. Para gerar uma cópia atualizada, abra a paleta com `Ctrl+K` e escolha **Recriar página de ajuda**.
+A página Welcome pode ser excluída. Para gerar uma cópia atualizada, abra a paleta com `Ctrl+Shift+P` e escolha **Recriar página de ajuda**.
 
 ### Atalhos para começar
 
 Use `Ctrl` no Windows/Linux e `Cmd` no macOS. Atalhos como criar e fechar abas podem ser interceptados pelo navegador; no desktop, pertencem ao app.
 
-| Ação                                 | Atalho                   |
-| ------------------------------------ | ------------------------ |
-| Nova nota                            | `Ctrl+T`                 |
-| Encontrar nota pelo nome             | `Ctrl+P`                 |
-| Buscar no conteúdo de todas as notas | `Ctrl+Alt+F`             |
-| Buscar / substituir na nota atual    | `Ctrl+F` / `Ctrl+H`      |
-| Paleta de comandos                   | `Ctrl+K`                 |
-| Padrão / Código / Leitura            | `Ctrl+Alt+1` / `2` / `3` |
-| Modo de foco                         | `Ctrl+Shift+F`           |
-| Configurações                        | `Ctrl+,`                 |
+| Ação                                 | Atalho                         |
+| ------------------------------------ | ------------------------------ |
+| Nova nota                            | `Ctrl+T`                       |
+| Encontrar nota pelo nome             | `Ctrl+P`                       |
+| Buscar no conteúdo de todas as notas | `Ctrl+Shift+F`                 |
+| Buscar / substituir na nota atual    | `Ctrl+F` / `Ctrl+H`            |
+| Paleta de comandos                   | `Ctrl+Shift+P`                 |
+| Padrão / Código / Leitura            | `Ctrl+Alt+1` / `2` / `3`       |
+| Modo de foco                         | `Ctrl+Alt+F`                   |
+| Negrito / itálico / link             | `Ctrl+B` / `Ctrl+I` / `Ctrl+K` |
+| Configurações                        | `Ctrl+,`                       |
 
 A lista completa está em **Configurações → Atalhos** e na [documentação de recursos](docs/RECURSOS.md).
 

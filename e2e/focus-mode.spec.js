@@ -64,7 +64,7 @@ test('focus preserves the writing selection and supports tab navigation, find an
   await editor.press('Home')
   await editor.press('Shift+End')
   const selected = await editor.evaluate((el) => [el.selectionStart, el.selectionEnd])
-  await page.keyboard.press('Control+Shift+f')
+  await page.keyboard.press('Control+Alt+f')
   await expect(editor).toBeFocused()
   expect(await editor.evaluate((el) => [el.selectionStart, el.selectionEnd])).toEqual(selected)
   await page.keyboard.press('Control+p')
@@ -105,7 +105,7 @@ test('focus is discoverable in the main menu and command palette and remains acc
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze()
   expect(violations).toEqual([])
-  await page.keyboard.press('Control+k')
+  await page.keyboard.press('Control+Shift+p')
   await page.getByRole('combobox').fill('Modo foco')
   await page.keyboard.press('Enter')
   await expect(page.locator('.app')).toHaveClass('app')
@@ -114,7 +114,7 @@ test('focus is discoverable in the main menu and command palette and remains acc
 test('the exit control disappears when writing and appears only on corner hover or keyboard focus', async ({
   page,
 }) => {
-  await page.keyboard.press('Control+Shift+f')
+  await page.keyboard.press('Control+Alt+f')
   const button = page.getByRole('button', { name: 'Sair do modo foco', exact: true })
   await page.mouse.move(100, 200)
   await expect(button).toHaveCSS('opacity', '0')
@@ -144,7 +144,7 @@ test('touch reveals the exit without leaving focus until the button is tapped', 
     const touch = await context.newPage()
     await touch.goto('/')
     await expect(touch.locator('.cm-content')).toBeVisible()
-    await touch.keyboard.press('Control+Shift+f')
+    await touch.keyboard.press('Control+Alt+f')
     const button = touch.getByRole('button', { name: 'Sair do modo foco', exact: true })
     await expect(button).toHaveCSS('opacity', '0')
     await touch.locator('.focus-exit-region').tap({ position: { x: 10, y: 8 } })

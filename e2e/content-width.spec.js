@@ -65,7 +65,7 @@ test('Settings widens and narrows the column in all modes, remembers it, and can
 test('the palette makes the column wider or narrower by one step', async ({ page }) => {
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
   const run = async (query) => {
-    await page.keyboard.press('Control+k')
+    await page.keyboard.press('Control+Shift+p')
     const commands = page.getByRole('dialog', { name: 'Paleta de comandos' })
     await commands.getByRole('combobox').fill(query)
     await expect(commands.getByRole('option')).toHaveCount(1)

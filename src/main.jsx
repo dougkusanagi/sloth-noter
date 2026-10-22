@@ -1,6 +1,5 @@
 import { createHistory } from './history.js'
 import { pasteGesture } from './paste-intent.js'
-import { HistoryDialog } from './components/history-dialog.jsx'
 import { quickOpenNotes } from './quick-open.js'
 import { textStatistics } from './text-statistics.js'
 import { ChangeSet } from '@codemirror/state'
@@ -44,6 +43,7 @@ import { ImageLibrary } from './components/image-library.jsx'
 import { readNoteFile, splitDrop } from './note-drop.js'
 import { externalNote, isExternalNote } from './external-notes.js'
 import { appShortcut } from './shortcuts.js'
+import { formatShortcut, shortcutEdit } from './editor-shortcuts.js'
 import { searchNote, replacementText } from './find.js'
 import { setSearchHighlights, revealSearchMatch } from './editor/search.js'
 import {
@@ -168,7 +168,7 @@ function App() {
 function Workspace({ persistence, loaded }) {
   const current = useRef(loaded.document)
   const [data, setData] = useState(loaded.document)
-  const [historyOpen, setHistoryOpen] = useState(false)
+  const [settingsSection, setSettingsSection] = useState('appearance')
   const [noteHistory] = useState(
     () =>
       persistence.history ??
@@ -568,6 +568,18 @@ function Workspace({ persistence, loaded }) {
     if (raw !== normalized) requestAnimationFrame(() => field.setSelectionRange(from, to))
   }
   function wrapSourceSelection(event) {
+    const shortcut = formatShortcut(event)
+    if (shortcut) {
+      const field = event.currentTarget
+      const edit = shortcutEdit(field.value, field.selectionStart, field.selectionEnd, shortcut)
+      if (!edit) return
+      event.preventDefault()
+      event.stopPropagation()
+      field.setRangeText(edit.insert, edit.from, edit.to, 'preserve')
+      field.setSelectionRange(edit.selectionFrom, edit.selectionTo)
+      updateBody(field.value)
+      return
+    }
     if (
       !event.isComposing &&
       event.ctrlKey &&
@@ -2029,8 +2041,17 @@ function Workspace({ persistence, loaded }) {
         const welcome = welcomeNote(prefs.language)
         createNote(welcome.name, welcome.body)
       }, false),
-    history: () => runMenu(() => setHistoryOpen(true), false),
-    settings: () => runMenu(() => setSettingsOpen(true), false),
+    history: () =>
+      runMenu(() => {
+        setSettingsSection('history')
+        setSettingsOpen(true)
+      }, false),
+    status: () => runMenu(() => updatePrefs({ statusVisible: prefs.statusVisible === false })),
+    settings: () =>
+      runMenu(() => {
+        setSettingsSection('appearance')
+        setSettingsOpen(true)
+      }, false),
     commands: () =>
       runMenu(() => {
         returnFocus.current = document.activeElement
@@ -2534,7 +2555,7 @@ function Workspace({ persistence, loaded }) {
                     </div>
                   </details>
                 )}
-                {selectionStats && (
+                {prefs.statusVisible !== false && selectionStats && (
                   <span
                     className="selection-statistics"
                     aria-label={t('document.selection')}
@@ -2548,13 +2569,18 @@ function Workspace({ persistence, loaded }) {
                     <span>{selectedCount('document.lines', selectionStats.lines)}</span>
                   </span>
                 )}
-                <span
-                  className="document-statistics"
-                  aria-label={t('document.total', { words: wordCount, characters: characterCount })}
-                >
-                  <span>{t('document.words', { count: wordCount })}</span>
-                  <span>{t('document.characters', { count: characterCount })}</span>
-                </span>
+                {prefs.statusVisible !== false && (
+                  <span
+                    className="document-statistics"
+                    aria-label={t('document.total', {
+                      words: wordCount,
+                      characters: characterCount,
+                    })}
+                  >
+                    <span>{t('document.words', { count: wordCount })}</span>
+                    <span>{t('document.characters', { count: characterCount })}</span>
+                  </span>
+                )}
               </>
             )}
             <fieldset className="mode-switch">
@@ -2584,31 +2610,6 @@ function Workspace({ persistence, loaded }) {
           </footer>
         </section>
       </div>
-      {historyOpen && active && (
-        <HistoryDialog
-          note={active}
-          history={noteHistory}
-          theme={prefs.theme}
-          onTheme={(theme) => updatePrefs({ theme })}
-          enabled={prefs.historyEnabled === true}
-          onToggle={() => updatePrefs({ historyEnabled: prefs.historyEnabled !== true })}
-          onClose={() => {
-            setHistoryOpen(false)
-            focusEditor()
-          }}
-          onRestore={(body) => {
-            noteHistory.record(
-              { ...active, revision: active.revision + 1 },
-              active.body,
-              body,
-              'restauracao',
-            )
-            updateBody(body)
-            setHistoryOpen(false)
-            focusEditor()
-          }}
-        />
-      )}
       {shortcutsOpen && (
         <ShortcutsDialog
           onClose={() => {
@@ -2649,6 +2650,20 @@ function Workspace({ persistence, loaded }) {
           sidebarVisible={sidebarVisible}
           folder={persistence.kind === 'vault' ? persistence.label : ''}
           desktop={Boolean(persistence.invoke)}
+          note={active}
+          history={noteHistory}
+          initialSection={settingsSection}
+          onRestore={(body) => {
+            noteHistory.record(
+              { ...active, revision: active.revision + 1 },
+              active.body,
+              body,
+              'restauracao',
+            )
+            updateBody(body)
+            setSettingsOpen(false)
+            focusEditor()
+          }}
           onChange={updatePrefs}
           onRun={(id) => {
             setSettingsOpen(false)

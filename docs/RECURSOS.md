@@ -2,7 +2,7 @@
 
 Comportamento atual do editor. O resumo do produto está no [README](../README.md).
 
-**Ctrl+K** abre a paleta de comandos: todas as ações do app em uma lista pesquisável (as indisponíveis ficam ocultas), com os atalhos ao lado. **Ctrl+P** continua sendo a busca de notas. **Ctrl+,** abre as Configurações (tema, idioma, tamanho do texto, abas, biblioteca, pasta de notas, backup e atalhos); as mudanças valem na hora. Alertas aparecem como toasts empilhados no canto superior direito; o de falha de gravação continua visível até o problema sumir e traz as ações de backup.
+**Ctrl+Shift+P** abre a paleta de comandos: todas as ações do app em uma lista pesquisável (as indisponíveis ficam ocultas), com os atalhos ao lado. **Ctrl+P** continua sendo a busca de notas. **Ctrl+,** abre as Configurações (tema, idioma, tamanho do texto, abas, biblioteca, pasta de notas, backup e atalhos); as mudanças valem na hora. Alertas aparecem como toasts empilhados no canto superior direito; o de falha de gravação continua visível até o problema sumir e traz as ações de backup.
 
 A biblioteca mostra o título e uma prévia de uma linha de cada nota, e a busca procura no nome e no texto. Nomes que começam com sintaxe Markdown (`- [ ]`, `![[`) aparecem sem ela; o arquivo não muda. Na aba de imagens, as miniaturas aparecem em grade com a situação de uso.
 
@@ -28,11 +28,11 @@ A Leitura usa `react-markdown` com `remark-gfm`: CommonMark, títulos H1–H6, l
 
 ### Seções
 
-Os títulos H2–H6 organizam a nota em seções. Passe o mouse sobre um título (ou foque a seta com o teclado) e clique na seta para recolher a seção e suas subseções; no modo Padrão fica uma etiqueta “⋯ N linhas ocultas” que também expande. Mover o cursor ou a seleção para dentro do trecho recolhido o revela. **Recolher todas as seções** e **Expandir todas as seções** estão na paleta de comandos (Ctrl+K), nos modos Padrão e Leitura. Recolher é só da tela: o Markdown não muda, e na Leitura o estado é lembrado por nota enquanto o app está aberto.
+Os títulos H2–H6 organizam a nota em seções. Passe o mouse sobre um título (ou foque a seta com o teclado) e clique na seta para recolher a seção e suas subseções; no modo Padrão fica uma etiqueta “⋯ N linhas ocultas” que também expande. Mover o cursor ou a seleção para dentro do trecho recolhido o revela. **Recolher todas as seções** e **Expandir todas as seções** estão na paleta de comandos (Ctrl+Shift+P), nos modos Padrão e Leitura. Recolher é só da tela: o Markdown não muda, e na Leitura o estado é lembrado por nota enquanto o app está aberto.
 
 As seções não recuam o texto nem recebem linhas; só as sublistas ganham uma linha pontilhada discreta sob o marcador do item pai, nos modos Padrão e Leitura.
 
-**Largura do texto:** Configurações → Editor tem um controle (520–1400 px, padrão 760) para a coluna de texto, que vale para os três modos e se ajusta sozinha em janelas estreitas. A paleta (Ctrl+K) tem “Coluna de texto mais larga/estreita”, que mudam 40 px por vez.
+**Largura do texto:** Configurações → Editor tem um controle (520–1400 px, padrão 760) para a coluna de texto, que vale para os três modos e se ajusta sozinha em janelas estreitas. A paleta (Ctrl+Shift+P) tem “Coluna de texto mais larga/estreita”, que mudam 40 px por vez.
 
 ### Padrão e Leitura têm o mesmo layout
 
@@ -40,7 +40,7 @@ Mudar entre Padrão e Leitura não move nada: o espaço antes de cada bloco é o
 
 ### Página de ajuda
 
-`Welcome.md` é uma nota comum que serve de ajuda e de exemplo: mostra títulos H1–H6, ênfase, riscado, código em linha, escapes, quebra de linha, links (com texto, automáticos, entre sinais, por referência e internos), tags, imagem, citações aninhadas, listas aninhadas, ordenadas e de tarefas, tabela com alinhamento, blocos de código com realce, separador e nota de rodapé, e explica os atalhos principais. A imagem vem de uma URL HTTPS do repositório do projeto, então só aparece com conexão. Ela pode ser excluída sem perda: **Recriar página de ajuda** (paleta de comandos, Ctrl+K, ou menu → Aplicativo) cria uma cópia nova com o texto original, no idioma atual da interface. Se já existir uma nota com esse nome, a cópia recebe um sufixo (`Welcome (2).md`) e a existente não é alterada.
+`Welcome.md` é uma nota comum que serve de ajuda e de exemplo: mostra títulos H1–H6, ênfase, riscado, código em linha, escapes, quebra de linha, links (com texto, automáticos, entre sinais, por referência e internos), tags, imagem, citações aninhadas, listas aninhadas, ordenadas e de tarefas, tabela com alinhamento, blocos de código com realce, separador e nota de rodapé, e explica os atalhos principais. A imagem vem de uma URL HTTPS do repositório do projeto, então só aparece com conexão. Ela pode ser excluída sem perda: **Recriar página de ajuda** (paleta de comandos, Ctrl+Shift+P, ou menu → Aplicativo) cria uma cópia nova com o texto original, no idioma atual da interface. Se já existir uma nota com esse nome, a cópia recebe um sufixo (`Welcome (2).md`) e a existente não é alterada.
 
 ### Importar notas arrastando
 
@@ -48,7 +48,7 @@ Soltar arquivos `.md`, `.markdown` ou `.txt` (UTF-8, até 5 MB) na janela, fora 
 
 ### Busca em todas as notas
 
-O campo **Buscar em todas as notas…** na biblioteca pesquisa títulos e conteúdo, ignorando diferenças de maiúsculas e acentos. O resultado mostra um trecho com destaque e a quantidade de ocorrências. Clique para abrir a nota na primeira ocorrência; a busca da nota permite navegar pelas demais. O menu e a paleta também oferecem **Buscar em todas as notas** (`Ctrl+Alt+F`). `Ctrl+P` encontra notas pelo nome; `Ctrl+F` e `Ctrl+H` buscam e substituem no documento atual.
+O campo **Buscar em todas as notas…** na biblioteca pesquisa títulos e conteúdo, ignorando diferenças de maiúsculas e acentos. O resultado mostra um trecho com destaque e a quantidade de ocorrências. Clique para abrir a nota na primeira ocorrência; a busca da nota permite navegar pelas demais. O menu e a paleta também oferecem **Buscar em todas as notas** (`Ctrl+Shift+F`). `Ctrl+P` encontra notas pelo nome; `Ctrl+F` e `Ctrl+H` buscam e substituem no documento atual.
 
 ### Imagens
 
@@ -89,25 +89,31 @@ O menu **Atalhos de teclado** (e **Configurações → Atalhos**) lista as combi
 | ------------------------------------------------- | ------------------------------------ |
 | Nova nota / buscar nota / buscar texto            | Ctrl+T / Ctrl+P / Ctrl+F             |
 | Fechar aba / renomear / mover para lixeira        | Ctrl+W / F2 / Ctrl+Shift+Delete      |
-| Importar / exportar Markdown                      | Ctrl+I / Ctrl+E                      |
+| Importar / exportar Markdown                      | Ctrl+O / Ctrl+E                      |
 | Biblioteca de imagens                             | Ctrl+Shift+L                         |
-| Paleta de comandos / configurações                | Ctrl+K / Ctrl+,                      |
+| Paleta de comandos / configurações                | Ctrl+Shift+P / Ctrl+,                |
 | Backup / pasta de notas (desktop)                 | Ctrl+Shift+S / Ctrl+Shift+O          |
-| Mostrar ou ocultar biblioteca                     | Ctrl+B                               |
+| Mostrar ou ocultar biblioteca                     | Ctrl+\                               |
 | Padrão / Código / Leitura                         | Ctrl+Alt+1 / Ctrl+Alt+2 / Ctrl+Alt+3 |
+| Modo de foco                                      | Ctrl+Alt+F                           |
+| Negrito / itálico / tachado                       | Ctrl+B / Ctrl+I / Ctrl+Shift+X       |
+| Código em linha / link                            | Ctrl+` / Ctrl+K                      |
+| Lista / citação                                   | Ctrl+Shift+8 / Ctrl+Shift+.          |
 | Ajuda de atalhos                                  | Ctrl+Shift+/                         |
 | Tamanho de texto: aumentar / diminuir / restaurar | Ctrl++ / Ctrl+- / Ctrl+0             |
 
 ## Histórico local de alterações (desktop)
 
-No menu principal ou na paleta de comandos, abra **Histórico da nota**. A tela mostra
-horário, origem, texto removido e inserido e alertas de remoção grande ou colagem sem gesto.
+Em **Configurações → Histórico** (também pelo menu ou pela paleta, em **Histórico de versões**),
+ligue o histórico, escolha por quanto tempo guardar (7, 30 ou 90 dias) e o espaço máximo
+(20, 50 ou 100 MB). A mesma tela lista as versões da nota aberta, com horário, origem, texto
+removido e inserido e alertas de remoção grande ou colagem sem gesto.
 **Restaurar esta versão** recupera o texto e registra a restauração como outra alteração.
-Nas configurações, em Dados, há um atalho para a mesma tela.
+Há botões para limpar o histórico da nota ou de todas as notas.
 
 O histórico fica em `<app_data_dir>/history/`, fora do vault. Os diários JSONL são
 compactados nos dias seguintes; cópias completas usam gzip e SHA-256 para não repetir conteúdo.
-O limite é de 30 dias ou 20 MB, preservando a última cópia de abertura de arquivos externos.
+Por padrão o limite é de 30 dias ou 20 MB, preservando a última cópia de abertura de arquivos externos.
 Essa cópia protegida pode exceder os limites até outra abertura substituí-la.
 
 O histórico começa desligado, inclusive para preferências antigas sem essa opção. Para usá-lo,
