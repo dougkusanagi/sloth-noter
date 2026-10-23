@@ -337,9 +337,11 @@ test('rename fits narrow enlarged text and desktop; controls keep touch targets'
     await page.evaluate(() => {
       document.documentElement.style.fontSize = '200%'
     })
-    for (const button of await page
-      .locator('.mobile-header button, .mobile-note-row:first-child > button')
-      .all()) {
+    const buttons = [
+      ...(await page.locator('.mobile-header button').all()),
+      ...(await page.locator('.mobile-note-row').first().getByRole('button').all()),
+    ]
+    for (const button of buttons) {
       const box = await button.boundingBox()
       expect(box.width).toBeGreaterThanOrEqual(48)
       expect(box.height).toBeGreaterThanOrEqual(48)
@@ -353,5 +355,146 @@ test('rename fits narrow enlarged text and desktop; controls keep touch targets'
     await page.screenshot({ path: testInfo.outputPath(`rename-${width}.png`) })
     await page.getByRole('button', { name: 'Cancelar', exact: true }).tap()
     await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
+  }
+})
+
+async function dragNote(
+  page,
+  { id = 'shopping', dx = -130, dy = 0, startX, cancel = false, beforeRelease } = {},
+) {
+  const note = page.locator(`[data-note-id="${id}"]`)
+  const box = await note.boundingBox()
+  const x = startX ?? box.x + box.width - 12
+  const y = box.y + box.height / 2
+  const touch = await page.context().newCDPSession(page)
+  await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] })
+  for (let step = 1; step <= 8; step++) {
+    await touch.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: x + (dx * step) / 8, y: y + (dy * step) / 8 }],
+    })
+  }
+  if (beforeRelease) await beforeRelease()
+  await touch.send('Input.dispatchTouchEvent', {
+    type: cancel ? 'touchCancel' : 'touchEnd',
+    touchPoints: [],
+  })
+  await touch.detach()
+}
+
+test('swipe trashes an open, pinned search result once and undo keeps context', async ({
+  page,
+}) => {
+  await page.getByRole('searchbox').fill('compras')
+  await page.locator('[data-note-id="shopping"]').tap()
+  await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
+  await page.getByRole('button', { name: 'Ações de Compras', exact: true }).tap()
+  await page.getByRole('button', { name: 'Fixar nota', exact: true }).tap()
+  await dragNote(page)
+  await expect(page.locator('[data-note-id="shopping"]')).toHaveCount(0)
+  await expect(page.getByRole('searchbox')).toHaveValue('compras')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.locator('.markdown')).toHaveCount(0)
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (key) =>
+          JSON.parse(localStorage.getItem(key)).trash.filter(
+            (entry) => entry.note.id === 'shopping',
+          ).length,
+        STORAGE_KEY,
+      ),
+    )
+    .toBe(1)
+  await page.getByRole('button', { name: 'Desfazer', exact: true }).tap()
+  await expect(page.locator('[data-note-id="shopping"]')).toBeVisible()
+  await expect(page.locator('[data-note-id="shopping"] svg')).toHaveAttribute(
+    'aria-label',
+    'Fixada',
+  )
+  await expect(page.getByRole('searchbox')).toHaveValue('compras')
+  await page.locator('[data-note-id="shopping"]').tap()
+  await expect(page.locator('.markdown')).toContainText('Frutas')
+})
+
+test('short, vertical, reverse, edge and cancelled drags do not trash or open a note', async ({
+  page,
+}) => {
+  for (const gesture of [
+    { dx: -45 },
+    { dx: -100, dy: -100 },
+    { dx: 100, startX: 80 },
+    { dx: -100, startX: 20 },
+    { dx: -100, startX: 400 },
+    { cancel: true },
+  ]) {
+    await dragNote(page, gesture)
+    await expect(page.locator('[data-note-id="shopping"]')).toBeVisible()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page.locator('.markdown')).toHaveCount(0)
+  }
+})
+
+test('swiping a scrolled list preserves its scroll and supports undo', async ({ page }) => {
+  await page.locator('[data-note-id="note-30"]').scrollIntoViewIfNeeded()
+  const before = await page.locator('.mobile-content').evaluate((el) => el.scrollTop)
+  await dragNote(page, { id: 'note-30' })
+  await expect(page.locator('[data-note-id="note-30"]')).toHaveCount(0)
+  expect(await page.locator('.mobile-content').evaluate((el) => el.scrollTop)).toBe(before)
+  await page.getByRole('button', { name: 'Desfazer', exact: true }).tap()
+  await expect(page.locator('[data-note-id="note-30"]')).toBeVisible()
+  expect(await page.locator('.mobile-content').evaluate((el) => el.scrollTop)).toBe(before)
+})
+
+test('gesture cancels after changing to vertical movement or scrolling; duplicate release is harmless', async ({
+  page,
+}) => {
+  const note = page.locator('[data-note-id="shopping"]')
+  const point = { pointerId: 17, isPrimary: true, button: 0, clientX: 240, clientY: 240 }
+  for (const reason of ['vertical', 'scroll']) {
+    await note.dispatchEvent('pointerdown', point)
+    await note.dispatchEvent('pointermove', { ...point, clientX: 210 })
+    if (reason === 'vertical')
+      await note.dispatchEvent('pointermove', { ...point, clientX: 110, clientY: 380 })
+    else await page.locator('.mobile-content').dispatchEvent('scroll')
+    await note.dispatchEvent('pointerup', { ...point, clientX: 110 })
+    await expect(note).toBeVisible()
+  }
+  const row = note.locator('xpath=ancestor::*[contains(@class,"mobile-swipe-row")]')
+  await note.dispatchEvent('pointerdown', point)
+  await note.dispatchEvent('pointermove', { ...point, clientX: 110 })
+  await row.evaluate((el, point) => {
+    el.dispatchEvent(new PointerEvent('pointerup', { ...point, clientX: 110, bubbles: true }))
+    el.dispatchEvent(new PointerEvent('pointerup', { ...point, clientX: 110, bubbles: true }))
+  }, point)
+  await expect(note).toHaveCount(0)
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (key) =>
+          JSON.parse(localStorage.getItem(key)).trash.filter(
+            (entry) => entry.note.id === 'shopping',
+          ).length,
+        STORAGE_KEY,
+      ),
+    )
+    .toBe(1)
+})
+
+test('swipe feedback fits mobile and desktop with long titles', async ({ page }, testInfo) => {
+  for (const width of [320, 1280]) {
+    await page.setViewportSize({ width, height: 844 })
+    await dragNote(page, {
+      id: 'long',
+      cancel: true,
+      beforeRelease: async () => {
+        await expect(page.locator('[data-swipe-ready]')).toHaveCount(1)
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+          true,
+        )
+        await page.screenshot({ path: testInfo.outputPath(`swipe-${width}.png`) })
+      },
+    })
+    await expect(page.locator('[data-note-id="long"]')).toBeVisible()
   }
 })

@@ -40,7 +40,7 @@ Executar 2.1 → 2.2 → 2.3 → 2.4. Essa sequência vem antes da fase 3.
       afetados para 48 × 48 dp, preservando tema visível e acesso ao título em 320 dp/fonte ampliada.
       Pronto: E2E dos caminhos por botão/toque longo, renomeação/cancelamento/erro, referências, foco e
       inspeção mobile/desktop. Fora do incremento: deslizar e compartilhar.
-- [ ] **2.2 — Deslizar para lixeira.** Depende de 2.1. Cancelar com rolagem vertical ou gesto pela borda,
+- [x] **2.2 — Deslizar para lixeira.** Depende de 2.1. Cancelar com rolagem vertical ou gesto pela borda,
       impedir acionamentos duplicados e preservar desfazer e contexto. Pronto: regressões de gesto,
       cancelamento, exclusão e desfazer; verificar nota aberta e busca ativa.
 - [ ] **2.3 — Compartilhar texto.** Depende de 2.1/2.2. Implementar adaptador Android e ação na folha
@@ -160,12 +160,29 @@ inválidos e repetidos e atualiza referências wiki nas notas e na lixeira. O to
 com movimento/rolagem e não abre a nota ao soltar. A verificação usa navegador; teclado Android
 real e ciclo nativo continuam previstos em 2.4/4.1, sem aprovação nativa nesta entrega.
 
+Na etapa 2.2 (2026-10-23) passaram localmente: 301 testes JavaScript (`bun run test`),
+39 testes Rust (`bun run desktop:test`) e 315 E2E (`bun run e2e --workers=1`, incluindo 34 mobile),
+além de lint, build e formatação dos arquivos alterados. A rodada final gerenciou seu próprio
+servidor pelo Playwright e passou sem falhas. Rodadas anteriores tiveram falhas desktop de foco
+em paralelo e uma queda do servidor reutilizado; não foram usadas como aprovação da suíte.
+Eventos reais de toque cobrem exclusão de nota aberta/fixada com busca ativa, desfazer com
+fixação, manutenção da rolagem, arrastes curtos/verticais/reversos/pelas bordas, cancelamento,
+mudança para vertical e soltura duplicada. Capturas em 320 px e desktop foram conferidas,
+assim como a entrada de Novidades e sua imagem local. Gesto do sistema no aparelho Android
+continua na validação nativa de 2.4; esta etapa qualifica a interface no navegador.
+
 Em cada entrega, registrar testes executados e limitações reais. Vincular os problemas #1–24 do v2 a
 testes/checklists com ambiente e resultado; screenshots devem ser inspecionadas. Usar notas longas,
 palavras sem espaços, tabelas válidas de 12 colunas e tabelas iguais, 300 notas e imagens locais com
 proporções variadas quando a tela as exibir. Falhas e dados inválidos ficam em testes específicos.
 
 ## Tentativas que falharam
+
+- Em 2.2, capturar explicitamente o ponteiro de toque na linha interferia na captura implícita
+  do botão. O componente mantém a captura nativa de toque. Reconhecer o arraste apenas pelos
+  eventos de ponteiro também permitia ao Chromium suprimir o clique seguinte no Desfazer;
+  bloquear o `touchmove` somente após reconhecer movimento horizontal resolveu o caso,
+  preservando a rolagem vertical. A regressão usa eventos reais de toque.
 
 - A prévia colaborativa falhou duas vezes com `Preview automation snapshot timed out after 15000ms.`
   A inspeção visual da integração inicial usou o Playwright existente; não é uma limitação permanente.
@@ -190,8 +207,9 @@ decisões locais ficam neste plano e, ao concluir, seus fatos duráveis vão par
 
 ## Próximo passo
 
-**Executar somente 2.2 — deslizar para lixeira**, com cancelamento por rolagem vertical ou gesto
-pela borda, proteção contra acionamentos duplicados, desfazer e preservação de contexto.
-A etapa 2.1 está concluída; não iniciar 2.2 no mesmo pedido. Compartilhar continua em 2.3.
+**Executar somente 2.3 — compartilhar texto**, com adaptador Android, ação na folha da lista
+e alternativa explícita de copiar na prévia web quando compartilhar estiver indisponível.
+Validar sucesso, cancelamento, falha, envio único e o fluxo no APK. Não inclui arquivo `.md`,
+exportação ou recebimento. As etapas 2.1 e 2.2 estão concluídas; não iniciar 2.3 no mesmo pedido.
 Informar esse escopo antes de começar; encerrar a etapa com testes, atualização deste plano,
 commit e push da etapa completa. Não iniciar fase 3 nem outra etapa no mesmo pedido.

@@ -528,3 +528,33 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-create {
 [data-platform='mobile'] .mobile-sheet form p {
   color: var(--danger);
 }
+
+[data-platform='mobile'] .mobile-swipe-row {
+  position: relative;
+  overflow: hidden;
+  touch-action: pan-y pinch-zoom;
+}
+[data-platform='mobile'] .mobile-swipe-content {
+  position: relative;
+  background: var(--bg);
+}
+[data-platform='mobile'] .mobile-swipe-hint:not([hidden]) {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px;
+  color: var(--danger);
+  background: var(--paper);
+  font-size: 0.875rem;
+}
+[data-platform='mobile'] .mobile-swipe-hint span {
+  max-width: 90px;
+  overflow-wrap: anywhere;
+}
+[data-platform='mobile'] .mobile-swipe-row[data-swipe-ready] .mobile-swipe-hint {
+  box-shadow: inset 0 -2px var(--danger);
+}

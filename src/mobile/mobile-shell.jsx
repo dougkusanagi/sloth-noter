@@ -37,6 +37,7 @@ import { t } from '../i18n.js'
 import { useInsets } from './use-insets.js'
 import { useNavigation } from './use-navigation.js'
 import { newMobileNote, renameMobileNote, updateMobileNote } from './note-actions.js'
+import { SwipeNoteRow } from './swipe-note-row.jsx'
 import './mobile.css'
 
 const destinations = [
@@ -298,13 +299,33 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     if (note) openNote(note.id)
     else toast.info(t('mobile.missingNote', { name: target }))
   }
-  function removeNote(id) {
-    commit(moveToTrash(current.current, id, Date.now()))
-    back()
+  function removeNote(id, closeSheet = true) {
+    const before = current.current
+    const index = before.notes.findIndex((note) => note.id === id)
+    if (blocked || index < 0) return
+    const wasPinned = before.pinnedIds?.includes(id)
+    const next = moveToTrash(before, id, Date.now())
+    commit(next)
+    if (closeSheet) back()
+    else {
+      const focusId = next.notes[Math.min(index, next.notes.length - 1)]?.id
+      requestAnimationFrame(() => {
+        const target = Array.from(content.current?.querySelectorAll('[data-note-id]') ?? []).find(
+          (item) => item.dataset.noteId === focusId,
+        )
+        ;(target ?? heading.current)?.focus({ preventScroll: true })
+      })
+    }
     toast(t('mobile.trashed'), {
       action: {
         label: t('mobile.undo'),
-        onClick: () => commit(restoreFromTrash(current.current, id)),
+        onClick: () => {
+          if (!current.current.trash.some((entry) => entry.note.id === id)) return
+          const restored = restoreFromTrash(current.current, id)
+          commit(
+            wasPinned ? { ...restored, pinnedIds: [...(restored.pinnedIds ?? []), id] } : restored,
+          )
+        },
       },
     })
   }
@@ -467,70 +488,80 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               {query.trim() ? t('mobile.results') : t('menu.notes')} <span>{results.length}</span>
             </h2>
             {results.map(({ note, result }) => (
-              <div className="mobile-note-row" key={note.id}>
-                <button
-                  data-note-id={note.id}
-                  className="mobile-note-open"
-                  onPointerDown={(event) => {
-                    if (!event.isPrimary || event.button !== 0) return
-                    cancelPress()
-                    suppressClick.current = false
-                    const target = event.currentTarget
-                    press.current = {
-                      x: event.clientX,
-                      y: event.clientY,
-                      timer: setTimeout(() => {
-                        suppressClick.current = true
-                        target.focus({ preventScroll: true })
-                        dispatch({ type: 'layer', route: { name: 'sheet', id: note.id } })
-                      }, 550),
-                    }
-                  }}
-                  onPointerMove={(event) => {
-                    if (
-                      press.current &&
-                      Math.hypot(event.clientX - press.current.x, event.clientY - press.current.y) >
-                        10
-                    )
+              <SwipeNoteRow
+                key={note.id}
+                enabled={!blocked && !layer}
+                onTrash={() => removeNote(note.id, false)}
+              >
+                <div className="mobile-note-row">
+                  <button
+                    data-note-id={note.id}
+                    className="mobile-note-open"
+                    onPointerDown={(event) => {
+                      if (!event.isPrimary || event.button !== 0) return
                       cancelPress()
-                  }}
-                  onPointerUp={cancelPress}
-                  onPointerCancel={cancelPress}
-                  onContextMenu={(event) => event.preventDefault()}
-                  onClick={() => {
-                    if (suppressClick.current) {
                       suppressClick.current = false
-                      return
+                      const target = event.currentTarget
+                      press.current = {
+                        x: event.clientX,
+                        y: event.clientY,
+                        timer: setTimeout(() => {
+                          suppressClick.current = true
+                          target.focus({ preventScroll: true })
+                          dispatch({ type: 'layer', route: { name: 'sheet', id: note.id } })
+                        }, 550),
+                      }
+                    }}
+                    onPointerMove={(event) => {
+                      if (
+                        press.current &&
+                        Math.hypot(
+                          event.clientX - press.current.x,
+                          event.clientY - press.current.y,
+                        ) > 10
+                      )
+                        cancelPress()
+                    }}
+                    onPointerUp={cancelPress}
+                    onPointerCancel={cancelPress}
+                    onContextMenu={(event) => event.preventDefault()}
+                    onClick={() => {
+                      if (suppressClick.current) {
+                        suppressClick.current = false
+                        return
+                      }
+                      openNote(note.id)
+                    }}
+                  >
+                    <span className="mobile-note-title">
+                      {data.pinnedIds?.includes(note.id) && (
+                        <Pin size={14} aria-label={t('mobile.pinned')} />
+                      )}
+                      {displayName(note.name)}
+                    </span>
+                    <span className="mobile-note-preview">
+                      {result.snippet ? (
+                        <>
+                          {result.snippet.before}
+                          <mark>{result.snippet.hit}</mark>
+                          {result.snippet.after}
+                        </>
+                      ) : (
+                        notePreview(note.body) || t('mobile.emptyNote')
+                      )}
+                    </span>
+                  </button>
+                  <button
+                    className="mobile-icon"
+                    aria-label={t('mobile.noteActions', { name: displayName(note.name) })}
+                    onClick={() =>
+                      dispatch({ type: 'layer', route: { name: 'sheet', id: note.id } })
                     }
-                    openNote(note.id)
-                  }}
-                >
-                  <span className="mobile-note-title">
-                    {data.pinnedIds?.includes(note.id) && (
-                      <Pin size={14} aria-label={t('mobile.pinned')} />
-                    )}
-                    {displayName(note.name)}
-                  </span>
-                  <span className="mobile-note-preview">
-                    {result.snippet ? (
-                      <>
-                        {result.snippet.before}
-                        <mark>{result.snippet.hit}</mark>
-                        {result.snippet.after}
-                      </>
-                    ) : (
-                      notePreview(note.body) || t('mobile.emptyNote')
-                    )}
-                  </span>
-                </button>
-                <button
-                  className="mobile-icon"
-                  aria-label={t('mobile.noteActions', { name: displayName(note.name) })}
-                  onClick={() => dispatch({ type: 'layer', route: { name: 'sheet', id: note.id } })}
-                >
-                  <MoreHorizontal size={20} />
-                </button>
-              </div>
+                  >
+                    <MoreHorizontal size={20} />
+                  </button>
+                </div>
+              </SwipeNoteRow>
             ))}
             {!results.length && (
               <div className="mobile-empty">
