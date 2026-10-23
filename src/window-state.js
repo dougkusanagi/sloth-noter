@@ -33,6 +33,7 @@ function runningInTauri() {
 }
 
 export async function restoreWindowState() {
+  if (/Android/i.test(navigator.userAgent)) return () => {}
   if (!runningInTauri()) return () => {}
   const appWindow = getCurrentWindow()
   const saved = readState()

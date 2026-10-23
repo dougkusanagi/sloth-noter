@@ -14,6 +14,7 @@ export const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform)
 
 /** Minimize, maximize and close. On macOS they are the traffic lights at the left. */
 export function WindowControls({ mac = false }) {
+  if (/Android/i.test(navigator.userAgent)) return null
   const run = async (action) => {
     try {
       await getCurrentWindow()[action]()

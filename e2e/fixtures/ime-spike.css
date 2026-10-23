@@ -1,0 +1,40 @@
+body {
+  overflow: auto;
+}
+.ime-spike {
+  padding: max(16px, env(safe-area-inset-top)) 16px 24px;
+  max-width: 800px;
+  margin: auto;
+}
+.ime-spike header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ime-spike h1 {
+  font-size: 20px;
+}
+.ime-spike select {
+  min-height: 44px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.ime-spike p {
+  font-size: 14px;
+}
+.ime-spike .visual-editor {
+  min-height: 260px;
+}
+.ime-spike .cm-content {
+  padding: 12px 0;
+  font-size: 18px;
+}
+.ime-spike pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ime-spike summary {
+  padding: 12px 0;
+}

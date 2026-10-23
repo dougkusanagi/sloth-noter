@@ -1,0 +1,10 @@
+/* Loaded only by the mobile shell; every rule stays under [data-platform='mobile']. */
+/* Insets come from public/insets-boot.js. Ime is max()ed with the gesture bar, never added. */
+[data-platform='mobile'] {
+  box-sizing: border-box;
+  height: 100dvh;
+  padding: max(var(--inset-top, 0px), env(safe-area-inset-top, 0px))
+    max(var(--inset-right, 0px), env(safe-area-inset-right, 0px))
+    max(var(--inset-bottom, 0px), var(--ime-bottom, 0px), env(safe-area-inset-bottom, 0px))
+    max(var(--inset-left, 0px), env(safe-area-inset-left, 0px));
+}
