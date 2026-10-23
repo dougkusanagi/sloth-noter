@@ -1,0 +1,1876 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sloth Note Android — protótipo (plano v2)</title>
+    <style>
+      /* Tokens copied from src/styles.css so the prototype matches the product. */
+      :root {
+        --bg: #f7f6f2;
+        --ink: #23221e;
+        --muted: #67645d;
+        --soft: #e8e5de;
+        --paper: #fcfbf8;
+        --raised: #f1efe8;
+        --accent: #a65427;
+        --on-accent: #fff;
+        --ok: #2a7347;
+        --danger: #b3382a;
+        --line: color-mix(in srgb, var(--ink) 11%, transparent);
+        --active: color-mix(in srgb, var(--accent) 13%, transparent);
+        --ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --mono: ui-monospace, Menlo, Consolas, monospace;
+        --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+        /* Simulated insets (set by the control panel; in the app, by MainActivity.kt). */
+        --inset-top: 32px;
+        --inset-bottom: 24px;
+        --ime-bottom: 0px;
+        --font-scale: 1;
+      }
+      [data-theme='dark'] {
+        --bg: #171715;
+        --ink: #ece9e2;
+        --muted: #aaa69d;
+        --soft: #30302d;
+        --paper: #1d1d1a;
+        --raised: #2b2b27;
+        --accent: #e2a074;
+        --on-accent: #1d140d;
+        --ok: #6cc58c;
+        --danger: #f08a78;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: var(--ui);
+        background: #d9d6cf;
+        color: #222;
+        display: flex;
+        gap: 32px;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 24px;
+        flex-wrap: wrap;
+      }
+      /* ---------- Phone frame ---------- */
+      .device {
+        width: 390px;
+        height: 844px;
+        border-radius: 44px;
+        background: #111;
+        padding: 10px;
+        box-shadow: 0 30px 80px rgb(0 0 0 / 35%);
+        flex: none;
+      }
+      .screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 34px;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--ink);
+        font-size: calc(16px * var(--font-scale));
+      }
+      .sys-status {
+        position: absolute;
+        inset: 0 0 auto;
+        height: var(--inset-top);
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 22px;
+        font-size: 13px;
+        font-weight: 600;
+        pointer-events: none;
+      }
+      .sys-status .cutout {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #000;
+      }
+      .sys-nav {
+        position: absolute;
+        inset: auto 0 0;
+        height: var(--inset-bottom);
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+      .sys-nav .pill {
+        width: 108px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--ink);
+        opacity: 0.6;
+      }
+      .sys-nav .buttons {
+        display: flex;
+        gap: 72px;
+        font-size: 18px;
+        opacity: 0.7;
+        pointer-events: auto;
+      }
+      .sys-nav .buttons span {
+        cursor: pointer;
+      }
+      .keyboard {
+        position: absolute;
+        inset: auto 0 0;
+        height: var(--ime-bottom);
+        z-index: 40;
+        overflow: hidden;
+        background: color-mix(in srgb, var(--ink) 14%, var(--bg));
+        transition: height 0.25s var(--ease);
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 6px;
+        padding: 10px 6px 30px;
+        align-content: start;
+      }
+      .keyboard i {
+        height: 42px;
+        border-radius: 6px;
+        background: var(--paper);
+        font-style: normal;
+        display: grid;
+        place-items: center;
+        font-size: 15px;
+        color: var(--ink);
+      }
+      /* ---------- App root: the 3-zone contract (plan section 2) ---------- */
+      .app {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        padding-top: var(--inset-top);
+        padding-bottom: max(var(--inset-bottom), var(--ime-bottom));
+        transition: padding-bottom 0.25s var(--ease);
+        background: var(--paper);
+      }
+      .appbar {
+        flex: none;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0 4px 0 8px;
+        background: var(--paper);
+        border-bottom: 1px solid var(--line);
+      }
+      .appbar h1 {
+        flex: 1;
+        min-width: 0;
+        margin: 0 0 0 8px;
+        font-size: 1.15em;
+        font-weight: 650;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .appbar .saved {
+        font-size: 0.72em;
+        color: var(--muted);
+        font-weight: 400;
+        display: block;
+      }
+      .icon {
+        width: 48px;
+        height: 48px;
+        flex: none;
+        border: 0;
+        background: none;
+        color: var(--ink);
+        border-radius: 24px;
+        font-size: 20px;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+      }
+      .icon:active {
+        background: var(--active);
+      }
+      .seg {
+        display: flex;
+        background: var(--raised);
+        border-radius: 20px;
+        padding: 3px;
+      }
+      .seg button {
+        border: 0;
+        background: none;
+        color: var(--muted);
+        padding: 0 12px;
+        height: 34px;
+        border-radius: 17px;
+        font: inherit;
+        font-size: 0.85em;
+        cursor: pointer;
+      }
+      .seg button[aria-pressed='true'] {
+        background: var(--paper);
+        color: var(--ink);
+        font-weight: 600;
+        box-shadow: 0 1px 3px rgb(0 0 0 / 15%);
+      }
+      .done-btn {
+        border: 0;
+        background: var(--accent);
+        color: var(--on-accent);
+        height: 36px;
+        padding: 0 16px;
+        border-radius: 18px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .content {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        background: var(--bg);
+      }
+      .bottom-nav {
+        flex: none;
+        height: 64px;
+        display: flex;
+        background: var(--paper);
+        border-top: 1px solid var(--line);
+      }
+      .bottom-nav button {
+        flex: 1;
+        border: 0;
+        background: none;
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.75em;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        cursor: pointer;
+      }
+      .bottom-nav button span {
+        font-size: 20px;
+        padding: 2px 18px;
+        border-radius: 14px;
+      }
+      .bottom-nav button[aria-current='page'] {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .bottom-nav button[aria-current='page'] span {
+        background: var(--active);
+      }
+      /* ---------- Home ---------- */
+      .capture {
+        margin: 12px 16px 4px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 52px;
+        padding: 0 16px;
+        border-radius: 26px;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        color: var(--muted);
+        cursor: text;
+      }
+      .group {
+        margin: 18px 16px 6px;
+        font-size: 0.72em;
+        letter-spacing: 0.06em;
+        font-weight: 700;
+        color: var(--muted);
+      }
+      .item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        padding: 10px 16px;
+        min-height: 64px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--line);
+      }
+      .item:active {
+        background: var(--active);
+      }
+      .item b {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-weight: 600;
+      }
+      .item b span:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+      }
+      .item small {
+        color: var(--muted);
+        font-weight: 400;
+        flex: none;
+      }
+      .item p {
+        margin: 3px 0 0;
+        color: var(--muted);
+        font-size: 0.88em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .fab {
+        position: absolute;
+        right: 16px;
+        width: 56px;
+        height: 56px;
+        border-radius: 18px;
+        border: 0;
+        background: var(--accent);
+        color: var(--on-accent);
+        font-size: 28px;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgb(0 0 0 / 25%);
+        bottom: calc(max(var(--inset-bottom), var(--ime-bottom)) + 64px + 16px);
+        z-index: 5;
+      }
+      /* ---------- Note ---------- */
+      .doc {
+        padding: 16px 16px 40px;
+        line-height: 1.55;
+        font-size: 1.06em;
+        background: var(--paper);
+        min-height: 100%;
+      }
+      .doc h2 {
+        font-size: 1.35em;
+        margin: 0.4em 0 0.3em;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .doc h2 .fold {
+        width: 32px;
+        height: 32px;
+        border: 0;
+        background: none;
+        color: var(--muted);
+        cursor: pointer;
+        margin-left: -8px;
+      }
+      .task {
+        display: flex;
+        align-items: flex-start;
+        gap: 4px;
+        margin-left: -12px;
+      }
+      .task label {
+        width: 44px;
+        height: 44px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+      }
+      .task input {
+        width: 20px;
+        height: 20px;
+        accent-color: var(--accent);
+      }
+      .task span {
+        padding-top: 10px;
+      }
+      .task.done span {
+        text-decoration: line-through;
+        color: var(--muted);
+      }
+      .doc a {
+        color: var(--accent);
+      }
+      .doc pre {
+        overflow-x: auto;
+        background: var(--raised);
+        padding: 12px;
+        border-radius: 8px;
+        font-family: var(--mono);
+        font-size: 0.82em;
+      }
+      .doc[contenteditable='true'] {
+        outline: none;
+        caret-color: var(--accent);
+      }
+      .doc[contenteditable='true'] .md {
+        color: var(--muted);
+      }
+      .doc .md {
+        display: none;
+      }
+      .doc[contenteditable='true'] .cursor-line .md {
+        display: inline;
+      }
+      .doc .cursor-line {
+        background: color-mix(in srgb, var(--accent) 6%, transparent);
+        border-radius: 4px;
+      }
+      .fmtbar {
+        flex: none;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        overflow-x: auto;
+        background: var(--paper);
+        border-top: 1px solid var(--line);
+        scrollbar-width: none;
+      }
+      .fmtbar button {
+        flex: none;
+        min-width: 44px;
+        height: 44px;
+        border: 0;
+        background: none;
+        color: var(--ink);
+        font: inherit;
+        font-size: 15px;
+        cursor: pointer;
+        border-radius: 8px;
+        padding: 0 8px;
+      }
+      .fmtbar button:active {
+        background: var(--active);
+      }
+      .fmtbar .sep {
+        width: 1px;
+        height: 24px;
+        background: var(--line);
+        flex: none;
+        margin: 0 4px;
+      }
+      .fmtbar .ctx {
+        font-size: 0.7em;
+        color: var(--muted);
+        padding: 0 6px;
+        flex: none;
+      }
+      /* ---------- Tasks / search ---------- */
+      .search-field {
+        flex: 1;
+        height: 40px;
+        border: 0;
+        border-radius: 20px;
+        background: var(--raised);
+        color: var(--ink);
+        padding: 0 16px;
+        font: inherit;
+      }
+      mark {
+        background: color-mix(in srgb, var(--accent) 30%, transparent);
+        color: inherit;
+        border-radius: 3px;
+      }
+      .empty {
+        padding: 48px 32px;
+        text-align: center;
+        color: var(--muted);
+      }
+      .empty button {
+        margin-top: 12px;
+      }
+      /* ---------- Sheet ---------- */
+      .scrim {
+        position: absolute;
+        inset: 0;
+        background: rgb(0 0 0 / 40%);
+        z-index: 30;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+      }
+      .scrim.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .sheet {
+        position: absolute;
+        left: 0;
+        right: 0;
+        z-index: 31;
+        background: var(--paper);
+        border-radius: 20px 20px 0 0;
+        bottom: 0;
+        padding: 8px 0 max(var(--inset-bottom), var(--ime-bottom));
+        transform: translateY(100%);
+        transition: transform 0.25s var(--ease);
+        max-height: calc(100% - var(--inset-top) - 24px);
+        overflow-y: auto;
+      }
+      .sheet.open {
+        transform: none;
+      }
+      .sheet .handle {
+        width: 32px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--muted);
+        opacity: 0.5;
+        margin: 4px auto 8px;
+      }
+      .sheet button.row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        width: 100%;
+        height: 52px;
+        border: 0;
+        background: none;
+        color: var(--ink);
+        font: inherit;
+        padding: 0 20px;
+        cursor: pointer;
+        text-align: left;
+      }
+      .sheet button.row:active {
+        background: var(--active);
+      }
+      .sheet .danger {
+        color: var(--danger) !important;
+      }
+      .theme {
+        display: flex;
+        gap: 4px;
+        margin: 4px 16px 10px;
+        background: var(--raised);
+        border-radius: 22px;
+        padding: 4px;
+      }
+      .theme button {
+        flex: none;
+        height: 36px;
+        min-width: 44px;
+        border: 0;
+        border-radius: 18px;
+        background: none;
+        color: var(--muted);
+        cursor: pointer;
+        font: inherit;
+        transition: all 0.2s var(--ease);
+      }
+      .theme button[aria-pressed='true'] {
+        flex: 1;
+        background: var(--paper);
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .theme button .lbl {
+        display: none;
+        margin-left: 6px;
+      }
+      .theme button[aria-pressed='true'] .lbl {
+        display: inline;
+      }
+      .toast {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        z-index: 45;
+        background: var(--ink);
+        color: var(--bg);
+        border-radius: 12px;
+        padding: 12px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        bottom: calc(max(var(--inset-bottom), var(--ime-bottom)) + 80px);
+        opacity: 0;
+        transform: translateY(8px);
+        transition: all 0.2s;
+        pointer-events: none;
+        font-size: 0.9em;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+      }
+      .toast button {
+        border: 0;
+        background: none;
+        color: var(--accent);
+        font-weight: 700;
+        font: inherit;
+        cursor: pointer;
+      }
+      /* ---------- Control panel (outside the phone) ---------- */
+      .panel {
+        width: 340px;
+        background: #fff;
+        border-radius: 14px;
+        padding: 18px 20px;
+        font-size: 14px;
+        box-shadow: 0 6px 20px rgb(0 0 0 / 10%);
+      }
+      .panel h2 {
+        font-size: 16px;
+        margin: 0 0 4px;
+      }
+      .panel p {
+        color: #555;
+        margin: 0 0 12px;
+        line-height: 1.4;
+      }
+      .panel fieldset {
+        border: 0;
+        padding: 0;
+        margin: 0 0 14px;
+      }
+      .panel legend {
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .panel label {
+        display: block;
+        margin: 4px 0;
+      }
+      .panel .hint {
+        font-size: 12px;
+        color: #666;
+        background: #f4f2ec;
+        padding: 10px;
+        border-radius: 8px;
+      }
+      .panel button {
+        font: inherit;
+        padding: 6px 12px;
+      }
+      /* ---------- v2.1: icons, insert sheet, tables, code mode, images ---------- */
+      svg.i {
+        width: 22px;
+        height: 22px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .fmtbar {
+        gap: 2px;
+        padding: 0 6px;
+        height: 52px;
+      }
+      .fmtbar button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .fmtbar .insert {
+        background: var(--accent);
+        color: var(--on-accent);
+        height: 36px;
+        border-radius: 18px;
+        padding: 0 14px 0 10px;
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .fmtbar .insert:active {
+        background: var(--accent);
+        filter: brightness(0.92);
+      }
+      .fmtbar .grp {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        background: var(--raised);
+        border-radius: 22px;
+        padding: 0 4px;
+        height: 40px;
+        flex: none;
+      }
+      .fmtbar .grp button {
+        height: 36px;
+        min-width: 40px;
+        border-radius: 18px;
+        font-size: 14px;
+      }
+      .fmtbar .grp button[aria-pressed='true'] {
+        background: var(--paper);
+        box-shadow: 0 1px 3px rgb(0 0 0 / 14%);
+        font-weight: 650;
+      }
+      .fmtbar .spacer {
+        flex: 1;
+        min-width: 4px;
+      }
+      .fmtbar .pin {
+        position: sticky;
+        right: 0;
+        background: var(--paper);
+        display: flex;
+        padding-left: 4px;
+        box-shadow: -10px 0 10px -6px var(--paper);
+      }
+      .ins-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        padding: 4px 16px 16px;
+      }
+      .ins-grid button {
+        border: 1px solid var(--line);
+        background: var(--bg);
+        color: var(--ink);
+        border-radius: 14px;
+        padding: 10px 6px 8px;
+        font: inherit;
+        font-size: 0.8em;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        min-height: 88px;
+      }
+      .ins-grid button:active {
+        background: var(--active);
+      }
+      .ins-grid .pv {
+        width: 64px;
+        height: 40px;
+        border-radius: 6px;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+        color: var(--muted);
+        overflow: hidden;
+        line-height: 1.15;
+        font-family: var(--mono);
+      }
+      .pv.tbl-pv {
+        place-items: stretch;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        gap: 1px;
+        background: var(--line);
+        padding: 0;
+      }
+      .pv.tbl-pv i {
+        background: var(--paper);
+      }
+      .pv.tbl-pv i:nth-child(-n + 3) {
+        background: var(--raised);
+      }
+      .sheet h3 {
+        margin: 0 16px 10px;
+        font-size: 1em;
+      }
+      .size-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 40px);
+        gap: 4px;
+        justify-content: center;
+        padding: 8px 16px 20px;
+      }
+      .size-grid button {
+        width: 40px;
+        height: 40px;
+        border: 1px solid var(--line);
+        background: var(--bg);
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .size-grid button.on {
+        background: var(--active);
+        border-color: var(--accent);
+      }
+      /* Tables (plan 5.4) */
+      .tbl {
+        margin: 12px -16px;
+      }
+      .tbl-bar {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0 8px 0 16px;
+        font-size: 0.75em;
+        color: var(--muted);
+      }
+      .tbl-bar span {
+        flex: 1;
+      }
+      .tbl-bar button {
+        height: 36px;
+        border: 0;
+        background: none;
+        color: var(--accent);
+        font: inherit;
+        font-weight: 600;
+        padding: 0 10px;
+        border-radius: 18px;
+        cursor: pointer;
+      }
+      .tbl-scroll {
+        overflow-x: auto;
+        position: relative;
+        padding: 0 16px;
+        overscroll-behavior-x: contain;
+        background:
+          linear-gradient(to right, var(--paper) 30%, transparent) left / 24px 100% no-repeat local,
+          linear-gradient(to left, var(--paper) 30%, transparent) right / 24px 100% no-repeat local,
+          radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / 18%), transparent) left / 10px 100%
+            no-repeat scroll,
+          radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / 18%), transparent) right / 10px
+            100% no-repeat scroll;
+      }
+      .doc table {
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.88em;
+      }
+      .doc th,
+      .doc td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+        min-width: 96px;
+        max-width: 220px;
+        overflow-wrap: anywhere;
+      }
+      .doc th {
+        background: var(--raised);
+        font-weight: 650;
+        white-space: nowrap;
+        max-width: none;
+      }
+      .doc tr > :first-child {
+        position: sticky;
+        left: -16px;
+        background: var(--paper);
+        box-shadow: 1px 0 0 var(--line);
+        font-weight: 600;
+      }
+      .doc th:first-child {
+        background: var(--raised);
+      }
+      .doc td.sel {
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+        background: var(--active);
+      }
+      .cards {
+        display: grid;
+        gap: 10px;
+        padding: 0 16px;
+      }
+      .cards dl {
+        margin: 0;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px 14px;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 4px 12px;
+        font-size: 0.9em;
+      }
+      .cards dt {
+        color: var(--muted);
+      }
+      .cards dd {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      .cards dl > :first-child + dd {
+        font-weight: 650;
+      }
+      .fullscreen-tbl .doc {
+        padding: 8px 0;
+      }
+      .fullscreen-tbl .tbl {
+        margin: 0;
+      }
+      .rotate-hint {
+        margin: 10px 16px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--raised);
+        font-size: 0.82em;
+        color: var(--muted);
+      }
+      /* Code mode */
+      .raw {
+        margin: 0;
+        padding: 16px;
+        min-height: 100%;
+        background: var(--paper);
+        font-family: var(--mono);
+        font-size: 0.86em;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        outline: none;
+      }
+      .raw .mk {
+        color: var(--accent);
+      }
+      .raw .tb {
+        display: block;
+        white-space: pre;
+        overflow-x: auto;
+      }
+      .raw .hd {
+        font-weight: 700;
+      }
+      .mode-chip {
+        font-size: 0.7em;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: var(--raised);
+        color: var(--muted);
+        margin-left: 6px;
+        font-weight: 600;
+        vertical-align: 2px;
+      }
+      /* Home search + images */
+      .searchbox {
+        margin: 12px 16px 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 48px;
+        padding: 0 6px 0 16px;
+        border-radius: 24px;
+        background: var(--raised);
+        color: var(--muted);
+      }
+      .searchbox input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        background: none;
+        color: var(--ink);
+        font: inherit;
+        outline: none;
+        height: 100%;
+      }
+      .img-grid {
+        columns: 2;
+        gap: 8px;
+        padding: 12px 12px 96px;
+      }
+      .img-grid figure {
+        margin: 0 0 8px;
+        break-inside: avoid;
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--raised);
+      }
+      .img-grid .ph {
+        display: block;
+        width: 100%;
+      }
+      .img-grid figcaption {
+        font-size: 0.72em;
+        color: var(--muted);
+        padding: 6px 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="device">
+      <div class="screen" id="screen" data-theme="light">
+        <div class="sys-status">
+          <span>9:41</span><span class="cutout" id="cutout"></span><span>▾ ◢ 87%</span>
+        </div>
+        <div class="app" id="app"></div>
+        <div class="scrim" id="scrim"></div>
+        <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+        <div class="toast" id="toast" role="status"></div>
+        <div class="keyboard" id="keyboard" aria-hidden="true"></div>
+        <div class="sys-nav" id="sysnav"></div>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <h2>Simulador do sistema</h2>
+      <p>
+        Protótipo do <code>docs/plano-mobile-v2.md</code>. Os controles simulam o que o Android
+        injeta via <code>--inset-*</code> e <code>--ime-bottom</code>.
+      </p>
+      <fieldset>
+        <legend>Barra de status / recorte</legend>
+        <label
+          ><input type="radio" name="top" value="0" /> Sem inset (bug atual: conteúdo sob a
+          barra)</label
+        >
+        <label><input type="radio" name="top" value="32" checked /> Normal (32 dp)</label>
+        <label><input type="radio" name="top" value="48" /> Recorte alto (48 dp)</label>
+      </fieldset>
+      <fieldset>
+        <legend>Navegação do sistema</legend>
+        <label><input type="radio" name="nav" value="gesture" checked /> Gestos (24 dp)</label>
+        <label><input type="radio" name="nav" value="buttons" /> 3 botões (48 dp)</label>
+      </fieldset>
+      <fieldset>
+        <legend>Teclado</legend>
+        <label><input type="checkbox" id="kbd-float" /> Teclado flutuante (inset do IME = 0)</label>
+        <p style="margin: 4px 0 0; font-size: 12px">
+          O teclado abre ao tocar em Editar, Capturar ou Busca.
+        </p>
+      </fieldset>
+      <fieldset>
+        <legend>Escala de fonte do sistema</legend>
+        <label><input type="radio" name="fs" value="1" checked /> 1,0×</label>
+        <label><input type="radio" name="fs" value="1.3" /> 1,3×</label>
+      </fieldset>
+      <fieldset>
+        <legend>Botão voltar do Android</legend>
+        <button id="back">◁ Voltar</button>
+      </fieldset>
+      <div class="hint">
+        Experimente: abra “Reunião de planejamento” para ver a tabela em cartões, em tabela e em
+        tela cheia. Toque em Editar e depois numa célula, numa lista ou num título: a barra muda.
+        “Inserir” abre os blocos. O modo código fica no ⋮ da nota. Voltar fecha folha → teclado →
+        tela. Deslize um item para a lixeira.
+      </div>
+    </aside>
+
+    <script>
+      const $ = (s) => document.querySelector(s)
+      const screen = $('#screen'),
+        app = $('#app'),
+        sheet = $('#sheet'),
+        scrim = $('#scrim')
+      const root = document.documentElement
+      const esc = (s) =>
+        String(s).replace(
+          /[&<>"]/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
+        )
+
+      // ---------- Icons (lucide-style strokes; the app already ships lucide-react) ----------
+      const P = {
+        undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+        plus: '<path d="M12 5v14M5 12h14"/>',
+        bold: '<path d="M6 12h9a4 4 0 0 1 0 8H6V4h8a4 4 0 0 1 0 8"/>',
+        italic: '<path d="M19 4h-9M14 20H5M15 4 9 20"/>',
+        strike: '<path d="M16 4H9a3 3 0 0 0-2.83 4M14 12a4 4 0 0 1 0 8H6M4 12h16"/>',
+        code: '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>',
+        link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+        list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+        task: '<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4M13 6h8M13 12h8M13 18h8"/>',
+        indent: '<path d="m3 8 4 4-4 4M21 12H11M21 6H11M21 18H11"/>',
+        outdent: '<path d="m7 8-4 4 4 4M21 12H11M21 6H11M21 18H11"/>',
+        up: '<path d="m18 15-6-6-6 6"/>',
+        down: '<path d="m6 9 6 6 6-6"/>',
+        kbd: '<rect x="2" y="4" width="20" height="12" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h8M9 20l3 2 3-2"/>',
+        type: '<path d="M4 7V4h16v3M9 20h6M12 4v16"/>',
+        row: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15h18M12 18v-0"/>',
+        col: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>',
+        trash: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',
+        left: '<path d="m15 18-6-6 6-6"/>',
+        right: '<path d="m9 18 6-6-6-6"/>',
+        copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+        search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+        x: '<path d="M18 6 6 18M6 6l12 12"/>',
+        expand: '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',
+      }
+      const ic = (n, flip) =>
+        `<svg class="i" viewBox="0 0 24 24" aria-hidden="true"${flip ? ' style="transform:scaleX(-1)"' : ''}>${P[n]}</svg>`
+
+      // ---------- Data ----------
+      const notes = [
+        {
+          id: 1,
+          title: 'Lista de compras',
+          pinned: true,
+          when: '2 min',
+          body: [
+            ['h', 'Mercado'],
+            ['t', 'Café em grão', true],
+            ['t', 'Leite de aveia', false],
+            ['t', 'Pão integral', false],
+            ['h', 'Farmácia'],
+            ['t', 'Protetor solar', false],
+          ],
+        },
+        {
+          id: 2,
+          title: 'Reunião de planejamento — 23/10',
+          when: 'ontem',
+          body: [
+            ['h', 'Decisões'],
+            ['li', 'Lançar a versão Android em novembro'],
+            ['li', 'Barra inferior: Notas, Tarefas, Imagens'],
+            ['h', 'Teclados testados'],
+            [
+              'table',
+              {
+                head: ['Teclado', 'Composição', 'Autocorreção', 'Voz', 'Observação'],
+                rows: [
+                  ['Gboard', 'OK', 'OK', 'OK', 'Referência'],
+                  [
+                    'SwiftKey',
+                    'Falha em **negrito**',
+                    'OK',
+                    'OK',
+                    'Reescreve a palavra inteira ao corrigir',
+                  ],
+                  [
+                    'Samsung Keyboard',
+                    'OK',
+                    'Parcial',
+                    'Não testado',
+                    'Supercalifragilisticexpialidocious_sem_espacos',
+                  ],
+                ],
+              },
+            ],
+            ['h', 'Próximos passos'],
+            ['t', 'Revisar o plano v2 com o time', false],
+            ['t', 'Testar Gboard e SwiftKey', false],
+            ['p', 'Ver também [[Plano mobile]].'],
+            ['code', 'adb shell settings put global window_animation_scale 0'],
+          ],
+        },
+        {
+          id: 3,
+          title: 'Supercalifragilisticexpialidocious_titulo_sem_espacos_muito_longo',
+          when: '3 dias',
+          body: [['p', 'Título sem espaços para testar reticências e quebra.']],
+        },
+        {
+          id: 4,
+          title: 'Ideias soltas',
+          when: '1 sem',
+          body: [['p', 'Um app de notas que não briga com o teclado.']],
+        },
+      ]
+      const state = {
+        stack: [{ name: 'home' }],
+        layers: [],
+        keyboard: false,
+        mode: 'read',
+        ctx: 'texto',
+        query: '',
+        style: false,
+        tblView: {},
+        cell: null,
+      }
+
+      // ---------- Insets / system simulation ----------
+      function setInsets() {
+        const top = document.querySelector('input[name=top]:checked').value
+        const nav = document.querySelector('input[name=nav]:checked').value
+        const fs = document.querySelector('input[name=fs]:checked').value
+        const float = $('#kbd-float').checked
+        root.style.setProperty('--inset-top', top + 'px')
+        root.style.setProperty('--inset-bottom', nav === 'gesture' ? '24px' : '48px')
+        root.style.setProperty('--font-scale', fs)
+        root.style.setProperty('--ime-bottom', state.keyboard && !float ? '300px' : '0px')
+        const k = $('#keyboard')
+        k.style.height = state.keyboard ? '300px' : '0'
+        k.style.padding = state.keyboard ? '' : '0'
+        k.style.margin = state.keyboard && float ? '0 20px 60px' : '0'
+        k.style.borderRadius = float ? '16px' : '0'
+        $('#cutout').style.visibility = top === '0' ? 'hidden' : 'visible'
+        $('#sysnav').innerHTML =
+          nav === 'gesture'
+            ? '<div class="pill"></div>'
+            : '<div class="buttons"><span>▢</span><span>○</span><span id="sysback">◁</span></div>'
+        const sb = $('#sysback')
+        if (sb) sb.onclick = back
+      }
+      document.querySelectorAll('.panel input').forEach((i) => (i.onchange = setInsets))
+      $('#keyboard').innerHTML = 'qwertyuiopasdfghjklç⇧zxcvbnm⌫'
+        .split('')
+        .map((k) => `<i>${k}</i>`)
+        .join('')
+      function openKeyboard(on) {
+        state.keyboard = on
+        setInsets()
+        render()
+      }
+
+      // ---------- Navigation stack + back (plan 5.1) ----------
+      function push(s) {
+        state.stack.push(s)
+        state.keyboard = false
+        setInsets()
+        render()
+      }
+      function back() {
+        if (state.layers.length) return closeSheet()
+        if (state.keyboard) return openKeyboard(false)
+        if (state.stack.length > 1) {
+          const s = state.stack.pop()
+          if (s.name === 'note') state.mode = 'read'
+          return render()
+        }
+        toast('Toque de novo para sair')
+      }
+      $('#back').onclick = back
+      addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !e.target.matches('input')) back()
+      })
+      const cur = () => state.stack[state.stack.length - 1]
+
+      // ---------- Toast ----------
+      let toastTimer
+      function toast(msg, undo) {
+        const t = $('#toast')
+        t.innerHTML = `<span>${msg}</span>` + (undo ? '<button>Desfazer</button>' : '')
+        if (undo)
+          t.querySelector('button').onclick = () => {
+            undo()
+            t.classList.remove('show')
+          }
+        t.classList.add('show')
+        clearTimeout(toastTimer)
+        toastTimer = setTimeout(() => t.classList.remove('show'), 3500)
+      }
+
+      // ---------- Sheet ----------
+      function openSheet(html, bind) {
+        sheet.innerHTML = '<div class="handle"></div>' + html
+        if (!state.layers.length) state.layers.push('sheet')
+        sheet.classList.add('open')
+        scrim.classList.add('open')
+        bind?.(sheet)
+        sheet.querySelector('button')?.focus()
+      }
+      function closeSheet() {
+        state.layers.pop()
+        sheet.classList.remove('open')
+        scrim.classList.remove('open')
+      }
+      scrim.onclick = closeSheet
+      let dragY = null
+      sheet.addEventListener('pointerdown', (e) => {
+        if (e.target.classList.contains('handle')) dragY = e.clientY
+      })
+      addEventListener('pointerup', (e) => {
+        if (dragY != null && e.clientY - dragY > 60) closeSheet()
+        dragY = null
+      })
+
+      function themeSwitcher() {
+        const c = screen.dataset.pref || 'light'
+        const opt = [
+          ['light', '☀', 'Claro'],
+          ['dark', '☾', 'Escuro'],
+          ['system', '🖥', 'Sistema'],
+        ]
+        return `<div class="theme" role="group" aria-label="Tema">${opt
+          .map(
+            ([v, i, l]) =>
+              `<button data-theme-opt="${v}" aria-pressed="${c === v}" aria-label="${l}">${i}<span class="lbl">${l}</span></button>`,
+          )
+          .join('')}</div>`
+      }
+      function bindTheme(el) {
+        el.querySelectorAll('[data-theme-opt]').forEach(
+          (b) =>
+            (b.onclick = () => {
+              const v = b.dataset.themeOpt
+              screen.dataset.pref = v
+              screen.dataset.theme =
+                v === 'system'
+                  ? matchMedia('(prefers-color-scheme: dark)').matches
+                    ? 'dark'
+                    : 'light'
+                  : v
+              el.querySelectorAll('[data-theme-opt]').forEach((x) =>
+                x.setAttribute('aria-pressed', x === b),
+              )
+            }),
+        )
+      }
+      const rows = (list) => list.map((r) => `<button class="row">${r}</button>`).join('')
+
+      // ---------- Bottom navigation: Notas · Tarefas · Imagens ----------
+      const bottomNav = (c) =>
+        state.keyboard
+          ? ''
+          : `<nav class="bottom-nav">${[
+              ['home', '📝', 'Notas'],
+              ['tasks', '☑', 'Tarefas'],
+              ['images', '🖼', 'Imagens'],
+            ]
+              .map(
+                ([n, i, l]) =>
+                  `<button data-tab="${n}" ${c === n ? 'aria-current="page"' : ''}><span>${i}</span>${l}</button>`,
+              )
+              .join('')}</nav>`
+
+      const plain = (n) =>
+        n.body.map((b) => (b[0] === 'table' ? b[1].head.join(' ') : b[1])).join(' · ')
+      const hl = (s, q) =>
+        q
+          ? esc(s).replace(
+              new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
+              '<mark>$1</mark>',
+            )
+          : esc(s)
+      const item = (n, q) =>
+        `<button class="item" data-open="${n.id}"><b><span>${hl(n.title, q)}</span><small>${n.when}</small></b><p>${hl(plain(n), q)}</p></button>`
+
+      // ---------- Notas: search lives here, filtering the same list (no separate Busca tab) ----------
+      function home() {
+        const q = state.query.trim().toLowerCase()
+        const list = q
+          ? notes.filter((n) => (n.title + ' ' + plain(n)).toLowerCase().includes(q))
+          : notes
+        const pinned = list.filter((n) => n.pinned),
+          rest = list.filter((n) => !n.pinned)
+        return `<header class="appbar"><h1>Sloth Note</h1>
+          <button class="icon" aria-label="Mais opções" id="home-more">⋮</button></header>
+          <div class="content">
+            <label class="searchbox">${ic('search')}<input id="q" type="search" enterkeyhint="search" autocapitalize="off" placeholder="Buscar nas notas" value="${esc(state.query)}" />
+              ${state.query ? `<button class="icon" id="clear-q" aria-label="Limpar busca">${ic('x')}</button>` : ''}</label>
+            ${
+              !notes.length
+                ? '<div class="empty">Nenhuma nota ainda. Toque em + para escrever a primeira.</div>'
+                : q && !list.length
+                  ? `<div class="empty">Nada encontrado para “${esc(state.query)}”.<br/><button class="done-btn" id="create-q">Criar nota “${esc(state.query)}”</button></div>`
+                  : q
+                    ? '<div class="group">RESULTADOS</div>' + list.map((n) => item(n, q)).join('')
+                    : (pinned.length
+                        ? '<div class="group">FIXADAS</div>' + pinned.map((n) => item(n)).join('')
+                        : '') +
+                      (rest.length
+                        ? '<div class="group">RECENTES</div>' + rest.map((n) => item(n)).join('')
+                        : '')
+            }
+            <div style="height:96px"></div>
+          </div>
+          ${bottomNav('home')}
+          ${state.keyboard ? '' : '<button class="fab" aria-label="Nova nota" id="fab">+</button>'}`
+      }
+
+      // ---------- Tables (plan 5.4) ----------
+      const inline = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      function table(t, i, edit, full) {
+        const cards =
+          !full &&
+          (state.tblView[i] ?? (t.head.length > 3 ? 'cards' : 'table')) === 'cards' &&
+          !edit
+        const bar = full
+          ? ''
+          : `<div class="tbl-bar" contenteditable="false"><span>${t.rows.length} linhas · ${t.head.length} colunas</span>
+          ${edit ? '' : `<button data-tblview="${i}">${cards ? 'Ver tabela' : 'Ver cartões'}</button>`}
+          <button data-expand="${i}" aria-label="Abrir tabela em tela cheia">${ic('expand')}</button></div>`
+        if (cards)
+          return `<div class="tbl" data-line="${i}">${bar}<div class="cards">${t.rows
+            .map(
+              (r) =>
+                `<dl>${r.map((c, j) => `<dt>${esc(t.head[j])}</dt><dd>${inline(c)}</dd>`).join('')}</dl>`,
+            )
+            .join('')}</div></div>`
+        const sel = (r, c) =>
+          edit && state.cell && state.cursor === i && state.cell[0] === r && state.cell[1] === c
+            ? ' class="sel"'
+            : ''
+        return `<div class="tbl" data-line="${i}" data-ctx="tabela">${bar}<div class="tbl-scroll"><table>
+          <thead><tr>${t.head.map((h, c) => `<th data-cell="${i},-1,${c}"${sel(-1, c)}>${esc(h)}</th>`).join('')}</tr></thead>
+          <tbody>${t.rows.map((r, ri) => `<tr>${r.map((c, ci) => `<td data-cell="${i},${ri},${ci}"${sel(ri, ci)}>${inline(c)}</td>`).join('')}</tr>`).join('')}</tbody>
+          </table></div></div>`
+      }
+
+      function renderBody(n, edit) {
+        return n.body
+          .map(([k, v, done], i) => {
+            const cls = edit && state.cursor === i ? ' cursor-line' : ''
+            if (k === 'table') return table(v, i, edit)
+            if (k === 'h')
+              return `<h2 class="${cls}" data-line="${i}" data-ctx="título"><button class="fold" contenteditable="false" aria-label="Recolher seção">▾</button><span class="md">## </span>${esc(v)}</h2>`
+            if (k === 't')
+              return `<div class="task ${done ? 'done' : ''}${cls}" data-line="${i}" data-ctx="lista"><label contenteditable="false"><input type="checkbox" data-task="${i}" ${done ? 'checked' : ''} aria-label="${esc(v)}" /></label><span><span class="md">- [${done ? 'x' : ' '}] </span>${esc(v)}</span></div>`
+            if (k === 'li')
+              return `<div class="${cls}" data-line="${i}" data-ctx="lista" style="padding-left:8px"><span class="md">- </span>• ${esc(v)}</div>`
+            if (k === 'code')
+              return `<pre class="${cls}" data-line="${i}" data-ctx="código">${esc(v)}</pre>`
+            if (k === 'hr') return `<hr data-line="${i}" />`
+            return `<p class="${cls}" data-line="${i}" data-ctx="texto">${esc(v).replace(/\[\[(.+?)\]\]/g, '<span class="md">[[</span><a href="#">$1</a><span class="md">]]</span>')}</p>`
+          })
+          .join('')
+      }
+
+      // Code mode: the raw Markdown, always available (plan 5.3).
+      function toMarkdown(n) {
+        const pad = (cells, w) => '| ' + cells.map((c, j) => c.padEnd(w[j])).join(' | ') + ' |'
+        return n.body
+          .map(([k, v, done]) => {
+            if (k === 'h') return '## ' + v
+            if (k === 't') return `- [${done ? 'x' : ' '}] ` + v
+            if (k === 'li') return '- ' + v
+            if (k === 'code') return '```\n' + v + '\n```'
+            if (k === 'hr') return '---'
+            if (k === 'table') {
+              const w = v.head.map((h, j) =>
+                Math.max(3, h.length, ...v.rows.map((r) => r[j].length)),
+              )
+              return (
+                '\u0000' +
+                [
+                  pad(v.head, w),
+                  '| ' + w.map((x) => '-'.repeat(x)).join(' | ') + ' |',
+                  ...v.rows.map((r) => pad(r, w)),
+                ].join('\n') +
+                '\u0001'
+              )
+            }
+            return v
+          })
+          .join('\n\n')
+      }
+      const colorMd = (md) =>
+        esc(md)
+          .split('\n')
+          .map((l) =>
+            l
+              .replace(/^(#{1,6} )(.*)$/, '<span class="mk">$1</span><span class="hd">$2</span>')
+              .replace(/^(- \[[ x]\] |- |\| |```)/, '<span class="mk">$1</span>')
+              .replace(/( \| )/g, '<span class="mk">$1</span>')
+              .replace(/( \|)$/, '<span class="mk">$1</span>')
+              .replace(/(\*\*|\[\[|\]\])/g, '<span class="mk">$1</span>'),
+          )
+          .join('\n')
+          .replace(/\u0000/g, '<span class="tb">')
+          .replace(/\u0001/g, '</span>')
+
+      // ---------- Formatting bar (plan 5.5) ----------
+      // [＋ Inserir] [contextual group] … [↶] [⌄]
+      function ctxGroup() {
+        const b = (icon, label, attrs = '') =>
+          `<button aria-label="${label}" ${attrs}>${icon}</button>`
+        if (state.mode === 'code')
+          return `<div class="grp">${b('Tab', 'Inserir tabulação')}${b('#', 'Título')}${b('-', 'Hífen')}${b('[ ]', 'Tarefa')}${b('|', 'Barra vertical')}${b('`', 'Crase')}${b('*', 'Asterisco')}</div>`
+        if (state.style)
+          return `<div class="grp">${b(ic('bold'), 'Negrito')}${b(ic('italic'), 'Itálico')}${b(ic('strike'), 'Tachado')}${b(ic('code'), 'Código em linha')}${b(ic('link'), 'Link')}${b(ic('x'), 'Fechar estilos', 'id="style-off"')}</div>`
+        const c =
+          {
+            texto:
+              b(ic('type'), 'Estilos', 'id="style-on"') +
+              b(ic('list'), 'Lista') +
+              b(ic('task'), 'Tarefa') +
+              b(ic('link'), 'Link'),
+            título:
+              ['H1', 'H2', 'H3', 'H4']
+                .map((h) => b(h, 'Título nível ' + h[1], h === 'H2' ? 'aria-pressed="true"' : ''))
+                .join('') + b('¶', 'Virar parágrafo'),
+            lista:
+              b(ic('outdent'), 'Desrecuar') +
+              b(ic('indent'), 'Recuar') +
+              b(ic('up'), 'Mover para cima') +
+              b(ic('down'), 'Mover para baixo') +
+              b(ic('task'), 'Alternar tarefa'),
+            tabela:
+              b(ic('left'), 'Célula anterior') +
+              b(ic('right'), 'Próxima célula') +
+              b(ic('row') + '+', 'Inserir linha abaixo') +
+              b(ic('col') + '+', 'Inserir coluna à direita') +
+              b(ic('trash'), 'Apagar linha ou coluna', 'id="tbl-del"'),
+            código:
+              b('Tab', 'Inserir tabulação') +
+              b('js', 'Linguagem do bloco') +
+              b(ic('copy'), 'Copiar bloco'),
+          }[state.ctx] || ''
+        return `<div class="grp">${c}</div>`
+      }
+      function fmtbar() {
+        return `<div class="fmtbar" role="toolbar" aria-label="Formatação">
+          ${state.mode === 'code' ? '' : `<button class="insert" id="insert">${ic('plus')}Inserir</button>`}
+          ${ctxGroup()}<span class="spacer"></span>
+          <span class="pin"><button aria-label="Desfazer">${ic('undo')}</button><button aria-label="Esconder teclado" id="hide-kbd">${ic('kbd')}</button></span></div>`
+      }
+
+      const INSERTS = [
+        ['Título', '<b style="font-size:15px;color:var(--ink)">Aa</b>', 'h'],
+        ['Lista', '• ——<br/>• ——', 'li'],
+        ['Tarefa', '☑ ——<br/>☐ ——', 't'],
+        ['Tabela', '<i></i>'.repeat(9), 'table'],
+        ['Código', '{ … }', 'code'],
+        ['Citação', '❝ ——', 'p'],
+        ['Imagem', '🖼', 'img'],
+        ['Câmera', '📷', 'img'],
+        ['Link p/ nota', '[[ ]]', 'p'],
+        ['Divisor', '———', 'hr'],
+        ['Data de hoje', '23/10', 'p'],
+        ['Recolher', '▾ ——', 'p'],
+      ]
+      function insertSheet() {
+        openSheet(
+          `<h3>Inserir</h3><div class="ins-grid">${INSERTS.map(
+            ([l, pv, k], i) =>
+              `<button data-ins="${i}"><span class="pv${k === 'table' ? ' tbl-pv' : ''}">${pv}</span>${l}</button>`,
+          ).join('')}</div>`,
+          (el) =>
+            el.querySelectorAll('[data-ins]').forEach(
+              (b) =>
+                (b.onclick = () => {
+                  const [label, , k] = INSERTS[+b.dataset.ins]
+                  if (k === 'table') return tableSizeSheet()
+                  closeSheet()
+                  toast(`${label} inserido na linha do cursor`)
+                }),
+            ),
+        )
+      }
+      function tableSizeSheet() {
+        let pick = [3, 3]
+        const draw = (el) =>
+          el.querySelectorAll('[data-sz]').forEach((b) => {
+            const [r, c] = b.dataset.sz.split(',').map(Number)
+            b.classList.toggle('on', r <= pick[0] && c <= pick[1])
+          })
+        openSheet(
+          `<h3>Tabela: <span id="sz-l">3 × 3</span></h3><div class="size-grid">${Array.from(
+            { length: 36 },
+            (_, i) =>
+              `<button data-sz="${Math.floor(i / 6) + 1},${(i % 6) + 1}" aria-label="${Math.floor(i / 6) + 1} linhas por ${(i % 6) + 1} colunas"></button>`,
+          ).join('')}</div>
+          <div style="padding:0 16px 12px"><button class="done-btn" id="sz-ok" style="width:100%;height:48px">Inserir tabela</button></div>`,
+          (el) => {
+            draw(el)
+            el.querySelectorAll('[data-sz]').forEach(
+              (b) =>
+                (b.onclick = () => {
+                  pick = b.dataset.sz.split(',').map(Number)
+                  el.querySelector('#sz-l').textContent = `${pick[0]} × ${pick[1]}`
+                  draw(el)
+                }),
+            )
+            el.querySelector('#sz-ok').onclick = () => {
+              const n = notes.find((x) => x.id === cur().id)
+              const t = {
+                head: Array.from({ length: pick[1] }, (_, j) => 'Coluna ' + (j + 1)),
+                rows: Array.from({ length: pick[0] - 1 }, () => Array(pick[1]).fill('')),
+              }
+              const at = Math.min((state.cursor ?? 0) + 1, n.body.length)
+              n.body.splice(at, 0, ['table', t])
+              state.cursor = at
+              state.cell = [-1, 0]
+              state.ctx = 'tabela'
+              closeSheet()
+              render()
+              app.querySelector('td.sel, th.sel')?.scrollIntoView({ block: 'nearest' })
+            }
+          },
+        )
+      }
+
+      function note() {
+        const n = notes.find((x) => x.id === cur().id),
+          m = state.mode
+        const body =
+          m === 'code'
+            ? `<pre class="raw" contenteditable="true" spellcheck="false" autocapitalize="off">${colorMd(toMarkdown(n))}</pre>`
+            : `<article class="doc" ${m === 'edit' ? 'contenteditable="true"' : ''}>${renderBody(n, m === 'edit')}</article>`
+        return `<header class="appbar">
+            <button class="icon" aria-label="Voltar" id="nav-back">←</button>
+            <h1>${esc(n.title)}<span class="saved">${m === 'read' ? 'Editada ' + n.when : 'Salvo agora'}${m === 'code' ? '<span class="mode-chip">Código</span>' : ''}</span></h1>
+            ${
+              m === 'read'
+                ? '<div class="seg"><button aria-pressed="true">Ler</button><button id="to-edit">Editar</button></div>'
+                : '<button class="done-btn" id="done">Pronto</button>'
+            }
+            <button class="icon" aria-label="Ações da nota" id="note-more">⋮</button></header>
+          <div class="content">${body}</div>
+          ${m !== 'read' && state.keyboard ? fmtbar() : ''}`
+      }
+
+      function fullTable() {
+        const n = notes.find((x) => x.id === cur().id),
+          i = cur().line
+        return `<header class="appbar"><button class="icon" aria-label="Voltar" id="nav-back">←</button><h1>Tabela<span class="saved">${esc(n.title)}</span></h1></header>
+          <div class="content fullscreen-tbl"><div class="rotate-hint">Gire o celular para ver mais colunas. Pinça amplia.</div>
+          <div class="doc">${table(n.body[i][1], i, false, true)}</div></div>`
+      }
+
+      function tasks() {
+        const groups = notes
+          .map((n) => [n, n.body.map((b, i) => [b, i]).filter(([b]) => b[0] === 't')])
+          .filter(([, t]) => t.length)
+        return `<header class="appbar"><h1>Tarefas</h1></header><div class="content">
+          ${groups
+            .map(
+              ([n, ts]) => `<div class="group">${esc(n.title.toUpperCase())}</div>
+            <div class="doc" style="min-height:0;padding-top:0;padding-bottom:0">${ts
+              .map(
+                ([[, v, done], i]) =>
+                  `<div class="task ${done ? 'done' : ''}"><label><input type="checkbox" data-note="${n.id}" data-task="${i}" ${done ? 'checked' : ''} aria-label="${esc(v)}"/></label><span>${esc(v)}</span></div>`,
+              )
+              .join('')}</div>`,
+            )
+            .join('')}
+          </div>${bottomNav('tasks')}`
+      }
+
+      function images() {
+        const imgs = [
+          [1.5, '#c98b5e', 'Reunião — quadro branco'],
+          [0.75, '#5e8bc9', 'Recibo farmácia'],
+          [1, '#7aa36b', 'Lista de compras'],
+          [1.78, '#a36b9b', 'Captura de tela muito longa sem espaços_ABCDEFGHIJ'],
+          [0.56, '#c9b25e', 'Foto vertical'],
+          [1.33, '#6bb0a3', 'Diagrama'],
+        ]
+        return `<header class="appbar"><h1>Imagens</h1><button class="icon" aria-label="Tirar foto">📷</button></header>
+          <div class="content"><div class="img-grid">${imgs
+            .map(
+              ([r, c, l]) =>
+                `<figure><span class="ph" style="aspect-ratio:${r};background:linear-gradient(135deg,${c},color-mix(in srgb,${c} 50%,#000))"></span><figcaption>${esc(l)}</figcaption></figure>`,
+            )
+            .join('')}</div></div>
+          ${bottomNav('images')}`
+      }
+
+      // ---------- Render + bind ----------
+      const on = (sel, fn) => {
+        const el = app.querySelector(sel)
+        if (el) el.onclick = fn
+      }
+      function render() {
+        const s = cur().name
+        app.innerHTML = { home, note, tasks, images, table: fullTable }[s]()
+        app.querySelectorAll('[data-tab]').forEach(
+          (b) =>
+            (b.onclick = () => {
+              state.stack =
+                b.dataset.tab === 'home'
+                  ? [{ name: 'home' }]
+                  : [{ name: 'home' }, { name: b.dataset.tab }]
+              state.keyboard = false
+              setInsets()
+              render()
+            }),
+        )
+        app.querySelectorAll('[data-open]').forEach((b) => {
+          b.onclick = () => {
+            state.mode = 'read'
+            push({ name: 'note', id: +b.dataset.open })
+          }
+          let timer, x0
+          b.onpointerdown = (e) => {
+            x0 = e.clientX
+            timer = setTimeout(() => itemActions(+b.dataset.open), 500)
+          }
+          b.onpointerup = b.onpointerleave = () => clearTimeout(timer)
+          b.onpointermove = (e) => {
+            if (x0 != null && x0 - e.clientX > 80) {
+              clearTimeout(timer)
+              x0 = null
+              trash(+b.dataset.open)
+            }
+          }
+        })
+        on('#nav-back', back)
+        on('#home-more', () =>
+          openSheet(
+            themeSwitcher() + rows(['🗑 Lixeira', '⬇ Importar', '💾 Backup', '⚙ Configurações']),
+            bindTheme,
+          ),
+        )
+        on('#note-more', () =>
+          openSheet(
+            themeSwitcher() +
+              `<button class="row" id="toggle-code">‹/› ${state.mode === 'code' ? 'Voltar ao modo visual' : 'Modo código (Markdown puro)'}</button>` +
+              rows([
+                '🔍 Buscar na nota',
+                '📌 Fixar',
+                '✎ Renomear',
+                '↗ Compartilhar .md',
+                '🕘 Histórico',
+                'A± Tamanho do texto',
+              ]) +
+              '<button class="row danger" id="note-trash">🗑 Mover para a lixeira</button>',
+            (el) => {
+              bindTheme(el)
+              el.querySelector('#toggle-code').onclick = () => {
+                state.mode = state.mode === 'code' ? 'edit' : 'code'
+                closeSheet()
+                openKeyboard(true)
+              }
+              el.querySelector('#note-trash').onclick = () => {
+                const id = cur().id
+                closeSheet()
+                state.stack.pop()
+                state.mode = 'read'
+                trash(id)
+              }
+            },
+          ),
+        )
+        const newNote = (title = 'Nova nota') => {
+          const n = { id: Date.now(), title, when: 'agora', body: [['p', '']] }
+          notes.unshift(n)
+          state.mode = 'edit'
+          state.cursor = 0
+          state.ctx = 'texto'
+          state.query = ''
+          push({ name: 'note', id: n.id })
+          openKeyboard(true)
+        }
+        on('#fab', () => newNote())
+        on('#create-q', () => newNote(state.query))
+        on('#clear-q', (e) => {
+          e.preventDefault()
+          state.query = ''
+          render()
+        })
+        on('#to-edit', () => {
+          state.mode = 'edit'
+          state.cursor = 0
+          state.ctx = 'texto'
+          openKeyboard(true)
+        })
+        on('#done', () => {
+          state.mode = 'read'
+          state.style = false
+          openKeyboard(false)
+        })
+        on('#hide-kbd', () => openKeyboard(false))
+        on('#insert', insertSheet)
+        on('#style-on', () => {
+          state.style = true
+          render()
+        })
+        on('#style-off', () => {
+          state.style = false
+          render()
+        })
+        on('#tbl-del', () =>
+          openSheet(
+            rows([
+              'Apagar linha',
+              'Apagar coluna',
+              'Alinhar coluna: esquerda',
+              'Alinhar coluna: centro',
+              'Alinhar coluna: direita',
+            ]),
+          ),
+        )
+        app.querySelectorAll('[data-tblview]').forEach(
+          (b) =>
+            (b.onclick = () => {
+              const i = +b.dataset.tblview
+              const t = notes.find((x) => x.id === cur().id).body[i][1]
+              state.tblView[i] =
+                (state.tblView[i] ?? (t.head.length > 3 ? 'cards' : 'table')) === 'cards'
+                  ? 'table'
+                  : 'cards'
+              render()
+            }),
+        )
+        app
+          .querySelectorAll('[data-expand]')
+          .forEach(
+            (b) =>
+              (b.onclick = () => push({ name: 'table', id: cur().id, line: +b.dataset.expand })),
+          )
+        const q = app.querySelector('#q')
+        if (q) {
+          q.oninput = () => {
+            state.query = q.value
+            render()
+            const nq = $('#q')
+            nq.focus()
+            nq.setSelectionRange(nq.value.length, nq.value.length)
+          }
+          q.onfocus = () => {
+            if (!state.keyboard) {
+              openKeyboard(true)
+              $('#q').focus()
+            }
+          }
+        }
+        app.querySelectorAll('[data-task]').forEach(
+          (c) =>
+            (c.onchange = () => {
+              const n = notes.find((x) => x.id === (+c.dataset.note || cur().id))
+              const line = n.body[+c.dataset.task]
+              line[2] = c.checked
+              render()
+              if (c.checked)
+                toast('Tarefa concluída', () => {
+                  line[2] = false
+                  render()
+                })
+            }),
+        )
+        const doc = app.querySelector('.doc[contenteditable]')
+        if (doc)
+          doc.onclick = (e) => {
+            if (e.target.closest('button')) return
+            const cell = e.target.closest('[data-cell]'),
+              line = e.target.closest('[data-line]')
+            if (!line) return
+            state.cursor = +line.dataset.line
+            state.ctx = line.dataset.ctx || 'texto'
+            state.style = false
+            state.cell = cell ? cell.dataset.cell.split(',').slice(1).map(Number) : null
+            state.keyboard = true
+            setInsets()
+            render()
+            app.querySelector('.cursor-line, td.sel, th.sel')?.scrollIntoView({ block: 'nearest' })
+          }
+        const rd = app.querySelector('.doc:not([contenteditable])')
+        if (rd && s === 'note')
+          rd.ondblclick = (e) => {
+            const l = e.target.closest('[data-line]')
+            state.mode = 'edit'
+            state.cursor = l ? +l.dataset.line : 0
+            state.ctx = l?.dataset.ctx || 'texto'
+            openKeyboard(true)
+          }
+      }
+
+      function itemActions(id) {
+        const n = notes.find((x) => x.id === id)
+        openSheet(
+          `<div class="group" style="margin-top:4px">${esc(n.title)}</div>` +
+            rows(['📌 Fixar', '✎ Renomear', '↗ Compartilhar']) +
+            '<button class="row danger" id="sheet-trash">🗑 Mover para a lixeira</button>',
+          (el) =>
+            (el.querySelector('#sheet-trash').onclick = () => {
+              closeSheet()
+              trash(id)
+            }),
+        )
+      }
+      function trash(id) {
+        const i = notes.findIndex((x) => x.id === id),
+          [n] = notes.splice(i, 1)
+        render()
+        toast(`“${esc(n.title.slice(0, 24))}” foi para a lixeira`, () => {
+          notes.splice(i, 0, n)
+          render()
+        })
+      }
+
+      setInsets()
+      render()
+    </script>
+  </body>
+</html>
