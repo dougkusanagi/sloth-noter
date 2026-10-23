@@ -1,0 +1,3 @@
+Adicionado: navegação no Android com busca nas notas, criação por toque e retorno à lista no mesmo ponto. Notas existentes abrem em leitura; toque em Editar para escrever e em Pronto para voltar à leitura. As ações de cada nota permitem fixar ou mover para a lixeira, com Desfazer logo após a remoção. O seletor Claro, Escuro e Sistema fica visível no topo. As abas Tarefas e Imagens mostram o conteúdo das notas; captura pela câmera, edição de tabelas por célula e importação pelo seletor do Android continuam pendentes.
+
+![Lista de notas no Android com busca, ações por nota, botão Nova nota e navegação inferior.](/changelog/mobile-navigation.png)

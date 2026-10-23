@@ -80,8 +80,15 @@ No Windows, use JDK 21 para o Gradle 8 (por exemplo, `winget install Microsoft.O
 
 As notas ficam no armazenamento interno do aplicativo. A seleção de pastas externas ainda não está disponível no Android; use a colagem nativa do teclado para a área de transferência. Esta compilação não é um pacote de publicação na Play Store.
 
+Para conferir a interface mobile no navegador, rode `bun run dev` e abra
+`http://localhost:5173/?platform=mobile`. A lista permite buscar, criar e abrir notas por toque.
+Notas existentes abrem em leitura; use Editar e Pronto para alternar. A interface Android ainda
+está em implementação: veja o [plano em andamento](docs/plans/mobile-interface.md).
+Os testes mobile rodam localmente com `bun run e2e --project=mobile`.
+
 ## Documentação
 
+- [Arquitetura](docs/architecture.md)
 - [Recursos, comportamento e atalhos](docs/RECURSOS.md)
 - [Desenvolvimento, testes e releases](docs/DESENVOLVIMENTO.md)
 - [Roteiro do projeto](docs/ROADMAP.md)

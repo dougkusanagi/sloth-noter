@@ -26,7 +26,7 @@ import {
   navigateToFence,
   wrapSelectedText,
 } from './editor/keys.js'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { t } from './i18n.js'
 import { flushSync } from 'react-dom'
 import { Compartment, EditorSelection, EditorState } from '@codemirror/state'
@@ -586,7 +586,9 @@ export function VisualEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId])
 
-  useEffect(() => {
+  // Synchronize controlled text before the next browser input; a passive effect can
+  // replay an older body over rapid EditContext updates on Android.
+  useLayoutEffect(() => {
     const view = viewRef.current
     if (!view || view.state.doc.toString() === body) return
     syncing.current = true

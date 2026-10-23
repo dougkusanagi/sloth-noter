@@ -316,24 +316,13 @@ feitas. O resto:
 
 ### Progresso da fase 2 — 2026-10-23
 
-Núcleo implementado em `src/mobile/nav-stack.js`, com testes em
-`src/mobile-nav-stack.test.js`:
+O núcleo de navegação foi integrado à casca mobile. Lista, busca, criação, abertura em leitura,
+edição visual inicial, retorno com contexto preservado, temas e ações de fixar/lixeira estão
+implementados. Tarefas, imagens referenciadas e Novidades têm uma primeira integração.
 
-- Pilhas separadas de telas e camadas; decisão de retorno na ordem camada → teclado → tela → sair.
-- Adaptador `createNavigation` com `pushState`, `replaceState` e `popstate`, incluindo avançar.
-- Restauração da sessão com busca, rolagem e cursor; camadas transitórias não reabrem no boot.
-- Descarte de rotas inválidas e de detalhes de notas removidas, quando o consumidor fornece
-  `noteExists`; falhas no armazenamento não impedem a navegação.
-- Somente metadados de navegação são persistidos, sem texto das notas.
-
-A integração com `MobileShell` ainda está pendente. A casca continua mostrando o placeholder;
-lista de notas, busca, barra inferior, FAB e tratamento nativo do botão Voltar ainda não estão
-entregues. O consumidor deve consultar `backTarget` antes de despachar `back`: ocultar o teclado
-é uma ação do host e não deve remover a tela do histórico. A posição deve ser atualizada antes
-de abrir um detalhe. A restauração do cursor depende da futura montagem do editor.
-
-Validação deste núcleo: 296 testes JavaScript passaram localmente; ESLint passou nos dois arquivos.
-Não houve alteração visual nem validação de UI nesta etapa.
+O estado detalhado, limitações, tentativas e próximo passo ficam em
+[plano de implementação](plans/mobile-interface.md). A fase 2 ainda tem interações da lista e
+validação nativa pendentes; as fases seguintes não estão concluídas.
 
 ## 7. Testes
 

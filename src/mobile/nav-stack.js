@@ -106,7 +106,17 @@ export function createNavigation({ history, events, storage, noteExists, onChang
     saveNavigation(storage, state)
     onChange(state)
   }
-  history.replaceState(entry(), '')
+  // A new WebView can restore a detail from sessionStorage without any back entries.
+  // Rebuild its parent screens; a reload already has browser entries and must not duplicate them.
+  const restored = state
+  if (history.state?.slothMobile?.version !== 1 && restored.screens.length > 1) {
+    state = { screens: [restored.screens[0]], layers: [] }
+    history.replaceState(entry(), '')
+    for (const screen of restored.screens.slice(1)) {
+      state = { screens: [...state.screens, screen], layers: [] }
+      history.pushState(entry(), '')
+    }
+  } else history.replaceState(entry(), '')
   const pop = (event) => {
     const saved = event.state?.slothMobile
     if (saved?.version !== 1) return

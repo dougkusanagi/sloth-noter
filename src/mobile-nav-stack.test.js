@@ -159,3 +159,49 @@ test('browser back and forward restore screens and nested layers; disposal remov
   nav.dispose()
   assert.equal(listener, null)
 })
+
+test('#7 a fresh WebView rebuilds parent history for a restored note without duplicating on reload', async () => {
+  const { createNavigation } = await import('./mobile/nav-stack.js')
+  const restored = note(
+    navigate(initialNavigation(), { type: 'position', position: { query: 'reunião', scroll: 80 } }),
+  )
+  let saved = JSON.stringify(restored),
+    listener
+  const storage = {
+    getItem: () => saved,
+    setItem: (_, value) => {
+      saved = value
+    },
+  }
+  const events = {
+    addEventListener: (_, fn) => {
+      listener = fn
+    },
+    removeEventListener() {},
+  }
+  const entries = [null]
+  let index = 0
+  const history = {
+    get state() {
+      return entries[index]
+    },
+    replaceState(value) {
+      entries[index] = value
+    },
+    pushState(value) {
+      entries[++index] = value
+    },
+    back() {
+      listener({ state: entries[--index] })
+    },
+  }
+  const nav = createNavigation({ history, storage, events })
+  assert.equal(entries.length, 2)
+  assert.deepEqual(nav.getState(), restored)
+  nav.dispose()
+  const reloaded = createNavigation({ history, storage, events })
+  assert.equal(entries.length, 2)
+  reloaded.dispatch({ type: 'back' })
+  assert.equal(reloaded.getState().screens[0].query, 'reunião')
+  assert.equal(reloaded.getState().screens[0].scroll, 80)
+})
