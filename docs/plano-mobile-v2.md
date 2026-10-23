@@ -314,6 +314,27 @@ feitas. O resto:
 | 6    | Polimento: tema nas barras, arrastar folhas, TalkBack, escala 1,3×–2×, rotação, tela dividida                            | Problemas 2, 4, 8–11, 20, 23, 24 no checklist manual                                                   |
 | 7    | Receber compartilhamento, "Abrir com" `.md`, atalho de launcher "Nova nota"                                              | Capturar texto de outro app em 2 toques                                                                |
 
+### Progresso da fase 2 — 2026-10-23
+
+Núcleo implementado em `src/mobile/nav-stack.js`, com testes em
+`src/mobile-nav-stack.test.js`:
+
+- Pilhas separadas de telas e camadas; decisão de retorno na ordem camada → teclado → tela → sair.
+- Adaptador `createNavigation` com `pushState`, `replaceState` e `popstate`, incluindo avançar.
+- Restauração da sessão com busca, rolagem e cursor; camadas transitórias não reabrem no boot.
+- Descarte de rotas inválidas e de detalhes de notas removidas, quando o consumidor fornece
+  `noteExists`; falhas no armazenamento não impedem a navegação.
+- Somente metadados de navegação são persistidos, sem texto das notas.
+
+A integração com `MobileShell` ainda está pendente. A casca continua mostrando o placeholder;
+lista de notas, busca, barra inferior, FAB e tratamento nativo do botão Voltar ainda não estão
+entregues. O consumidor deve consultar `backTarget` antes de despachar `back`: ocultar o teclado
+é uma ação do host e não deve remover a tela do histórico. A posição deve ser atualizada antes
+de abrir um detalhe. A restauração do cursor depende da futura montagem do editor.
+
+Validação deste núcleo: 296 testes JavaScript passaram localmente; ESLint passou nos dois arquivos.
+Não houve alteração visual nem validação de UI nesta etapa.
+
 ## 7. Testes
 
 - **Desktop:** suíte atual sem edição em toda fase.
