@@ -5,7 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const env = { ...process.env }
+const env = { ...process.env, VITE_TARGET: 'mobile' }
 if (process.platform === 'win32') {
   env.PATH = `${path.join(env.USERPROFILE, '.cargo', 'bin')};${env.PATH}`
   env.ANDROID_HOME ||= path.join(env.LOCALAPPDATA, 'Android', 'Sdk')

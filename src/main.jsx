@@ -106,6 +106,8 @@ import {
   Trash2,
   Minimize2,
 } from 'lucide-react'
+import { platform } from './platform.js'
+import { MobileShell } from './mobile/mobile-shell.jsx'
 import './styles.css'
 import './ui.css'
 
@@ -2767,4 +2769,6 @@ function Workspace({ persistence, loaded }) {
   )
 }
 
-createRoot(document.getElementById('root')).render(<App />)
+createRoot(document.getElementById('root')).render(
+  platform === 'mobile' ? <MobileShell /> : <App />,
+)

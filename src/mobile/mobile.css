@@ -1,0 +1,4 @@
+/* Loaded only by the mobile shell; every rule stays under [data-platform='mobile']. */
+[data-platform='mobile'] {
+  min-height: 100dvh;
+}
