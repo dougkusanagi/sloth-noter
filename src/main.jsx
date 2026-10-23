@@ -39,6 +39,7 @@ import { TasksLibrary } from './components/tasks-library.jsx'
 import { resolvedTasks, syncLinkedTasks, toggleTask } from './tasks.js'
 import { displayName } from './note-title.js'
 import { useTabs } from './components/tabs.jsx'
+import { usePrefs } from './hooks/use-prefs.js'
 import { ImageLibrary } from './components/image-library.jsx'
 import { readNoteFile, splitDrop } from './note-drop.js'
 import { externalNote, isExternalNote } from './external-notes.js'
@@ -70,7 +71,7 @@ import {
   PromptDialog,
   SyncConflictDialog,
 } from './components/dialogs.jsx'
-import { setLanguage, t } from './i18n.js'
+import { t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
 import { welcomeNote } from './welcome.js'
 import { foldableLines } from './sections.js'
@@ -294,7 +295,7 @@ function Workspace({ persistence, loaded }) {
     () => (palette ? quickOpenNotes(data.notes, data.openIds, query) : []),
     [palette, data.notes, data.openIds, query],
   )
-  const prefs = data.preferences
+  const { prefs, updatePrefs } = usePrefs({ data, current, commit })
   const { tabStrip, tabContextMenu, openTabMenu } = useTabs({
     data,
     current,
@@ -310,8 +311,7 @@ function Workspace({ persistence, loaded }) {
   })
   const sidebarVisible =
     !focusMode && (prefs.sidebarVisible ?? !window.matchMedia('(max-width: 600px)').matches)
-  setLanguage(prefs.language)
-  const images = useMemo(() => libraryImages(data, diskImages), [data, diskImages])
+  const images =useMemo(() => libraryImages(data, diskImages), [data, diskImages])
   const openTasks = useMemo(
     () =>
       data.notes.reduce(
@@ -378,9 +378,6 @@ function Workspace({ persistence, loaded }) {
     current.current = next
     setData(next)
     if (!blocked) writer.current.write(next)
-  }
-  function updatePrefs(change) {
-    commit({ ...current.current, preferences: { ...current.current.preferences, ...change } })
   }
   function focusEditor() {
     if (mode === 'source') editorRef.current?.focus()
