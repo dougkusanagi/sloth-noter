@@ -4,6 +4,18 @@
 
 ## Desenvolvimento
 
+Antes de fechar uma etapa, execute localmente `bun run test`, `bun run desktop:test` e
+`bun run e2e` (desktop e mobile). Use testes afetados a cada incremento e a suíte completa antes de
+commit em `main` e do push da etapa. Lint, build e versão são verificações complementares. Não
+depender de CI nem alterar workflows de testes para validar uma entrega.
+
+E2E com ponte nativa simulada não valida o armazenamento dentro da janela Tauri ou os eventos de
+ciclo de vida Android. Os testes Rust verificam o backend local; fluxos de integração ainda exigem
+o aplicativo nativo. Para Android, registrar ambiente e evidências conforme o
+[plano de execução](plans/mobile-interface.md) e a matriz do [ADR 0003](adr/0003-spike-ime-mobile.md).
+O histórico desktop já foi entregue; seu contrato está no [ADR 0002](adr/0002-historico-de-alteracoes.md)
+e o uso em [Recursos](RECURSOS.md#histórico-local-de-alterações-desktop), sem plano de execução pendente.
+
 Requisitos: [Bun](https://bun.sh) 1.4, Node.js 24 (executa os testes) e, para o desktop, Rust 1.82+ com as [dependências do Tauri](https://tauri.app/start/prerequisites/).
 
 ```sh

@@ -1,8 +1,11 @@
 # Plano: Sloth Note no Android
 
-Status: proposta, nada implementado. A versão Android de hoje (APK experimental de `962b01b`) roda a
-interface de desktop num celular. Este plano refaz a usabilidade mobile do zero, **sem alterar a versão
-desktop**.
+Status: referência histórica do diagnóstico e da proposta inicial, baseada no APK `962b01b`.
+A interface Android já tem implementação parcial; as descrições de “hoje” abaixo se referem àquele
+APK, não ao estado atual. O [plano v2](plano-mobile-v2.md) define o escopo vigente e o
+[plano de execução](plans/mobile-interface.md) é a única fonte de andamento e próxima etapa.
+As seções 3.3–7 abaixo foram substituídas pelo v2. As seções 1–3.2 permanecem como contexto e
+princípios, com as ressalvas de implementação registradas no v2.
 
 ## 1. Diagnóstico
 

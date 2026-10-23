@@ -64,7 +64,12 @@ A interface mostra as etapas em andamento ("Buscando por tags… Lendo 4 resumos
 
 O app continua local e sem conta por padrão. GitHub é um provedor planejado; também será avaliada uma alternativa gratuita que não exija conta no GitHub. A escolha dessa alternativa permanece em aberto. Backup remoto e sincronização entre dispositivos são entregas distintas.
 
-O contrato de sincronização deve incluir notas, imagens, exclusões, metadados das tarefas e histórico de conclusão, com IDs estáveis, tratamento de conflitos e deduplicação de eventos. O histórico de tarefas é independente dos commits. As escolhas abaixo são a proposta específica para o provedor GitHub:
+O contrato de sincronização deve incluir notas, imagens, exclusões, metadados das tarefas e histórico de conclusão, com IDs estáveis, tratamento de conflitos e deduplicação de eventos. O histórico de tarefas é independente dos commits.
+
+O histórico local de **versões das notas** é outro recurso: continua fora da rede e do backup
+exportado, conforme [ADR 0002](adr/0002-historico-de-alteracoes.md). Esta proposta não altera esse
+contrato; enviar esses diários exige nova decisão aprovada. As escolhas abaixo são a proposta
+específica para o provedor GitHub:
 
 - Login por **OAuth device flow** (código + abrir navegador; sem tokens manuais).
 - Cria automaticamente um **repositório privado** (ex.: `sloth-notes`).
@@ -99,13 +104,17 @@ O gargalo não é o tamanho do modelo, e sim ter os dados organizados. Essa perg
 
 **Atalho:** expor notas + diário como **servidor MCP**, para que Claude Desktop/Claude Code e outros clientes consultem tudo sem construir um agente dentro do app.
 
-## 8. Ordem sugerida
+## 8. Evolução futura
+
+Android offline já está em implementação e não depende de tarefas dedicadas, sync ou IA. Sua
+próxima etapa está no [plano de execução](plans/mobile-interface.md); a lista abaixo organiza as
+capacidades futuras e não bloqueia nem reordena essa entrega.
 
 1. Listas de tarefas dedicadas e histórico de conclusão.
 2. Recorrência diária e por dias da semana, com ocorrências independentes.
 3. Prazo, lembretes e notificações no desktop.
 4. Backup remoto e sincronização opcionais: proposta GitHub acima e avaliação de alternativa gratuita sem GitHub.
-5. Versão mobile, com funcionamento offline, sincronização e validação de notificações e alarmes na plataforma escolhida.
+5. Evolução mobile com sincronização opcional e validação de notificações/alarmes; a casca Android offline é trabalho independente, já em andamento.
 6. IA local fase 1: sidecar llama.cpp, título sugerido, resumo, explicar seleção, frontmatter + `.sloth/meta`.
 7. Índice FTS5 + tags + "Perguntar às notas" com fontes e histórico.
 8. Diário automático (GitHub + git local + notas), aproveitando o histórico de tarefas já registrado.
