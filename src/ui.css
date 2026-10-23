@@ -2538,6 +2538,7 @@ html:has(
 .focus-mode .width-feedback,
 .focus-mode .cm-fold-toggle,
 .focus-mode .fold-toggle,
+.focus-mode .cm-drag-handle,
 .focus-mode .cm-rails {
   display: none;
 }
@@ -2812,4 +2813,81 @@ html:has(
 .history-confirm p {
   flex-basis: 100%;
   margin: 0;
+}
+
+/* Keyboard hints stay separate from the document selection and viewport edges. */
+.shortcut-tooltip {
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  max-width: min(280px, calc(100vw - 24px));
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--popover);
+  color: var(--ink);
+  box-shadow: var(--shadow-pop);
+  font: 12px var(--ui);
+  transform: translateX(-50%);
+  pointer-events: auto;
+  animation: tooltip-in 0.12s var(--ease) 0.35s both;
+}
+@keyframes tooltip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.block-menu {
+  width: 290px;
+}
+.block-menu button {
+  min-height: 36px;
+}
+.changelog-page {
+  font: 14px/1.65 var(--ui);
+  overflow-wrap: anywhere;
+}
+.changelog-intro {
+  color: var(--muted);
+}
+.changelog-page h4 {
+  margin: 28px 0 12px;
+  font-size: 17px;
+}
+.changelog-page h5 {
+  margin: 22px 0 8px;
+  font-size: 14px;
+}
+.changelog-page ul {
+  padding-left: 20px;
+}
+.changelog-page li {
+  margin: 12px 0;
+  padding-left: 3px;
+}
+.changelog-page p {
+  margin: 8px 0;
+}
+.changelog-page img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+.changelog-page code {
+  white-space: normal;
+}
+.changelog-page details {
+  margin-top: 28px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.changelog-page summary {
+  cursor: pointer;
+  font-weight: 600;
 }

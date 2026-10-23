@@ -2041,6 +2041,11 @@ function Workspace({ persistence, loaded }) {
         const welcome = welcomeNote(prefs.language)
         createNote(welcome.name, welcome.body)
       }, false),
+    changelog: () =>
+      runMenu(() => {
+        setSettingsSection('changelog')
+        setSettingsOpen(true)
+      }, false),
     history: () =>
       runMenu(() => {
         setSettingsSection('history')

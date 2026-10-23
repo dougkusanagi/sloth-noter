@@ -1,0 +1,1 @@
+Corrigido: o menu “+” de inserir blocos aproveita a margem vazia à esquerda do texto quando há espaço suficiente, sem cobrir a coluna de escrita. Em telas estreitas, permanece dentro da janela e mantém todas as opções acessíveis.

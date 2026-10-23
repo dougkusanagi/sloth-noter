@@ -90,20 +90,25 @@ test('a nested fold stays closed when its parent is expanded', async ({ page }) 
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+End')
   await page.locator('.cm-line', { hasText: 'Sub um' }).hover()
-  await page.locator('.cm-line', { hasText: 'Sub um' }).getByRole('button').click()
+  await page
+    .locator('.cm-line', { hasText: 'Sub um' })
+    .getByRole('button', { name: 'Recolher seção' })
+    .click()
   await expect(page.locator('.cm-line', { hasText: 'texto sub' })).toHaveCount(0)
   await page.locator('.cm-line', { hasText: 'Seção um' }).hover()
-  await page.locator('.cm-line', { hasText: 'Seção um' }).getByRole('button').click()
+  await page
+    .locator('.cm-line', { hasText: 'Seção um' })
+    .getByRole('button', { name: 'Recolher seção' })
+    .click()
   await page
     .locator('.cm-line', { hasText: 'Seção um' })
     .getByRole('button', { name: 'Expandir seção' })
     .click()
   await expect(page.locator('.cm-line', { hasText: 'texto um' })).toBeVisible()
   await expect(page.locator('.cm-line', { hasText: 'texto sub' })).toHaveCount(0)
-  await expect(page.locator('.cm-line', { hasText: 'Sub um' }).getByRole('button')).toHaveAttribute(
-    'aria-expanded',
-    'false',
-  )
+  await expect(
+    page.locator('.cm-line', { hasText: 'Sub um' }).locator('.cm-fold-toggle').first(),
+  ).toHaveAttribute('aria-expanded', 'false')
 })
 
 test('moving the cursor into a collapsed section reveals it', async ({ page }) => {
@@ -111,7 +116,10 @@ test('moving the cursor into a collapsed section reveals it', async ({ page }) =
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+End')
   await page.locator('.cm-line', { hasText: 'Seção dois' }).hover()
-  await page.locator('.cm-line', { hasText: 'Seção dois' }).getByRole('button').click()
+  await page
+    .locator('.cm-line', { hasText: 'Seção dois' })
+    .getByRole('button', { name: 'Recolher seção' })
+    .click()
   await expect(page.locator('.cm-line', { hasText: 'texto dois' })).toHaveCount(0)
   await page.keyboard.press('Control+a')
   await expect(page.locator('.cm-line', { hasText: 'texto dois' })).toBeVisible()

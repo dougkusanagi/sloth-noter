@@ -1,5 +1,17 @@
 import { useState } from 'react'
-import { Monitor, Sun, Moon, Palette, Type, Database, Keyboard, History, X } from 'lucide-react'
+import {
+  Monitor,
+  Sun,
+  Moon,
+  Palette,
+  Type,
+  Database,
+  Keyboard,
+  History,
+  NotebookPen,
+  X,
+} from 'lucide-react'
+import { ChangelogPanel } from './changelog-panel.jsx'
 import { HistoryPanel } from './history-panel.jsx'
 import { Modal, ShortcutList } from './dialogs.jsx'
 import { FontSlider, RangeSlider, Segmented, Switch } from './controls.jsx'
@@ -18,6 +30,7 @@ const SECTIONS = [
   ['data', Database],
   ['history', History],
   ['shortcuts', Keyboard],
+  ['changelog', NotebookPen],
 ]
 
 function Row({ id, title, hint, children }) {
@@ -47,8 +60,11 @@ function Action({ title, hint, label, onClick }) {
 }
 
 const focusable = (dialog) =>
-  [...dialog.querySelectorAll('button, input')].filter(
-    (element) => !element.disabled && (element.type !== 'radio' || element.checked),
+  [...dialog.querySelectorAll('button, input, summary, a[href]')].filter(
+    (element) =>
+      !element.disabled &&
+      element.getClientRects().length > 0 &&
+      (element.type !== 'radio' || element.checked),
   )
 
 export function SettingsDialog({
@@ -95,6 +111,7 @@ export function SettingsDialog({
         </nav>
         <div className="settings-panel">
           <h3>{t(`settings.${section}`)}</h3>
+          {section === 'changelog' && <ChangelogPanel />}
           {section === 'appearance' && (
             <>
               <Row title={t('settings.theme')} hint={t('settings.themeHint')}>

@@ -1196,6 +1196,86 @@ textarea:focus-visible {
     opacity: 0.6;
   }
 }
+
+/* Ordering grip in the left gutter, before the heading level pill. */
+.cm-drag-handle {
+  position: absolute;
+  right: calc(100% + 3.45rem);
+  top: 50%;
+  translate: 0 -50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 20px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--muted) 65%, transparent);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  transition: color 0.12s;
+}
+/* It needs a wide gutter, which only opens beyond the content column. */
+@media (min-width: 925px) {
+  .visual-editor .cm-md-h2 .cm-drag-handle,
+  .visual-editor .cm-md-h3 .cm-drag-handle,
+  .visual-editor .cm-md-h4 .cm-drag-handle,
+  .visual-editor .cm-md-h5 .cm-drag-handle,
+  .visual-editor .cm-md-h6 .cm-drag-handle {
+    display: inline-flex;
+    opacity: 0;
+    transition:
+      opacity 0.12s,
+      color 0.12s;
+  }
+  .visual-editor .cm-md-h2:hover .cm-drag-handle,
+  .visual-editor .cm-md-h3:hover .cm-drag-handle,
+  .visual-editor .cm-md-h4:hover .cm-drag-handle,
+  .visual-editor .cm-md-h5:hover .cm-drag-handle,
+  .visual-editor .cm-md-h6:hover .cm-drag-handle,
+  .visual-editor .cm-md-h2:focus-within .cm-drag-handle,
+  .visual-editor .cm-md-h3:focus-within .cm-drag-handle,
+  .visual-editor .cm-md-h4:focus-within .cm-drag-handle,
+  .visual-editor .cm-md-h5:focus-within .cm-drag-handle,
+  .visual-editor .cm-md-h6:focus-within .cm-drag-handle {
+    opacity: 1;
+  }
+  .cm-drag-handle:hover,
+  .cm-drag-handle:focus-visible {
+    opacity: 1;
+    color: var(--accent);
+  }
+  .cm-drag-handle:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+    outline-offset: 1px;
+  }
+}
+.cm-drag-handle svg {
+  width: 16px;
+}
+.cm-drag-handle:active {
+  cursor: grabbing;
+}
+body.cm-section-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+.cm-dragging-line {
+  opacity: 0.45;
+}
+.cm-section-drop {
+  position: fixed;
+  z-index: 60;
+  display: none;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  pointer-events: none;
+}
+
 .markdown .md-section[data-collapsed] > :not(:first-child) {
   display: none;
 }

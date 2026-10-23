@@ -8,6 +8,7 @@ import { Decoration, ViewPlugin, WidgetType } from '@codemirror/view'
 import { classifyLine, inlineSyntax } from '../live-markdown.js'
 import { headingSections } from '../sections.js'
 import { FoldToggleWidget, foldField, foldRange, isFolded } from './folding.js'
+import { SectionGripWidget } from './section-drag.js'
 import { codeTokens, syntaxRanges } from '../syntax-highlight.js'
 import { sectionProgress, resolvedTasks, sectionChecklists, sectionTaskChanges } from '../tasks.js'
 import { Facet } from '@codemirror/state'
@@ -195,9 +196,14 @@ export function decorationsFor(view) {
   const tree = markdownTree(text)
   const foldable = new Map()
   const headingLevels = new Map()
+  const headingSiblings = new Map()
   for (const heading of headingSections(text, tree)) {
     // Level 0 is the H1 title; level 1 is H2.
-    if (heading.level > 0) headingLevels.set(heading.line, heading.level + 1)
+    if (heading.level > 0) {
+      headingLevels.set(heading.line, heading.level + 1)
+      // Sections of the same level are the siblings a section can move among.
+      headingSiblings.set(heading.level, (headingSiblings.get(heading.level) ?? 0) + 1)
+    }
     const range = heading.level > 0 && foldRange(view.state, heading)
     if (range) foldable.set(heading.line, isFolded(view.state, range.from))
   }
@@ -390,7 +396,7 @@ export function decorationsFor(view) {
         ranges.push(
           Decoration.replace({}).range(breakMarks.get(number), breakMarks.get(number) + 1),
         )
-      if (headingLevels.has(number))
+      if (headingLevels.has(number)) {
         ranges.push(
           Decoration.widget({
             widget: new FoldToggleWidget(
@@ -402,6 +408,15 @@ export function decorationsFor(view) {
             side: -2,
           }).range(line.from),
         )
+        // Only headings with someone to swap places with get a grip.
+        if ((headingSiblings.get(headingLevels.get(number) - 1) ?? 0) > 1)
+          ranges.push(
+            Decoration.widget({
+              widget: new SectionGripWidget(number, headingLevels.get(number)),
+              side: -3,
+            }).range(line.from),
+          )
+      }
       const indent = line.text.match(/^\s*/)[0].length
       // The margin carries the nesting, so the source spaces never show.
       if (shape.kind === 'ordered' && indent && listDepths.has(number))

@@ -1,5 +1,6 @@
 import { RectangleMarker, layer } from '@codemirror/view'
 import { markdownTree } from '../markdown-model.js'
+import { foldField } from './folding.js'
 
 /** Continuous guides include wrapped lines below the parent marker. */
 export const railsLayer = layer({
@@ -16,13 +17,24 @@ export const railsLayer = layer({
     const top = view.documentTop - base.top + view.scrollDOM.scrollTop
     const size = parseFloat(getComputedStyle(view.contentDOM).fontSize) || 16
     const markers = []
+    // Folded sections collapse into their heading's block, so rails computed
+    // inside them land on the heading as a stray line. Track the folds and
+    // skip any rail a fold covers (or whose parent line is folded).
+    const folds = []
+    view.state.field(foldField, false)?.between(0, doc.length, (from, to) => folds.push([from, to]))
+    const foldedParent = (pos) => folds.some(([f, t]) => f < pos && pos < t)
+    const coveredSpan = (from, to) => folds.some(([f, t]) => f < to && t > from)
     const rail = (x, from, to, parentLine) => {
-      const start = view.lineBlockAt(doc.line(from).from)
+      const nestedFrom = doc.line(from).from
+      const nestedTo = doc.line(to).to
+      if (foldedParent(doc.line(parentLine).from) || coveredSpan(nestedFrom, nestedTo)) return
+      const start = view.lineBlockAt(nestedFrom)
       const end = view.lineBlockAt(doc.line(to).to)
       const parent = view.lineBlockAt(doc.line(parentLine).from)
       const railTop = Math.min(start.top, parent.top + view.defaultLineHeight)
       markers.push(new RectangleMarker('cm-rail', x, top + railTop, null, end.bottom - railTop))
     }
+
     const visit = (node, depth) => {
       if (node.type === 'listItem') {
         const nested = node.children.filter((child) => child.type === 'list')

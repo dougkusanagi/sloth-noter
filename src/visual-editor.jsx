@@ -1,4 +1,6 @@
-import { formatShortcut, shortcutEdit } from './editor-shortcuts.js'
+import { ShortcutButton } from './components/shortcut-button.jsx'
+import { Shortcut } from './components/main-menu.jsx'
+import { EDITOR_SHORTCUTS, formatShortcut, shortcutEdit } from './editor-shortcuts.js'
 import { transactionHistory } from './editor/history-log.js'
 import { searchHighlights } from './editor/search.js'
 import { clipboardImageFiles } from './clipboard.js'
@@ -61,6 +63,11 @@ const formatButtons = [
   ['list', 'format.list', <span>☷</span>],
 ]
 /* eslint-enable react/jsx-key */
+const keysForLabel = (label) => EDITOR_SHORTCUTS.find(([, key]) => key === label)?.[0]
+
+const blockKeys = (action) =>
+  ['list', 'quote'].includes(action) ? keysForLabel(`format.${action}`) : undefined
+
 const blockButtons = [
   ['h2', 'block.h2'],
   ['h3', 'block.h3'],
@@ -194,6 +201,16 @@ export function VisualEditor({
         setInsertAt(position)
       },
     })
+  }
+
+  function blockMenuLeft() {
+    const width = Math.min(290, window.innerWidth - 16)
+    const editorLeft = Math.max(8, host.current?.getBoundingClientRect().left ?? 8)
+    const leftOfTrigger = insertAt.x - width - 8
+    // Use the writing area's empty margin before falling back to an overlay.
+    return leftOfTrigger >= editorLeft
+      ? leftOfTrigger
+      : Math.max(8, Math.min(insertAt.x, window.innerWidth - width - 8))
   }
 
   function insertBlock(action) {
@@ -630,11 +647,11 @@ export function VisualEditor({
             </form>
           ) : (
             formatButtons.map(([action, label, icon]) => (
-              <button
+              <ShortcutButton
                 key={action}
                 type="button"
-                title={t(label)}
-                aria-label={t(label)}
+                label={t(label)}
+                keys={keysForLabel(label)}
                 aria-pressed={toolbar.active.includes(action)}
                 className={toolbar.active.includes(action) ? 'active' : undefined}
                 onClick={() =>
@@ -644,7 +661,7 @@ export function VisualEditor({
                 }
               >
                 {icon}
-              </button>
+              </ShortcutButton>
             ))
           )}
         </div>
@@ -669,7 +686,7 @@ export function VisualEditor({
               role="menu"
               aria-label={t('editor.insertBlock')}
               style={{
-                left: Math.max(8, insertAt.x),
+                left: blockMenuLeft(),
                 top: Math.max(
                   52,
                   Math.min(
@@ -718,7 +735,8 @@ export function VisualEditor({
                   }}
                 >
                   <BlockIcon action={action} />
-                  <span>{t(label)}</span>
+                  <span className="menu-item-label">{t(label)}</span>
+                  {blockKeys(action) && <Shortcut keys={blockKeys(action)} />}
                 </button>
               ))}
             </div>

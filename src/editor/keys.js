@@ -3,6 +3,9 @@ import { wrapSelection } from '../wrap-selection.js'
 import { continueBlock } from '../continue-block.js'
 import { listIndentChanges } from '../list-indent.js'
 import { moveListItems } from '../list-move.js'
+import { moveSectionBy } from '../section-move.js'
+import { foldRange, isFolded, refoldAfterMove } from './folding.js'
+import { headingSections } from '../sections.js'
 
 export function wrapSelectedText(event, view) {
   if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return false
@@ -75,6 +78,29 @@ export function indentList(view, outdent = false) {
 export function moveList(view, direction) {
   if (view.state.selection.ranges.length !== 1) return false
   const { anchor, head } = view.state.selection.main
+  // A single-line caret/selection on a heading moves the whole section instead.
+  const first = view.state.doc.lineAt(anchor)
+  if (first.number === view.state.doc.lineAt(head).number) {
+    const movedHeading = moveSectionBy(view.state.doc.toString(), first.number, direction)
+    if (movedHeading) {
+      if (movedHeading.changes.length) {
+        // The fold belongs to the section; it travels with the move.
+        const section = headingSections(view.state.doc.toString()).find(
+          (heading) => heading.line === first.number,
+        )
+        const range = section && foldRange(view.state, section)
+        const folded = range && isFolded(view.state, range.from)
+        view.dispatch({
+          changes: movedHeading.changes,
+          selection: EditorSelection.single(movedHeading.anchor, movedHeading.head),
+          scrollIntoView: true,
+          userEvent: 'secao',
+        })
+        if (folded) refoldAfterMove(view, movedHeading.anchor)
+      }
+      return true
+    }
+  }
   const moved = moveListItems(view.state.doc.toString(), anchor, head, direction)
   if (!moved) return false
   if (moved.changes.length)

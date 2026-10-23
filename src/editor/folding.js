@@ -114,6 +114,19 @@ export const foldField = StateField.define({
   provide: (field) => EditorView.decorations.from(field),
 })
 
+/**
+ * Re-folds the section that a move just relocated. The fold lives on the
+ * heading's end offset, which a whole-section replace swallows along with the
+ * section itself, so it has to be restored from the heading's new position.
+ */
+export function refoldAfterMove(view, anchor) {
+  const { state } = view
+  const line = state.doc.lineAt(anchor).number
+  const heading = headingSections(state.doc.toString()).find((item) => item.line === line)
+  const range = heading && foldRange(state, heading)
+  if (range) view.dispatch({ effects: foldSection.of(range) })
+}
+
 /** Folds or unfolds the section whose heading starts on `lineNumber`. */
 export function toggleFold(view, lineNumber) {
   const { state } = view

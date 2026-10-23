@@ -29,6 +29,7 @@ import {
   Settings,
   Command,
   LifeBuoy,
+  NotebookPen,
   MoveHorizontal,
   ChevronsDownUp,
   ChevronsUpDown,
@@ -111,6 +112,7 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
         ['settings', 'menu.settings', Settings, ',', false, true],
         ['shortcuts', 'menu.shortcuts', Keyboard, 'Shift+/', false, true],
         ['welcome', 'menu.welcome', LifeBuoy, undefined, false, true],
+        ['changelog', 'settings.changelog', NotebookPen, undefined, false, true],
       ],
     ],
   ]

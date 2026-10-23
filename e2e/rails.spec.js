@@ -58,6 +58,20 @@ test('Padrão draws continuous rails only for nested lists, one per nesting leve
   await expect(box(page)).toHaveValue(BODY)
 })
 
+test('Padrão drops the rails of a section while it is collapsed', async ({ page }) => {
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  const rails = page.locator('.cm-rail')
+  await expect(rails).toHaveCount(2)
+  const heading = page.locator('.cm-line', { hasText: 'Seção um' })
+  await heading.hover()
+  await heading.getByRole('button', { name: 'Recolher seção' }).click()
+  await expect(page.locator('.cm-line', { hasText: 'filho' })).toHaveCount(0)
+  await expect(rails).toHaveCount(0)
+  await heading.hover()
+  await heading.getByRole('button', { name: 'Expandir seção' }).click()
+  await expect(rails).toHaveCount(2)
+})
+
 test('Leitura draws the same rails for nested lists and none for sections', async ({ page }) => {
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
   const pseudo = (selector, property) =>
