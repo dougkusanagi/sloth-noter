@@ -293,6 +293,8 @@ const messages = {
       'Copiar as {count} notas atuais e as imagens para esta pasta? Os originais serão mantidos. Se houver arquivos diferentes com o mesmo nome, a cópia será interrompida.',
     'dialog.folderCopyConfirm': 'Copiar',
     'dialog.folderCopyDecline': 'Abrir sem copiar',
+    'mobile.invalidName':
+      'Digite um nome sem caracteres de arquivo como /, : ou * e sem ponto no final. Use um nome mais curto se necessário.',
     'dialog.renameLabel': 'Nome da nota',
 
     'palette.label': 'Buscar nota',
@@ -689,6 +691,8 @@ const messages = {
       'Copy the {count} current notes and images into this folder? Originals are kept. Different files with the same name stop the copy.',
     'dialog.folderCopyConfirm': 'Copy',
     'dialog.folderCopyDecline': 'Open without copying',
+    'mobile.invalidName':
+      'Enter a name without file characters such as /, : or * and without a trailing period. Use a shorter name if needed.',
     'dialog.renameLabel': 'Note name',
 
     'palette.label': 'Find note',

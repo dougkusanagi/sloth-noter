@@ -286,3 +286,72 @@ test('notes and action sheet pass accessibility checks and keep keyboard focus i
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Ações de Compras', exact: true })).toBeFocused()
 })
+
+test('rename validates, preserves text and returns focus after cancel', async ({ page }) => {
+  await page.locator('.mobile-note-row').first().getByRole('button').last().tap()
+  await page.getByRole('button', { name: 'Renomear nota', exact: true }).tap()
+  const input = page.getByRole('textbox', { name: 'Nome da nota' })
+  await expect(input).toBeFocused()
+  await input.fill('Reunião')
+  await page.getByRole('button', { name: 'Renomear nota', exact: true }).tap()
+  await expect(page.getByRole('alert')).toContainText('Já existe')
+  await expect(input).toHaveValue('Reunião')
+  await input.fill('')
+  await page.getByRole('button', { name: 'Renomear nota', exact: true }).tap()
+  await expect(page.getByRole('alert')).toContainText('Digite um nome')
+  await input.fill('Mercado')
+  await page.getByRole('button', { name: 'Renomear nota', exact: true }).tap()
+  await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
+  await expect(page.locator('.mobile-note-row').first().getByRole('button').last()).toBeFocused()
+  await expect(page.locator('[data-note-id="shopping"]')).toContainText('Mercado')
+  await page.locator('.mobile-note-row').first().getByRole('button').last().tap()
+  await page.getByRole('button', { name: 'Renomear nota', exact: true }).tap()
+  await input.fill('Descartar')
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).tap()
+  await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
+  await page.locator('[data-note-id="shopping"]').tap()
+  await expect(page.locator('.markdown')).toContainText('Mercado')
+  await expect(page.locator('.markdown')).toContainText('Frutas')
+})
+
+test('long press opens actions without opening note; movement cancels', async ({ page }) => {
+  const note = page.locator('[data-note-id="shopping"]')
+  await note.dispatchEvent('pointerdown', { isPrimary: true, button: 0, clientX: 50, clientY: 100 })
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await note.dispatchEvent('pointerup')
+  await note.dispatchEvent('click')
+  await expect(page.locator('.markdown')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
+  await expect(note).toBeFocused()
+  await note.dispatchEvent('pointerdown', { isPrimary: true, button: 0, clientX: 50, clientY: 100 })
+  await note.dispatchEvent('pointermove', { clientX: 50, clientY: 140 })
+  await page.waitForTimeout(650)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('rename fits narrow enlarged text and desktop; controls keep touch targets', async ({
+  page,
+}, testInfo) => {
+  for (const width of [320, 1280]) {
+    await page.setViewportSize({ width, height: 844 })
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '200%'
+    })
+    for (const button of await page
+      .locator('.mobile-header button, .mobile-note-row:first-child > button')
+      .all()) {
+      const box = await button.boundingBox()
+      expect(box.width).toBeGreaterThanOrEqual(48)
+      expect(box.height).toBeGreaterThanOrEqual(48)
+    }
+    await page.locator('.mobile-note-row').first().getByRole('button').last().tap()
+    await page.getByRole('button', { name: 'Renomear nota', exact: true }).tap()
+    await page
+      .getByRole('textbox', { name: 'Nome da nota' })
+      .fill('Planejamento com ação 🦥 e detalhes')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`rename-${width}.png`) })
+    await page.getByRole('button', { name: 'Cancelar', exact: true }).tap()
+    await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
+  }
+})

@@ -33,7 +33,7 @@ Os itens marcados registram código e cobertura de navegador. Não significam ap
 
 Executar 2.1 → 2.2 → 2.3 → 2.4. Essa sequência vem antes da fase 3.
 
-- [ ] **2.1 — Toque longo e renomear.** Reutilizar a folha existente e manter seu botão visível.
+- [x] **2.1 — Toque longo e renomear.** Reutilizar a folha existente e manter seu botão visível.
       Acrescentar renomeação por formulário curto com validação, preservação dos dados e referências wiki.
       Cancelar toque longo ao rolar; não abrir a nota depois de acionar a folha. Conferir nomes longos,
       duplicados, teclado e retorno de foco. Corrigir alvos de toque do cabeçalho e dos controles da lista
@@ -151,6 +151,15 @@ Na revisão documental de 2026-10-23 passaram localmente: 300 testes JavaScript 
 39 testes Rust (`bun run desktop:test`) e 307 E2E (`bun run e2e`, incluindo 26 mobile).
 Esses resultados não aprovam a matriz nativa nem corrigem as pendências de implementação acima.
 
+Na etapa 2.1 (2026-10-23) passaram localmente: 301 testes JavaScript (`bun run test`),
+39 testes Rust (`bun run desktop:test`) e 310 E2E (`bun run e2e`, incluindo 29 mobile).
+Também passaram lint, build e verificação de formatação dos arquivos alterados. Capturas reais
+conferidas em 320 px, com fonte 2×, e em desktop: formulário de renomeação, alvos de 48 px,
+nomes longos, foco e Novidades com imagem local carregada. A renomeação valida nomes vazios,
+inválidos e repetidos e atualiza referências wiki nas notas e na lixeira. O toque longo cancela
+com movimento/rolagem e não abre a nota ao soltar. A verificação usa navegador; teclado Android
+real e ciclo nativo continuam previstos em 2.4/4.1, sem aprovação nativa nesta entrega.
+
 Em cada entrega, registrar testes executados e limitações reais. Vincular os problemas #1–24 do v2 a
 testes/checklists com ambiente e resultado; screenshots devem ser inspecionadas. Usar notas longas,
 palavras sem espaços, tabelas válidas de 12 colunas e tabelas iguais, 300 notas e imagens locais com
@@ -181,7 +190,8 @@ decisões locais ficam neste plano e, ao concluir, seus fatos duráveis vão par
 
 ## Próximo passo
 
-**Executar somente 2.1 — toque longo e renomear**, com a folha existente, botão visível, alvos de
-toque e validações descritas acima. Compartilhar e deslizar ficam para 2.3 e 2.2, respectivamente.
-Informar esse escopo antes de começar; encerrar o pedido com testes, atualização deste plano, commit
-e push da etapa completa. Não iniciar fase 3 nem outra etapa no mesmo pedido.
+**Executar somente 2.2 — deslizar para lixeira**, com cancelamento por rolagem vertical ou gesto
+pela borda, proteção contra acionamentos duplicados, desfazer e preservação de contexto.
+A etapa 2.1 está concluída; não iniciar 2.2 no mesmo pedido. Compartilhar continua em 2.3.
+Informar esse escopo antes de começar; encerrar a etapa com testes, atualização deste plano,
+commit e push da etapa completa. Não iniciar fase 3 nem outra etapa no mesmo pedido.

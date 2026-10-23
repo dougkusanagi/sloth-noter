@@ -36,7 +36,7 @@ import { toggleTask } from '../tasks.js'
 import { t } from '../i18n.js'
 import { useInsets } from './use-insets.js'
 import { useNavigation } from './use-navigation.js'
-import { newMobileNote, updateMobileNote } from './note-actions.js'
+import { newMobileNote, renameMobileNote, updateMobileNote } from './note-actions.js'
 import './mobile.css'
 
 const destinations = [
@@ -120,6 +120,15 @@ export function MobileShell() {
 }
 
 function MobileWorkspace({ persistence, loaded, onReload }) {
+  const [rename, setRename] = useState(null)
+  const [renameError, setRenameError] = useState('')
+  const press = useRef(null)
+  const suppressClick = useRef(false)
+  function cancelPress() {
+    clearTimeout(press.current?.timer)
+    press.current = null
+  }
+  useEffect(() => () => clearTimeout(press.current?.timer), [])
   const [warning, setWarning] = useState('')
   const store = useNotesStore({ persistence, loaded, mode: 'visual', onHistoryWarning: setWarning })
   const { data, current, commit, writer, saving, error, blocked } = store
@@ -136,6 +145,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const editor = useRef(null)
   const focusAfterClose = useRef(null)
   const dialog = useRef(null)
+  const hadLayer = useRef(false)
   const heading = useRef(null)
   const previousRoute = useRef(null)
   const restoreFocus = useRef(null)
@@ -198,12 +208,20 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   }, [route.name, route.id])
   useEffect(() => {
     if (!layer) {
+      hadLayer.current = false
       focusAfterClose.current?.focus({ preventScroll: true })
       return
     }
     const previous = document.activeElement
-    if (!state.layers.slice(0, -1).length) focusAfterClose.current = previous
-    dialog.current?.querySelector('button')?.focus()
+    if (!hadLayer.current) focusAfterClose.current = previous
+    hadLayer.current = true
+    if (layer.name === 'dialog') dialog.current?.querySelector('input')?.focus()
+    else if (
+      hadLayer.current &&
+      dialog.current?.querySelector('[data-rename-trigger]:not(:disabled)')
+    )
+      dialog.current.querySelector('[data-rename-trigger]:not(:disabled)').focus()
+    else dialog.current?.querySelector('button')?.focus()
     const key = (event) => {
       if (event.key === 'Escape') {
         event.preventDefault()
@@ -212,7 +230,9 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       }
       if (event.key !== 'Tab') return
       const items = Array.from(
-        dialog.current?.querySelectorAll('button, input, summary, [tabindex="0"]') ?? [],
+        dialog.current?.querySelectorAll(
+          'button:not(:disabled), input:not(:disabled), summary, [tabindex="0"]',
+        ) ?? [],
       )
       const first = items[0],
         last = items.at(-1)
@@ -436,9 +456,10 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       <div
         className={`mobile-content${editing ? ' mobile-editing' : ''}`}
         ref={content}
-        onScroll={(event) =>
+        onScroll={(event) => {
+          cancelPress()
           dispatch({ type: 'position', position: { scroll: event.currentTarget.scrollTop } })
-        }
+        }}
       >
         {route.name === 'notes' && (
           <section aria-label={t('menu.notes')} className="mobile-notes">
@@ -450,7 +471,39 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 <button
                   data-note-id={note.id}
                   className="mobile-note-open"
-                  onClick={() => openNote(note.id)}
+                  onPointerDown={(event) => {
+                    if (!event.isPrimary || event.button !== 0) return
+                    cancelPress()
+                    suppressClick.current = false
+                    const target = event.currentTarget
+                    press.current = {
+                      x: event.clientX,
+                      y: event.clientY,
+                      timer: setTimeout(() => {
+                        suppressClick.current = true
+                        target.focus({ preventScroll: true })
+                        dispatch({ type: 'layer', route: { name: 'sheet', id: note.id } })
+                      }, 550),
+                    }
+                  }}
+                  onPointerMove={(event) => {
+                    if (
+                      press.current &&
+                      Math.hypot(event.clientX - press.current.x, event.clientY - press.current.y) >
+                        10
+                    )
+                      cancelPress()
+                  }}
+                  onPointerUp={cancelPress}
+                  onPointerCancel={cancelPress}
+                  onContextMenu={(event) => event.preventDefault()}
+                  onClick={() => {
+                    if (suppressClick.current) {
+                      suppressClick.current = false
+                      return
+                    }
+                    openNote(note.id)
+                  }}
                 >
                   <span className="mobile-note-title">
                     {data.pinnedIds?.includes(note.id) && (
@@ -642,8 +695,55 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 <X size={22} />
               </button>
             </div>
-            {actionsNote ? (
+            {layer.name === 'dialog' ? (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  const result = renameMobileNote(current.current, layer.id, rename ?? '')
+                  if (result.error) {
+                    setRenameError(t(result.error))
+                    return
+                  }
+                  commit(result.document)
+                  back()
+                }}
+              >
+                <label htmlFor="mobile-rename">{t('dialog.renameLabel')}</label>
+                <input
+                  id="mobile-rename"
+                  value={rename ?? ''}
+                  onChange={(event) => {
+                    setRename(event.target.value)
+                    setRenameError('')
+                  }}
+                  aria-invalid={Boolean(renameError)}
+                  aria-describedby={renameError ? 'mobile-rename-error' : undefined}
+                />
+                {renameError && (
+                  <p id="mobile-rename-error" role="alert">
+                    {renameError}
+                  </p>
+                )}
+                <button type="button" onClick={back}>
+                  {t('dialog.cancel')}
+                </button>
+                <button type="submit" disabled={blocked}>
+                  {t('menu.rename')}
+                </button>
+              </form>
+            ) : actionsNote ? (
               <>
+                <button
+                  data-rename-trigger
+                  disabled={blocked || Boolean(actionsNote.external)}
+                  onClick={() => {
+                    setRename(displayName(actionsNote.name))
+                    setRenameError('')
+                    dispatch({ type: 'layer', route: { name: 'dialog', id: actionsNote.id } })
+                  }}
+                >
+                  {t('menu.rename')}
+                </button>
                 <button disabled={blocked} onClick={() => pinNote(actionsNote.id)}>
                   <Pin size={20} />
                   {t(data.pinnedIds?.includes(actionsNote.id) ? 'mobile.unpin' : 'mobile.pin')}

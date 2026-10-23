@@ -1,5 +1,5 @@
 import { ensureTitle } from '../title.js'
-import { nameFromHeading, uniqueName } from '../notes.js'
+import { headingFileName, nameFromHeading, uniqueName } from '../notes.js'
 import { renameWikiReferences } from '../markdown-model.js'
 
 export function newMobileNote(document, title = '', id = crypto.randomUUID()) {
@@ -42,5 +42,31 @@ export function updateMobileNote(document, id, body) {
     ...document,
     notes: document.notes.map(rewrite),
     trash: document.trash.map((entry) => ({ ...entry, note: rewrite(entry.note) })),
+  }
+}
+
+// Validate before applying the same title/reference rewrite used by the editor.
+export function renameMobileNote(document, id, proposed) {
+  const note = document.notes.find((item) => item.id === id)
+  if (!note) return { error: 'mobile.noteGone' }
+  if (note.external) return { error: 'external.noRename' }
+  const title = proposed.trim().replace(/\.md$/i, '')
+  const name = `${title}.md`
+  if (
+    !title ||
+    /[\r\n]/.test(title) ||
+    ensureTitle(`# ${title}`) !== `# ${title}` ||
+    headingFileName(`# ${title}`) !== name
+  )
+    return { error: 'mobile.invalidName' }
+  if (
+    document.notes.some(
+      (item) => item.id !== id && item.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
+    )
+  )
+    return { error: 'error.nameExists' }
+  const end = note.body.indexOf('\n')
+  return {
+    document: updateMobileNote(document, id, `# ${title}${end < 0 ? '' : note.body.slice(end)}`),
   }
 }
