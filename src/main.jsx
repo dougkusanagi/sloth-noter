@@ -1,4 +1,3 @@
-import { createHistory } from './history.js'
 import { pasteGesture } from './paste-intent.js'
 import { quickOpenNotes } from './quick-open.js'
 import { textStatistics } from './text-statistics.js'
@@ -9,7 +8,7 @@ import { clipboardImageFiles, readNativeClipboard } from './clipboard.js'
 import { createMiddleClickPasteGuard } from './middle-click-paste.js'
 import { createPasteIntentGuard } from './paste-intent.js'
 import { listenNativeImageDrops, routeNativeImageDrop } from './native-image-drop.js'
-import { ensureTitle, ensureDocumentTitles, titlePosition, titleNavigationTarget } from './title.js'
+import { ensureTitle, titlePosition, titleNavigationTarget } from './title.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { createRoot } from 'react-dom/client'
@@ -36,9 +35,10 @@ import { MainMenu } from './components/main-menu.jsx'
 import { WindowControls, isMac } from './components/window-controls.jsx'
 import { DisplayMenu } from './components/display-menu.jsx'
 import { TasksLibrary } from './components/tasks-library.jsx'
-import { resolvedTasks, syncLinkedTasks, toggleTask } from './tasks.js'
+import { resolvedTasks, toggleTask } from './tasks.js'
 import { displayName } from './note-title.js'
 import { useTabs } from './components/tabs.jsx'
+import { useNotesStore } from './hooks/use-notes-store.js'
 import { usePrefs } from './hooks/use-prefs.js'
 import { ImageLibrary } from './components/image-library.jsx'
 import { readNoteFile, splitDrop } from './note-drop.js'
@@ -59,7 +59,6 @@ import {
 import { openWorkspace } from './boot.js'
 import { createAppPersistence } from './persistence-runtime.js'
 import { VAULT_DISCONNECT, connectVault } from './persistence-vault.js'
-import { createWriteQueue } from './write-queue.js'
 import { VisualEditor } from './visual-editor.jsx'
 import {
   ConfirmDialog,
@@ -169,28 +168,21 @@ function App() {
 }
 
 function Workspace({ persistence, loaded }) {
-  const current = useRef(loaded.document)
-  const [data, setData] = useState(loaded.document)
   const [settingsSection, setSettingsSection] = useState('appearance')
-  const [noteHistory] = useState(
-    () =>
-      persistence.history ??
-      createHistory(persistence.invoke, (message) => setImportError(message)),
-  )
-  useEffect(() => {
-    noteHistory.onWarning = (message) => setImportError(message)
-    noteHistory.observe(loaded.document, loaded.document)
-    const timer = setInterval(() => void noteHistory.flushIfDue(), 1000)
-    const flush = () => void noteHistory.flush()
-    window.addEventListener('pagehide', flush)
-    return () => {
-      clearInterval(timer)
-      window.removeEventListener('pagehide', flush)
-      flush()
-    }
-  }, [noteHistory, loaded.document])
-  const [error, setError] = useState(loaded.error)
-  const [blocked, setBlocked] = useState(loaded.blocked)
+  const [mode, setMode] = useState('visual')
+  const [importError, setImportError] = useState('')
+  const {
+    data,
+    current,
+    commit,
+    noteHistory,
+    writer,
+    error,
+    setError,
+    saving,
+    blocked,
+    setBlocked,
+  } = useNotesStore({ persistence, loaded, mode, onHistoryWarning: setImportError })
   const [sidebarQuery, setSidebarQuery] = useState('')
   const sidebarSearchRef = useRef(null)
   const [sidebarSection, setSidebarSection] = useState('notes')
@@ -204,15 +196,12 @@ function Workspace({ persistence, loaded }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [commandsOpen, setCommandsOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [imageBusy, setImageBusy] = useState(false)
   const imageInput = useRef(null)
   const imagePoint = useRef(null)
-  const [mode, setMode] = useState('visual')
   const [palette, setPalette] = useState(false)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(0)
-  const [importError, setImportError] = useState('')
   const [folderError, setFolderError] = useState('')
   const [folderOpen, setFolderOpen] = useState(false)
   const [asking, setAsking] = useState(null)
@@ -237,14 +226,6 @@ function Workspace({ persistence, loaded }) {
     scope: null,
   })
   const damaged = useRef(loaded.raw)
-  const writer = useRef(null)
-  if (!writer.current)
-    writer.current = createWriteQueue(
-      (document) => persistence.save(document),
-      setError,
-      setSaving,
-      { debounceMs: persistence.kind === 'vault' ? 1200 : 0 },
-    )
   const search = useRef(null)
   const conflictFirst = useRef(null)
   const importInput = useRef(null)
@@ -344,7 +325,7 @@ function Workspace({ persistence, loaded }) {
       disposed = true
       cleanup()
     }
-  }, [persistence, noteHistory])
+  }, [persistence, noteHistory, writer, setError])
 
   useEffect(() => {
     let disposed = false
@@ -368,16 +349,6 @@ function Workspace({ persistence, loaded }) {
   function answer(value) {
     asking.resolve(value)
     setAsking(null)
-  }
-  function commit(next, historyOrigin = mode === 'source' ? 'codigo' : 'sistema') {
-    if (next.notes !== current.current.notes) {
-      next = ensureDocumentTitles(next)
-      next = { ...next, notes: syncLinkedTasks(next.notes) }
-    }
-    noteHistory.observe(current.current, next, historyOrigin)
-    current.current = next
-    setData(next)
-    if (!blocked) writer.current.write(next)
   }
   function focusEditor() {
     if (mode === 'source') editorRef.current?.focus()
