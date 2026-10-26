@@ -3,6 +3,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { toast } from 'sonner'
 import { friendlyError } from '../errors.js'
 import { t } from '../i18n.js'
+import { ShortcutButton } from './shortcut-button.jsx'
 
 const BUTTONS = [
   ['minimize', 'window.minimize', Minus],
@@ -25,15 +26,14 @@ export function WindowControls({ mac = false }) {
   return (
     <div className={mac ? 'window-controls mac' : 'window-controls'}>
       {(mac ? [BUTTONS[2], BUTTONS[0], BUTTONS[1]] : BUTTONS).map(([action, label, Icon]) => (
-        <button
+        <ShortcutButton
           key={action}
           className={mac ? `traffic-light window-${action}` : `icon-button window-${action}`}
-          aria-label={t(label)}
-          title={t(label)}
+          label={t(label)}
           onClick={() => run(action)}
         >
           <Icon size={mac ? 8 : 15} strokeWidth={mac ? 3 : 2} aria-hidden="true" />
-        </button>
+        </ShortcutButton>
       ))}
     </div>
   )

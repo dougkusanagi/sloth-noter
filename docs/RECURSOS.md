@@ -8,6 +8,10 @@ A biblioteca mostra o título e uma prévia de uma linha de cada nota, e a busca
 
 O ícone ☰, o nome do app e as abas ficam no cabeçalho. As abas rolam horizontalmente, limitam títulos longos com reticências e revelam o nome completo e um botão de fechar ao passar o mouse. O botão de fechar também aparece com foco de teclado. O seletor compacto de modos flutua no canto inferior direito. A biblioteca à esquerda lista todas as notas, mesmo as que estão sem aba aberta, permite buscar por nome e pode ser ocultada pelo botão no cabeçalho. Em telas estreitas começa recolhida. O menu organiza notas, arquivos e exibição em grupos, permite buscar ações e mostra os atalhos. Use as setas para navegar e Escape para fechar. O cabeçalho informa quando há gravações em andamento.
 
+Ao trocar de aba e voltar, os modos Padrão e Código mantêm a rolagem e a seleção de cada nota enquanto o app estiver aberto. As posições são lembradas separadamente por modo.
+
+Os controles do cabeçalho, das abas, do seletor de modos e do menu de inserir blocos mostram dicas ao passar o mouse ou receber foco pelo teclado. A dica inclui o atalho quando a ação tem uma combinação definida. As opções de tema Claro, Escuro e Sistema ficam visíveis no cabeçalho; em janelas estreitas, ficam no canto inferior esquerdo. A escolha é mantida e Sistema acompanha o tema do dispositivo.
+
 **Padrão** mostra títulos, ênfase, citações, listas, links, tags `#tag` e código estilizados nas linhas fora do cursor; a linha em edição mostra a sintaxe Markdown original. **Código** mostra todo o Markdown sem estilos; **Leitura** mostra o documento sem cursor de edição. O seletor usa ícones, mostra o nome do modo ao passar o mouse e aceita setas do teclado para alternar.
 
 Ao selecionar texto no modo Padrão, uma barra discreta oferece negrito, itálico, código em linha, link, título H2, citação e lista. O botão de link pede o endereço na própria barra. Novas instalações começam com `Welcome.md`, a página de ajuda (veja abaixo); notas já salvas continuam intactas.
@@ -93,14 +97,20 @@ O menu **Atalhos de teclado** (e **Configurações → Atalhos**) lista as combi
 | Biblioteca de imagens                             | Ctrl+Shift+L                         |
 | Paleta de comandos / configurações                | Ctrl+Shift+P / Ctrl+,                |
 | Backup / pasta de notas (desktop)                 | Ctrl+Shift+S / Ctrl+Shift+O          |
-| Mostrar ou ocultar biblioteca                     | Ctrl+\                               |
+| Menu principal                                    | F10                                  |
+| Mostrar ou ocultar biblioteca                     | Ctrl+Alt+B                           |
 | Padrão / Código / Leitura                         | Ctrl+Alt+1 / Ctrl+Alt+2 / Ctrl+Alt+3 |
 | Modo de foco                                      | Ctrl+Alt+F                           |
 | Negrito / itálico / tachado                       | Ctrl+B / Ctrl+I / Ctrl+Shift+X       |
 | Código em linha / link                            | Ctrl+` / Ctrl+K                      |
 | Lista / citação                                   | Ctrl+Shift+8 / Ctrl+Shift+.          |
+| Títulos H2 / H3 / H4                              | Ctrl+Shift+2 / 3 / 4                 |
+| Tabela / imagem / lista numerada                  | Ctrl+Shift+5 / 6 / 7                 |
+| Bloco de código                                   | Ctrl+Shift+crase                     |
 | Ajuda de atalhos                                  | Ctrl+Shift+/                         |
 | Tamanho de texto: aumentar / diminuir / restaurar | Ctrl++ / Ctrl+- / Ctrl+0             |
+
+Os novos atalhos de títulos H2–H4, tabela, imagem, lista numerada e bloco de código funcionam nos modos Padrão e Código. No macOS, use **Cmd+Option+Shift** com a mesma tecla, preservando os atalhos do sistema para capturas. Títulos e listas se aplicam às linhas selecionadas; um título já no mesmo nível volta a ser texto. Tabela preserva o parágrafo selecionado e bloco de código envolve o texto selecionado. No título principal da nota, um novo bloco é inserido abaixo dele. Imagem abre o painel de inserção no Padrão e o seletor de arquivos no Código.
 
 ## Histórico local de alterações (desktop)
 

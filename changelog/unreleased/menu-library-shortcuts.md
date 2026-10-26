@@ -1,0 +1,1 @@
+Alterado: F10 abre ou fecha o menu principal e aparece na dica do botão ao passar o mouse ou receber foco pelo teclado. O atalho para mostrar ou ocultar a biblioteca agora é Ctrl+Alt+B (Cmd+Option+B no macOS), também nas dicas, no menu e em Configurações → Atalhos.

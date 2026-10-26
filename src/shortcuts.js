@@ -1,6 +1,7 @@
-import { EDITOR_SHORTCUTS } from './editor-shortcuts.js'
+import { BLOCK_SHORTCUTS, EDITOR_SHORTCUTS, blockKeys } from './editor-shortcuts.js'
 
 export const SHORTCUTS = [
+  ['F10', 'menu.main'],
   ['T', 'menu.newNote'],
   ['P', 'menu.findNote'],
   ['F', 'menu.findInNote'],
@@ -23,7 +24,7 @@ export const SHORTCUTS = [
   ['Shift+O', 'menu.folder'],
   ['Shift+P', 'menu.commands'],
   [',', 'menu.settings'],
-  ['\\', 'sidebar.toggle'],
+  ['Alt+B', 'sidebar.toggle'],
   ['Alt+1', 'mode.visual'],
   ['Alt+2', 'mode.source'],
   ['Alt+3', 'mode.reading'],
@@ -32,17 +33,29 @@ export const SHORTCUTS = [
   ['0', 'menu.resetText'],
   ['+', 'menu.larger'],
   ...EDITOR_SHORTCUTS,
+  ...BLOCK_SHORTCUTS.map(([, label, action]) => [blockKeys(action), label]),
   ['Alt+-', 'menu.narrower'],
   ['Alt+0', 'menu.resetWidth'],
   ['Alt++', 'menu.wider'],
 ]
 export function appShortcut(event) {
+  if (
+    event.key === 'F10' &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey &&
+    !event.shiftKey &&
+    !event.isComposing
+  )
+    return 'mainMenu'
   if (event.key === 'F2' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey)
     return 'rename'
   if (!(event.ctrlKey || event.metaKey) || event.isComposing) return null
   const key = event.key.toLowerCase()
   if (event.altKey && !event.shiftKey)
-    return { 1: 'visual', 2: 'source', 3: 'reading', f: 'focus' }[key] ?? null
+    return event.code === 'KeyB'
+      ? 'sidebar'
+      : ({ 1: 'visual', 2: 'source', 3: 'reading', f: 'focus', b: 'sidebar' }[key] ?? null)
   if (event.shiftKey && !event.altKey)
     return (
       {
@@ -73,7 +86,6 @@ export function appShortcut(event) {
       o: 'import',
       e: 'export',
       ',': 'settings',
-      '\\': 'sidebar',
     }[key] ?? null
   )
 }

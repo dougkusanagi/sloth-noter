@@ -55,7 +55,8 @@ test('Tab and Shift+Tab nest and unnest list items in the Padrão editor', async
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(box(page)).toHaveValue(LIST.replace('- b', '    - b'))
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
-  await page.locator('.cm-line', { hasText: /^b$/ }).click()
+  // The restored cursor keeps this line's Markdown markers visible.
+  await page.locator('.cm-line', { hasText: /^\s*(?:- )?b$/ }).click()
   await page.keyboard.press('Shift+Tab')
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(box(page)).toHaveValue(LIST)
@@ -129,7 +130,7 @@ for (const mode of ['Código', 'Padrão']) {
     await expect(box(page)).toHaveValue('# Lista\n\n- bX\n- a\n    - filho\n- c')
     if (mode === 'Padrão') {
       await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
-      await page.locator('.cm-line', { hasText: /^bX$/ }).click()
+      await page.locator('.cm-line', { hasText: /^\s*(?:- )?bX$/ }).click()
     } else await select(page, '# Lista\n\n- bX'.length)
     await page.keyboard.press('Control+Shift+ArrowDown')
     if (mode === 'Padrão')

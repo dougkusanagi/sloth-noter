@@ -34,7 +34,7 @@ export function useNoteActions({
   const closedTabs = useRef([])
 
   function focusEditor() {
-    if (mode === 'source') editorRef.current?.focus()
+    if (mode === 'source') editorRef.current?.focus({ preventScroll: true })
     else visualRef.current?.focus()
   }
   function openNote(id) {

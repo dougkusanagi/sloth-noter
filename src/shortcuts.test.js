@@ -1,7 +1,41 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { SHORTCUTS, appShortcut } from './shortcuts.js'
-import { formatShortcut, shortcutEdit } from './editor-shortcuts.js'
+import {
+  BLOCK_SHORTCUTS,
+  blockKeys,
+  blockShortcut,
+  formatShortcut,
+  shortcutEdit,
+} from './editor-shortcuts.js'
+
+test('block shortcuts respect composition and modifiers and use physical shifted keys', () => {
+  for (const [keys, , action] of BLOCK_SHORTCUTS) {
+    const key = keys.slice('Shift+'.length)
+    const event = {
+      ctrlKey: true,
+      shiftKey: true,
+      key: key === '`' ? '~' : '!@#$%^&'[Number(key) - 1],
+      code: key === '`' ? 'Backquote' : `Digit${key}`,
+    }
+    assert.equal(blockShortcut(event, false), action)
+    assert.equal(blockShortcut({ ...event, ctrlKey: false, metaKey: true }, false), action)
+    assert.equal(blockShortcut({ ...event, ctrlKey: false }), null)
+    assert.equal(blockShortcut({ ...event, shiftKey: false }), null)
+    assert.equal(blockShortcut({ ...event, altKey: true }), null)
+    assert.equal(blockShortcut({ ...event, isComposing: true }), null)
+    assert.equal(appShortcut(event), null)
+    assert.equal(blockKeys(action, false), keys)
+    assert.equal(blockKeys(action, true), `Alt+${keys}`)
+    assert.equal(blockShortcut({ ...event, ctrlKey: false, metaKey: true }, true), null)
+    assert.equal(
+      blockShortcut({ ...event, ctrlKey: false, metaKey: true, altKey: true }, true),
+      action,
+    )
+    assert.equal(SHORTCUTS.filter(([shortcut]) => shortcut === blockKeys(action)).length, 1)
+  }
+  assert.equal(blockShortcut({ ctrlKey: true, shiftKey: true, key: 'T', code: 'KeyT' }), null)
+})
 test('app shortcuts respect modifiers and composition', () => {
   assert.equal(appShortcut({ key: 'T', ctrlKey: true, shiftKey: true }), 'reopenTab')
   assert.equal(appShortcut({ key: 'PageUp', ctrlKey: true }), 'previousTab')
@@ -17,7 +51,11 @@ test('app shortcuts respect modifiers and composition', () => {
   assert.equal(appShortcut({ key: 'F2', ctrlKey: true }), null)
   assert.equal(appShortcut({ key: '2', metaKey: true, altKey: true }), 'source')
   assert.equal(appShortcut({ key: '?', ctrlKey: true, shiftKey: true }), 'shortcuts')
-  assert.equal(appShortcut({ key: '\\', ctrlKey: true }), 'sidebar')
+  assert.equal(appShortcut({ key: 'b', ctrlKey: true, altKey: true }), 'sidebar')
+  assert.equal(appShortcut({ key: 'B', metaKey: true, altKey: true }), 'sidebar')
+  assert.equal(appShortcut({ key: '∫', code: 'KeyB', metaKey: true, altKey: true }), 'sidebar')
+  assert.equal(appShortcut({ key: 'b', ctrlKey: true, altKey: true, shiftKey: true }), null)
+  assert.equal(appShortcut({ key: '\\', ctrlKey: true }), null)
   assert.equal(appShortcut({ key: 'P', ctrlKey: true, shiftKey: true }), 'commands')
   assert.equal(appShortcut({ key: 'o', ctrlKey: true }), 'import')
   assert.equal(appShortcut({ key: ',', metaKey: true }), 'settings')
@@ -26,6 +64,14 @@ test('app shortcuts respect modifiers and composition', () => {
   assert.equal(appShortcut({ key: 'r', ctrlKey: true }), null)
   assert.equal(appShortcut({ key: 'h', ctrlKey: true }), 'replaceInNote')
   assert.equal(appShortcut({ key: 't', ctrlKey: true, isComposing: true }), null)
+})
+
+test('F10 toggles the main menu without taking the tab context menu shortcut', () => {
+  assert.equal(appShortcut({ key: 'F10' }), 'mainMenu')
+  for (const modifier of ['ctrlKey', 'metaKey', 'altKey', 'shiftKey', 'isComposing'])
+    assert.equal(appShortcut({ key: 'F10', [modifier]: true }), null)
+  assert.ok(SHORTCUTS.some(([keys, label]) => keys === 'F10' && label === 'menu.main'))
+  assert.ok(SHORTCUTS.some(([keys, label]) => keys === 'Alt+B' && label === 'sidebar.toggle'))
 })
 
 // Combinations owned by the browser or webview: developer tools, hard reload, view source,

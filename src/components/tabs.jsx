@@ -4,7 +4,8 @@ import { Pin, Plus, X } from 'lucide-react'
 import { moveTab, togglePinnedTab } from '../tabs.js'
 import { t } from '../i18n.js'
 import { displayName } from '../note-title.js'
-import { Shortcut, shortcutText } from './main-menu.jsx'
+import { Shortcut } from './main-menu.jsx'
+import { ShortcutButton } from './shortcut-button.jsx'
 
 /**
  * Tab strip behaviour: drag to reorder, context menu, keeping the active tab in view.
@@ -181,8 +182,9 @@ export function useTabs({
                   .filter(Boolean)
                   .join(' ')}
               >
-                <button
-                  title={index < 9 ? `${tabTitle} · ${shortcutText(String(index + 1))}` : tabTitle}
+                <ShortcutButton
+                  label={tabTitle}
+                  keys={index < 9 ? String(index + 1) : undefined}
                   className={id === data.activeId ? 'tab active' : 'tab'}
                   aria-haspopup="menu"
                   aria-expanded={tabMenu?.id === id}
@@ -220,35 +222,37 @@ export function useTabs({
                     }
                   }}
                   onMouseDown={(event) => {
-                    if (event.button === 1) event.preventDefault()
+                    // Focusing a sticky header button can scroll the page before
+                    // the outgoing note's viewport is saved. The editor gets focus on open.
+                    if (event.button === 0 || event.button === 1) event.preventDefault()
                   }}
                 >
                   {pinned && <Pin size={12} className="tab-pin-icon" aria-hidden="true" />}
                   <span title={note.external?.path}>{displayName(note.name, true)}</span>
-                </button>
+                </ShortcutButton>
                 {!pinned && (
-                  <button
+                  <ShortcutButton
                     className="tab-close"
-                    aria-label={`${t('tabs.close')}: ${note.name}`}
-                    title={t('tabs.close')}
+                    label={`${t('tabs.close')}: ${note.name}`}
+                    keys={id === data.activeId ? 'W' : undefined}
                     onClick={() => close(id)}
                   >
                     <X size={13} />
-                  </button>
+                  </ShortcutButton>
                 )}
               </div>
             )
           )
         })}
       </div>
-      <button
+      <ShortcutButton
         className="tab-new"
-        aria-label={t('menu.newNote')}
-        title={t('menu.newNote')}
+        label={t('menu.newNote')}
+        keys="T"
         onClick={() => create()}
       >
         <Plus size={15} aria-hidden="true" />
-      </button>
+      </ShortcutButton>
     </nav>
   )
 

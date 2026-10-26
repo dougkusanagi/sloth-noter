@@ -33,6 +33,7 @@ Use `Ctrl` no Windows/Linux e `Cmd` no macOS. Atalhos como criar e fechar abas p
 | Ação                                 | Atalho                         |
 | ------------------------------------ | ------------------------------ |
 | Nova nota                            | `Ctrl+T`                       |
+| Menu principal / biblioteca          | `F10` / `Ctrl+Alt+B`           |
 | Encontrar nota pelo nome             | `Ctrl+P`                       |
 | Buscar no conteúdo de todas as notas | `Ctrl+Shift+F`                 |
 | Buscar / substituir na nota atual    | `Ctrl+F` / `Ctrl+H`            |

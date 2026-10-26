@@ -1,6 +1,12 @@
 import { ShortcutButton } from './components/shortcut-button.jsx'
 import { Shortcut } from './components/main-menu.jsx'
-import { EDITOR_SHORTCUTS, formatShortcut, shortcutEdit } from './editor-shortcuts.js'
+import {
+  EDITOR_SHORTCUTS,
+  blockKeys,
+  blockShortcut,
+  formatShortcut,
+  shortcutEdit,
+} from './editor-shortcuts.js'
 import { transactionHistory } from './editor/history-log.js'
 import { searchHighlights } from './editor/search.js'
 import { clipboardImageFiles } from './clipboard.js'
@@ -33,7 +39,7 @@ import { Compartment, EditorSelection, EditorState } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { EditorView, keymap } from '@codemirror/view'
 import { activeFormats, formatSelection } from './format-selection.js'
-import { blockTemplate } from './insert-block.js'
+import { blockEdit } from './insert-block.js'
 import { fencedPasteInEmptyBlock } from './fenced-paste.js'
 import {
   ArrowDownToLine,
@@ -63,10 +69,10 @@ const formatButtons = [
   ['list', 'format.list', <span>☷</span>],
 ]
 /* eslint-enable react/jsx-key */
-const keysForLabel = (label) => EDITOR_SHORTCUTS.find(([, key]) => key === label)?.[0]
-
-const blockKeys = (action) =>
-  ['list', 'quote'].includes(action) ? keysForLabel(`format.${action}`) : undefined
+const keysForLabel = (label) =>
+  label === 'format.heading'
+    ? blockKeys('h2')
+    : EDITOR_SHORTCUTS.find(([, key]) => key === label)?.[0]
 
 const blockButtons = [
   ['h2', 'block.h2'],
@@ -214,16 +220,25 @@ export function VisualEditor({
   }
 
   function insertBlock(action) {
-    const view = viewRef.current,
-      template = blockTemplate(action)
-    if (!view || !template || !insertAt) return
+    const view = viewRef.current
+    if (!view) return
+    const selection = view.state.selection.main
+    if (action === 'image') {
+      const coords = view.coordsAtPos(selection.head)
+      if (coords)
+        setInsertAt({ from: selection.from, x: Math.max(8, coords.left - 34), y: coords.top })
+      setImagePanel({ from: selection.from, to: selection.to })
+      setBlockMenu(false)
+      setToolbar(null)
+      return
+    }
+    const edit = blockEdit(view.state.doc.toString(), selection.from, selection.to, action)
+    if (!edit) return
     view.dispatch({
-      changes: { from: insertAt.from, insert: template.text },
-      selection: EditorSelection.single(
-        insertAt.from + template.selectionFrom,
-        insertAt.from + template.selectionTo,
-      ),
+      changes: { from: edit.from, to: edit.to, insert: edit.insert },
+      selection: EditorSelection.single(edit.selectionFrom, edit.selectionTo),
       userEvent: 'bloco',
+      scrollIntoView: true,
     })
     setBlockMenu(false)
     setInsertAt(null)
@@ -312,7 +327,7 @@ export function VisualEditor({
     }
   }, [tableMenu])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const view = new EditorView({
       state: EditorState.create({
         doc: ensureTitle(body),
@@ -353,6 +368,13 @@ export function VisualEditor({
           }),
           EditorView.domEventHandlers({
             keydown: (event, view) => {
+              const block = blockShortcut(event)
+              if (block) {
+                event.preventDefault()
+                event.stopPropagation()
+                insertBlock(block)
+                return true
+              }
               if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
                 const line = view.state.doc.lineAt(view.state.selection.main.head)
                 const token = inlineSyntax(line.text).find(
@@ -485,7 +507,7 @@ export function VisualEditor({
             },
             blur: (event) => {
               if (!event.relatedTarget?.closest?.('.format-toolbar')) setToolbar(null)
-              if (!event.relatedTarget?.closest?.('.insert-trigger, .block-menu')) {
+              if (!event.relatedTarget?.closest?.('.insert-trigger, .block-menu, .image-insert')) {
                 setInsertAt(null)
                 setBlockMenu(false)
               }
@@ -639,13 +661,9 @@ export function VisualEditor({
                 onChange={(event) => setLinkUrl(event.target.value)}
                 required
               />
-              <button
-                type="submit"
-                aria-label={t('editor.linkApply')}
-                title={t('editor.linkApply')}
-              >
+              <ShortcutButton type="submit" label={t('editor.linkApply')} keys="Enter">
                 ↗
-              </button>
+              </ShortcutButton>
             </form>
           ) : (
             formatButtons.map(([action, label, icon]) => (
@@ -670,18 +688,17 @@ export function VisualEditor({
       )}
       {insertAt && (
         <>
-          <button
+          <ShortcutButton
             type="button"
             className="insert-trigger"
-            aria-label={t('editor.insertBlock')}
+            label={t('editor.insertBlock')}
             aria-expanded={blockMenu}
-            title={t('editor.insertBlock')}
             style={{ left: insertAt.x, top: insertAt.y }}
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => setBlockMenu((value) => !value)}
           >
             +
-          </button>
+          </ShortcutButton>
           {blockMenu && (
             <div
               className="block-menu"
@@ -699,6 +716,13 @@ export function VisualEditor({
               }}
               onMouseDown={(event) => event.preventDefault()}
               onKeyDown={(event) => {
+                const block = blockShortcut(event)
+                if (block) {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  insertBlock(block)
+                  return
+                }
                 const buttons = [...event.currentTarget.querySelectorAll('button')]
                 const index = buttons.indexOf(document.activeElement)
                 if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -724,22 +748,18 @@ export function VisualEditor({
               }}
             >
               {blockButtons.map(([action, label]) => (
-                <button
+                <ShortcutButton
                   key={action}
+                  label={t(label)}
+                  keys={blockKeys(action)}
                   type="button"
                   role="menuitem"
-                  onClick={() => {
-                    if (action === 'image') {
-                      const selection = viewRef.current.state.selection.main
-                      setImagePanel({ from: selection.from, to: selection.to })
-                      setBlockMenu(false)
-                    } else insertBlock(action)
-                  }}
+                  onClick={() => insertBlock(action)}
                 >
                   <BlockIcon action={action} />
                   <span className="menu-item-label">{t(label)}</span>
                   {blockKeys(action) && <Shortcut keys={blockKeys(action)} />}
-                </button>
+                </ShortcutButton>
               ))}
             </div>
           )}

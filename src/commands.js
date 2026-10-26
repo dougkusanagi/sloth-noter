@@ -85,7 +85,7 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
       'menu.view',
       [
         ['focus', 'focus.toggle', Focus, 'Alt+F', !active, true],
-        ['sidebar', 'sidebar.toggle', PanelLeft, '\\', false, true],
+        ['sidebar', 'sidebar.toggle', PanelLeft, 'Alt+B', false, true],
         ['visual', 'mode.visual', Eye, 'Alt+1'],
         ['source', 'mode.source', Code, 'Alt+2'],
         ['reading', 'mode.reading', BookOpen, 'Alt+3'],

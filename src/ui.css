@@ -497,6 +497,42 @@ html:has(
     serif;
   letter-spacing: -0.02em;
 }
+.display-menu-wrap,
+.theme-switch {
+  display: flex;
+  align-items: center;
+}
+.theme-switch {
+  gap: 1px;
+  margin-right: 4px;
+}
+.theme-switch .icon-button {
+  width: 28px;
+  height: 30px;
+}
+.theme-switch [aria-checked='true'] {
+  color: var(--ink);
+  background: var(--hover);
+}
+.footer-theme-switch {
+  display: none;
+}
+@media (max-width: 600px) {
+  .header-theme-switch {
+    display: none;
+  }
+  .footer-theme-switch {
+    position: fixed;
+    left: 12px;
+    bottom: 44px;
+    z-index: 5;
+    display: flex;
+    padding: 3px;
+    border-radius: 9px;
+    background: var(--paper);
+    box-shadow: var(--shadow-pop);
+  }
+}
 .tabs {
   align-self: stretch;
   flex: 1;
@@ -2823,6 +2859,7 @@ html:has(
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+  width: max-content;
   max-width: min(280px, calc(100vw - 24px));
   padding: 9px 12px;
   border-radius: 8px;
@@ -2830,9 +2867,13 @@ html:has(
   color: var(--ink);
   box-shadow: var(--shadow-pop);
   font: 12px var(--ui);
-  transform: translateX(-50%);
   pointer-events: auto;
+  transition-property: none;
   animation: tooltip-in 0.12s var(--ease) 0.35s both;
+}
+.shortcut-tooltip > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 @keyframes tooltip-in {
   from {

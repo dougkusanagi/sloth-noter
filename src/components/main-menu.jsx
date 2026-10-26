@@ -1,29 +1,8 @@
 import { t } from '../i18n.js'
 import { buildCommands } from '../commands.js'
-
-const KEY_LABELS = { Shift: '⇧', Delete: 'Del' }
-
-const modifierKey = () => (/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl')
-const isBare = (keys) => /^F\d+$/.test(keys) // function keys need no modifier
-
-/** Plain text of a shortcut as the user reads it, for searching: "ctrl+shift+l". */
-export function shortcutText(keys) {
-  return (isBare(keys) ? keys : `${modifierKey()}+${keys}`).toLowerCase()
-}
-
-export function Shortcut({ keys }) {
-  const parts = keys.endsWith('+')
-    ? [...keys.slice(0, -1).split('+').filter(Boolean), '+']
-    : keys.split('+')
-  const bare = isBare(keys)
-  return (
-    <span className="menu-shortcut" aria-label={shortcutText(keys)}>
-      {(bare ? parts : [modifierKey(), ...parts]).map((key, index) => (
-        <kbd key={index}>{KEY_LABELS[key] ?? key}</kbd>
-      ))}
-    </span>
-  )
-}
+import { ShortcutButton } from './shortcut-button.jsx'
+import { Shortcut } from './shortcut.jsx'
+export { Shortcut, shortcutText } from './shortcut.jsx'
 
 export function MainMenu({
   firstRef,
@@ -76,8 +55,10 @@ export function MainMenu({
               {t(group)}
             </div>
             {entries.map(([id, label, Icon, keys, disabled]) => (
-              <button
+              <ShortcutButton
                 key={id}
+                label={t(label)}
+                keys={keys}
                 ref={id === 'newNote' ? firstRef : null}
                 role="menuitem"
                 disabled={disabled}
@@ -87,7 +68,7 @@ export function MainMenu({
                 <Icon size={15} aria-hidden="true" />
                 <span className="menu-item-label">{t(label)}</span>
                 {keys && <Shortcut keys={keys} />}
-              </button>
+              </ShortcutButton>
             ))}
           </div>
         ))}

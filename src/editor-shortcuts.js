@@ -15,6 +15,38 @@ export const EDITOR_SHORTCUTS = [
   ['Shift+.', 'format.quote'],
 ]
 
+export const BLOCK_SHORTCUTS = [
+  ['Shift+2', 'block.h2', 'h2'],
+  ['Shift+3', 'block.h3', 'h3'],
+  ['Shift+4', 'block.h4', 'h4'],
+  ['Shift+5', 'block.table', 'table'],
+  ['Shift+6', 'block.image', 'image'],
+  ['Shift+7', 'block.numbered', 'numbered'],
+  ['Shift+`', 'block.code', 'code'],
+]
+
+const isMac = () => /Mac|iPhone|iPad/.test(globalThis.navigator?.platform ?? '')
+
+export function blockKeys(action, mac = isMac()) {
+  if (['list', 'quote'].includes(action))
+    return EDITOR_SHORTCUTS.find(([, label]) => label === `format.${action}`)?.[0]
+  const keys = BLOCK_SHORTCUTS.find(([, , block]) => block === action)?.[0]
+  return keys && mac ? `Alt+${keys}` : keys
+}
+
+export function blockShortcut(event, mac = isMac()) {
+  if (event.isComposing || !(event.ctrlKey || event.metaKey) || !event.shiftKey) return null
+  // Command+Shift+digits belongs to macOS screenshots; Option keeps those combinations free.
+  if (Boolean(event.altKey) !== Boolean(mac && event.metaKey && !event.ctrlKey)) return null
+  // Physical digits still work when Shift changes the character, including on ABNT keyboards.
+  const key = /^Digit[2-7]$/.test(event.code ?? '')
+    ? event.code.slice(-1)
+    : event.code === 'Backquote' || event.key === '~'
+      ? '`'
+      : event.key
+  return BLOCK_SHORTCUTS.find(([keys]) => keys === `Shift+${key}`)?.[2] ?? null
+}
+
 /** Maps a keydown to a formatting action, or null. */
 export function formatShortcut(event) {
   if (event.isComposing || !(event.ctrlKey || event.metaKey) || event.altKey) return null

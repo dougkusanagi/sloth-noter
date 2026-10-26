@@ -67,7 +67,9 @@ test('the fixed insert button tracks document scrolling', async ({ page }) => {
   await openNote(page, '# Rolagem\n\n' + 'Parágrafo\n\n'.repeat(30))
   await page.keyboard.press('Control+End')
   await expect(trigger(page)).toBeVisible()
-  const original = await trigger(page).boundingBox()
+  // The editor may replace the trigger while measuring its viewport. Evaluate
+  // through the locator so Playwright waits for the attached element again.
+  const original = await trigger(page).evaluate((element) => element.getBoundingClientRect().top)
   await page.evaluate(() => window.scrollBy(0, -10))
   await expect
     .poll(() =>
@@ -75,7 +77,7 @@ test('the fixed insert button tracks document scrolling', async ({ page }) => {
         () => document.querySelector('.insert-trigger')?.getBoundingClientRect().top ?? null,
       ),
     )
-    .not.toBe(original.y)
+    .not.toBe(original)
   await page.evaluate(() => window.scrollBy(0, -120))
   await expect(trigger(page)).toBeHidden()
 })

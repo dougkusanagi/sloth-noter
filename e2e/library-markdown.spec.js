@@ -116,13 +116,15 @@ test('long tab names are truncated, disclosed on hover, and can be closed', asyn
     'Uma nota com um título muito longo para caber inteiramente na barra de abas do aplicativo'
   await source(page, `# ${title}\n\nTexto`)
   const tab = page.locator('.tab')
-  await expect(tab).toHaveAttribute('title', `${title}.md · ctrl+1`)
+  await expect(tab).toHaveAccessibleName(`${title}.md`)
   expect(await tab.locator('span').evaluate((span) => span.scrollWidth > span.clientWidth)).toBe(
     true,
   )
   const close = page.locator('.tab-close')
   await expect(close).toHaveCSS('opacity', '0')
   await tab.hover()
+  await expect(page.getByRole('tooltip')).toContainText(`${title}.md`)
+  await expect(page.getByRole('tooltip').locator('kbd')).toHaveText(['Ctrl', '1'])
   await expect(close).toHaveCSS('opacity', '1')
   await close.click()
   await expect(page.locator('.tabs')).toBeHidden()

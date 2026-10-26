@@ -9,7 +9,7 @@ import { createMiddleClickPasteGuard } from './middle-click-paste.js'
 import { createPasteIntentGuard } from './paste-intent.js'
 import { listenNativeImageDrops, routeNativeImageDrop } from './native-image-drop.js'
 import { ensureTitle, titlePosition, titleNavigationTarget } from './title.js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { createRoot } from 'react-dom/client'
 import { Toaster, toast } from 'sonner'
@@ -32,12 +32,15 @@ import { CommandPalette } from './components/command-palette.jsx'
 import { SettingsDialog } from './components/settings-dialog.jsx'
 import { buildCommands } from './commands.js'
 import { MainMenu } from './components/main-menu.jsx'
+import { ShortcutButton, ShortcutHint } from './components/shortcut-button.jsx'
+import { shortcutText } from './components/shortcut.jsx'
 import { WindowControls, isMac } from './components/window-controls.jsx'
-import { DisplayMenu } from './components/display-menu.jsx'
+import { DisplayMenu, ThemeSwitch } from './components/display-menu.jsx'
 import { TasksLibrary } from './components/tasks-library.jsx'
 import { resolvedTasks } from './tasks.js'
 import { displayName } from './note-title.js'
 import { useTabs } from './components/tabs.jsx'
+import { NoteViewport } from './components/note-viewport.jsx'
 import { useNotesStore } from './hooks/use-notes-store.js'
 import { useNoteActions } from './hooks/use-note-actions.js'
 import { usePrefs } from './hooks/use-prefs.js'
@@ -45,7 +48,8 @@ import { ImageLibrary } from './components/image-library.jsx'
 import { readNoteFile, splitDrop } from './note-drop.js'
 import { externalNote, isExternalNote } from './external-notes.js'
 import { appShortcut } from './shortcuts.js'
-import { formatShortcut, shortcutEdit } from './editor-shortcuts.js'
+import { blockShortcut, formatShortcut, shortcutEdit } from './editor-shortcuts.js'
+import { blockEdit } from './insert-block.js'
 import { searchNote, replacementText } from './find.js'
 import { setSearchHighlights, revealSearchMatch } from './editor/search.js'
 import { headingFileName, nameFromHeading, uniqueName } from './notes.js'
@@ -231,6 +235,7 @@ function Workspace({ persistence, loaded }) {
   const pendingSearchChanges = useRef(null)
   const editorRef = useRef(null)
   const visualRef = useRef(null)
+  const notePositions = useRef(new Map())
   const [readingFolds, setReadingFolds] = useState({ id: null, lines: new Set() })
   const clipboardBusy = useRef(false)
   const clipboardFocusEpoch = useRef(0)
@@ -488,9 +493,30 @@ function Workspace({ persistence, loaded }) {
     const from = titlePosition(raw, normalized, field.selectionStart)
     const to = titlePosition(raw, normalized, field.selectionEnd)
     updateBody(normalized)
+    updateSelectionStatistics(normalized.slice(from, to))
     if (raw !== normalized) requestAnimationFrame(() => field.setSelectionRange(from, to))
   }
   function wrapSourceSelection(event) {
+    const block = blockShortcut(event)
+    if (block) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (block === 'image') {
+        pickImages()
+        return
+      }
+      const field = event.currentTarget
+      const edit = blockEdit(field.value, field.selectionStart, field.selectionEnd, block)
+      if (!edit) return
+      field.setSelectionRange(edit.from, edit.to)
+      if (!document.execCommand('insertText', false, edit.insert)) {
+        field.setRangeText(edit.insert, edit.from, edit.to, 'end')
+        updateBody(field.value)
+      }
+      field.setSelectionRange(edit.selectionFrom, edit.selectionTo)
+      updateSelectionStatistics(field.value.slice(edit.selectionFrom, edit.selectionTo))
+      return
+    }
     const shortcut = formatShortcut(event)
     if (shortcut) {
       const field = event.currentTarget
@@ -1194,8 +1220,26 @@ function Workspace({ persistence, loaded }) {
         if (!document.querySelector('[role="dialog"]')) menuButton.current?.focus()
       }, 0)
   }
-  useEffect(() => {
-    setSelectedText({ id: null, mode: null, text: '' })
+  function toggleMainMenu() {
+    if (document.querySelector('[aria-modal="true"]')) return
+    if (menuOpen) closeMenu()
+    else {
+      setFocusMode(false)
+      setMenuOpen(true)
+    }
+  }
+  useLayoutEffect(() => {
+    const view = mode === 'visual' ? visualRef.current : null
+    const field = mode === 'source' ? editorRef.current : null
+    const text = view
+      ? view.state.selection.ranges
+          .filter((range) => !range.empty)
+          .map((range) => view.state.doc.sliceString(range.from, range.to))
+          .join('\n')
+      : field
+        ? field.value.slice(field.selectionStart, field.selectionEnd)
+        : ''
+    setSelectedText({ id: active?.id, mode, text })
   }, [active?.id, mode])
   function updateSelectionStatistics(text) {
     setSelectedText((previous) =>
@@ -1724,6 +1768,7 @@ function Workspace({ persistence, loaded }) {
     })
   }
   const menuActions = {
+    mainMenu: toggleMainMenu,
     ...Object.fromEntries(
       Array.from({ length: 9 }, (_, index) => [
         `tab${index + 1}`,
@@ -1878,30 +1923,31 @@ function Workspace({ persistence, loaded }) {
             }
           }}
         >
-          <button
+          <ShortcutButton
             type="button"
             className="focus-exit"
-            aria-label={t('focus.exit')}
-            title={`${t('focus.exit')} (Esc)`}
+            label={t('focus.exit')}
+            keys="Esc"
             onClick={toggleFocusMode}
           >
             <Minimize2 size={16} aria-hidden="true" />
             <span>{t('focus.exit')}</span>
             <kbd>Esc</kbd>
-          </button>
+          </ShortcutButton>
         </div>
       )}
       <header className="app-header" data-tauri-drag-region inert={switching ? true : undefined}>
         {persistence.invoke && mac && <WindowControls mac />}
         <div className="main-menu-wrap" ref={menuWrap}>
-          <button
+          <ShortcutButton
             ref={menuButton}
             className="icon-button menu-trigger"
-            aria-label={t('menu.main')}
+            label={t('menu.main')}
+            keys="F10"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             aria-controls="main-menu"
-            onClick={() => setMenuOpen((value) => !value)}
+            onClick={toggleMainMenu}
             onKeyDown={(event) => {
               if (event.key === 'ArrowDown') {
                 event.preventDefault()
@@ -1910,7 +1956,7 @@ function Workspace({ persistence, loaded }) {
             }}
           >
             <Menu size={18} aria-hidden="true" />
-          </button>
+          </ShortcutButton>
           {menuOpen && (
             <MainMenu
               firstRef={menuFirst}
@@ -1925,16 +1971,16 @@ function Workspace({ persistence, loaded }) {
             />
           )}
         </div>
-        <button
+        <ShortcutButton
           className="icon-button sidebar-toggle"
-          title={t('sidebar.toggle')}
-          aria-label={t('sidebar.toggle')}
+          label={t('sidebar.toggle')}
+          keys="Alt+B"
           aria-expanded={sidebarVisible}
           aria-controls="notes-sidebar"
           onClick={() => updatePrefs({ sidebarVisible: !sidebarVisible })}
         >
           <PanelLeft size={16} aria-hidden="true" />
-        </button>
+        </ShortcutButton>
         <input
           ref={imageInput}
           type="file"
@@ -1987,14 +2033,13 @@ function Workspace({ persistence, loaded }) {
           >
             {sidebarSection === 'trash' ? (
               <div className="sidebar-heading">
-                <button
+                <ShortcutButton
                   className="icon-button"
-                  aria-label={t('trash.back')}
-                  title={t('trash.back')}
+                  label={t('trash.back')}
                   onClick={() => showSection('notes')}
                 >
                   <ArrowLeft size={16} aria-hidden="true" />
-                </button>
+                </ShortcutButton>
                 <span>{t('trash.title')}</span>
                 <button
                   className="button quiet danger small"
@@ -2044,25 +2089,24 @@ function Workspace({ persistence, loaded }) {
                 />
               </div>
               {sidebarSection === 'notes' && (
-                <button
+                <ShortcutButton
                   className="button sidebar-add"
-                  aria-label={t('menu.newNote')}
-                  title={t('menu.newNote')}
+                  label={t('menu.newNote')}
+                  keys="T"
                   onClick={() => createNote()}
                 >
                   <Plus size={15} aria-hidden="true" />
-                </button>
+                </ShortcutButton>
               )}
               {sidebarSection === 'images' && (
-                <button
+                <ShortcutButton
                   className="button sidebar-add sidebar-add-image"
-                  title={t('images.import')}
-                  aria-label={t('images.import')}
+                  label={t('images.import')}
                   disabled={imageBusy}
                   onClick={pickImages}
                 >
                   <Plus size={15} aria-hidden="true" />
-                </button>
+                </ShortcutButton>
               )}
             </div>
             <div className="sidebar-items">
@@ -2200,95 +2244,111 @@ function Workspace({ persistence, loaded }) {
             </div>
           )}
           {active ? (
-            mode === 'reading' ? (
-              <div className="reading">
-                <Markdown
-                  text={active.body}
-                  onCopy={copyCode}
-                  onChange={updateBody}
-                  onOpenWiki={openWiki}
-                  notes={data.notes}
-                  folds={folds}
-                  onToggleFold={toggleReadingFold}
-                />
-              </div>
-            ) : mode === 'source' ? (
-              <div className="source-editor-wrap">
-                <div className="source-search-mirror" aria-hidden="true">
-                  <SourceSearchHighlights
-                    body={active.body}
-                    matches={findOpen ? findResult.matches : []}
-                    index={findIndex}
-                    scope={findOpen && findOptions.selectionOnly ? findOptions.scope : null}
+            <NoteViewport
+              key={`${active.id}:${mode}:${prefs.language}`}
+              noteId={active.id}
+              mode={mode}
+              positions={notePositions.current}
+              visualRef={visualRef}
+              editorRef={editorRef}
+            >
+              {mode === 'reading' ? (
+                <div className="reading">
+                  <Markdown
+                    text={active.body}
+                    onCopy={copyCode}
+                    onChange={updateBody}
+                    onOpenWiki={openWiki}
+                    notes={data.notes}
+                    folds={folds}
+                    onToggleFold={toggleReadingFold}
                   />
-                  {'\n'}
                 </div>
-                <textarea
-                  ref={editorRef}
-                  key={active.id}
-                  aria-label={t('mode.sourceEditor')}
-                  spellCheck="false"
-                  value={active.body}
-                  onChange={changeSource}
-                  onSelect={(event) => {
-                    const field = event.currentTarget
-                    if (field.selectionStart < 2)
-                      field.setSelectionRange(
-                        2,
-                        Math.max(2, field.selectionEnd),
-                        field.selectionDirection,
+              ) : mode === 'source' ? (
+                <div className="source-editor-wrap">
+                  <div className="source-search-mirror" aria-hidden="true">
+                    <SourceSearchHighlights
+                      body={active.body}
+                      matches={findOpen ? findResult.matches : []}
+                      index={findIndex}
+                      scope={findOpen && findOptions.selectionOnly ? findOptions.scope : null}
+                    />
+                    {'\n'}
+                  </div>
+                  <textarea
+                    ref={editorRef}
+                    key={active.id}
+                    aria-label={t('mode.sourceEditor')}
+                    spellCheck="false"
+                    value={active.body}
+                    onChange={changeSource}
+                    onFocus={(event) => {
+                      const field = event.currentTarget
+                      updateSelectionStatistics(
+                        field.value.slice(field.selectionStart, field.selectionEnd),
                       )
-                    updateSelectionStatistics(
-                      field.value.slice(field.selectionStart, field.selectionEnd),
-                    )
-                  }}
-                  onKeyDown={wrapSourceSelection}
-                  onKeyUp={(event) => {
-                    if (
-                      event.shiftKey ||
-                      ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a')
-                    )
+                    }}
+                    onSelect={(event) => {
+                      const field = event.currentTarget
+                      if (field.selectionStart < 2)
+                        field.setSelectionRange(
+                          2,
+                          Math.max(2, field.selectionEnd),
+                          field.selectionDirection,
+                        )
+                      updateSelectionStatistics(
+                        field.value.slice(field.selectionStart, field.selectionEnd),
+                      )
+                    }}
+                    onKeyDown={wrapSourceSelection}
+                    onKeyUp={(event) => {
+                      if (
+                        event.shiftKey ||
+                        ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a')
+                      )
+                        captureSearchSelection({
+                          from: event.currentTarget.selectionStart,
+                          to: event.currentTarget.selectionEnd,
+                        })
+                    }}
+                    onPointerUp={(event) =>
                       captureSearchSelection({
                         from: event.currentTarget.selectionStart,
                         to: event.currentTarget.selectionEnd,
                       })
-                  }}
-                  onPointerUp={(event) =>
-                    captureSearchSelection({
-                      from: event.currentTarget.selectionStart,
-                      to: event.currentTarget.selectionEnd,
-                    })
-                  }
-                  onScroll={(event) => {
-                    const mirror = event.currentTarget.previousElementSibling
-                    mirror.scrollTop = event.currentTarget.scrollTop
-                    mirror.scrollLeft = event.currentTarget.scrollLeft
+                    }
+                    onScroll={(event) => {
+                      const mirror = event.currentTarget.previousElementSibling
+                      mirror.scrollTop = event.currentTarget.scrollTop
+                      mirror.scrollLeft = event.currentTarget.scrollLeft
+                    }}
+                  />
+                </div>
+              ) : (
+                <VisualEditor
+                  notes={data.notes}
+                  onCopy={copyCode}
+                  imageBusy={imageBusy}
+                  onImageFiles={addImages}
+                  onImageUrl={(url, point) => insertMarkdown(markdownImage('Imagem', url), point)}
+                  onOpenWiki={openWiki}
+                  key={`${active.id}:${prefs.language}`}
+                  noteId={active.id}
+                  body={active.body}
+                  onChange={updateBody}
+                  onSelectionChange={captureSearchSelection}
+                  onStatisticsSelection={updateSelectionStatistics}
+                  onReady={(view) => {
+                    visualRef.current = view
                   }}
                 />
-              </div>
-            ) : (
-              <VisualEditor
-                notes={data.notes}
-                onCopy={copyCode}
-                imageBusy={imageBusy}
-                onImageFiles={addImages}
-                onImageUrl={(url, point) => insertMarkdown(markdownImage('Imagem', url), point)}
-                onOpenWiki={openWiki}
-                key={`${active.id}:${prefs.language}`}
-                noteId={active.id}
-                body={active.body}
-                onChange={updateBody}
-                onSelectionChange={captureSearchSelection}
-                onStatisticsSelection={updateSelectionStatistics}
-                onReady={(view) => {
-                  visualRef.current = view
-                }}
-              />
-            )
+              )}
+            </NoteViewport>
           ) : (
             <div className="empty-note">{t('empty.note')}</div>
           )}
           <footer className="document-info">
+            <ThemeSwitch className="footer-theme-switch" prefs={prefs} onChange={updatePrefs} />
             <span
               className="save-status"
               role="status"
@@ -2346,21 +2406,21 @@ function Workspace({ persistence, loaded }) {
                 ['source', t('mode.source')],
                 ['reading', t('mode.reading')],
               ].map(([value, label], index) => (
-                <label
-                  key={value}
-                  title={`${label} · ${mac ? `⌘⌥${index + 1}` : `Ctrl+Alt+${index + 1}`}`}
-                >
-                  <input
-                    type="radio"
-                    name="editor-mode"
-                    value={value}
-                    aria-label={label}
-                    checked={mode === value}
-                    onChange={() => changeMode(value)}
-                  />
-                  <ModeIcon mode={value} />
-                  <span className="mode-label">{label}</span>
-                </label>
+                <ShortcutHint key={value} label={label} keys={`Alt+${index + 1}`}>
+                  <label>
+                    <input
+                      type="radio"
+                      name="editor-mode"
+                      value={value}
+                      aria-label={label}
+                      aria-description={shortcutText(`Alt+${index + 1}`)}
+                      checked={mode === value}
+                      onChange={() => changeMode(value)}
+                    />
+                    <ModeIcon mode={value} />
+                    <span className="mode-label">{label}</span>
+                  </label>
+                </ShortcutHint>
               ))}
             </fieldset>
           </footer>

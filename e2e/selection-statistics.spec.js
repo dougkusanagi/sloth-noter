@@ -30,5 +30,11 @@ for (const mode of ['Padrão', 'Código', 'Leitura']) {
     else await page.keyboard.press('ArrowRight')
     await expect(stats).toHaveCount(0)
     await expect(page.locator('.document-info')).toContainText('5 palavras')
+    if (mode === 'Código') {
+      await page.locator('textarea').press('Control+a')
+      await expect(stats).toBeVisible()
+      await page.locator('textarea').fill('# Curta\n\nTexto')
+      await expect(stats).toHaveCount(0)
+    }
   })
 }

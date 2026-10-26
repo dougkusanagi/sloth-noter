@@ -13,6 +13,47 @@ import {
 import { FONT_SIZE, CONTENT_WIDTH, contentWidth } from '../storage.js'
 import { t } from '../i18n.js'
 import { Shortcut } from './main-menu.jsx'
+import { ShortcutButton } from './shortcut-button.jsx'
+
+const THEMES = [
+  ['light', Sun],
+  ['dark', Moon],
+  ['system', Monitor],
+]
+
+export function ThemeSwitch({ prefs, onChange, className = '' }) {
+  return (
+    <div className={`theme-switch ${className}`} role="radiogroup" aria-label={t('settings.theme')}>
+      {THEMES.map(([theme, Icon], index) => (
+        <ShortcutButton
+          key={theme}
+          type="button"
+          className="icon-button"
+          role="radio"
+          label={t(`theme.${theme}`)}
+          aria-checked={prefs.theme === theme}
+          tabIndex={prefs.theme === theme ? 0 : -1}
+          onClick={() => onChange({ theme })}
+          onKeyDown={(event) => {
+            const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[event.key]
+            if (!step && !['Home', 'End'].includes(event.key)) return
+            event.preventDefault()
+            const next =
+              event.key === 'Home'
+                ? 0
+                : event.key === 'End'
+                  ? THEMES.length - 1
+                  : (index + step + THEMES.length) % THEMES.length
+            onChange({ theme: THEMES[next][0] })
+            event.currentTarget.parentElement.querySelectorAll('button')[next].focus()
+          }}
+        >
+          <Icon size={14} aria-hidden="true" />
+        </ShortcutButton>
+      ))}
+    </div>
+  )
+}
 
 /**
  * The "Aa" popover in the header: theme, text size and text width. Appearance lives here
@@ -43,18 +84,18 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
   }, [open])
   return (
     <div className="display-menu-wrap" ref={wrap}>
-      <button
+      <ThemeSwitch className="header-theme-switch" prefs={prefs} onChange={onChange} />
+      <ShortcutButton
         ref={trigger}
         className="icon-button display-trigger"
-        aria-label={t('display.title')}
-        title={t('display.title')}
+        label={t('display.title')}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls="display-menu"
         onClick={() => setOpen((value) => !value)}
       >
         <span aria-hidden="true">Aa</span>
-      </button>
+      </ShortcutButton>
       {open && (
         <div
           id="display-menu"
@@ -142,34 +183,36 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
                   />
                 </div>
                 <div className="adjustment-buttons" role="presentation">
-                  <button
+                  <ShortcutButton
                     role="menuitem"
-                    aria-label={`${label}: ${t('adjust.decrease')}`}
+                    label={`${label}: ${t('adjust.decrease')}`}
+                    keys={`${modifier}-`}
                     disabled={value <= range.min}
                     onClick={() => onChange({ [key]: Math.max(range.min, value - step) })}
                   >
                     <Minus size={13} />
                     <Shortcut keys={`${modifier}-`} />
-                  </button>
-                  <button
+                  </ShortcutButton>
+                  <ShortcutButton
                     role="menuitem"
-                    aria-label={`${label}: ${t('settings.fontReset')}`}
-                    title={t('settings.fontReset')}
+                    label={`${label}: ${t('settings.fontReset')}`}
+                    keys={`${modifier}0`}
                     disabled={value === range.default}
                     onClick={() => onChange({ [key]: range.default })}
                   >
                     <RotateCcw size={13} />
                     <Shortcut keys={`${modifier}0`} />
-                  </button>
-                  <button
+                  </ShortcutButton>
+                  <ShortcutButton
                     role="menuitem"
-                    aria-label={`${label}: ${t('adjust.increase')}`}
+                    label={`${label}: ${t('adjust.increase')}`}
+                    keys={`${modifier}+`}
                     disabled={value >= range.max}
                     onClick={() => onChange({ [key]: Math.min(range.max, value + step) })}
                   >
                     <Plus size={13} />
                     <Shortcut keys={`${modifier}+`} />
-                  </button>
+                  </ShortcutButton>
                 </div>
               </div>
             ))}

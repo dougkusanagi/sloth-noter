@@ -203,7 +203,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         (item) => item.dataset.noteId === id,
       )
       button?.focus({ preventScroll: true })
-    } else heading.current?.focus({ preventScroll: true })
+    } else if (route.name === 'note' && editing) editor.current?.focus()
+    else heading.current?.focus({ preventScroll: true })
     // Only a screen change restores scroll; position updates must not fight the user's scroll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.name, route.id])
