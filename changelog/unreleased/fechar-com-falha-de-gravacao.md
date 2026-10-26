@@ -1,0 +1,1 @@
+Corrigido: ao fechar a janela com uma falha de gravação ou uma gravação que demora mais de dez segundos, o app explica por que continua aberto e oferece baixar um backup ou fechar sem salvar. O fechamento sem salvar exige confirmação e pode perder alterações ainda não gravadas.

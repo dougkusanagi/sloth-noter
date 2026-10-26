@@ -344,6 +344,37 @@ function Workspace({ persistence, loaded }) {
         },
       },
       persistence.kind !== 'web',
+      window,
+      undefined,
+      {
+        onBlocked: ({ forceClose }) => {
+          toast.error(
+            t(persistence.saveIssue?.localSaved ? 'window.closePending' : 'window.closeBlocked'),
+            {
+              id: 'close-blocked',
+              duration: Infinity,
+              description: (
+                <ToastButtons
+                  items={[
+                    [t('menu.backupDownload'), () => toastActions.current.downloadBackup()],
+                    [
+                      t('window.closeWithoutSaving'),
+                      async () => {
+                        if (!(await toastActions.current.confirmClose())) return
+                        try {
+                          await forceClose()
+                        } catch (cause) {
+                          setError(friendlyError(cause))
+                        }
+                      },
+                    ],
+                  ]}
+                />
+              ),
+            },
+          )
+        },
+      },
     )
       .then((stop) => {
         if (disposed) stop()
@@ -1593,7 +1624,17 @@ function Workspace({ persistence, loaded }) {
   }, [persistence, switching])
   const toastActions = useRef({})
   toastActions.current = {
+    confirmClose: () =>
+      ask({
+        kind: 'confirm',
+        message: t(
+          persistence.saveIssue?.localSaved ? 'window.closePendingConfirm' : 'window.closeConfirm',
+        ),
+        confirmLabel: t('window.closeWithoutSaving'),
+        cancelLabel: t('dialog.cancel'),
+      }),
     downloadBackup,
+    retrySave: () => writer.current.write(current.current),
     downloadDamaged: () =>
       download('sloth-note-damaged.json', damaged.current, 'application/json;charset=utf-8'),
     resetDamagedStorage,
@@ -1606,13 +1647,18 @@ function Workspace({ persistence, loaded }) {
       return
     }
     const run = (name) => () => toastActions.current[name]()
-    toast.error(t('error.storage', { error, label: persistence.label }), {
+    const detail = error.replace(/[.!?]+\s*$/, '')
+    const message = persistence.saveIssue?.localSaved
+      ? t('error.externalSaved', { error: detail })
+      : t('error.storage', { error: detail, label: persistence.label })
+    toast.error(message, {
       id: 'storage',
       duration: Infinity,
       description: (
         <ToastButtons
           items={[
             [t('menu.backupDownload'), run('downloadBackup')],
+            ...(!blocked ? [[t('error.retryStorage'), run('retrySave')]] : []),
             ...(blocked && damaged.current !== null
               ? [[t('error.downloadStored'), run('downloadDamaged')]]
               : []),
@@ -1621,7 +1667,7 @@ function Workspace({ persistence, loaded }) {
         />
       ),
     })
-  }, [error, blocked, persistence.label])
+  }, [error, blocked, persistence])
   useEffect(() => {
     const problem = persistence.vaultProblem
     if (!problem) return

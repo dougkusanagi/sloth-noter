@@ -7,6 +7,7 @@ import { headingFileName, moveToTrash, restoreFromTrash, uniqueName } from './no
 import { newDocument } from './storage.js'
 import { openWorkspace } from './boot.js'
 import { ensureTitle } from './title.js'
+import { externalNote } from './external-notes.js'
 
 /** In-memory stand-in for the native commands, with the same refusal rules. */
 function fakeHost({ files = {}, aux = null, chosen = '/notes', state = null } = {}) {
@@ -77,6 +78,37 @@ function fakeHost({ files = {}, aux = null, chosen = '/notes', state = null } = 
 }
 
 const start = (host) => createPersistence(createVaultAdapter(host.invoke, '/notes'))
+
+test('a missing external file preserves pending text and does not block vault notes', async () => {
+  const host = fakeHost({ files: { 'a.md': 'A' } })
+  const native = host.invoke
+  host.invoke = async (command, args) => {
+    if (command === 'external_read' || command === 'external_write') throw '[not-found] missing'
+    return native(command, args)
+  }
+  const persistence = start(host)
+  const { document } = await persistence.load()
+  const external = externalNote({
+    id: 'outside',
+    name: 'missing.md',
+    path: '/outside/missing.md',
+    contents: 'original',
+  })
+  const next = {
+    ...document,
+    notes: [
+      { ...document.notes[0], body: 'A updated' },
+      { ...external, body: 'pending' },
+    ],
+  }
+  assert.match(await persistence.save(next), /\/outside\/missing.md/)
+  assert.equal(host.files.get('a.md'), 'A updated')
+  assert.equal(persistence.saveIssue.localSaved, true)
+  assert.equal(JSON.parse(host.aux).externals[0].body, 'pending')
+  assert.equal(JSON.parse(host.aux).externals[0].external.seen, 'original')
+  const loaded = await start(host).load()
+  assert.equal(loaded.document.notes.find((note) => note.id === 'outside').body, 'pending')
+})
 
 test('an empty new folder starts with the welcome note as a real file', async () => {
   const host = fakeHost()
