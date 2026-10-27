@@ -1,4 +1,6 @@
 import { ShortcutButton } from './components/shortcut-button.jsx'
+import { openExternalLink } from './external-links.js'
+import { toast } from 'sonner'
 import { Shortcut } from './components/main-menu.jsx'
 import {
   EDITOR_SHORTCUTS,
@@ -448,7 +450,7 @@ export function VisualEditor({
               if (link && (event.ctrlKey || event.metaKey) && link.dataset.href) {
                 event.preventDefault()
                 event.stopPropagation()
-                window.open(link.dataset.href, '_blank', 'noopener,noreferrer')
+                openExternalLink(link.dataset.href).catch((error) => toast.error(String(error)))
                 return true
               }
               if (cell || event.target.closest?.('button')) return false
