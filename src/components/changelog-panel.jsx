@@ -27,6 +27,26 @@ const groups = types.map((type) => [
     ]),
 ])
 
+/** Build an ordinary Markdown document from the same sources used for releases. */
+export function changelogMarkdown() {
+  const sections = groups
+    .filter(([, entries]) => entries.length)
+    .map(([type, entries]) => `### ${type}\n\n${entries.map(([, text]) => text).join('\n\n')}`)
+  return (
+    [
+      `# ${t('settings.changelog')}`,
+      t('changelog.intro'),
+      `## ${t('changelog.pending')}`,
+      ...sections,
+      `## ${t('changelog.archive')}`,
+      ...Object.entries(releases)
+        .sort(([a], [b]) => b.localeCompare(a, undefined, { numeric: true }))
+        .map(([, text]) => text.replace(/^# /gm, '### ')),
+      archive.replace(/^# /gm, '### '),
+    ].join('\n\n') + '\n'
+  )
+}
+
 export function ChangelogPanel() {
   return (
     <article className="changelog-page">

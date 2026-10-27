@@ -11,7 +11,6 @@ import {
   NotebookPen,
   X,
 } from 'lucide-react'
-import { ChangelogPanel } from './changelog-panel.jsx'
 import { HistoryPanel } from './history-panel.jsx'
 import { Modal, ShortcutList } from './dialogs.jsx'
 import { FontSlider, RangeSlider, Segmented, Switch } from './controls.jsx'
@@ -102,7 +101,7 @@ export function SettingsDialog({
               key={id}
               autoFocus={id === section}
               aria-current={section === id ? 'page' : undefined}
-              onClick={() => setSection(id)}
+              onClick={() => (id === 'changelog' ? onRun('changelog') : setSection(id))}
             >
               <Icon size={15} aria-hidden="true" />
               {t(`settings.${id}`)}
@@ -111,7 +110,6 @@ export function SettingsDialog({
         </nav>
         <div className="settings-panel">
           <h3>{t(`settings.${section}`)}</h3>
-          {section === 'changelog' && <ChangelogPanel />}
           {section === 'appearance' && (
             <>
               <Row title={t('settings.theme')} hint={t('settings.themeHint')}>

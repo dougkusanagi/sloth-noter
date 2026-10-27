@@ -8,6 +8,7 @@ mod history;
 mod images;
 mod migration;
 mod store;
+mod updates;
 mod vault;
 
 use serde::Serialize;
@@ -622,6 +623,8 @@ pub fn run() {
     }));
     builder
         .setup(|app| {
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
             let _ = history::maintain(&app.path().app_data_dir()?.join("history"));
             migration::recover(&app.path().app_data_dir()?.join("migration.json"))
                 .map_err(std::io::Error::other)?;
@@ -634,6 +637,8 @@ pub fn run() {
         })
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
+            updates::update_environment,
+            updates::update_restart,
             history_maintain,
             history_configure,
             history_snapshot,

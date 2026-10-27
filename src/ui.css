@@ -2449,8 +2449,8 @@ html:has(
 }
 .inline-code-wrap .copy-inline-code {
   position: absolute;
-  left: calc(100% - 2px);
-  top: -4px;
+  right: 0;
+  top: -20px;
   z-index: 2;
   opacity: 0;
   pointer-events: none;
@@ -2931,4 +2931,57 @@ html:has(
 .changelog-page summary {
   cursor: pointer;
   font-weight: 600;
+}
+
+.update-notice {
+  position: sticky;
+  top: 46px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  font: 13px/1.5 var(--ui);
+  background: var(--paper);
+  color: var(--ink);
+}
+.update-notice .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+}
+@media (max-width: 600px) {
+  .update-notice {
+    justify-content: space-between;
+  }
+}
+
+.update-notice progress {
+  width: 130px;
+  height: 8px;
+  appearance: none;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--soft);
+  accent-color: var(--accent);
+}
+.update-notice progress::-webkit-progress-bar {
+  background: var(--soft);
+}
+.update-notice progress::-webkit-progress-value {
+  background: var(--accent);
+}
+.update-notice progress::-moz-progress-bar {
+  background: var(--accent);
+}
+.focus-mode .update-notice {
+  top: 0;
+}
+.focus-mode[data-native-window] .update-notice {
+  top: 40px;
 }

@@ -1,3 +1,6 @@
+import { saveBeforeUpdate } from './app-updates.js'
+import { useAppUpdates, UpdateNotice } from './components/app-updates.jsx'
+import { changelogMarkdown } from './components/changelog-panel.jsx'
 import { pasteGesture } from './paste-intent.js'
 import { quickOpenNotes } from './quick-open.js'
 import { textStatistics } from './text-statistics.js'
@@ -193,6 +196,16 @@ function Workspace({ persistence, loaded }) {
   const [commandsOpen, setCommandsOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
   const [imageBusy, setImageBusy] = useState(false)
+  const appUpdates = useAppUpdates(persistence.invoke, {
+    beforeInstall: async () => {
+      if (blocked || switching || imageBusy) throw new Error('Workspace is not ready')
+      setSwitching(true)
+      // Let inert and the keyboard guards apply before flushing the final document.
+      await new Promise(requestAnimationFrame)
+      await saveBeforeUpdate(writer.current, current.current, noteHistory)
+    },
+    resume: () => setSwitching(false),
+  })
   const imageInput = useRef(null)
   const imagePoint = useRef(null)
   const [palette, setPalette] = useState(false)
@@ -1837,10 +1850,14 @@ function Workspace({ persistence, loaded }) {
         const welcome = welcomeNote(prefs.language)
         createNote(welcome.name, welcome.body)
       }, false),
+    updates: () => runMenu(() => appUpdates.check(), false),
     changelog: () =>
       runMenu(() => {
-        setSettingsSection('changelog')
-        setSettingsOpen(true)
+        const body = changelogMarkdown()
+        const existing = current.current.notes.find((note) => note.body === body)
+        if (existing) openNote(existing.id)
+        else createNote(`${t('settings.changelog')}.md`, body)
+        setMode('reading')
       }, false),
     history: () =>
       runMenu(() => {
@@ -2022,6 +2039,7 @@ function Workspace({ persistence, loaded }) {
           }}
         />
       </header>
+      <UpdateNotice {...appUpdates} />
       {tabContextMenu}
       <div className="workspace-layout" inert={switching ? true : undefined}>
         {sidebarVisible && (

@@ -40,8 +40,13 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Sloth Note ${{ github.ref_name }}
           releaseDraft: true
-          args: --bundles ${{ matrix.bundles }}
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
+          tauriScript: bun run tauri
+          args: --config src-tauri/tauri.updater.conf.json --bundles ${{ matrix.bundles }}
