@@ -1,0 +1,16 @@
+{
+  "identifier": "desktop-updater",
+  "description": "Check, download and install signed updates in the desktop main window.",
+  "windows": [
+    "main"
+  ],
+  "platforms": [
+    "linux",
+    "windows"
+  ],
+  "permissions": [
+    "updater:allow-check",
+    "updater:allow-download",
+    "updater:allow-install"
+  ]
+}

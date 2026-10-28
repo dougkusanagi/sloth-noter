@@ -11,6 +11,11 @@ flowchart TD
   mobile --> store
   mobile --> navigation[useNavigation e nav-stack]
   navigation --> browser[Histórico do WebView e sessionStorage]
+  desktop --> updates[Consulta de atualizações desktop]
+  updates --> updater[Plugin updater Tauri]
+  updater --> github[Manifesto e pacotes assinados no GitHub Releases]
+  updater --> binary[Instalação do AppImage ou NSIS]
+  updates --> saves[Fila de gravação antes de instalar e reiniciar]
   desktop --> editor[VisualEditor CodeMirror e Markdown]
   mobile --> editor
   store --> runtime[createAppPersistence]
@@ -55,3 +60,12 @@ com o futuro histórico de conclusão de tarefas.
 
 Veja `docs/adr/`. O andamento da interface Android está em
 [docs/plans/mobile-interface.md](plans/mobile-interface.md).
+
+Atualizações desktop: `useAppUpdates` consulta o manifesto público de releases pelo plugin oficial
+Tauri, coordena download, verificação, instalação e reinício. A assinatura e a versão do pacote são
+verificadas no Rust com a chave pública incluída no app. A consulta automática é silenciosa em caso
+de falha e não impede edição offline. A instalação só começa após uma ação explícita, bloqueio da
+edição e conclusão das gravações pendentes. O updater substitui o AppImage ou executa o instalador
+NSIS; `updates.rs` oferece o reinício e restringe o fluxo às compilações distribuídas. As permissões
+do plugin pertencem apenas à janela principal Linux/Windows. A rede de atualização fica no Rust;
+a CSP da interface não libera domínios externos para essa operação.

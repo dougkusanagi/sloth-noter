@@ -113,6 +113,7 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
         ['shortcuts', 'menu.shortcuts', Keyboard, 'Shift+/', false, true],
         ['welcome', 'menu.welcome', LifeBuoy, undefined, false, true],
         ['changelog', 'settings.changelog', NotebookPen, undefined, false, true],
+        ...(desktop ? [['updates', 'updates.check', Download, undefined, false, true]] : []),
       ],
     ],
   ]

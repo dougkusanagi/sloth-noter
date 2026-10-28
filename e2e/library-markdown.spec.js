@@ -53,7 +53,7 @@ test('closed notes remain in the searchable library and visibility persists', as
     .click({ force: true })
   await expect(page.locator('.tabs')).toBeHidden()
   await page.getByRole('button', { name: 'Welcome', exact: true }).click()
-  await expect(page.locator('.tab')).toContainText('Welcome.md')
+  await expect(page.locator('.tab')).toContainText('Welcome')
   await page.getByRole('button', { name: 'Mostrar/ocultar biblioteca' }).click()
   await page.reload()
   await expect(page.locator('.notes-sidebar')).toBeHidden()

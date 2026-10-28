@@ -4,7 +4,7 @@ import { tableAt, tableDecorations } from './table.js'
 import { addInlineDecorations } from './inline-decorations.js'
 import { resolveImage } from '../images.js'
 import { t } from '../i18n.js'
-import { Decoration, ViewPlugin, WidgetType } from '@codemirror/view'
+import { Decoration, EditorView, ViewPlugin, WidgetType } from '@codemirror/view'
 import { classifyLine, inlineSyntax } from '../live-markdown.js'
 import { headingSections } from '../sections.js'
 import { FoldToggleWidget, foldField, foldRange, isFolded } from './folding.js'
@@ -213,7 +213,12 @@ export function decorationsFor(view) {
   const tasks = new Map(
     resolvedTasks(text, view.state.facet(taskNotes)).map((task) => [task.line, task]),
   )
-  const progress = sectionProgress(text, [...tasks.values()], collapsed)
+  const progress = sectionProgress(
+    text,
+    [...tasks.values()],
+    collapsed,
+    view.state.facet(taskNotes),
+  )
   const checklists = sectionChecklists(text, [...tasks.values()])
   const definitions = []
   walk(tree, (node) => {
@@ -477,13 +482,23 @@ export function decorationsFor(view) {
         )
     }
   }
-  return Decoration.set(ranges, true)
+  const cells = ranges.filter((range) =>
+    range.value.spec.attributes?.class?.split(' ').includes('cm-md-table-cell'),
+  )
+  const cellSet = new Set(cells)
+  return {
+    decorations: Decoration.set(
+      ranges.filter((range) => !cellSet.has(range)),
+      true,
+    ),
+    cells: Decoration.set(cells, true),
+  }
 }
 
 export const liveMarkdown = ViewPlugin.fromClass(
   class {
     constructor(view) {
-      this.decorations = decorationsFor(view)
+      Object.assign(this, decorationsFor(view))
     }
     update(update) {
       if (
@@ -495,8 +510,12 @@ export const liveMarkdown = ViewPlugin.fromClass(
         update.viewportChanged ||
         update.startState.field(foldField) !== update.state.field(foldField)
       )
-        this.decorations = decorationsFor(update.view)
+        Object.assign(this, decorationsFor(update.view))
     }
   },
-  { decorations: (plugin) => plugin.decorations },
+  {
+    decorations: (plugin) => plugin.decorations,
+    provide: (plugin) =>
+      EditorView.outerDecorations.of((view) => view.plugin(plugin)?.cells ?? Decoration.none),
+  },
 )

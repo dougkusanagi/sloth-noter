@@ -60,3 +60,10 @@ test('current and legacy help illustrations resolve locally without a network re
   )
   assert.equal(await resolveImage('https://example.com/photo.png'), 'https://example.com/photo.png')
 })
+
+test('release-note illustrations resolve offline without reading the vault', async () => {
+  assert.equal(
+    await resolveImage('/changelog/insert-block-shortcuts.png'),
+    '/changelog/insert-block-shortcuts.png',
+  )
+})

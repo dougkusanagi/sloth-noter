@@ -183,57 +183,35 @@ for (const width of [390, 1280]) {
     await page.goto('/')
     await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
-    const dialog = page.getByRole('dialog', { name: 'Configurações', exact: true })
-    await expect(dialog.getByRole('heading', { name: 'Novidades', exact: true })).toBeVisible()
-    await expect(dialog.locator('.changelog-page')).toContainText('barra flutuante')
-    await expect(dialog.locator('.changelog-page')).toContainText(
-      'os blocos de código no modo Leitura agora quebram linhas longas como no modo Padrão',
-    )
-    await expect(dialog.locator('.changelog-page')).toContainText(
-      'o modo Leitura agora mostra a nota exatamente como o modo Padrão',
-    )
-    await expect(dialog.locator('.changelog-page')).toContainText('Os botões de nova aba')
-    await expect(dialog.locator('.changelog-page')).toContainText('Trocar de aba e voltar')
-    await expect(dialog.locator('.changelog-page')).toContainText(
-      'F10 abre ou fecha o menu principal',
-    )
-    await expect(dialog.locator('.changelog-page')).toContainText('O menu [+] agora mostra atalhos')
-    const blocks = dialog.getByAltText(
-      'Menu de inserir blocos com os atalhos de títulos, listas, tabela, bloco de código e imagem.',
-    )
-    await expect
-      .poll(() => blocks.evaluate((image) => image.complete && image.naturalWidth > 0))
-      .toBe(true)
-    await expect(dialog.locator('.changelog-page')).toContainText(
-      'As opções Claro, Escuro e Sistema',
-    )
-    const themes = dialog.getByAltText(
-      'Seletor de tema com ícones de sol, lua e monitor ao lado de Aparência do texto, com a dica Sistema.',
-    )
-    await expect
-      .poll(() => themes.evaluate((image) => image.complete && image.naturalWidth > 0))
-      .toBe(true)
-    if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/sloth-changelog-${width}.png` })
-    const illustration = dialog.getByAltText(
-      'Barra de formatação com texto selecionado e dica Negrito mostrando Ctrl e B, com o cursor sobre o botão.',
-    )
-    await expect(illustration).toHaveCount(1)
-    await expect
-      .poll(() => illustration.evaluate((img) => img.complete && img.naturalWidth > 0))
-      .toBe(true)
-    if (process.env.CAPTURE_UI)
-      await illustration.screenshot({ path: `/tmp/sloth-hover-illustration-${width}.png` })
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    const document = page.locator('.visual-editor.read-only')
+    await expect(document).toBeVisible()
+    await expect(document).toContainText('Novidades')
     expect(
-      (await new AxeBuilder({ page }).include('.settings-dialog').analyze()).violations,
+      (await new AxeBuilder({ page }).include('.visual-editor.read-only').analyze()).violations,
     ).toEqual([])
+    expect(await document.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
+    if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/sloth-changelog-${width}.png` })
     await page.context().setOffline(true)
-    await dialog.locator('summary').click()
-    await expect(dialog.locator('details[open]')).toContainText('0.1.0')
-    expect(
-      await dialog.locator('.settings-panel').evaluate((el) => el.scrollWidth <= el.clientWidth),
-    ).toBe(true)
-    await page.keyboard.press('Escape')
-    await expect(dialog).toBeHidden()
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    const source = page.locator('textarea')
+    await expect(source).toHaveValue(/^# Novidades\n/)
+    const original = await source.inputValue()
+    expect(original).toContain('F10 abre ou fecha o menu principal')
+    expect(original).toContain('Baixar atualização')
+    expect(original).toContain('modo Leitura agora mostra a nota')
+    await source.fill(original + '\nMinha anotação pessoal.\n')
+    await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
+    await expect(document).not.toContainText('Minha anotação pessoal.')
+    const tabs = page.locator('.tab-wrap')
+    const count = await tabs.count()
+    await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Configurações', exact: true }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Novidades', exact: true }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(tabs).toHaveCount(count)
+    await expect(document).toContainText('Novidades')
   })
 }
 

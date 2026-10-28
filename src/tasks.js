@@ -2,6 +2,7 @@ import { findNote, wikiReferences, markdownTree, walk, wikiParts } from './markd
 import { headingSections } from './sections.js'
 
 const TASK = /^(\s*)(?:[-*+]|\d+[.)])\s+\[([ xX-])\](?:\s+(.*))?$/
+const linkedHeading = (line) => /^#{1,6}\s+\[\[[^\n]+?\]\]\s*#*\s*$/.test(line)
 const FENCE = /^\s*(`{3,}|~{3,})/
 
 /**
@@ -47,17 +48,34 @@ export function toggleTask(body, mark) {
  * Done/total tasks under H2–H6, keyed by heading line. Expanded ancestors omit
  * totals carried entirely by a single subsection; collapsed sections keep their summary.
  */
-export function sectionProgress(body, tasks = noteTasks(body), collapsed = new Set()) {
+export function sectionProgress(body, tasks = noteTasks(body), collapsed = new Set(), notes = []) {
   const progress = new Map()
-  if (!tasks.length) return progress
+  if (!tasks.length && !notes.length) return progress
   const headings = headingSections(body)
+  const lines = body.split('\n')
+  const linked = headings.flatMap((heading) => {
+    const text = lines[heading.line - 1] ?? ''
+    if (!text.includes('[[')) return []
+    const task = resolvedTasks('- [ ] ' + text.replace(/^#+\s*/, ''), notes)[0]
+    return task?.progress ? [{ line: heading.line, ...task.progress }] : []
+  })
   for (const heading of headings) {
     if (heading.level === 0) continue
-    const inside = tasks.filter((task) => task.line > heading.titleEnd && task.line <= heading.end)
-    if (inside.length)
+    const linkedTitle = linkedHeading(lines[heading.line - 1] ?? '')
+    const inside = linkedTitle
+      ? []
+      : tasks.filter((task) => task.line > heading.titleEnd && task.line <= heading.end)
+    const referenced = linked.filter((item) =>
+      linkedTitle
+        ? item.line === heading.line
+        : item.line >= heading.line && item.line <= heading.end,
+    )
+    const linkedTotal = referenced.reduce((sum, item) => sum + item.total, 0)
+    const linkedDone = referenced.reduce((sum, item) => sum + item.done, 0)
+    if (inside.length || linkedTotal)
       progress.set(heading.line, {
-        done: inside.filter((task) => task.done).length,
-        total: inside.length,
+        done: inside.filter((task) => task.done).length + linkedDone,
+        total: inside.length + linkedTotal,
       })
   }
   const redundant = headings.filter((heading) => {
@@ -92,8 +110,9 @@ export function sectionChecklists(body, tasks = noteTasks(body)) {
     titles.set(node.position.start.line, title)
   }
   const checklists = new Map()
+  const lines = body.split('\n')
   for (const heading of headingSections(body, tree)) {
-    if (heading.level === 0) continue
+    if (heading.level === 0 || linkedHeading(lines[heading.line - 1] ?? '')) continue
     const editable = tasks.filter(
       (task) => !task.progress && task.line > heading.titleEnd && task.line <= heading.end,
     )

@@ -1,0 +1,1 @@
+Corrigido: títulos como ## [[Sistema de Estoque]] mostram a contagem de tarefas da nota apontada nos modos Padrão e Leitura, incluindo links com nome de exibição. Tarefas parciais continuam pendentes na contagem de conclusão.

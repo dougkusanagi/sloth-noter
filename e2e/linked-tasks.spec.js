@@ -75,3 +75,42 @@ for (const name of ['Padrão', 'Leitura']) {
     await page.screenshot({ path: test.info().outputPath('mobile.png') })
   })
 }
+
+for (const name of ['Padrão', 'Leitura']) {
+  test(`${name} shows referenced tasks on a wiki heading and refreshes after editing the target`, async ({
+    page,
+  }) => {
+    await mode(page, 'Código')
+    await page.locator('textarea').fill('# Projetos\n\n## [[Filho|Sistema de Estoque]]\n\nFim')
+    await mode(page, name)
+    const root = page.locator('.visual-editor')
+    await expect(root.locator('.section-progress-count[data-count="1/2"]')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Filho.md', exact: true }).click()
+    await mode(page, 'Código')
+    await page.locator('textarea').fill(child.replace('- [ ] Segundo', '- [x] Segundo'))
+    await page.getByRole('button', { name: 'Projetos.md', exact: true }).click()
+    await mode(page, name)
+    await expect(root.locator('.section-progress-count[data-count="2/2"]')).toHaveCount(1)
+  })
+}
+
+for (const name of ['Padrão', 'Leitura']) {
+  test(`${name} does not show a checkbox or borrowed counter on a linked note without tasks`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: name === 'Padrão' ? 390 : 1280, height: 844 })
+    await page.getByRole('button', { name: 'Filho.md', exact: true }).click()
+    await mode(page, 'Código')
+    await page.locator('textarea').fill('# Filho\n\n- Ideia simples\n- Outra ideia')
+    await page.getByRole('button', { name: 'Projetos.md', exact: true }).click()
+    await page
+      .locator('textarea')
+      .fill('# Projetos\n\n## [[Filho|Ideias]]\n\n- [ ] Tarefa local sem relação')
+    await mode(page, name)
+    const root = page.locator('.visual-editor')
+    await expect(root.locator('.section-checkbox')).toHaveCount(0)
+    await expect(root.locator('.section-progress-count')).toHaveCount(0)
+    await expect(root.locator('.task-checkbox')).toHaveCount(1)
+    if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/wiki-empty-${name}.png` })
+  })
+}

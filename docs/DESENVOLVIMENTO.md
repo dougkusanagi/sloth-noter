@@ -16,7 +16,7 @@ o aplicativo nativo. Para Android, registrar ambiente e evidências conforme o
 O histórico desktop já foi entregue; seu contrato está no [ADR 0002](adr/0002-historico-de-alteracoes.md)
 e o uso em [Recursos](RECURSOS.md#histórico-local-de-alterações-desktop), sem plano de execução pendente.
 
-Requisitos: [Bun](https://bun.sh) 1.4, Node.js 24 (executa os testes) e, para o desktop, Rust 1.82+ com as [dependências do Tauri](https://tauri.app/start/prerequisites/).
+Requisitos: [Bun](https://bun.sh) 1.4, Node.js 24 (executa os testes) e, para o desktop, Rust 1.85+ com as [dependências do Tauri](https://tauri.app/start/prerequisites/).
 
 ```sh
 bun install
@@ -41,7 +41,7 @@ Em ambos os sistemas, use `bun run desktop:update --dry-run` para conferir os ca
 
 ## Release
 
-Toda alteração de comportamento do app deve atualizar a seção **Não lançado** do `CHANGELOG.md` no mesmo conjunto de commits, descrevendo o efeito para o usuário. Mudanças de planejamento também devem atualizar o roteiro e ser identificadas como futuras, sem serem apresentadas como recursos disponíveis.
+Toda alteração de comportamento do app deve criar ou atualizar um fragmento em `changelog/unreleased/` no mesmo commit, descrevendo o efeito para o usuário. Novidades e o documento Markdown aberto pelo app leem essas fontes e `CHANGELOG.md`. Mudanças de planejamento também devem atualizar o roteiro e ser identificadas como futuras, sem serem apresentadas como recursos disponíveis.
 
 A versão fica em `package.json` (o `tauri.conf.json` a lê de lá) e deve coincidir com `src-tauri/Cargo.toml`; `bun run version:check` confere.
 
@@ -49,4 +49,51 @@ A versão fica em `package.json` (o `tauri.conf.json` a lê de lá) e deve coinc
 git tag vX.Y.Z && git push --tags
 ```
 
-O workflow de release gera um rascunho no GitHub com o instalador NSIS `.exe` por usuário (Windows) e o `.AppImage` (Linux). Os artefatos ainda não são assinados. O CI (`.github/workflows/ci.yml`) roda versão, testes e build a cada push e PR.
+O workflow de release gera um rascunho no GitHub com o instalador NSIS `.exe` por usuário (Windows) e o `.AppImage` (Linux). Os artefatos de atualização recebem a assinatura do updater, sem assinatura de código reconhecida pelo sistema operacional. O CI (`.github/workflows/ci.yml`) roda versão, testes e build a cada push e PR.
+
+## Atualizações automáticas publicadas
+
+O desktop instalado consulta o manifesto público
+`https://github.com/dougkusanagi/sloth-noter/releases/latest/download/latest.json` ao abrir e quando
+se usa **Verificar atualizações** no menu ou na paleta. As notas não são enviadas. Falhas na consulta
+automática não interrompem a edição offline; na consulta manual, o app informa o erro.
+
+**Baixar atualização** transfere o pacote dentro do app, com progresso quando o servidor informa o
+tamanho. Você pode continuar editando. O pacote só fica pronto após a verificação da assinatura.
+**Instalar e reiniciar** bloqueia a edição por um instante, grava o documento atual, espera a fila de
+gravacao e o histórico e só então instala. Se a gravação das notas falhar, o app permanece aberto.
+Uma falha ao reiniciar permite tentar apenas o reinício novamente. No Windows, o instalador NSIS
+mostra seu progresso sem exigir interação e reabre o aplicativo; no Linux, o AppImage instalado é
+substituído e o aplicativo é reiniciado pelo Tauri.
+
+Para publicar uma atualização:
+
+1. Faça o lançamento com uma versão SemVer superior à instalada, mantendo manifesto JS e Rust alinhados.
+2. Envie a tag `vX.Y.Z`. O workflow de release usa `tauri.updater.conf.json` para gerar pacotes
+   assinados, suas assinaturas e `latest.json`, com os alvos Linux e Windows.
+3. Confira os instaladores anexados e o manifesto antes de publicar o release como estável.
+   Uma tag isolada, um rascunho ou uma prévia não é oferecida como atualização.
+
+A chave pública está em `src-tauri/tauri.conf.json`; `requireSignedVersion` exige que a assinatura
+vincule também a versão anunciada, evitando aceitar um pacote antigo com uma versão falsa.
+A chave privada está fora do repositório, em
+`~/.local/share/sloth-note/signing/updater.key`, e no secret `TAURI_SIGNING_PRIVATE_KEY` do
+repositório GitHub. O arquivo local tem permissão 600, em uma pasta com permissão 700. Mantenha uma
+cópia segura: perder ou trocar essa chave impede atualizar instalações que confiam na chave atual.
+Não coloque a chave privada em arquivos versionados nem nos logs. A chave não tem senha adicional;
+o acesso depende das permissões locais e do armazenamento de secrets do GitHub.
+
+Um build local comum não exige a chave porque não gera artefatos de updater. Para gerar um AppImage
+assinado localmente, sem instalar nem alterar o aplicativo atual:
+
+```sh
+TAURI_SIGNING_PRIVATE_KEY="$HOME/.local/share/sloth-note/signing/updater.key" \
+TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" \
+bun run desktop:build --config src-tauri/tauri.updater.conf.json --bundles appimage
+```
+
+As atualizações automáticas são oferecidas no AppImage Linux e no aplicativo Windows compilados
+para distribuição. `desktop:dev` não instala atualizações; `desktop:update` continua sendo o fluxo
+local de desenvolvimento. A primeira versão com o updater precisa ser instalada manualmente.
+Pacotes baixados ainda não instalados ficam na memória da sessão; fechar o app exige baixar outra vez.
+Esta assinatura é do updater, não uma assinatura de código do Windows ou notarização do macOS.

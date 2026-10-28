@@ -16,7 +16,7 @@ Um bloco de notas com Markdown para escrever, organizar ideias e fechar a janela
 
 ## Primeiros passos
 
-O aplicativo desktop usa **Tauri 2**. O fluxo de release prepara instaladores para **Windows** (`.exe`, NSIS) e **Linux** (`.AppImage`). Consulte as [releases do projeto](https://github.com/dougkusanagi/sloth-noter/releases) para os artefatos publicados. Os pacotes ainda não são assinados.
+O aplicativo desktop usa **Tauri 2**. O fluxo de release prepara instaladores para **Windows** (`.exe`, NSIS) e **Linux** (`.AppImage`). Consulte as [releases do projeto](https://github.com/dougkusanagi/sloth-noter/releases) para os artefatos publicados. As atualizações usam pacotes assinados pelo projeto. No desktop instalado, o app verifica releases estáveis ao iniciar. **Baixar atualização** baixa e verifica o pacote dentro do app; depois, **Instalar e reiniciar** salva as notas pendentes e aplica a versão. Use **menu principal → Verificar atualizações** para consultar novamente; sem conexão, o editor continua funcionando offline. A primeira compilação com esse recurso precisa ser instalada manualmente. A assinatura do updater não substitui a assinatura de código reconhecida pelo Windows.
 
 1. Abra o app e explore a nota **Welcome**, com exemplos editáveis dos recursos de Markdown.
 2. Crie uma nota. A primeira linha com `# Título` também dá nome ao arquivo.
@@ -93,3 +93,7 @@ Os testes mobile rodam localmente com `bun run e2e --project=mobile`.
 - [Recursos, comportamento e atalhos](docs/RECURSOS.md)
 - [Desenvolvimento, testes e releases](docs/DESENVOLVIMENTO.md)
 - [Roteiro do projeto](docs/ROADMAP.md)
+
+Novidades no desktop abre uma nota Markdown pelo menu principal ou por Configurações → Novidades.
+A nota usa os modos normais de leitura, edição e código. Abrir novamente reutiliza a cópia se ela
+continuar igual ao changelog da versão instalada; uma cópia editada não é sobrescrita.

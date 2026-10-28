@@ -19,11 +19,11 @@ test('wiki aliases open existing notes and missing targets can be created', asyn
   await expect(wiki).toHaveCount(1)
   await wiki.click()
   await page.getByRole('button', { name: 'Criar nota', exact: true }).click()
-  await expect(page.locator('.tab.active')).toHaveText('Destino.md')
+  await expect(page.locator('.tab.active')).toHaveText('Destino')
   await page.getByRole('button', { name: 'Origem', exact: true }).click()
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
   await wiki.click()
-  await expect(page.locator('.tab.active')).toHaveText('Destino.md')
+  await expect(page.locator('.tab.active')).toHaveText('Destino')
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 test('live wiki links open notes and task Enter continues unchecked', async ({ page }) => {
@@ -37,7 +37,7 @@ test('live wiki links open notes and task Enter continues unchecked', async ({ p
   await expect(page.locator('textarea')).toHaveValue(/- \[x\] Concluído\n- \[ \] $/)
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   await page.locator('[data-wiki]').click()
-  await expect(page.locator('.tab.active')).toHaveText('Welcome.md')
+  await expect(page.locator('.tab.active')).toHaveText('Welcome')
 })
 test('image insertion respects the cursor and undo retains an unused manageable asset', async ({
   page,
@@ -196,7 +196,7 @@ test('title marker cannot be selected and clearing the title keeps the last vali
   await expect.poll(() => field.evaluate((field) => field.selectionStart)).toBe(2)
   await field.fill('# \n\nCorpo')
   await expect(field).toHaveValue('# \n\nCorpo')
-  await expect(page.locator('.tab.active')).toHaveText('Título válido.md')
+  await expect(page.locator('.tab.active')).toHaveText('Título válido')
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+a')
@@ -269,13 +269,13 @@ test('an empty title permits editing the body and keeps a stable filename until 
   await page.keyboard.type(' editado')
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(page.locator('textarea')).toHaveValue('# \n\nCorpo editado')
-  await expect(page.locator('.tab.active')).toHaveText('Original.md')
+  await expect(page.locator('.tab.active')).toHaveText('Original')
   await page.reload()
-  await expect(page.locator('.tab.active')).toHaveText('Original.md')
+  await expect(page.locator('.tab.active')).toHaveText('Original')
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(page.locator('textarea')).toHaveValue('# \n\nCorpo editado')
   await page.locator('textarea').fill('# Novo título\n\nCorpo editado')
-  await expect(page.locator('.tab.active')).toHaveText('Novo título.md')
+  await expect(page.locator('.tab.active')).toHaveText('Novo título')
 })
 
 test('native window drops route into the upload field instead of inserting a path', async ({

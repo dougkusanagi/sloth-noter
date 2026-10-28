@@ -43,6 +43,33 @@ const messages = {
     'settings.data': 'Dados',
     'settings.shortcuts': 'Atalhos',
     'settings.changelog': 'Novidades',
+    'updates.check': 'Verificar atualizações',
+    'updates.title': 'Atualização do aplicativo',
+    'updates.checking': 'Verificando atualizações no GitHub…',
+    'updates.available': 'Sloth Note {version} está disponível.',
+    'updates.current': 'Nenhuma versão estável mais nova foi encontrada.',
+    'updates.failed':
+      'Não foi possível verificar atualizações. Confira sua conexão ou tente novamente mais tarde pelo menu.',
+    'updates.installedOnly':
+      'A atualização automática está disponível no AppImage instalado no Linux e no aplicativo instalado no Windows. No desenvolvimento, use desktop:update.',
+    'updates.download': 'Baixar atualização',
+    'updates.downloading': 'Baixando Sloth Note {version}… Você pode continuar editando.',
+    'updates.verifying': 'Verificando a assinatura da atualização…',
+    'updates.ready': 'Sloth Note {version} está pronto para instalar.',
+    'updates.saving': 'Salvando suas notas antes de atualizar…',
+    'updates.installing': 'Instalando Sloth Note {version}…',
+    'updates.restarting': 'Reiniciando o Sloth Note…',
+    'updates.restart': 'Reiniciar aplicativo',
+    'updates.install': 'Instalar e reiniciar',
+    'updates.progress': 'Progresso do download',
+    'updates.downloadFailed':
+      'Não foi possível baixar ou verificar a atualização. O app instalado foi preservado. Tente Baixar atualização novamente.',
+    'updates.installFailed':
+      'Não foi possível instalar a atualização. Suas notas foram salvas. Baixe a atualização novamente para tentar outra vez.',
+    'updates.saveFailed':
+      'A atualização não foi instalada porque não foi possível salvar suas notas ou o editor ainda está ocupado. Resolva o problema indicado e tente Instalar e reiniciar novamente.',
+    'updates.restartFailed':
+      'A atualização foi instalada, mas não foi possível reiniciar. Use Reiniciar aplicativo ou feche e abra o app.',
     'changelog.intro':
       'Acompanhe as novidades e melhorias do Sloth Note. Este registro acompanha o aplicativo e pode ser lido offline.',
     'changelog.pending': 'Em desenvolvimento',
@@ -462,6 +489,33 @@ const messages = {
     'settings.data': 'Data',
     'settings.shortcuts': 'Shortcuts',
     'settings.changelog': 'What’s new',
+    'updates.check': 'Check for updates',
+    'updates.title': 'App update',
+    'updates.checking': 'Checking GitHub for updates…',
+    'updates.available': 'Sloth Note {version} is available.',
+    'updates.current': 'No newer stable version was found.',
+    'updates.failed':
+      'Could not check for updates. Check your connection or try again later from the menu.',
+    'updates.installedOnly':
+      'Automatic updates are available in the installed Linux AppImage and Windows app. During development, use desktop:update.',
+    'updates.download': 'Download update',
+    'updates.downloading': 'Downloading Sloth Note {version}… You can keep editing.',
+    'updates.verifying': 'Verifying the update signature…',
+    'updates.ready': 'Sloth Note {version} is ready to install.',
+    'updates.saving': 'Saving your notes before updating…',
+    'updates.installing': 'Installing Sloth Note {version}…',
+    'updates.restarting': 'Restarting Sloth Note…',
+    'updates.restart': 'Restart app',
+    'updates.install': 'Install and restart',
+    'updates.progress': 'Download progress',
+    'updates.downloadFailed':
+      'Could not download or verify the update. The installed app was preserved. Choose Download update to try again.',
+    'updates.installFailed':
+      'Could not install the update. Your notes were saved. Download the update again to retry.',
+    'updates.saveFailed':
+      'The update was not installed because your notes could not be saved or the editor is still busy. Resolve the reported issue and choose Install and restart again.',
+    'updates.restartFailed':
+      'The update was installed, but the app could not restart. Choose Restart app or close and reopen the app.',
     'changelog.intro':
       'Explore what’s new and improved in Sloth Note. This log ships with the app and is available offline. Entries are written in Portuguese.',
     'changelog.pending': 'In development',

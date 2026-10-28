@@ -300,8 +300,8 @@ export function Markdown({ text, onCopy, onChange, onOpenWiki, notes, folds, onT
   )
   const checklists = useMemo(() => sectionChecklists(text, [...tasks.values()]), [text, tasks])
   const progress = useMemo(
-    () => sectionProgress(text, [...tasks.values()], folds),
-    [text, tasks, folds],
+    () => sectionProgress(text, [...tasks.values()], folds, notes),
+    [text, tasks, folds, notes],
   )
   return (
     <MarkdownContext.Provider
