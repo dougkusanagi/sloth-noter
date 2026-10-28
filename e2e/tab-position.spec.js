@@ -66,11 +66,11 @@ for (const runtime of ['web', 'desktop']) {
         for (const method of ['mouse', 'keyboard']) {
           if (method === 'mouse') await page.locator('[data-tab-id="Curta"] .tab').click()
           else await page.keyboard.press('Control+2')
-          await expect(page.locator('.tab.active')).toHaveText('Curta.md')
+          await expect(page.locator('.tab.active')).toHaveText('Curta')
           await expect.poll(position).toEqual({ window: 0, editor: 0 })
           if (method === 'mouse') await page.locator('[data-tab-id="Longa"] .tab').click()
           else await page.keyboard.press('Control+1')
-          await expect(page.locator('.tab.active')).toHaveText('Longa.md')
+          await expect(page.locator('.tab.active')).toHaveText('Longa')
           await expect.poll(position).toEqual(before)
         }
         await page.evaluate(() => {

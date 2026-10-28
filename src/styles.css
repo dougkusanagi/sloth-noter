@@ -530,7 +530,8 @@ textarea:focus-visible {
   display: none;
 }
 .visual-editor .cm-md-table-row > .cm-widgetBuffer,
-.visual-editor .cm-md-table-row > br {
+.visual-editor .cm-md-table-row > br,
+.visual-editor .cm-md-table-row > span[contenteditable='false']:empty {
   display: none;
 }
 .visual-editor .cm-md-table-divider {

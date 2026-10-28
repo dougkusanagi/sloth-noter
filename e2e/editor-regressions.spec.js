@@ -31,25 +31,25 @@ for (const mode of ['visual', 'source', 'reading']) {
       await page.locator(mode === 'visual' ? '.cm-content' : 'textarea').focus()
     for (const title of ['Alpha', 'Beta', 'Gamma', 'Alpha']) {
       await page.keyboard.press('Control+PageDown')
-      await expect(page.locator('.tab.active')).toHaveText(`${title}.md`)
+      await expect(page.locator('.tab.active')).toHaveText(`${title}`)
     }
     for (const title of ['Beta', 'Gamma', 'Alpha']) {
       await page.keyboard.press('Control+Tab')
-      await expect(page.locator('.tab.active')).toHaveText(`${title}.md`)
+      await expect(page.locator('.tab.active')).toHaveText(`${title}`)
     }
     await page.keyboard.press('Control+Shift+Tab')
-    await expect(page.locator('.tab.active')).toHaveText('Gamma.md')
+    await expect(page.locator('.tab.active')).toHaveText('Gamma')
     await page.keyboard.press('Control+Tab')
-    await expect(page.locator('.tab.active')).toHaveText('Alpha.md')
+    await expect(page.locator('.tab.active')).toHaveText('Alpha')
     await page.keyboard.press('Control+PageUp')
-    await expect(page.locator('.tab.active')).toHaveText('Gamma.md')
+    await expect(page.locator('.tab.active')).toHaveText('Gamma')
     await page.keyboard.press('Control+w')
     await page.keyboard.press('Control+w')
     await expect(page.locator('.tab')).toHaveCount(1)
     await page.keyboard.press('Control+Shift+t')
-    await expect(page.locator('.tab.active')).toHaveText('Beta.md')
+    await expect(page.locator('.tab.active')).toHaveText('Beta')
     await page.keyboard.press('Control+Shift+t')
-    await expect(page.locator('.tab.active')).toHaveText('Gamma.md')
+    await expect(page.locator('.tab.active')).toHaveText('Gamma')
     await expect(page.locator('.tab')).toHaveCount(3)
   })
 }
@@ -111,13 +111,13 @@ test('internal links have plain text styling and no click action on the active l
     await link.evaluate((element) => getComputedStyle(element.closest('.cm-line')).color),
   )
   await link.click()
-  await expect(page.locator('.tab.active')).toHaveText('Links.md')
+  await expect(page.locator('.tab.active')).toHaveText('Links')
   await link.click({ modifiers: ['Control'] })
-  await expect(page.locator('.tab.active')).toHaveText('Links.md')
+  await expect(page.locator('.tab.active')).toHaveText('Links')
   await page.locator('.cm-line').filter({ hasText: 'Outro texto' }).click()
   await expect(page.locator('[data-wiki]')).toHaveCSS('text-decoration-line', 'underline')
   await page.locator('[data-wiki]').click()
-  await expect(page.locator('.tab.active')).toHaveText('Welcome.md')
+  await expect(page.locator('.tab.active')).toHaveText('Welcome')
 })
 
 test('clipboard protection preserves paste into the link address form', async ({ page }) => {
@@ -299,7 +299,7 @@ test('global search shows body snippets and opens matches from another note', as
   await expect(page.locator('.note-search-snippet mark')).toHaveText('edição')
   await expect(page.locator('.note-search-count')).toHaveText('2 ocorrências')
   await page.locator('.note-item').click()
-  await expect(page.locator('.tab.active')).toHaveText('Planejamento.md')
+  await expect(page.locator('.tab.active')).toHaveText('Planejamento')
   await expect(page.locator('.find-dialog')).toBeVisible()
   await expect
     .poll(() =>

@@ -33,20 +33,20 @@ test('Ctrl+P shows open tabs in their order and keeps other notes searchable', a
   await expect(dialog.locator('.menu-shortcut')).toHaveCount(3)
   await dialog.getByRole('textbox').fill('Arquivo')
   await page.keyboard.press('Enter')
-  await expect(page.locator('.tab.active')).toHaveText('Arquivo.md')
+  await expect(page.locator('.tab.active')).toHaveText('Arquivo')
 })
 
 test('number shortcuts switch tabs from the editor and palette even with tabs hidden', async ({
   page,
 }) => {
   await page.keyboard.press('Control+3')
-  await expect(page.locator('.tab.active')).toHaveText('Beta.md')
+  await expect(page.locator('.tab.active')).toHaveText('Beta')
   await page.keyboard.press('Control+p')
   await page.keyboard.press('Control+1')
   await expect(page.getByRole('dialog', { name: 'Buscar nota', exact: true })).toHaveCount(0)
-  await expect(page.locator('.tab.active')).toHaveText('Gamma.md')
+  await expect(page.locator('.tab.active')).toHaveText('Gamma')
   await page.keyboard.press('Control+9')
-  await expect(page.locator('.tab.active')).toHaveText('Gamma.md')
+  await expect(page.locator('.tab.active')).toHaveText('Gamma')
   await page.keyboard.press('Control+,')
   await page.getByRole('switch', { name: 'Mostrar abas', exact: false }).uncheck()
   await page.keyboard.press('Escape')
