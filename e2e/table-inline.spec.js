@@ -42,7 +42,10 @@ for (const width of [390, 1280]) {
       await page.screenshot({ path: `/tmp/table-${width}.png`, fullPage: true })
     await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
     await expect(
-      page.locator('.markdown table').first().locator('tbody tr').first().locator('td'),
+      page
+        .locator('.visual-editor.read-only .cm-md-table-row:not(.cm-md-table-divider)')
+        .nth(1)
+        .locator(':scope > .cm-md-table-cell'),
     ).toHaveCount(5)
     await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
     await expect(page.locator('textarea')).toHaveValue(body)

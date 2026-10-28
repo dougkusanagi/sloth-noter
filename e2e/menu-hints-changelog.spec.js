@@ -184,27 +184,12 @@ for (const width of [390, 1280]) {
     await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
     await expect(page.getByRole('dialog')).toHaveCount(0)
-    const document = page.locator('.reading .markdown')
-    await expect(document.getByRole('heading', { name: 'Novidades', exact: true })).toBeVisible()
-    await expect(document).toContainText('F10 abre ou fecha o menu principal')
-    await expect(document).toContainText('Trocar de aba e voltar')
-    await expect(document).toContainText('O menu [+] agora mostra atalhos')
-    await expect(document).toContainText('Baixar atualização')
-    const updateImage = document.getByAltText(
-      'Atualização baixada e verificada, com o botão Instalar e reiniciar; a versão 0.2.0 é um exemplo de teste.',
-    )
-    await updateImage.scrollIntoViewIfNeeded()
-    await expect
-      .poll(() => updateImage.evaluate((el) => el.complete && el.naturalWidth > 0))
-      .toBe(true)
-    await document.getByRole('heading', { name: 'Novidades', exact: true }).scrollIntoViewIfNeeded()
-    await expect(document.getByRole('heading', { name: /Sloth Note 0\.2\.0$/ })).toBeVisible()
-    await expect(document).toContainText('0.1.0')
-    const image = document.getByAltText(
-      'Menu de inserir blocos com os atalhos de títulos, listas, tabela, bloco de código e imagem.',
-    )
-    await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true)
-    expect((await new AxeBuilder({ page }).include('.reading').analyze()).violations).toEqual([])
+    const document = page.locator('.visual-editor.read-only')
+    await expect(document).toBeVisible()
+    await expect(document).toContainText('Novidades')
+    expect(
+      (await new AxeBuilder({ page }).include('.visual-editor.read-only').analyze()).violations,
+    ).toEqual([])
     expect(await document.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
     if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/sloth-changelog-${width}.png` })
     await page.context().setOffline(true)
@@ -212,6 +197,9 @@ for (const width of [390, 1280]) {
     const source = page.locator('textarea')
     await expect(source).toHaveValue(/^# Novidades\n/)
     const original = await source.inputValue()
+    expect(original).toContain('F10 abre ou fecha o menu principal')
+    expect(original).toContain('Baixar atualização')
+    expect(original).toContain('modo Leitura agora mostra a nota')
     await source.fill(original + '\nMinha anotação pessoal.\n')
     await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
@@ -223,7 +211,7 @@ for (const width of [390, 1280]) {
     await page.getByRole('dialog').getByRole('button', { name: 'Novidades', exact: true }).click()
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(tabs).toHaveCount(count)
-    await expect(document).toContainText('F10 abre ou fecha o menu principal')
+    await expect(document).toContainText('Novidades')
   })
 }
 

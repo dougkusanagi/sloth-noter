@@ -43,6 +43,7 @@ test('Windows builds NSIS and installs silently, preserving a path containing sp
   assert.equal(calls.length, 3)
   assert.deepEqual(calls[0], ['query', 'Sloth Note'])
   assert.equal(calls[1][0], process.execPath)
+  assert.match(calls[1][1][0], /scripts[/\\]tauri-cli\.mjs$/)
   assert.deepEqual(calls[1][1].slice(1), [
     'build',
     '--config',

@@ -1,7 +1,6 @@
 import { spawn } from 'node:child_process'
-import { createRequire } from 'node:module'
 import { readFile } from 'node:fs/promises'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createServer } from 'vite'
 
 export async function startFrontend(port = 5173) {
@@ -37,11 +36,10 @@ async function main() {
   const config = JSON.parse(
     await readFile(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'),
   )
-  const require = createRequire(import.meta.url)
   const child = spawn(
     process.execPath,
     [
-      require.resolve('@tauri-apps/cli/tauri.js'),
+      fileURLToPath(new URL('./tauri-cli.mjs', import.meta.url)),
       'dev',
       '--config',
       JSON.stringify(desktopConfig(url, config.app.security.csp)),

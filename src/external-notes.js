@@ -1,9 +1,12 @@
+import { friendlyError } from './errors.js'
+import { t } from './i18n.js'
+
 export const EXTERNAL_READ = 'external_read'
 export const EXTERNAL_WRITE = 'external_write'
 export const EXTERNAL_RELEASE = 'external_release'
 
 /** A note whose text lives in a file the user opened from outside the notes folder. */
-export const isExternalNote = (note) => Boolean(note.external)
+export const isExternalNote = (note) => Boolean(note?.external)
 
 /** Creates the note for a file opened in place. `contents` is the text just read from it. */
 export function externalNote({ id, name, path, contents, revision = 0 }) {
@@ -16,7 +19,14 @@ export function externalNote({ id, name, path, contents, revision = 0 }) {
  * write when the file changed outside the app, so the edit is not lost silently.
  * Removing a note never deletes its file.
  */
-export async function writeExternalNotes(invoke, document, seen, paths = new Map()) {
+export async function writeExternalNotes(
+  invoke,
+  document,
+  seen,
+  paths = new Map(),
+  { continueOnError = false } = {},
+) {
+  const failures = []
   const live = new Set()
   const notes = [...document.notes, ...document.trash.map((entry) => entry.note)]
   for (const note of notes) {
@@ -24,13 +34,26 @@ export async function writeExternalNotes(invoke, document, seen, paths = new Map
     live.add(note.id)
     paths.set(note.id, note.external.path)
     const expected = seen.get(note.id) ?? note.external.seen
+    if (!seen.has(note.id)) seen.set(note.id, expected)
     if (note.body !== expected) {
-      await invoke(EXTERNAL_WRITE, {
-        path: note.external.path,
-        contents: note.body,
-        expected,
-      })
-      seen.set(note.id, note.body)
+      try {
+        await invoke(EXTERNAL_WRITE, {
+          path: note.external.path,
+          contents: note.body,
+          expected,
+        })
+        seen.set(note.id, note.body)
+      } catch (cause) {
+        const error = new Error(
+          t('external.writeFailed', {
+            name: note.name,
+            path: note.external.path,
+            error: friendlyError(cause),
+          }),
+        )
+        if (!continueOnError) throw error
+        failures.push(error.message)
+      }
     } else seen.set(note.id, expected)
   }
   // A note that left the document for good no longer needs permission to write its file.
@@ -42,12 +65,35 @@ export async function writeExternalNotes(invoke, document, seen, paths = new Map
     paths.delete(id)
     if (path && !stillUsed.has(path)) await invoke(EXTERNAL_RELEASE, { path }).catch(() => {})
   }
+  return failures
+}
+
+/** Keep unsent text together with the last confirmed disk text for safe recovery. */
+export function externalSnapshot(document, seen) {
+  const snapshot = (note) =>
+    isExternalNote(note)
+      ? { ...note, external: { ...note.external, seen: seen.get(note.id) ?? note.external.seen } }
+      : note
+  return {
+    ...document,
+    notes: document.notes.map(snapshot),
+    trash: document.trash.map((entry) => ({ ...entry, note: snapshot(entry.note) })),
+  }
+}
+
+export function pendingExternalWarning(document) {
+  const trash = Array.isArray(document.trash) ? document.trash.map((entry) => entry?.note) : []
+  return (
+    [...document.notes, ...trash]
+      .filter((note) => isExternalNote(note) && note.body !== note.external.seen)
+      .map((note) => t('external.pending', { name: note.name, path: note.external.path }))
+      .join('\n') || null
+  )
 }
 
 /**
- * Brings external notes up to the file on disk when the document is loaded. The file
- * wins: the app only saves text it has written, so a difference means an outside edit.
- * A file that cannot be read keeps its stored text; the next save reports the problem.
+ * Brings clean external notes up to date on load. Pending local text is retained
+ * with its original disk baseline so it can be retried or resolved as a conflict.
  */
 export async function readExternalNotes(invoke, notes, seen, paths = new Map(), history = null) {
   const result = []
@@ -66,6 +112,13 @@ export async function readExternalNotes(invoke, notes, seen, paths = new Map(), 
       continue
     }
     history?.record(note, disk, disk, 'abertura')
+    // A local snapshot may contain text that never reached its external file.
+    // Keep it until explicitly resolved; do not replace it with disk on restart.
+    if (note.body !== note.external.seen && disk !== note.body) {
+      seen.set(note.id, note.external.seen)
+      result.push(note)
+      continue
+    }
     if (note.body !== disk) history?.record(note, note.body, disk, 'disco-externo')
     seen.set(note.id, disk)
     result.push(

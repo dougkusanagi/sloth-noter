@@ -64,10 +64,9 @@ test('sections show task progress in the editor and in Leitura', async ({ page }
   await page.locator('.cm-task-checkbox').nth(1).check()
   await expect(badges.first()).toHaveAttribute('aria-label', '2 de 3 tarefas concluídas')
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  await expect(page.locator('.markdown h2 .section-progress').last()).toHaveAttribute(
-    'aria-label',
-    '0 de 1 tarefas concluídas',
-  )
+  await expect(
+    page.locator('.visual-editor.read-only .cm-md-h2 .section-progress').last(),
+  ).toHaveAttribute('aria-label', '0 de 1 tarefas concluídas')
 })
 
 test('the tasks view lists open tasks across notes, toggles and jumps to them', async ({
@@ -160,12 +159,10 @@ for (const mode of ['Padrão', 'Leitura']) {
         '# Tarefas\n\n## Projeto\n\n### Etapa\n\n#### Grupo\n\n##### Detalhes\n\n###### Ações\n\n- [ ] A\n- [x] B\n\n## Outro\n\n- [ ] C',
       )
     await page.getByRole('radio', { name: mode, exact: true }).check({ force: true })
-    const surface = page.locator(mode === 'Padrão' ? '.cm-content' : '.markdown')
+    const surface = page.locator('.cm-content')
     const badges = surface.locator('.section-progress:visible')
-    const parent = surface
-      .locator(mode === 'Padrão' ? '.cm-md-h2' : 'h2')
-      .filter({ hasText: 'Projeto' })
-    const leaf = surface.locator(mode === 'Padrão' ? '.cm-md-h6' : 'h6')
+    const parent = surface.locator('.cm-md-h2').filter({ hasText: 'Projeto' })
+    const leaf = surface.locator('.cm-md-h6')
     await expect(badges).toHaveCount(2)
     await expect(parent.locator('.section-progress')).toHaveCount(0)
     await expect(leaf.locator('.section-progress')).toHaveAttribute(

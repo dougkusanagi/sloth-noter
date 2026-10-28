@@ -4,8 +4,9 @@ export async function protectPendingSaves(
   desktop,
   target = window,
   loadWindow = () => import('@tauri-apps/api/window'),
+  { timeoutMs = 10000, onBlocked = () => {} } = {},
 ) {
-  const flush = () => void writer.whenIdle()
+  const flush = () => void writer.whenIdle().catch(() => {})
   const onVisibility = () => {
     if (target.document.visibilityState === 'hidden') flush()
   }
@@ -26,10 +27,21 @@ export async function protectPendingSaves(
         event.preventDefault()
         if (closing) return
         closing = true
+        let timer
         try {
-          const failure = await writer.whenIdle()
+          const failure = await Promise.race([
+            writer.whenIdle(),
+            new Promise((resolve) => {
+              timer = setTimeout(() => resolve('timeout'), timeoutMs)
+            }),
+          ])
+          clearTimeout(timer)
           if (!failure) await appWindow.destroy()
+          else onBlocked({ reason: failure, forceClose: () => appWindow.destroy() })
+        } catch (reason) {
+          onBlocked({ reason, forceClose: () => appWindow.destroy() })
         } finally {
+          clearTimeout(timer)
           closing = false
         }
       })

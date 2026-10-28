@@ -101,15 +101,13 @@ for (const mode of ['Padrão', 'Leitura']) {
         },
       }),
     )
-    await page.locator(mode === 'Padrão' ? '.cm-md-inline-code' : '.inline-code-wrap code').hover()
+    await page.locator('.cm-md-inline-code').hover()
     const button = page.locator('.copy-inline-code:visible')
     await expect(button).toBeVisible()
     await button.click()
     await expect.poll(() => page.evaluate(() => window.inlineCopied)).toBe('const café = 1')
-    if (mode === 'Padrão') {
-      await page.locator('.app-header').hover()
-      await expect(page.locator('.cm-copy-inline-code')).not.toBeVisible()
-    }
+    await page.locator('.app-header').hover()
+    await expect(page.locator('.cm-copy-inline-code')).not.toBeVisible()
     await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
     await expect(page.locator('textarea')).toHaveValue('# Inline\n\nUse `const café = 1` aqui.')
   })

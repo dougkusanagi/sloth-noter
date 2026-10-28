@@ -34,7 +34,7 @@ test('the find dialog has no detectable violations', async ({ page }) => {
 
 test('reading mode has no detectable violations', async ({ page }) => {
   await page.getByRole('radio', { name: /Leitura/ }).check({ force: true })
-  await expect(page.locator('.reading')).toBeVisible()
+  await expect(page.locator('.visual-editor.read-only')).toBeVisible()
   expect(await violations(page)).toEqual([])
 })
 

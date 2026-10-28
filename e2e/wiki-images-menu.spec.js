@@ -15,14 +15,14 @@ test.beforeEach(async ({ page }) => {
 test('wiki aliases open existing notes and missing targets can be created', async ({ page }) => {
   await source(page, '# Origem\n\n[[Destino|Abrir destino]] e `[[Código]]` e \\[[Literal]]')
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  await expect(page.locator('.wiki-link')).toHaveCount(1)
-  await page.getByRole('link', { name: 'Abrir destino' }).click()
+  const wiki = page.locator('.visual-editor.read-only .cm-md-wiki')
+  await expect(wiki).toHaveCount(1)
+  await wiki.click()
   await page.getByRole('button', { name: 'Criar nota', exact: true }).click()
   await expect(page.locator('.tab.active')).toHaveText('Destino')
   await page.getByRole('button', { name: 'Origem', exact: true }).click()
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  await expect(page.locator('.wiki-link')).not.toHaveClass(/missing/)
-  await page.getByRole('link', { name: 'Abrir destino' }).click()
+  await wiki.click()
   await expect(page.locator('.tab.active')).toHaveText('Destino')
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
@@ -99,7 +99,7 @@ test('shortcuts switch editor modes', async ({ page }) => {
   await page.keyboard.press('Control+Alt+2')
   await expect(page.locator('textarea')).toBeVisible()
   await page.keyboard.press('Control+Alt+3')
-  await expect(page.locator('.markdown')).toBeVisible()
+  await expect(page.locator('.visual-editor.read-only')).toBeVisible()
 })
 
 test('source image insertion can be undone and renamed notes preserve incoming wiki links', async ({

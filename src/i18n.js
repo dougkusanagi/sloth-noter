@@ -129,6 +129,15 @@ const messages = {
     'window.minimize': 'Minimizar',
     'window.maximize': 'Maximizar ou restaurar',
     'window.close': 'Fechar janela',
+    'window.closePending':
+      'As alterações estão guardadas no app, mas há arquivos externos pendentes. Você pode baixar um backup ou fechar sem atualizar esses arquivos.',
+    'window.closePendingConfirm':
+      'Fechar sem atualizar os arquivos externos? O texto pendente está guardado no app e será preservado ao reabrir.',
+    'window.closeBlocked':
+      'A gravação falhou ou está demorando. A janela continua aberta para proteger suas alterações. Baixe um backup ou confirme o fechamento sem salvar.',
+    'window.closeWithoutSaving': 'Fechar sem salvar',
+    'window.closeConfirm':
+      'Fechar sem salvar? Alterações ainda não gravadas serão perdidas. Baixe um backup antes de continuar se quiser guardá-las.',
     'document.backlinks': '{count} links inversos',
     'document.noBacklinks': 'Nenhum link para esta nota',
     'document.selection': 'Seleção',
@@ -283,7 +292,16 @@ const messages = {
 
     'error.storage':
       'Falha ao gravar: {error}. O texto continua na memória; baixe um backup antes de fechar. As gravações vão para {label}.',
+    'error.externalSaved':
+      'As alterações foram guardadas no app, mas não foi possível atualizar um ou mais arquivos externos: {error}. O texto pendente será preservado ao reabrir o app. Baixe um backup como cópia adicional.',
+    'external.writeFailed': '{name} ({path}): {error}',
+    'external.pending': '{name} ({path}): há alterações locais pendentes de gravação neste arquivo',
     'error.downloadStored': 'Baixar dados armazenados',
+    'backup.preparing': 'Preparando o backup…',
+    'backup.downloadStarted':
+      'Download do backup iniciado. Confira a pasta Downloads ou o destino configurado para downloads.',
+    'backup.failed': 'Não foi possível criar o backup: {error}',
+    'error.retryStorage': 'Tentar gravar novamente',
     'error.replaceStorage': 'Substituir o armazenamento pelas notas atuais',
     'error.import': 'Falha na importação: {error}',
     'error.folder': 'Pasta de notas: {error}',
@@ -292,7 +310,7 @@ const messages = {
     'error.vaultMissing':
       'Pasta de notas não encontrada: {path}. Usando o armazenamento do app até você escolher outra pasta.',
     'disk.not-found':
-      'O arquivo ou a pasta não existe mais. Verifique se a pasta de notas continua conectada.',
+      'O arquivo ou a pasta usados para gravar não existem mais. Confira o local de armazenamento e tente novamente.',
     'disk.denied': 'Sem permissão para gravar. Verifique as permissões da pasta de notas.',
     'disk.read-only': 'A pasta está em um local somente leitura.',
     'disk.disk-full': 'Sem espaço em disco. Libere espaço para continuar gravando.',
@@ -556,6 +574,15 @@ const messages = {
     'window.minimize': 'Minimize',
     'window.maximize': 'Maximize or restore',
     'window.close': 'Close window',
+    'window.closePending':
+      'Changes are saved in the app, but some external files are still pending. You can download a backup or close without updating those files.',
+    'window.closePendingConfirm':
+      'Close without updating the external files? Pending text is saved in the app and will be preserved when you reopen it.',
+    'window.closeBlocked':
+      'Saving failed or is taking too long. The window stays open to protect your changes. Download a backup or confirm closing without saving.',
+    'window.closeWithoutSaving': 'Close without saving',
+    'window.closeConfirm':
+      'Close without saving? Changes that have not been saved will be lost. Download a backup before continuing if you want to keep them.',
     'document.backlinks': '{count} backlinks',
     'document.noBacklinks': 'No links to this note',
     'document.selection': 'Selection',
@@ -708,7 +735,16 @@ const messages = {
 
     'error.storage':
       'Storage failed: {error}. Text stays in memory; download a backup before closing. Writes go to {label}.',
+    'error.externalSaved':
+      'Changes were saved in the app, but one or more external files could not be updated: {error}. Pending text will be preserved when you reopen the app. Download a backup as an additional copy.',
+    'external.writeFailed': '{name} ({path}): {error}',
+    'external.pending': '{name} ({path}): local changes are waiting to be saved to this file',
     'error.downloadStored': 'Download stored data',
+    'backup.preparing': 'Preparing the backup…',
+    'backup.downloadStarted':
+      'Backup download started. Check your Downloads folder or your configured download destination.',
+    'backup.failed': 'Could not create the backup: {error}',
+    'error.retryStorage': 'Try saving again',
     'error.replaceStorage': 'Replace storage with current notes',
     'error.import': 'Import failed: {error}',
     'error.folder': 'Notes folder: {error}',
@@ -717,7 +753,7 @@ const messages = {
     'error.vaultMissing':
       'Notes folder not found: {path}. Using the app storage until you choose another folder.',
     'disk.not-found':
-      'The file or folder no longer exists. Check that the notes folder is still connected.',
+      'The file or folder used for saving no longer exists. Check the storage location and try again.',
     'disk.denied': 'Permission denied. Check the permissions of the notes folder.',
     'disk.read-only': 'The folder is on a read-only location.',
     'disk.disk-full': 'The disk is full. Free some space to keep saving.',

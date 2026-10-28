@@ -92,3 +92,65 @@ test('switching apps flushes pending edits and cleanup removes the listeners', a
   assert.deepEqual(calls, ['note'])
   cleanup()
 })
+
+test('a stalled save offers an explicit exit and late completion does not close the window', async () => {
+  const app = host()
+  let finish
+  let blocked
+  const cleanup = await protectPendingSaves(
+    {
+      whenIdle: () =>
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+    },
+    true,
+    app.target,
+    app.loadWindow,
+    {
+      timeoutMs: 5,
+      onBlocked: (problem) => {
+        blocked = problem
+      },
+    },
+  )
+  await app.close()
+  assert.equal(blocked.reason, 'timeout')
+  assert.equal(app.destroyed(), 0)
+  finish(null)
+  await Promise.resolve()
+  assert.equal(app.destroyed(), 0)
+  await blocked.forceClose()
+  assert.equal(app.destroyed(), 1)
+  cleanup()
+})
+
+test('a rejected save reports the blocked close and permits another close request', async () => {
+  const app = host()
+  const failure = new Error('unavailable')
+  let blocked
+  let reject = true
+  const cleanup = await protectPendingSaves(
+    {
+      whenIdle: async () => {
+        if (reject) throw failure
+        return null
+      },
+    },
+    true,
+    app.target,
+    app.loadWindow,
+    {
+      onBlocked: (problem) => {
+        blocked = problem
+      },
+    },
+  )
+  await app.close()
+  assert.equal(blocked.reason, failure)
+  assert.equal(app.destroyed(), 0)
+  reject = false
+  await app.close()
+  assert.equal(app.destroyed(), 1)
+  cleanup()
+})

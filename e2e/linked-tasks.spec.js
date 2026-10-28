@@ -37,10 +37,13 @@ for (const name of ['Padrão', 'Leitura']) {
       await page.locator('.cm-content').click()
       await page.keyboard.press('Control+End')
     }
-    const root = page.locator(name === 'Padrão' ? '.visual-editor' : '.markdown')
+    const root = page.locator('.visual-editor')
     const boxes = root.locator('.task-checkbox:not(.section-checkbox)')
     await expect(boxes).toHaveCount(2)
-    if (name === 'Leitura') await expect(root).not.toContainText('[-]')
+    if (name === 'Leitura') {
+      await expect(root).toHaveClass(/read-only/)
+      await expect(root).not.toContainText('[-]')
+    }
     await expect(boxes.nth(0)).toHaveJSProperty('indeterminate', true)
     await expect(boxes.nth(0)).toBeDisabled()
     await expect(root.locator('.section-progress-count[data-count="1/2"]')).toHaveCount(1)
@@ -80,7 +83,7 @@ for (const name of ['Padrão', 'Leitura']) {
     await mode(page, 'Código')
     await page.locator('textarea').fill('# Projetos\n\n## [[Filho|Sistema de Estoque]]\n\nFim')
     await mode(page, name)
-    const root = page.locator(name === 'Padrão' ? '.visual-editor' : '.markdown')
+    const root = page.locator('.visual-editor')
     await expect(root.locator('.section-progress-count[data-count="1/2"]')).toHaveCount(1)
     await page.getByRole('button', { name: 'Filho.md', exact: true }).click()
     await mode(page, 'Código')
@@ -104,7 +107,7 @@ for (const name of ['Padrão', 'Leitura']) {
       .locator('textarea')
       .fill('# Projetos\n\n## [[Filho|Ideias]]\n\n- [ ] Tarefa local sem relação')
     await mode(page, name)
-    const root = page.locator(name === 'Padrão' ? '.visual-editor' : '.markdown')
+    const root = page.locator('.visual-editor')
     await expect(root.locator('.section-checkbox')).toHaveCount(0)
     await expect(root.locator('.section-progress-count')).toHaveCount(0)
     await expect(root.locator('.task-checkbox')).toHaveCount(1)

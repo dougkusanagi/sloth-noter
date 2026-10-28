@@ -28,7 +28,7 @@ for (const mode of ['Padrão', 'Código', 'Leitura']) {
     const guide = page.locator('.width-feedback')
     await expect(guide).toBeVisible()
     const target = page.locator(
-      mode === 'Padrão' ? '.cm-content' : mode === 'Código' ? 'textarea' : '.reading',
+      mode === 'Padrão' ? '.cm-content' : mode === 'Código' ? 'textarea' : '.cm-content',
     )
     const expected = await target.evaluate((el) => {
       const r = el.getBoundingClientRect(),
@@ -61,20 +61,8 @@ test('nested guides start after the first visual line of a wrapped parent in bot
   expect(guide.y).toBeLessThan(rect.y + rect.height - lineHeight)
   await page.screenshot({ path: 'test-results/parent-list-guide.png' })
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  const metrics = await page
-    .locator('.markdown li:has(> ul)')
-    .first()
-    .evaluate((el) => {
-      const style = getComputedStyle(el, '::after')
-      return {
-        top: parseFloat(style.top),
-        lineHeight: parseFloat(getComputedStyle(el).lineHeight),
-        height: parseFloat(style.height),
-        parentHeight: el.getBoundingClientRect().height,
-      }
-    })
-  expect(Math.abs(metrics.top - metrics.lineHeight)).toBeLessThan(2)
-  expect(Math.abs(metrics.height + metrics.top - metrics.parentHeight)).toBeLessThan(2)
+  await expect(page.locator('.visual-editor.read-only')).toBeVisible()
+  expect(await rail.boundingBox()).toEqual(guide)
 })
 
 test('image menu covers the scrollbar outside the library scroll container', async ({ page }) => {

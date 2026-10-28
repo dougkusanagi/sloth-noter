@@ -2,6 +2,8 @@ import { isDiscardableEmptyNote } from './notes.js'
 import { newDocument, validateDocument } from './storage.js'
 import { mergeExternal, resolveConflict } from './vault-sync.js'
 import {
+  externalSnapshot,
+  pendingExternalWarning,
   externalsApi,
   isExternalNote,
   readExternalNotes,
@@ -41,8 +43,19 @@ export function createVaultAdapter(invoke, path, history = null) {
   // Text last seen in each file opened in place (outside the folder); see external-notes.js.
   const seen = new Map()
   const paths = new Map()
+  let saveIssue = null
+  let readWarning = null
 
   return {
+    clearSaveIssue() {
+      saveIssue = null
+    },
+    get saveIssue() {
+      return saveIssue
+    },
+    get readWarning() {
+      return readWarning
+    },
     kind: 'vault',
     externals: externalsApi(invoke, seen),
     label: path,
@@ -59,6 +72,8 @@ export function createVaultAdapter(invoke, path, history = null) {
       resolve: (document, conflict, choice) => resolveConflict(document, conflict, choice, known),
     },
     async readState() {
+      saveIssue = null
+      readWarning = null
       const files = await invoke(VAULT_LIST)
       const rawAux = await invoke(VAULT_READ_AUX)
       known = new Map()
@@ -99,14 +114,16 @@ export function createVaultAdapter(invoke, path, history = null) {
         preferences: aux.preferences ?? newDocument().preferences,
       }
       history?.observe(previous, previous)
+      readWarning = pendingExternalWarning(previous)
+      if (readWarning) saveIssue = { kind: 'external', localSaved: true }
       return JSON.stringify(previous)
     },
     async readLegacy() {
       return null
     },
     async writeState(contents) {
+      saveIssue = null
       const parsed = JSON.parse(contents)
-      const externals = parsed.notes.filter(isExternalNote)
       const document = { ...parsed, notes: parsed.notes.filter((note) => !isExternalNote(note)) }
       const kept = new Set(document.notes.map((note) => note.id))
       const trashed = new Set(document.trash.map((entry) => entry.note.id))
@@ -129,25 +146,30 @@ export function createVaultAdapter(invoke, path, history = null) {
         } else writes.push({ note, expected: null })
       }
 
-      // Files opened in place are written before the auxiliary state, which records
-      // their text: it must never hold text that did not reach the file.
-      await writeExternalNotes(invoke, parsed, seen, paths)
-
       // The auxiliary state goes first: a failure part-way leaves files intact and
       // the trash body saved, so at worst the newest keystrokes stay in memory.
-      await invoke(VAULT_WRITE_AUX, {
-        contents: JSON.stringify({
-          version: AUX_VERSION,
-          assets: document.assets ?? [],
-          ids: Object.fromEntries(document.notes.map((note) => [note.name, note.id])),
-          openIds: document.openIds,
-          pinnedIds: document.pinnedIds ?? [],
-          activeId: document.activeId,
-          preferences: document.preferences,
-          trash: document.trash,
-          externals,
-        }),
+      const snapshot = externalSnapshot(parsed, seen)
+      const auxiliary = {
+        version: AUX_VERSION,
+        assets: document.assets ?? [],
+        ids: Object.fromEntries(document.notes.map((note) => [note.name, note.id])),
+        openIds: document.openIds,
+        pinnedIds: document.pinnedIds ?? [],
+        activeId: document.activeId,
+        preferences: document.preferences,
+        trash: snapshot.trash,
+        externals: snapshot.notes.filter(isExternalNote),
+      }
+      const initialAux = JSON.stringify(auxiliary)
+      await invoke(VAULT_WRITE_AUX, { contents: initialAux })
+      const failures = await writeExternalNotes(invoke, parsed, seen, paths, {
+        continueOnError: true,
       })
+      const confirmed = externalSnapshot(parsed, seen)
+      auxiliary.trash = confirmed.trash
+      auxiliary.externals = confirmed.notes.filter(isExternalNote)
+      const confirmedAux = JSON.stringify(auxiliary)
+      if (confirmedAux !== initialAux) await invoke(VAULT_WRITE_AUX, { contents: confirmedAux })
 
       // Only a note moved to the trash deletes its file. A note that merely left the
       // document (a restored backup) keeps its file, which is picked up again later.
@@ -197,6 +219,10 @@ export function createVaultAdapter(invoke, path, history = null) {
           op: { kind: 'write', name: note.name, contents: note.body, expected },
         })
         known.set(note.name, { id: note.id, body: note.body })
+      }
+      if (failures.length) {
+        saveIssue = { kind: 'external', localSaved: true }
+        throw new Error(failures.join('\n'))
       }
     },
   }

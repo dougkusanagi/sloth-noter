@@ -19,6 +19,9 @@ export function createPersistence(adapter, label = adapter.label) {
     label,
     sync: adapter.sync ?? null,
     externals: adapter.externals ?? null,
+    get saveIssue() {
+      return adapter.saveIssue ?? null
+    },
     async load() {
       let current = null
       let legacy = null
@@ -30,7 +33,12 @@ export function createPersistence(adapter, label = adapter.label) {
       }
       const read = readStoredDocument({ current, legacy })
       if (!read.needsWrite)
-        return { document: read.document, error: read.error, blocked: read.blocked, raw: read.raw }
+        return {
+          document: read.document,
+          error: read.error ?? adapter.readWarning ?? null,
+          blocked: read.blocked,
+          raw: read.raw,
+        }
       return {
         document: read.document,
         error: await persistence.save(read.document),
@@ -39,6 +47,7 @@ export function createPersistence(adapter, label = adapter.label) {
       }
     },
     async save(document) {
+      adapter.clearSaveIssue?.()
       let text
       try {
         text = serializeDocument(document)

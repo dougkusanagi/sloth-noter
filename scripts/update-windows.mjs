@@ -1,12 +1,10 @@
 import { spawn, execFile } from 'node:child_process'
 import { readFile, readdir, stat } from 'node:fs/promises'
-import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const require = createRequire(import.meta.url)
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
@@ -68,7 +66,7 @@ export async function updateWindows({
   await checkLegacy(config.productName)
   if (!args.includes('--skip-build')) {
     const code = await execute(process.execPath, [
-      require.resolve('@tauri-apps/cli/tauri.js'),
+      join(root, 'scripts/tauri-cli.mjs'),
       'build',
       '--config',
       'src-tauri/tauri.windows.conf.json',

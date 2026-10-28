@@ -1,0 +1,1 @@
+Corrigido: a leitura e a gravação do estado do aplicativo agora aguardam a conclusão de uma substituição em andamento, evitando disputar o mesmo arquivo temporário ou interpretar como ausente um arquivo que está sendo atualizado. Se a substituição falhar, o app tenta restaurar a última versão gravada e informa o erro.

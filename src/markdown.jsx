@@ -110,7 +110,11 @@ function ListItem({ children, className, node, style }) {
     if (task && onChange && !task.progress) onChange(toggleTask(text, task.mark))
   }
   return (
-    <li className={task ? 'task-list-item' : className} style={style}>
+    <li
+      className={task ? 'task-list-item' : className}
+      style={style}
+      data-source-line={node.position.start.line}
+    >
       {task && (
         <input
           type="checkbox"
@@ -149,14 +153,18 @@ function InlineCode({ children, className }) {
     </span>
   )
 }
-function CodeBlock({ children }) {
+function CodeBlock({ children, node }) {
   const { onCopy } = useContext(MarkdownContext)
   const child = React.Children.toArray(children)[0]
   const source = String(child?.props?.children ?? '').replace(/\n$/, '')
   const language = child?.props?.className?.replace('language-', '') ?? ''
   const label = codeLanguageName(language)
   return (
-    <div className="code-block" style={child?.props?.style}>
+    <div
+      className="code-block"
+      style={child?.props?.style}
+      data-source-line={node.position.start.line}
+    >
       <div className="code-block-tools">
         <button
           type="button"

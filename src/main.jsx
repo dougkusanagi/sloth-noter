@@ -16,7 +16,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { createRoot } from 'react-dom/client'
 import { Toaster, toast } from 'sonner'
-import { Markdown } from './markdown.jsx'
 import { createFullBackup, readBackupBundle, restoreBackupImages } from './backup.js'
 import {
   findNote,
@@ -73,7 +72,6 @@ import {
 import { t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
 import { welcomeNote } from './welcome.js'
-import { foldableLines } from './sections.js'
 import { foldAll, unfoldAll } from './editor/folding.js'
 import { continueBlock } from './continue-block.js'
 import { applyChanges, listIndentChanges, mapPosition } from './list-indent.js'
@@ -239,6 +237,7 @@ function Workspace({ persistence, loaded }) {
   const conflictFirst = useRef(null)
   const importInput = useRef(null)
   const backupInput = useRef(null)
+  const backupBusy = useRef(false)
   const menuButton = useRef(null)
   const menuWrap = useRef(null)
   const menuFirst = useRef(null)
@@ -249,7 +248,6 @@ function Workspace({ persistence, loaded }) {
   const editorRef = useRef(null)
   const visualRef = useRef(null)
   const notePositions = useRef(new Map())
-  const [readingFolds, setReadingFolds] = useState({ id: null, lines: new Set() })
   const clipboardBusy = useRef(false)
   const clipboardFocusEpoch = useRef(0)
   const [pasteIntentGuard] = useState(createPasteIntentGuard)
@@ -357,6 +355,37 @@ function Workspace({ persistence, loaded }) {
         },
       },
       persistence.kind !== 'web',
+      window,
+      undefined,
+      {
+        onBlocked: ({ forceClose }) => {
+          toast.error(
+            t(persistence.saveIssue?.localSaved ? 'window.closePending' : 'window.closeBlocked'),
+            {
+              id: 'close-blocked',
+              duration: Infinity,
+              description: (
+                <ToastButtons
+                  items={[
+                    [t('menu.backupDownload'), () => toastActions.current.downloadBackup()],
+                    [
+                      t('window.closeWithoutSaving'),
+                      async () => {
+                        if (!(await toastActions.current.confirmClose())) return
+                        try {
+                          await forceClose()
+                        } catch (cause) {
+                          setError(friendlyError(cause))
+                        }
+                      },
+                    ],
+                  ]}
+                />
+              ),
+            },
+          )
+        },
+      },
     )
       .then((stop) => {
         if (disposed) stop()
@@ -1138,14 +1167,23 @@ function Workspace({ persistence, loaded }) {
     commit(persistence.sync.resolve(current.current, conflict, choice), 'disco')
   }
   async function downloadBackup() {
+    if (backupBusy.current) return
+    backupBusy.current = true
+    toast.loading(t('backup.preparing'), { id: 'backup-download' })
     try {
       download(
         'sloth-note-backup.json',
         await createFullBackup(current.current, persistence.invoke),
         'application/json;charset=utf-8',
       )
+      toast.success(t('backup.downloadStarted'), { id: 'backup-download', duration: 10000 })
     } catch (cause) {
-      setImportError(String(cause.message ?? cause))
+      toast.error(t('backup.failed', { error: friendlyError(cause) }), {
+        id: 'backup-download',
+        duration: Infinity,
+      })
+    } finally {
+      backupBusy.current = false
     }
   }
   async function restoreBackup(file) {
@@ -1242,7 +1280,7 @@ function Workspace({ persistence, loaded }) {
     }
   }
   useLayoutEffect(() => {
-    const view = mode === 'visual' ? visualRef.current : null
+    const view = mode !== 'source' ? visualRef.current : null
     const field = mode === 'source' ? editorRef.current : null
     const text = view
       ? view.state.selection.ranges
@@ -1261,26 +1299,6 @@ function Workspace({ persistence, loaded }) {
         : { id: active?.id, mode, text },
     )
   }
-  useEffect(() => {
-    if (mode !== 'reading') return
-    const update = () => {
-      const selection = window.getSelection()
-      const article = document.querySelector('.reading .markdown')
-      const text =
-        selection &&
-        article?.contains(selection.anchorNode) &&
-        article.contains(selection.focusNode)
-          ? selection.toString()
-          : ''
-      setSelectedText((previous) =>
-        previous.id === active?.id && previous.mode === mode && previous.text === text
-          ? previous
-          : { id: active?.id, mode, text },
-      )
-    }
-    document.addEventListener('selectionchange', update)
-    return () => document.removeEventListener('selectionchange', update)
-  }, [mode, active?.id])
   function captureSearchSelection(selection) {
     if (!findOpen || !selection || selection.to <= selection.from) return
     setFindOptions((options) => ({ ...options, scope: { from: selection.from, to: selection.to } }))
@@ -1313,20 +1331,18 @@ function Workspace({ persistence, loaded }) {
   function openFind(replace = false) {
     setReplaceOpen(replace)
     const selection =
-      mode === 'visual'
+      mode !== 'source'
         ? visualRef.current?.state.selection.main
         : mode === 'source' && editorRef.current
           ? { from: editorRef.current.selectionStart, to: editorRef.current.selectionEnd }
           : null
     const editorFocused =
-      mode === 'visual' ? visualRef.current?.hasFocus : document.activeElement === editorRef.current
+      mode !== 'source' ? visualRef.current?.hasFocus : document.activeElement === editorRef.current
     if (!findOpen || editorFocused) {
       const selectedText =
         selection && selection.to > selection.from
           ? active?.body.slice(selection.from, selection.to)
-          : mode === 'reading'
-            ? window.getSelection()?.toString()
-            : ''
+          : ''
       if (selectedText) setFindQuery(selectedText)
     }
     if (!findOpen || (editorFocused && selection && selection.to > selection.from)) {
@@ -1430,7 +1446,7 @@ function Workspace({ persistence, loaded }) {
     [active?.body, findQuery, findOptions],
   )
   useEffect(() => {
-    const view = mode === 'visual' ? visualRef.current : null
+    const view = mode !== 'source' ? visualRef.current : null
     const matches = findOpen ? findResult.matches : []
     const index = Math.min(findIndex, Math.max(0, matches.length - 1))
     if (index !== findIndex) setFindIndex(index)
@@ -1466,7 +1482,7 @@ function Workspace({ persistence, loaded }) {
       }, 0)
   }
   function toggleFocusMode() {
-    const view = mode === 'visual' ? visualRef.current : null
+    const view = mode !== 'source' ? visualRef.current : null
     const position = view?.state.selection.main.head
     const before = view && view.coordsAtPos(position)
     setFocusMode((value) => !value)
@@ -1606,7 +1622,17 @@ function Workspace({ persistence, loaded }) {
   }, [persistence, switching])
   const toastActions = useRef({})
   toastActions.current = {
+    confirmClose: () =>
+      ask({
+        kind: 'confirm',
+        message: t(
+          persistence.saveIssue?.localSaved ? 'window.closePendingConfirm' : 'window.closeConfirm',
+        ),
+        confirmLabel: t('window.closeWithoutSaving'),
+        cancelLabel: t('dialog.cancel'),
+      }),
     downloadBackup,
+    retrySave: () => writer.current.write(current.current),
     downloadDamaged: () =>
       download('sloth-note-damaged.json', damaged.current, 'application/json;charset=utf-8'),
     resetDamagedStorage,
@@ -1619,13 +1645,18 @@ function Workspace({ persistence, loaded }) {
       return
     }
     const run = (name) => () => toastActions.current[name]()
-    toast.error(t('error.storage', { error, label: persistence.label }), {
+    const detail = error.replace(/[.!?]+\s*$/, '')
+    const message = persistence.saveIssue?.localSaved
+      ? t('error.externalSaved', { error: detail })
+      : t('error.storage', { error: detail, label: persistence.label })
+    toast.error(message, {
       id: 'storage',
       duration: Infinity,
       description: (
         <ToastButtons
           items={[
             [t('menu.backupDownload'), run('downloadBackup')],
+            ...(!blocked ? [[t('error.retryStorage'), run('retrySave')]] : []),
             ...(blocked && damaged.current !== null
               ? [[t('error.downloadStored'), run('downloadDamaged')]]
               : []),
@@ -1634,7 +1665,7 @@ function Workspace({ persistence, loaded }) {
         />
       ),
     })
-  }, [error, blocked, persistence.label])
+  }, [error, blocked, persistence])
   useEffect(() => {
     const problem = persistence.vaultProblem
     if (!problem) return
@@ -1758,18 +1789,8 @@ function Workspace({ persistence, loaded }) {
     return () => document.removeEventListener('keydown', onKey, true)
   })
 
-  const folds = readingFolds.id === active?.id ? readingFolds.lines : undefined
-  function setFolds(lines) {
-    setReadingFolds({ id: active?.id ?? null, lines })
-  }
-  function toggleReadingFold(line) {
-    const lines = new Set(folds)
-    if (!lines.delete(line)) lines.add(line)
-    setFolds(lines)
-  }
   function foldSections(collapse) {
-    if (mode === 'reading') setFolds(new Set(collapse && active ? foldableLines(active.body) : []))
-    else if (visualRef.current) (collapse ? foldAll : unfoldAll)(visualRef.current)
+    if (visualRef.current) (collapse ? foldAll : unfoldAll)(visualRef.current)
   }
 
   function stepWidth(steps) {
@@ -2263,26 +2284,14 @@ function Workspace({ persistence, loaded }) {
           )}
           {active ? (
             <NoteViewport
-              key={`${active.id}:${mode}:${prefs.language}`}
+              key={`${active.id}:${mode === 'source' ? 'source' : 'visual'}:${prefs.language}`}
               noteId={active.id}
-              mode={mode}
+              mode={mode === 'source' ? 'source' : 'visual'}
               positions={notePositions.current}
               visualRef={visualRef}
               editorRef={editorRef}
             >
-              {mode === 'reading' ? (
-                <div className="reading">
-                  <Markdown
-                    text={active.body}
-                    onCopy={copyCode}
-                    onChange={updateBody}
-                    onOpenWiki={openWiki}
-                    notes={data.notes}
-                    folds={folds}
-                    onToggleFold={toggleReadingFold}
-                  />
-                </div>
-              ) : mode === 'source' ? (
+              {mode === 'source' ? (
                 <div className="source-editor-wrap">
                   <div className="source-search-mirror" aria-hidden="true">
                     <SourceSearchHighlights
@@ -2352,6 +2361,7 @@ function Workspace({ persistence, loaded }) {
                   onOpenWiki={openWiki}
                   key={`${active.id}:${prefs.language}`}
                   noteId={active.id}
+                  readOnly={mode === 'reading'}
                   body={active.body}
                   onChange={updateBody}
                   onSelectionChange={captureSearchSelection}
