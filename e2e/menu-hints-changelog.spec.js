@@ -198,6 +198,8 @@ for (const width of [390, 1280]) {
       .poll(() => updateImage.evaluate((el) => el.complete && el.naturalWidth > 0))
       .toBe(true)
     await document.getByRole('heading', { name: 'Novidades', exact: true }).scrollIntoViewIfNeeded()
+    await expect(document.getByRole('heading', { name: /Sloth Note 0\.2\.0$/ })).toBeVisible()
+    await expect(document.getByRole('heading', { name: /Em desenvolvimento/ })).toHaveCount(0)
     await expect(document).toContainText('0.1.0')
     const image = document.getByAltText(
       'Menu de inserir blocos com os atalhos de títulos, listas, tabela, bloco de código e imagem.',

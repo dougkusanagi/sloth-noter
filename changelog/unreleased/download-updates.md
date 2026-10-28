@@ -1,3 +1,0 @@
-Adicionado: no desktop instalado, Baixar atualização transfere e verifica a nova versão dentro do app. Você pode continuar editando durante o download. Depois, use Instalar e reiniciar: o app salva as notas pendentes antes de aplicar a atualização e permanece aberto se não conseguir salvá-las. Consulte novamente pelo menu principal → Verificar atualizações. São aceitos apenas pacotes assinados de releases estáveis; o editor continua funcionando offline. Disponível no AppImage Linux e no aplicativo Windows. A primeira compilação com esse recurso precisa ser instalada manualmente.
-
-![Atualização baixada e verificada, com o botão Instalar e reiniciar; a versão 0.2.0 é um exemplo de teste.](/changelog/download-updates.png)

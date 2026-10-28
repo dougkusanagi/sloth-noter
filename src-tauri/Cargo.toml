@@ -1,6 +1,6 @@
 [package]
 name = "sloth-note"
-version = "0.1.0"
+version = "0.2.0"
 description = "Offline Markdown editor with notes in files the user controls"
 edition = "2021"
 rust-version = "1.85"

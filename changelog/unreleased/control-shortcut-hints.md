@@ -1,1 +1,0 @@
-Corrigido: Os botões de nova aba, menu, biblioteca e aparência, os seletores de modo e as ações do menu de inserir blocos agora mostram dicas com o nome da ação ao passar o mouse ou receber foco pelo teclado, no mesmo estilo da barra de seleção. Quando a ação tem atalho, a combinação aparece na dica.
