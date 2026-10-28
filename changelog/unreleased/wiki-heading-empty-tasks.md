@@ -1,0 +1,1 @@
+Corrigido: títulos formados por um link para outra nota mostram apenas o progresso das tarefas da nota apontada. Uma nota sem tarefas, como Ideias, não recebe checkbox nem contagem emprestados de tarefas locais abaixo do título.

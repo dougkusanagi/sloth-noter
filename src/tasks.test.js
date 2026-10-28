@@ -188,3 +188,32 @@ test('section bulk checkboxes support setext and formatted subtitles without cha
     '# Note\n**Work**\n----\n- [x] A',
   )
 })
+
+test('wiki headings summarize the referenced document without changing its tasks', () => {
+  const notes = [
+    {
+      name: 'Sistema de Estoque.md',
+      body: '# Sistema de Estoque\n\n- [x] Feito\n- [-] Parcial\n- [ ] Pendente',
+    },
+  ]
+  const body = '# Projetos\n\n## [[Sistema de Estoque]]'
+  assert.deepEqual(sectionProgress(body, [], new Set(), notes).get(3), { done: 1, total: 3 })
+  assert.equal(sectionProgress(body, [], new Set(), []).size, 0)
+  assert.deepEqual(
+    sectionProgress(body.replace('Estoque]]', 'Estoque|Estoque]]'), [], new Set(), notes).get(3),
+    { done: 1, total: 3 },
+  )
+})
+
+test('a wiki-only heading never borrows local checkboxes for its target summary', () => {
+  const body = '# Projetos\n\n## [[Ideias]]\n\n- [ ] Outra tarefa local'
+  const notes = [{ name: 'Ideias.md', body: '# Ideias\n\n- Uma ideia sem checkbox' }]
+  assert.equal(sectionProgress(body, noteTasks(body), new Set(), notes).has(3), false)
+  assert.equal(sectionChecklists(body).has(3), false)
+  notes[0].body = '# Ideias\n\n- [x] Feito\n- [ ] Pendente'
+  assert.deepEqual(sectionProgress(body, noteTasks(body), new Set(), notes).get(3), {
+    done: 1,
+    total: 2,
+  })
+  assert.deepEqual(sectionTaskChanges(body, 3, true, notes), [])
+})

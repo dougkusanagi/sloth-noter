@@ -211,7 +211,12 @@ export function decorationsFor(view) {
   const tasks = new Map(
     resolvedTasks(text, view.state.facet(taskNotes)).map((task) => [task.line, task]),
   )
-  const progress = sectionProgress(text, [...tasks.values()], collapsed)
+  const progress = sectionProgress(
+    text,
+    [...tasks.values()],
+    collapsed,
+    view.state.facet(taskNotes),
+  )
   const checklists = sectionChecklists(text, [...tasks.values()])
   const definitions = []
   walk(tree, (node) => {
