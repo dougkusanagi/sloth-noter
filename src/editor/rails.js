@@ -22,15 +22,24 @@ export const railsLayer = layer({
     // skip any rail a fold covers (or whose parent line is folded).
     const folds = []
     view.state.field(foldField, false)?.between(0, doc.length, (from, to) => folds.push([from, to]))
+    // The height map can lag behind lines whose styles changed without a resize
+    // (e.g. a fresh read-only view); prefer the rendered line when it exists.
+    const block = (pos) => {
+      const line = view.domAtPos(pos).node
+      const element = (line.nodeType === 1 ? line : line.parentElement)?.closest?.('.cm-line')
+      if (!element) return view.lineBlockAt(pos)
+      const rect = element.getBoundingClientRect()
+      return { top: rect.top - view.documentTop, bottom: rect.bottom - view.documentTop }
+    }
     const foldedParent = (pos) => folds.some(([f, t]) => f < pos && pos < t)
     const coveredSpan = (from, to) => folds.some(([f, t]) => f < to && t > from)
     const rail = (x, from, to, parentLine) => {
       const nestedFrom = doc.line(from).from
       const nestedTo = doc.line(to).to
       if (foldedParent(doc.line(parentLine).from) || coveredSpan(nestedFrom, nestedTo)) return
-      const start = view.lineBlockAt(nestedFrom)
-      const end = view.lineBlockAt(doc.line(to).to)
-      const parent = view.lineBlockAt(doc.line(parentLine).from)
+      const start = block(nestedFrom)
+      const end = block(doc.line(to).to)
+      const parent = block(doc.line(parentLine).from)
       const railTop = Math.min(start.top, parent.top + view.defaultLineHeight)
       markers.push(new RectangleMarker('cm-rail', x, top + railTop, null, end.bottom - railTop))
     }

@@ -38,7 +38,7 @@ export function NoteViewport({ noteId, mode, positions, visualRef, editorRef, ch
     return () => {
       disposed = true
       cancelAnimationFrame(frame)
-      positions.set(key, {
+      const position = {
         windowTop: window.scrollY,
         windowLeft: window.scrollX,
         top: scroller?.scrollTop ?? 0,
@@ -52,7 +52,8 @@ export function NoteViewport({ noteId, mode, positions, visualRef, editorRef, ch
                 direction: field.selectionDirection,
               }
             : null,
-      })
+      }
+      positions.set(key, position)
     }
   }, [noteId, mode, positions, visualRef, editorRef])
   return children

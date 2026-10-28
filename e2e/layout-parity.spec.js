@@ -173,6 +173,45 @@ const DOCS = {
 }
 
 const BIG = 'https://example.com/big.svg'
+for (const width of [1280, 390]) {
+  test(`long code wraps with identical height in both modes at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 3600 })
+    await page.goto('/')
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    const body = [
+      '# Blocos',
+      '',
+      '```text',
+      'INICIO ' + 'Uma mensagem longa com palavras e espaços. '.repeat(8),
+      'https://example.com/' + 'segmento'.repeat(40),
+      '',
+      'FIMCODIGO',
+      '```',
+      '',
+      'DEPOIS',
+    ].join('\n')
+    await page.locator('textarea').fill(body)
+    await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+    await expect(page.locator('.cm-md-code').first()).toBeVisible()
+    const anchors = ['INICIO', 'FIMCODIGO', 'DEPOIS']
+    const live = await positions(page, '.cm-content', anchors)
+    await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
+    await expect(page.locator('.visual-editor.read-only')).toBeVisible()
+    const read = await positions(page, '.cm-content', anchors)
+    for (const anchor of anchors) {
+      expect(Math.abs(read[anchor][0] - live[anchor][0]), `${anchor} vertical`).toBeLessThan(0.5)
+      expect(Math.abs(read[anchor][1] - live[anchor][1]), `${anchor} horizontal`).toBeLessThan(0.5)
+    }
+    expect(
+      await page
+        .locator('.cm-scroller')
+        .evaluate((scroller) => scroller.scrollWidth <= scroller.clientWidth),
+    ).toBe(true)
+    await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+    const returned = await positions(page, '.cm-content', anchors)
+    expect(returned).toEqual(live)
+  })
+}
 DOCS['a large image between paragraphs'] = {
   body: [
     '# TTRES',
@@ -238,9 +277,10 @@ for (const [name, { body, anchors }] of Object.entries(DOCS)) {
     await page.waitForTimeout(300)
     const live = await positions(page, '.cm-content', anchors)
     await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-    await expect(page.locator('.markdown img')).toHaveJSProperty('complete', true)
+    await expect(page.locator('.visual-editor.read-only')).toBeVisible()
+    await expect(page.locator('.cm-image-preview')).toHaveJSProperty('complete', true)
     await page.waitForTimeout(300)
-    const read = await positions(page, '.markdown', anchors)
+    const read = await positions(page, '.cm-content', anchors)
     for (const anchor of anchors) {
       expect(live[anchor], `${anchor} in Padrão`).toBeTruthy()
       expect(read[anchor], `${anchor} in Leitura`).toBeTruthy()
@@ -272,14 +312,12 @@ test('Padrão and Leitura lay out the help page identically, heading by heading'
       .evaluateAll((elements) => elements.map((e) => e.getBoundingClientRect().top))
   const live = await tops('.cm-md-h2, .cm-md-h3, .cm-md-h4, .cm-md-h5, .cm-md-h6')
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  await expect(page.locator('.markdown img').first()).toHaveJSProperty('complete', true)
+  await expect(page.locator('.visual-editor.read-only')).toBeVisible()
+  await expect(page.locator('.cm-image-preview').first()).toHaveJSProperty('complete', true)
   await page.waitForTimeout(300)
-  const read = await tops(
-    '.markdown h2:not(.sr-only), .markdown h3, .markdown h4, .markdown h5, .markdown h6',
-  )
+  const read = await tops('.cm-md-h2, .cm-md-h3, .cm-md-h4, .cm-md-h5, .cm-md-h6')
   expect(read).toHaveLength(live.length)
   expect(live.length).toBeGreaterThan(15)
-  // The footnote's own list is the only thing Leitura places differently; it comes last.
   live.forEach((top, index) =>
     expect(Math.abs(read[index] - top), `heading ${index}`).toBeLessThan(0.5),
   )

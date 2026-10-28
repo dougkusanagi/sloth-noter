@@ -7,27 +7,17 @@ for (const mode of ['Padrão', 'Código', 'Leitura']) {
     await page.locator('textarea').fill('# Contagem\n\nOlá mundo\nmais texto')
     if (mode !== 'Código')
       await page.getByRole('radio', { name: mode, exact: true }).check({ force: true })
-    if (mode === 'Leitura') {
-      await page.locator('.reading .markdown p').evaluate((el) => {
-        const range = document.createRange()
-        range.selectNodeContents(el)
-        const selection = window.getSelection()
-        selection.removeAllRanges()
-        selection.addRange(range)
-      })
-    } else {
-      const editor = page.locator(mode === 'Padrão' ? '.cm-content' : 'textarea')
-      await editor.focus()
-      await editor.press('Control+End')
-      await editor.press('Home')
-      await editor.press('Shift+End')
-    }
+    // Leitura is the read-only visual editor, so it selects like Padrão.
+    const editor = page.locator(mode === 'Código' ? 'textarea' : '.cm-content')
+    await editor.focus()
+    await editor.press('Control+End')
+    await editor.press('Home')
+    await editor.press('Shift+End')
     const stats = page.locator('.selection-statistics')
-    await expect(stats).toContainText(mode === 'Leitura' ? '4 palavras' : '2 palavras')
-    await expect(stats).toContainText(mode === 'Leitura' ? '20 caracteres' : '10 caracteres')
-    await expect(stats).toContainText(mode === 'Leitura' ? '2 linhas' : '1 linha')
-    if (mode === 'Leitura') await page.evaluate(() => window.getSelection().removeAllRanges())
-    else await page.keyboard.press('ArrowRight')
+    await expect(stats).toContainText('2 palavras')
+    await expect(stats).toContainText('10 caracteres')
+    await expect(stats).toContainText('1 linha')
+    await page.keyboard.press('ArrowRight')
     await expect(stats).toHaveCount(0)
     await expect(page.locator('.document-info')).toContainText('5 palavras')
     if (mode === 'Código') {

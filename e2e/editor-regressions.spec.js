@@ -85,11 +85,15 @@ test('external links open only while their line is rendered for reading', async 
   expect(await page.evaluate(() => window.openedLinks)).toHaveLength(1)
   await page.locator('.cm-line').filter({ hasText: 'Outro texto' }).click()
   await expect(link).toHaveAttribute('data-href', 'https://google.com')
+  await link.click()
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  await expect(page.getByRole('link', { name: 'google' })).toHaveAttribute(
-    'href',
+  // Leitura never reveals syntax on the cursor line, and a plain click opens the link.
+  await expect(link).toHaveAttribute('data-href', 'https://google.com')
+  await link.click()
+  expect(await page.evaluate(() => window.openedLinks)).toEqual([
     'https://google.com',
-  )
+    'https://google.com',
+  ])
 })
 
 test('internal links have plain text styling and no click action on the active line', async ({
@@ -383,7 +387,7 @@ test('welcome art loads from the app for new and legacy notes without GitHub acc
   await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true)
   await expect(image).toHaveAttribute('src', /\/src\/assets\/welcome-sloth\.png/)
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  const readingImage = page.locator('.reading img').first()
+  const readingImage = page.locator('.visual-editor.read-only .cm-image-preview').first()
   await expect
     .poll(() => readingImage.evaluate((el) => el.complete && el.naturalWidth > 0))
     .toBe(true)

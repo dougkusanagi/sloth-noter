@@ -1,4 +1,6 @@
 import { ShortcutButton } from './components/shortcut-button.jsx'
+import { openExternalLink } from './external-links.js'
+import { toast } from 'sonner'
 import { Shortcut } from './components/main-menu.jsx'
 import {
   EDITOR_SHORTCUTS,
@@ -125,8 +127,12 @@ export function VisualEditor({
   onImageUrl,
   onCopy,
   imageBusy,
+  readOnly = false,
 }) {
   const notesCompartment = useRef(new Compartment())
+  const readOnlyCompartment = useRef(new Compartment())
+  const readOnlyRef = useRef(readOnly)
+  readOnlyRef.current = readOnly
   const host = useRef(null),
     viewRef = useRef(null),
     syncing = useRef(false)
@@ -165,7 +171,7 @@ export function VisualEditor({
 
   function positionToolbar(view) {
     const selection = view.state.selection.main
-    if (selection.empty || !view.hasFocus) {
+    if (selection.empty || !view.hasFocus || view.state.readOnly) {
       setToolbar(null)
       return
     }
@@ -195,7 +201,7 @@ export function VisualEditor({
     view.requestMeasure({
       key: 'insert-trigger',
       read: () => {
-        if (!view.hasFocus || !view.state.selection.main.empty) return null
+        if (!view.hasFocus || view.state.readOnly || !view.state.selection.main.empty) return null
         const line = view.state.doc.lineAt(view.state.selection.main.head)
         if (line.text.trim()) return null
         const coords = view.coordsAtPos(line.from)
@@ -333,6 +339,17 @@ export function VisualEditor({
         doc: ensureTitle(body),
         selection: { anchor: 2 },
         extensions: [
+          // Starts editable; the effect below switches to read-only after the first measure.
+          readOnlyCompartment.current.of(EditorState.readOnly.of(false)),
+          // Preview keeps the same view; drop every edit except task toggles and outside sync.
+          EditorState.transactionFilter.of((transaction) =>
+            transaction.docChanged &&
+            transaction.startState.readOnly &&
+            !syncing.current &&
+            !transaction.isUserEvent('tarefa')
+              ? []
+              : transaction,
+          ),
           mandatoryTitle,
           history(),
           keymap.of([
@@ -368,6 +385,11 @@ export function VisualEditor({
           }),
           EditorView.domEventHandlers({
             keydown: (event, view) => {
+              if (
+                view.state.readOnly &&
+                !((event.ctrlKey || event.metaKey) && event.key === 'Enter')
+              )
+                return false
               const block = blockShortcut(event)
               if (block) {
                 event.preventDefault()
@@ -406,6 +428,10 @@ export function VisualEditor({
               return wrapSelectedText(event, view)
             },
             paste: (event, view) => {
+              if (view.state.readOnly) {
+                event.preventDefault()
+                return true
+              }
               const selection = view.state.selection.main
               const files = clipboardImageFiles(event.clipboardData)
               if (files.length) {
@@ -445,10 +471,14 @@ export function VisualEditor({
                 return true
               }
               const link = event.target.closest?.('.cm-md-inline-link')
-              if (link && (event.ctrlKey || event.metaKey) && link.dataset.href) {
+              if (
+                link &&
+                (view.state.readOnly || event.ctrlKey || event.metaKey) &&
+                link.dataset.href
+              ) {
                 event.preventDefault()
                 event.stopPropagation()
-                window.open(link.dataset.href, '_blank', 'noopener,noreferrer')
+                openExternalLink(link.dataset.href).catch((error) => toast.error(String(error)))
                 return true
               }
               if (cell || event.target.closest?.('button')) return false
@@ -464,6 +494,7 @@ export function VisualEditor({
               return true
             },
             contextmenu: (event, view) => {
+              if (view.state.readOnly) return false
               const cell = event.target.closest?.('.cm-md-table-cell')
               if (!cell) return false
               const from = Number(cell.dataset.cellFrom)
@@ -619,13 +650,40 @@ export function VisualEditor({
   }, [body])
 
   useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+    // A view created read-only keeps stale line heights for unrevealed lines, which
+    // misplaces rails and line-boundary moves; switch once the editable layout is measured.
+    view.requestMeasure({
+      key: 'read-only',
+      read: () => null,
+      // Dispatching inside the measure cycle is not allowed.
+      write: () =>
+        queueMicrotask(() => {
+          const next = readOnlyRef.current
+          if (viewRef.current === view && view.state.readOnly !== next)
+            view.dispatch({
+              effects: readOnlyCompartment.current.reconfigure(EditorState.readOnly.of(next)),
+            })
+        }),
+    })
+    if (readOnly) {
+      setToolbar(null)
+      setInsertAt(null)
+      setBlockMenu(false)
+      setTableMenu(null)
+      setImagePanel(null)
+    }
+  }, [readOnly])
+
+  useEffect(() => {
     viewRef.current?.dispatch({
       effects: notesCompartment.current.reconfigure(taskNotes.of(notes)),
     })
   }, [notes])
 
   return (
-    <div className="visual-editor" ref={host}>
+    <div className={`visual-editor${readOnly ? ' read-only' : ''}`} ref={host}>
       {toolbar && (
         <div
           className={`format-toolbar${toolbar.below ? ' below' : ''}`}

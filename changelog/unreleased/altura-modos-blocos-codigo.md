@@ -1,0 +1,1 @@
+Corrigido: os blocos de código no modo Leitura agora quebram linhas longas como no modo Padrão, sem rolagem horizontal e com o mesmo espaço para o botão de copiar. Isso mantém a altura dos blocos e a posição do conteúdo seguinte ao alternar entre os modos.

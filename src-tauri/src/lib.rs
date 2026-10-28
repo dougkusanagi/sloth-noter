@@ -633,6 +633,7 @@ pub fn run() {
             window.state::<DroppedFiles>().on_window_event(event);
         })
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             history_maintain,
             history_configure,

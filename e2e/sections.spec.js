@@ -42,14 +42,6 @@ async function runCommand(page, query) {
   await expect(commands).toBeHidden()
 }
 
-test('Leitura wraps each H2–H6 and its content in a nested section', async ({ page }) => {
-  await mode(page, 'Leitura')
-  const read = page.locator('.markdown')
-  await expect(read.locator('.md-section')).toHaveCount(4)
-  await expect(read.locator('.md-section .md-section')).toHaveCount(1)
-  await expect(read.locator('.md-section .md-section')).toContainText('texto sub')
-})
-
 test('Padrão collapses a section and expands it from the heading without a hidden-line counter', async ({
   page,
 }) => {
@@ -137,10 +129,10 @@ test('the palette collapses and expands every section in Padrão and in Leitura'
   await expect(page.locator('.cm-line', { hasText: 'texto dois' })).toBeVisible()
   await mode(page, 'Leitura')
   await runCommand(page, 'Recolher todas')
-  await expect(page.locator('.markdown').getByText('texto dois')).toBeHidden()
-  await expect(page.locator('.markdown').getByText('texto sub')).toBeHidden()
+  await expect(page.locator('.cm-line', { hasText: 'texto dois' })).toHaveCount(0)
+  await expect(page.locator('.cm-line', { hasText: 'texto sub' })).toHaveCount(0)
   await runCommand(page, 'Expandir todas')
-  await expect(page.locator('.markdown').getByText('texto dois')).toBeVisible()
+  await expect(page.locator('.cm-line', { hasText: 'texto dois' })).toBeVisible()
 })
 
 test('the fold commands are hidden in the Código editor', async ({ page }) => {
@@ -150,26 +142,23 @@ test('the fold commands are hidden in the Código editor', async ({ page }) => {
   await expect(commands.getByRole('option')).toHaveCount(0)
 })
 
-test('Leitura collapses a section with its subsections and remembers it per note', async ({
+test('Leitura collapses a section with its subsections and shares it with Padrão', async ({
   page,
 }) => {
   await mode(page, 'Leitura')
-  const read = page.locator('.markdown')
+  const read = page.locator('.visual-editor.read-only')
   await expect(read.getByRole('button', { name: /(Recolher|Expandir) seção/ })).toHaveCount(3)
-  const toggle = read.getByRole('heading', { name: 'Seção um' }).getByRole('button')
-  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
-  await read.getByRole('heading', { name: 'Seção um' }).hover()
-  await toggle.click()
-  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
-  await expect(read.getByText('texto um')).toBeHidden()
-  await expect(read.getByText('texto sub')).toBeHidden()
-  await expect(read.getByRole('heading', { name: 'Sub um' })).toBeHidden()
-  await expect(read.getByText('texto dois')).toBeVisible()
+  const heading = read.locator('.cm-line', { hasText: 'Seção um' })
+  await heading.hover()
+  await heading.getByRole('button', { name: 'Recolher seção' }).click()
+  await expect(read.locator('.cm-line', { hasText: 'texto um' })).toHaveCount(0)
+  await expect(read.locator('.cm-line', { hasText: 'Sub um' })).toHaveCount(0)
+  await expect(read.locator('.cm-line', { hasText: 'texto dois' })).toBeVisible()
   await mode(page, 'Padrão')
+  await expect(page.locator('.cm-line', { hasText: 'texto um' })).toHaveCount(0)
   await mode(page, 'Leitura')
-  await expect(read.getByText('texto um')).toBeHidden()
-  await toggle.click()
-  await expect(read.getByText('texto um')).toBeVisible()
+  await heading.getByRole('button', { name: 'Expandir seção' }).click()
+  await expect(read.locator('.cm-line', { hasText: 'texto um' })).toBeVisible()
 })
 
 test('Leitura task checkboxes inside a section keep working', async ({ page }) => {
@@ -182,11 +171,11 @@ test('Leitura task checkboxes inside a section keep working', async ({ page }) =
 
 test('headings show their level as a pill without changing the heading text', async ({ page }) => {
   await mode(page, 'Leitura')
-  await expect(page.locator('.markdown h3 .fold-toggle')).toHaveAttribute('data-level', '3')
-  await expect(page.locator('.markdown h3')).toHaveText('Sub um')
+  await expect(page.locator('.cm-md-h3 .cm-fold-toggle')).toHaveAttribute('data-level', '3')
+  await expect(page.locator('.cm-md-h3')).toHaveText('Sub um')
   const pill = await page
-    .locator('.markdown h3 .fold-toggle')
+    .locator('.cm-md-h3 .cm-fold-toggle')
     .evaluate((el) => getComputedStyle(el, '::before').content)
   expect(pill).toBe('"H3"')
-  await expect(page.locator('.markdown h1 .fold-toggle')).toHaveCount(0)
+  await expect(page.locator('.cm-md-h1 button.cm-fold-toggle')).toHaveCount(0)
 })

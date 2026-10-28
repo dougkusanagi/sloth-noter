@@ -270,6 +270,10 @@ const messages = {
     'external.writeFailed': '{name} ({path}): {error}',
     'external.pending': '{name} ({path}): há alterações locais pendentes de gravação neste arquivo',
     'error.downloadStored': 'Baixar dados armazenados',
+    'backup.preparing': 'Preparando o backup…',
+    'backup.downloadStarted':
+      'Download do backup iniciado. Confira a pasta Downloads ou o destino configurado para downloads.',
+    'backup.failed': 'Não foi possível criar o backup: {error}',
     'error.retryStorage': 'Tentar gravar novamente',
     'error.replaceStorage': 'Substituir o armazenamento pelas notas atuais',
     'error.import': 'Falha na importação: {error}',
@@ -682,6 +686,10 @@ const messages = {
     'external.writeFailed': '{name} ({path}): {error}',
     'external.pending': '{name} ({path}): local changes are waiting to be saved to this file',
     'error.downloadStored': 'Download stored data',
+    'backup.preparing': 'Preparing the backup…',
+    'backup.downloadStarted':
+      'Backup download started. Check your Downloads folder or your configured download destination.',
+    'backup.failed': 'Could not create the backup: {error}',
     'error.retryStorage': 'Try saving again',
     'error.replaceStorage': 'Replace storage with current notes',
     'error.import': 'Import failed: {error}',

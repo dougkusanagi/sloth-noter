@@ -119,6 +119,7 @@ class TaskWidget extends WidgetType {
           to: Number(input.dataset.mark) + 1,
           insert: input.checked ? 'x' : ' ',
         },
+        userEvent: 'tarefa',
       }),
     )
     return input
@@ -186,7 +187,8 @@ export function decorationsFor(view) {
     ranges = []
   const editing = new Set(),
     selectedLines = []
-  for (const selection of view.state.selection.ranges) {
+  // Read-only preview never reveals Markdown syntax, so the layout matches an idle editor.
+  for (const selection of view.state.readOnly ? [] : view.state.selection.ranges) {
     const first = doc.lineAt(selection.from).number,
       last = doc.lineAt(selection.to).number
     selectedLines.push({ first, last })
@@ -487,6 +489,7 @@ export const liveMarkdown = ViewPlugin.fromClass(
       if (
         update.startState.facet(taskNotes) !== update.state.facet(taskNotes) ||
         update.docChanged ||
+        update.startState.readOnly !== update.state.readOnly ||
         (update.selectionSet &&
           selectionLineSignature(update.startState) !== selectionLineSignature(update.state)) ||
         update.viewportChanged ||

@@ -186,6 +186,12 @@ for (const width of [390, 1280]) {
     const dialog = page.getByRole('dialog', { name: 'Configurações', exact: true })
     await expect(dialog.getByRole('heading', { name: 'Novidades', exact: true })).toBeVisible()
     await expect(dialog.locator('.changelog-page')).toContainText('barra flutuante')
+    await expect(dialog.locator('.changelog-page')).toContainText(
+      'os blocos de código no modo Leitura agora quebram linhas longas como no modo Padrão',
+    )
+    await expect(dialog.locator('.changelog-page')).toContainText(
+      'o modo Leitura agora mostra a nota exatamente como o modo Padrão',
+    )
     await expect(dialog.locator('.changelog-page')).toContainText('Os botões de nova aba')
     await expect(dialog.locator('.changelog-page')).toContainText('Trocar de aba e voltar')
     await expect(dialog.locator('.changelog-page')).toContainText(

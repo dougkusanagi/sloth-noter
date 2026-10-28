@@ -137,50 +137,31 @@ test('Padrão shows the Markdown source of the clicked line, even below H5 and H
   await expect(page.locator('.cm-line', { hasText: 'aninhada' })).toContainText('> > aninhada')
 })
 
-test('Leitura renders every Markdown format', async ({ page }) => {
+test('Leitura renders every Markdown format and never reveals its source', async ({ page }) => {
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  const read = page.locator('.markdown')
+  const read = page.locator('.visual-editor.read-only .cm-content')
 
-  // remark-rehype adds a visually hidden "Footnotes" h2 when the note has footnotes.
   for (const level of [1, 2, 3, 4, 5, 6])
-    await expect(read.locator(`h${level}:not(.sr-only)`)).toHaveCount(1)
-  await expect(read.locator('h6')).toHaveText('Seção seis')
+    await expect(read.locator(`.cm-md-h${level}`)).toHaveCount(1)
+  await expect(read.locator('.cm-md-inline-strike')).toHaveText('riscado')
+  await expect(read.locator('[data-href="https://example.net"]')).toHaveText('texto')
+  await expect(read.locator('.cm-md-table-cell[data-align="right"]')).toHaveText(['C', '3'])
+  await expect(read.locator('.cm-md-rule')).toHaveCount(1)
+  await expect(read.locator('.cm-image-preview')).toHaveJSProperty('naturalWidth', 1)
+  await expect(read.locator('.cm-md-code .syntax-keyword')).toHaveText('const')
 
-  await expect(read.locator('strong').first()).toHaveText('forte')
-  await expect(read.locator('em').first()).toHaveText('ênfase')
-  await expect(read.locator('strong em, em strong')).toHaveText('ambos')
-  await expect(read.locator('del')).toHaveText('riscado')
-  await expect(read.locator('p code')).toHaveText('código')
-  await expect(read.locator('p', { hasText: 'literal' })).toContainText('*literal*')
-  await expect(read.locator('p', { hasText: 'literal' })).not.toContainText('\\')
-
-  await expect(read.locator('a[href="https://example.com"]')).toBeVisible()
-  await expect(read.locator('a[href="https://example.org"]')).toBeVisible()
-  await expect(read.locator('a[href="https://example.net"]')).toHaveText('texto')
-  await expect(read.locator('a[href="https://example.com/site"]')).toHaveText('ref')
-  await expect(read.locator('a[href="https://example.net"]')).toHaveAttribute('target', '_blank')
-  await expect(read.locator('a[href="https://example.net"]')).toHaveAttribute('rel', /noopener/)
-  await expect(read.locator('a.wiki-link')).toHaveText('Início')
-  await expect(read.locator('.markdown-tag')).toHaveText('#etiqueta')
-
-  await expect(read.locator('p br')).toHaveCount(1)
-  await expect(read.locator('blockquote blockquote')).toHaveText('aninhada')
-  await expect(read.locator('ul ul')).toContainText('filho')
-  await expect(read.locator('ol:not([data-footnotes] ol) > li')).toHaveText(['um', 'dois'])
-  await expect(read.locator('input[type=checkbox]:not(.section-checkbox)')).toHaveCount(2)
-  await expect(read.locator('input[type=checkbox]:not(.section-checkbox):checked')).toHaveCount(1)
-
-  await expect(read.locator('th').nth(0)).toHaveCSS('text-align', 'left')
-  await expect(read.locator('th').nth(1)).toHaveCSS('text-align', 'center')
-  await expect(read.locator('th').nth(2)).toHaveCSS('text-align', 'right')
-  await expect(read.locator('td').nth(2)).toHaveCSS('text-align', 'right')
-
-  await expect(read.locator('hr')).toHaveCount(1)
-  await expect(read.locator('sup a')).toHaveText('1')
-  await expect(read.locator('[data-footnotes]')).toContainText('Rodapé')
-  await expect(read.getByRole('img', { name: 'Foto' })).toHaveJSProperty('naturalWidth', 1)
-  await expect(read.locator('pre .token.keyword')).toHaveText('const')
-  await expect(read.locator('.copy-code')).toHaveText('javascript')
+  // Clicking a line in Padrão reveals its Markdown; in Leitura it stays rendered.
+  for (const [text, rendered, source] of [
+    ['Primeira linha', 'Primeira linha', 'linha\\'],
+    ['literal', '*literal*', '\\*literal\\*'],
+    ['aninhada', 'aninhada', '> > aninhada'],
+  ]) {
+    const line = read.locator('.cm-line', { hasText: text })
+    await line.click()
+    await expect(line).toContainText(rendered)
+    await expect(line).not.toContainText(source)
+  }
+  await expect(read.locator('.cm-md-editing')).toHaveCount(0)
 })
 
 test('Leitura keeps raw HTML inert and unsafe links unclickable', async ({ page }) => {
@@ -190,10 +171,16 @@ test('Leitura keeps raw HTML inert and unsafe links unclickable', async ({ page 
       '# Seguro\n\n<script>window.pwned = 1</script>\n\n<img src=x onerror="window.pwned = 1">\n\n[Perigo](javascript:alert%281%29) e [Dados](data:text/html;base64,AAAA)',
     )
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  await expect(page.locator('.markdown script, .markdown img[onerror]')).toHaveCount(0)
-  await expect(
-    page.locator('.markdown a[href^="javascript:"], .markdown a[href^="data:"]'),
-  ).toHaveCount(0)
+  const read = page.locator('.visual-editor.read-only .cm-content')
+  await expect(read).toContainText('Perigo')
+  await expect(read.locator('script, img[onerror]')).toHaveCount(0)
+  await expect(read.locator('[data-href^="javascript:"], [data-href^="data:"]')).toHaveCount(0)
+  await page.evaluate(() => {
+    window.openedLinks = []
+    window.open = (url) => window.openedLinks.push(url)
+  })
+  await read.getByText('Perigo').click()
+  expect(await page.evaluate(() => window.openedLinks)).toEqual([])
   expect(await page.evaluate(() => window.pwned)).toBeUndefined()
 })
 

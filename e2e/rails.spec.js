@@ -72,17 +72,14 @@ test('Padrão drops the rails of a section while it is collapsed', async ({ page
   await expect(rails).toHaveCount(2)
 })
 
-test('Leitura draws the same rails for nested lists and none for sections', async ({ page }) => {
+test('Leitura draws the same rails as Padrão, aligned with the nested items', async ({ page }) => {
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  const pseudo = (selector, property) =>
-    page
-      .locator(selector)
-      .first()
-      .evaluate(
-        (element, name) =>
-          getComputedStyle(element, element.matches('li') ? '::after' : '::before')[name],
-        property,
-      )
-  expect(await pseudo('.markdown li:has(> ul)', 'borderLeftStyle')).toBe('solid')
-  expect(await pseudo('.markdown .md-section', 'content')).toBe('none')
+  await expect(page.locator('.visual-editor.read-only')).toBeVisible()
+  const rails = page.locator('.cm-rail')
+  await expect(rails).toHaveCount(2)
+  const top = (locator) => locator.evaluate((element) => element.getBoundingClientRect().top)
+  const outer = () =>
+    rails.evaluateAll((elements) => Math.min(...elements.map((e) => e.getBoundingClientRect().top)))
+  const filho = page.locator('.cm-line', { hasText: 'filho' }).first()
+  await expect.poll(async () => Math.abs((await outer()) - (await top(filho)))).toBeLessThan(1)
 })

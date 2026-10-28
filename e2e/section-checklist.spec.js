@@ -45,9 +45,7 @@ for (const mode of ['Padrão', 'Leitura']) {
     await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
     await page.locator('textarea').fill(body)
     await page.getByRole('radio', { name: mode, exact: true }).check({ force: true })
-    const heading = page
-      .locator(mode === 'Padrão' ? '.cm-md-h2' : '.markdown h2')
-      .filter({ hasText: 'Projeto' })
+    const heading = page.locator('.cm-md-h2').filter({ hasText: 'Projeto' })
     await heading.hover()
     await heading.getByRole('button', { name: 'Recolher seção', exact: true }).click()
     await heading.getByRole('checkbox').check()

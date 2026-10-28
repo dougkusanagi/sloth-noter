@@ -33,7 +33,7 @@ test('the text column is 760px by default and the same in every mode', async ({ 
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   await expect.poll(() => width(page, '.cm-scroller')).toBe(760)
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  await expect.poll(() => width(page, '.reading')).toBe(760)
+  await expect.poll(() => width(page, '.visual-editor.read-only .cm-scroller')).toBe(760)
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect.poll(() => width(page, 'textarea')).toBe(760)
 })
@@ -45,21 +45,21 @@ test('Settings widens and narrows the column in all modes, remembers it, and can
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   await expect.poll(() => width(page, '.cm-scroller')).toBe(1100)
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  await expect.poll(() => width(page, '.reading')).toBe(1100)
+  await expect.poll(() => width(page, '.visual-editor.read-only .cm-scroller')).toBe(1100)
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect.poll(() => width(page, 'textarea')).toBe(1100)
   await page.reload()
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  await expect.poll(() => width(page, '.reading')).toBe(1100)
+  await expect.poll(() => width(page, '.visual-editor.read-only .cm-scroller')).toBe(1100)
   await setWidth(page, 600)
-  await expect.poll(() => width(page, '.reading')).toBe(600)
+  await expect.poll(() => width(page, '.visual-editor.read-only .cm-scroller')).toBe(600)
   await page.keyboard.press('Control+,')
   const settings = page.getByRole('dialog', { name: 'Configurações' })
   await settings.getByRole('button', { name: 'Editor' }).click()
   await settings.getByRole('button', { name: 'Restaurar' }).last().click()
   await expect(settings.getByLabel('Largura do texto')).toHaveValue('760')
   await page.keyboard.press('Escape')
-  await expect.poll(() => width(page, '.reading')).toBe(760)
+  await expect.poll(() => width(page, '.visual-editor.read-only .cm-scroller')).toBe(760)
 })
 
 test('the palette makes the column wider or narrower by one step', async ({ page }) => {
@@ -73,17 +73,17 @@ test('the palette makes the column wider or narrower by one step', async ({ page
     await expect(commands).toBeHidden()
   }
   await run('mais larga')
-  await expect.poll(() => width(page, '.reading')).toBe(800)
+  await expect.poll(() => width(page, '.visual-editor.read-only .cm-scroller')).toBe(800)
   await run('mais estreita')
   await run('mais estreita')
-  await expect.poll(() => width(page, '.reading')).toBe(720)
+  await expect.poll(() => width(page, '.visual-editor.read-only .cm-scroller')).toBe(720)
 })
 
 test('a narrow window still keeps its margins whatever the width setting', async ({ page }) => {
   await setWidth(page, 1400)
   await page.setViewportSize({ width: 700, height: 900 })
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  const box = await page.locator('.reading').evaluate((element) => {
+  const box = await page.locator('.visual-editor.read-only .cm-scroller').evaluate((element) => {
     const style = getComputedStyle(element)
     return { left: parseFloat(style.paddingLeft), right: parseFloat(style.paddingRight) }
   })

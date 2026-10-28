@@ -1,6 +1,65 @@
 import { test, expect } from '@playwright/test'
 import { newDocument, STORAGE_KEY } from '../src/storage.js'
 
+for (const width of [390, 1280]) {
+  test(`reading and visual preserve visible content at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 })
+    const doc = newDocument()
+    doc.notes[0].body =
+      '# Longa\n\n' +
+      Array.from(
+        { length: 300 },
+        (_, index) =>
+          `## Seção ${index}\n\nParágrafo ${index} para ler e editar.\n\n\`\`\`text\n${'Mensagem com palavras e espaços. '.repeat(5)}\n\`\`\`\n\n`,
+      ).join('')
+    await page.addInitScript(({ key, doc }) => localStorage.setItem(key, JSON.stringify(doc)), {
+      key: STORAGE_KEY,
+      doc,
+    })
+    await page.goto('/')
+    await expect(page.locator('.cm-content')).toBeVisible()
+    const scroll = () => page.evaluate(() => window.scrollY)
+    for (const [mode, offset] of [
+      ['Leitura', 1300],
+      ['Padrão', 2700],
+      ['Leitura', 1900],
+      ['Padrão', 800],
+      ['Leitura', 14000],
+      ['Padrão', 19000],
+      ['Leitura', 25000],
+      ['Padrão', 32000],
+    ]) {
+      await page.evaluate((offset) => window.scrollTo(0, offset), offset)
+      await expect.poll(scroll).toBe(offset)
+      const before = await page.locator('.cm-md-h2, .markdown h2').evaluateAll(
+        (elements) =>
+          elements
+            .map((element) => ({
+              text: element.textContent.replace(/^##\s*/, '').trim(),
+              top: element.getBoundingClientRect().top,
+            }))
+            .filter((item) => item.top > 60 && item.top < 750)
+            .sort((a, b) => a.top - b.top)[0],
+      )
+      expect(before).toBeTruthy()
+      await page.getByRole('radio', { name: mode, exact: true }).check({ force: true })
+      const contentTop = () =>
+        page
+          .locator('.cm-md-h2, .markdown h2')
+          .evaluateAll(
+            (elements, text) =>
+              elements
+                .find((element) => element.textContent.replace(/^##\s*/, '').trim() === text)
+                ?.getBoundingClientRect().top,
+            before.text,
+          )
+      await expect.poll(async () => Math.abs((await contentTop()) - before.top)).toBeLessThan(1.1)
+      await page.waitForTimeout(200)
+      expect(Math.abs((await contentTop()) - before.top)).toBeLessThan(1.1)
+    }
+  })
+}
+
 for (const runtime of ['web', 'desktop']) {
   for (const width of [390, 1280]) {
     for (const mode of ['Padrão', 'Código']) {
@@ -13,7 +72,7 @@ for (const runtime of ['web', 'desktop']) {
           notes: ['Longa', 'Curta'].map((id) => ({
             id,
             name: `${id}.md`,
-            body: `# ${id}\n\n${id === 'Longa' ? 'Parágrafo com acentuação e palavras para editar.\n\n'.repeat(180).trimEnd() : 'Nota curta.'}`,
+            body: `# ${id}\n\n${id === 'Longa' ? `${'Parágrafo com acentuação e palavras para editar.\n\n'.repeat(180)}Fim.` : 'Nota curta.'}`,
             revision: 1,
           })),
           openIds: ['Longa', 'Curta'],
@@ -45,6 +104,7 @@ for (const runtime of ['web', 'desktop']) {
         const editor = page.locator(mode === 'Padrão' ? '.cm-content' : 'textarea')
         await editor.focus()
         await page.keyboard.press('Control+End')
+        // The last line is short so Shift+Home selects all of it even where long lines wrap.
         await page.keyboard.press('Shift+Home')
         // Scroll away from the selected cursor: restoring just the cursor is insufficient.
         await page.evaluate(() => {

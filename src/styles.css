@@ -757,14 +757,10 @@ textarea:focus-visible {
   background: var(--paper);
   border: 0;
   /* As tall as the live editor's fence lines (they carry the copy badge there too). */
-  padding: 1.445em 0.85em;
-  overflow: auto;
+  padding: 1.445em var(--copy-reserve) 1.445em 0.85em;
   margin: 0;
   position: relative;
   border-radius: var(--radius);
-  /* Overflow clips at the padding box, so the border keeps scrolled text out of
-     the sticky copy badge's column. */
-  border-right: var(--copy-reserve) solid var(--paper);
 }
 .code-block {
   position: relative;
@@ -787,7 +783,9 @@ textarea:focus-visible {
 .markdown pre code {
   font: 0.85em/1.7 var(--mono);
   display: block;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 4;
   background: transparent;
   padding: 0;
 }
@@ -1372,4 +1370,9 @@ body.cm-section-dragging {
 }
 .task-checkbox:disabled {
   cursor: default;
+}
+
+/* Preview reuses the visual editor; only the caret hints at editing. */
+.visual-editor.read-only .cm-cursorLayer {
+  display: none;
 }

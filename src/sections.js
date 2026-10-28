@@ -105,6 +105,15 @@ export function remarkSourceLayout() {
   return (tree) => {
     fitSectionPositions(tree)
     const visit = (node) => {
+      if (
+        node.position &&
+        ['heading', 'paragraph', 'listItem', 'code', 'table', 'thematicBreak'].includes(node.type)
+      ) {
+        node.data = {
+          ...node.data,
+          hProperties: { ...node.data?.hProperties, 'data-source-line': node.position.start.line },
+        }
+      }
       if (!node.children) return
       node.children = node.children.flatMap((child) => {
         if (child.type !== 'text' || !child.value.includes('\n')) return [child]

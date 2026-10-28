@@ -28,9 +28,9 @@ async function runCommand(page, query) {
 
 test('the help page opens on a fresh install and explains what it is', async ({ page }) => {
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  const read = page.locator('.markdown')
-  await expect(read.locator('h1')).toHaveText('Welcome')
-  await expect(read.locator('blockquote').first()).toContainText('página de ajuda e exemplos')
+  const read = page.locator('.visual-editor.read-only .cm-content')
+  await expect(read.locator('.cm-md-h1')).toHaveText('Welcome')
+  await expect(read.locator('.cm-md-quote').first()).toContainText('página de ajuda e exemplos')
   await expect(read).toContainText('Pode excluir esta nota sem medo')
   await expect(read).toContainText('Recriar página de ajuda')
 })
@@ -39,30 +39,19 @@ test('the help page renders its sloth image and every example in reading mode', 
   page,
 }) => {
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
-  const read = page.locator('.markdown')
-  const image = read.getByRole('img', { name: 'Preguiça escrevendo em um caderno sobre um galho' })
+  const read = page.locator('.visual-editor.read-only .cm-content')
+  const image = read.locator('.cm-image-preview').first()
   await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true)
-  await expect(read.locator('.image-missing')).toHaveCount(0)
-  await expect(read.locator('h2:not(.sr-only)')).toHaveCount(14)
-  for (const level of [3, 4, 5, 6]) await expect(read.locator(`h${level}`)).toHaveCount(1)
-  await expect(read.locator('del')).toHaveText('riscado')
-  await expect(read.locator('table')).toBeVisible()
-  await expect(read.locator('input[type=checkbox]:not(.section-checkbox)')).toHaveCount(3)
-  await expect(read.locator('blockquote blockquote')).toContainText('aninhadas')
-  await expect(read.locator('hr')).toHaveCount(1)
-  await expect(read.locator('[data-footnotes]')).toContainText('fim do documento')
-  await expect(read.locator('.markdown-tag')).toHaveText(['#ideias', '#projeto/lista'])
-  await expect(read.locator('a.wiki-link:not(.missing)')).toHaveText(['Welcome', 'com outro texto'])
-  await expect(read.locator('.copy-code')).toHaveText([
-    'markdown',
-    'javascript',
-    'python',
-    'bash',
-    'json',
-    'html',
-    'css',
-    'sql',
-  ])
+  for (const level of [1, 2, 3, 4, 5, 6])
+    await expect(read.locator(`.cm-md-h${level}`).first()).toBeVisible()
+  await expect(read.locator('.cm-md-inline-strike')).toHaveText('riscado')
+  await expect(read.locator('.cm-md-inline-tag')).toHaveText(['#ideias', '#projeto/lista'])
+  await expect(read.locator('.cm-md-quote-nested')).toContainText('aninhadas')
+  await expect(read.locator('.cm-md-rule')).toHaveCount(1)
+  await expect(read.locator('.cm-task-checkbox')).toHaveCount(3)
+  await expect(read.locator('.cm-md-wiki')).toHaveText(['Welcome', 'com outro texto'])
+  // Leitura never reveals the Markdown of the line under the cursor.
+  await expect(read.locator('.cm-md-editing')).toHaveCount(0)
 })
 
 test('the help page renders in the live editor away from the cursor', async ({ page }) => {
