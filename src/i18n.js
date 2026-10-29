@@ -252,7 +252,8 @@ const messages = {
     'library.rename': 'Renomear',
     'library.trash': 'Mover para a lixeira',
     'library.menu': 'Menu da biblioteca',
-    'dialog.trashFolder': 'Mover a pasta {name} para a lixeira. Mover também as {count} nota(s) dela?',
+    'dialog.trashFolder':
+      'Mover a pasta {name} para a lixeira. Mover também as {count} nota(s) dela?',
     'dialog.trashFolderWithNotes': 'Mover pasta e notas',
     'dialog.trashFolderOnly': 'Só a pasta',
     'library.newMore': 'Mais opções de criação',

@@ -46,8 +46,15 @@ export function WindowControls({ mac = false }) {
   if (/Android/i.test(navigator.userAgent)) return null
   const run = async (action) => {
     try {
-      await getCurrentWindow()[action]()
-      if (action === 'toggleMaximize') setMaximized(await getCurrentWindow().isMaximized())
+      const appWindow = getCurrentWindow()
+      await appWindow[action]()
+      if (action === 'toggleMaximize') {
+        try {
+          setMaximized(await appWindow.isMaximized())
+        } catch {
+          // The action already succeeded; a state-query failure must not show a blocking toast.
+        }
+      }
     } catch (error) {
       toast.error(friendlyError(error))
     }
