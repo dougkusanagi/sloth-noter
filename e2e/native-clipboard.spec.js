@@ -81,7 +81,7 @@ test('desktop clicks invoke window actions only through their own controls', asy
   await page.keyboard.press('Escape')
   expect(await page.evaluate(() => window.nativeWindowActions)).toEqual([])
   await page.getByRole('button', { name: 'Minimizar', exact: true }).click()
-  await page.getByRole('button', { name: 'Maximizar ou restaurar', exact: true }).click()
+  await page.getByRole('button', { name: 'Maximizar janela', exact: true }).click()
   await page.getByRole('button', { name: 'Fechar janela', exact: true }).click()
   expect(await page.evaluate(() => window.nativeWindowActions)).toEqual([
     'plugin:window|minimize',
@@ -488,7 +488,7 @@ for (const platform of ['Linux x86_64', 'MacIntel']) {
       await page.setViewportSize({ width, height: 800 })
       await expect(page.getByRole('button', { name: 'Minimizar', exact: true })).toBeInViewport()
       await expect(
-        page.getByRole('button', { name: 'Maximizar ou restaurar', exact: true }),
+        page.getByRole('button', { name: 'Maximizar janela', exact: true }),
       ).toBeInViewport()
       await expect(
         page.getByRole('button', { name: 'Fechar janela', exact: true }),
@@ -504,7 +504,7 @@ for (const platform of ['Linux x86_64', 'MacIntel']) {
       ).toBe(true)
     }
     await page.getByRole('button', { name: 'Minimizar', exact: true }).click()
-    await page.getByRole('button', { name: 'Maximizar ou restaurar', exact: true }).click()
+    await page.getByRole('button', { name: 'Maximizar janela', exact: true }).click()
     await page.getByRole('button', { name: 'Fechar janela', exact: true }).click()
     expect(await page.evaluate(() => window.nativeWindowActions)).toEqual([
       'plugin:window|minimize',

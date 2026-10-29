@@ -79,7 +79,7 @@ export function useNoteActions({
     if (!current.current.openIds.includes(id)) openNote(id)
   }
 
-  function createNote(name = 'new note.md', body = '') {
+  function createNote(name = 'new note.md', body = '', group = undefined) {
     const blank = !body
     body = ensureTitle(body, name.replace(/\.md$/i, ''))
     const old = current.current
@@ -88,6 +88,8 @@ export function useNoteActions({
       name: uniqueName(old.notes, headingFileName(body) ?? name),
       body,
       revision: 0,
+      modifiedAt: Date.now(),
+      ...(group && old.groups?.includes(group) ? { group } : {}),
     }
     commit({
       ...old,

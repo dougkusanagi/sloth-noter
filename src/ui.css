@@ -752,8 +752,13 @@ html:has(
   align-self: stretch;
   min-width: 24px;
 }
+.window-drag-handle {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 10px;
+}
 .tabs + .window-drag-space {
-  flex: 0 0 16px;
+  flex: 0 0 48px;
 }
 .window-controls {
   display: flex;
@@ -1176,12 +1181,113 @@ html:has(
   padding: 0;
   border-radius: var(--radius);
 }
+.split-button {
+  position: relative;
+  display: flex;
+  flex: none;
+}
+.split-button .split-main {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.split-button .split-toggle {
+  width: 22px;
+  border-left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.library-menu {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  padding: 5px;
+  border-radius: 12px;
+  background: var(--popover);
+  box-shadow: var(--bevel), var(--shadow-pop);
+  font: 13px var(--ui);
+  transform-origin: top right;
+  animation: pop-in 0.18s var(--ease) both;
+}
+.library-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font: 13px var(--ui);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.library-menu button:hover,
+.library-menu button:focus-visible {
+  background: var(--hover);
+  outline: 0;
+}
+.library-menu button svg {
+  flex: none;
+  color: var(--muted);
+}
+.library-menu .menu-check {
+  margin-left: auto;
+  color: var(--ink);
+}
 .sidebar-items {
   flex: 1;
   min-height: 0;
   margin: 0 -6px;
   padding: 2px 6px 16px;
   overflow-y: auto;
+}
+.note-group > summary {
+  cursor: pointer;
+  padding: 8px 10px 4px;
+  color: var(--muted);
+  font: 600 12px var(--ui);
+}
+.note-list-row {
+  position: relative;
+}
+.note-list-row .note-item {
+  padding-right: 35px;
+}
+.note-list {
+  min-height: 100%;
+  border-radius: var(--radius);
+}
+.note-list[data-drop-over],
+.note-group[data-drop-over] {
+  background: var(--hover);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.note-list-row[data-dragging] {
+  opacity: 0.45;
+}
+.note-item {
+  touch-action: pan-y;
+  user-select: none;
+}
+.note-group > summary .folder-icon {
+  margin: -2px 6px 0 2px;
+  vertical-align: middle;
+}
+.folder-name-input {
+  width: calc(100% - 50px);
+  vertical-align: middle;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  color: var(--ink);
+  font: 600 12px var(--ui);
+  padding: 3px 6px;
+  outline: 0;
 }
 .sidebar-empty {
   margin: 0;

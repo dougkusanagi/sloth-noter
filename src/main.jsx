@@ -28,6 +28,7 @@ import { CONTENT_WIDTH, FONT_SIZE, contentWidth } from './storage.js'
 import { WidthFeedback } from './components/width-feedback.jsx'
 import { TrashLibrary } from './components/trash-library.jsx'
 import { NoteList } from './components/note-list.jsx'
+import { NewMenu, SortMenu } from './components/library-menus.jsx'
 import { friendlyError } from './errors.js'
 import { ToastButtons } from './components/toast-buttons.jsx'
 import { CommandPalette } from './components/command-palette.jsx'
@@ -54,7 +55,7 @@ import { blockShortcut, formatShortcut, shortcutEdit } from './editor-shortcuts.
 import { blockEdit } from './insert-block.js'
 import { searchNote, replacementText } from './find.js'
 import { setSearchHighlights, revealSearchMatch } from './editor/search.js'
-import { headingFileName, nameFromHeading, uniqueName } from './notes.js'
+import { headingFileName, moveToTrash, nameFromHeading, uniqueName } from './notes.js'
 import { openWorkspace } from './boot.js'
 import { createAppPersistence } from './persistence-runtime.js'
 import { VAULT_DISCONNECT, connectVault } from './persistence-vault.js'
@@ -182,6 +183,7 @@ function Workspace({ persistence, loaded }) {
     setBlocked,
   } = useNotesStore({ persistence, loaded, mode, onHistoryWarning: setImportError })
   const [sidebarQuery, setSidebarQuery] = useState('')
+  const [renamingGroup, setRenamingGroup] = useState(null)
   const sidebarSearchRef = useRef(null)
   const [sidebarSection, setSidebarSection] = useState('notes')
   const [showDoneTasks, setShowDoneTasks] = useState(false)
@@ -317,7 +319,7 @@ function Workspace({ persistence, loaded }) {
     visualRef,
     setSidebarSection,
   })
-  const { tabStrip, tabContextMenu, openTabMenu } = useTabs({
+  const { tabStrip, tabContextMenu } = useTabs({
     data,
     current,
     commit,
@@ -421,6 +423,89 @@ function Workspace({ persistence, loaded }) {
     asking.resolve(value)
     setAsking(null)
   }
+  // New folders go to the top of the library and open straight into rename mode.
+  function createGroup() {
+    const doc = current.current
+    const groups = doc.groups ?? []
+    const base = t('library.newFolderName')
+    let name = base
+    for (let n = 2; groups.some((g) => g.toLocaleLowerCase() === name.toLocaleLowerCase()); n++)
+      name = `${base} ${n}`
+    commit({ ...doc, groups: [name, ...groups] })
+    setRenamingGroup(name)
+  }
+  function renameGroup(from, to) {
+    setRenamingGroup(null)
+    const name = to.trim()
+    const doc = current.current
+    const groups = doc.groups ?? []
+    if (!name || name === from || !groups.includes(from)) return
+    if (groups.some((g) => g !== from && g.toLocaleLowerCase() === name.toLocaleLowerCase()))
+      return toast.error(t('error.nameExists'))
+    commit({
+      ...doc,
+      groups: groups.map((g) => (g === from ? name : g)),
+      notes: doc.notes.map((note) => (note.group === from ? { ...note, group: name } : note)),
+    })
+  }
+  // Dragging notes between folders is undoable from the library (Ctrl+Z / Ctrl+Shift+Z).
+  const moveHistory = useRef({ undo: [], redo: [] })
+  function setNoteGroup(id, group) {
+    const doc = current.current
+    const valid = group && (doc.groups ?? []).includes(group) ? group : undefined
+    commit({
+      ...doc,
+      notes: doc.notes.map((note) => (note.id === id ? { ...note, group: valid } : note)),
+    })
+  }
+  function moveNoteGroup(id, group) {
+    const note = current.current.notes.find((item) => item.id === id)
+    if (!note) return
+    const move = { id, from: note.group, to: group || undefined }
+    moveHistory.current = { undo: [...moveHistory.current.undo.slice(-49), move], redo: [] }
+    setNoteGroup(id, move.to)
+  }
+  function stepMoveHistory(redo) {
+    const history = moveHistory.current
+    const from = redo ? history.redo : history.undo
+    const exists = (move) => current.current.notes.some((note) => note.id === move.id)
+    const move = from.findLast(exists)
+    if (!move) return false
+    const rest = from.slice(0, from.lastIndexOf(move))
+    moveHistory.current = redo
+      ? { undo: [...history.undo, move], redo: rest }
+      : { undo: rest, redo: [...history.redo, move] }
+    setNoteGroup(move.id, redo ? move.to : move.from)
+    return true
+  }
+  async function trashGroup(name) {
+    const doc = current.current
+    const members = doc.notes.filter((note) => note.group === name)
+    let withNotes = false
+    if (members.length) {
+      const answer = await ask({
+        kind: 'confirm',
+        message: t('dialog.trashFolder', { name, count: members.length }),
+        confirmLabel: t('dialog.trashFolderWithNotes'),
+        cancelLabel: t('dialog.trashFolderOnly'),
+        dismissLabel: t('dialog.cancel'),
+      })
+      if (answer === null || answer === undefined) return
+      withNotes = answer === true
+    }
+    const latest = current.current
+    const ids = new Set(withNotes ? members.map((note) => note.id) : [])
+    let next = {
+      ...latest,
+      groups: (latest.groups ?? []).filter((group) => group !== name),
+      notes: latest.notes.map((note) =>
+        note.group === name ? { ...note, group: undefined } : note,
+      ),
+    }
+    const deletedAt = Date.now()
+    for (const id of ids) next = moveToTrash(next, id, deletedAt)
+    commit(next)
+  }
   async function openWiki(target) {
     const parts = wikiParts(target)
     const note = parts.name ? findNote(current.current.notes, target) : active
@@ -493,6 +578,7 @@ function Workspace({ persistence, loaded }) {
             name: active ? (name ?? note.name) : note.name,
             body: nextBody,
             revision: note.revision + 1,
+            modifiedAt: active ? Date.now() : note.modifiedAt,
           }
         : note
     }
@@ -1742,6 +1828,18 @@ function Workspace({ persistence, loaded }) {
       if (asking || folderOpen || shortcutsOpen || settingsOpen || commandsOpen || switching) return
       const modifier = event.ctrlKey || event.metaKey
       const key = event.key.toLowerCase()
+      // Outside text fields, undo/redo applies to library changes such as moving notes to folders.
+      if (
+        modifier &&
+        !event.altKey &&
+        !event.isComposing &&
+        key === 'z' &&
+        !event.target.closest?.('input, textarea, select, [contenteditable], .cm-editor') &&
+        stepMoveHistory(event.shiftKey)
+      ) {
+        event.preventDefault()
+        return
+      }
       const action = appShortcut(event)
       if (action && menuActions[action]) {
         event.preventDefault()
@@ -1975,6 +2073,7 @@ function Workspace({ persistence, loaded }) {
         </div>
       )}
       <header className="app-header" data-tauri-drag-region inert={switching ? true : undefined}>
+        {persistence.invoke && <div className="window-drag-handle" data-tauri-drag-region />}
         {persistence.invoke && mac && <WindowControls mac />}
         <div className="main-menu-wrap" ref={menuWrap}>
           <ShortcutButton
@@ -2128,14 +2227,13 @@ function Workspace({ persistence, loaded }) {
                 />
               </div>
               {sidebarSection === 'notes' && (
-                <ShortcutButton
-                  className="button sidebar-add"
-                  label={t('menu.newNote')}
-                  keys="T"
-                  onClick={() => createNote()}
-                >
-                  <Plus size={15} aria-hidden="true" />
-                </ShortcutButton>
+                <>
+                  <SortMenu
+                    value={prefs.noteSort ?? 'recent'}
+                    onChange={(noteSort) => updatePrefs({ noteSort })}
+                  />
+                  <NewMenu onNote={() => createNote()} onFolder={createGroup} />
+                </>
               )}
               {sidebarSection === 'images' && (
                 <ShortcutButton
@@ -2150,16 +2248,28 @@ function Workspace({ persistence, loaded }) {
             </div>
             <div className="sidebar-items">
               {sidebarSection === 'notes' ? (
-                <NoteList
-                  notes={data.notes}
-                  query={sidebarQuery}
-                  activeId={active?.id}
-                  openIds={data.openIds}
-                  onOpen={previewNote}
-                  onKeep={keepNote}
-                  onSearchOpen={openNoteSearch}
-                  onMenu={openTabMenu}
-                />
+                <>
+                  <NoteList
+                    notes={data.notes}
+                    groups={data.groups ?? []}
+                    sort={prefs.noteSort ?? 'recent'}
+                    query={sidebarQuery}
+                    activeId={active?.id}
+                    openIds={data.openIds}
+                    onOpen={previewNote}
+                    onKeep={keepNote}
+                    onSearchOpen={openNoteSearch}
+                    renamingGroup={renamingGroup}
+                    onStartRenameGroup={setRenamingGroup}
+                    onRenameGroup={renameGroup}
+                    onTrashGroup={trashGroup}
+                    onCreateNote={(group) => createNote(undefined, undefined, group)}
+                    onCreateGroup={createGroup}
+                    onRenameNote={renameNote}
+                    onTrashNote={deleteNote}
+                    onMoveGroup={moveNoteGroup}
+                  />
+                </>
               ) : sidebarSection === 'tasks' ? (
                 <TasksLibrary
                   notes={data.notes}

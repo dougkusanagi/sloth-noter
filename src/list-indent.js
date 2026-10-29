@@ -32,10 +32,16 @@ export function listIndentChanges(text, from, to, outdent = false) {
   let last = lineAt(to)
   if (last > first && to === starts[last]) last--
   const code = []
+  const items = new Map()
   walk(markdownTree(text), (node) => {
     if (node.type === 'code') code.push([node.position.start.line - 1, node.position.end.line - 1])
+    if (node.type === 'listItem') items.set(node.position.start.line - 1, node)
   })
   const lines = text.split('\n')
+  const continuationLines = new Set()
+  for (const item of items.values())
+    for (let line = item.position.start.line; line < item.position.end.line; line++)
+      continuationLines.add(line)
   const isList = (index) =>
     LIST_LINE.test(lines[index]) && !code.some(([start, end]) => index >= start && index <= end)
   const touched = []
@@ -64,8 +70,26 @@ export function listIndentChanges(text, from, to, outdent = false) {
     return false
   }
   const changes = []
+  const moved = new Set()
   for (const index of touched) {
+    if (moved.has(index)) continue
     const space = lines[index].match(/^[ \t]*/)[0]
+    const moveChildren = () => {
+      const item = items.get(index)
+      if (!item) return
+      for (let child = index + 1; child < item.position.end.line; child++) {
+        moved.add(child)
+        if (!lines[child].trim()) continue
+        const prefix = lines[child].match(/^[ \t]*/)[0]
+        const remove = prefix.startsWith('\t') ? 1 : Math.min(INDENT.length, prefix.length)
+        changes.push({
+          from: starts[child],
+          to: starts[child] + (outdent ? remove : 0),
+          insert: outdent ? '' : INDENT,
+        })
+        indents[child] += outdent ? -width(prefix.slice(0, remove)) : INDENT.length
+      }
+    }
     if (outdent) {
       // Quotes carry their own indentation marker, hidden in the visual editor.
       // Remove one quote level while retaining the list marker and its text.
@@ -81,6 +105,7 @@ export function listIndentChanges(text, from, to, outdent = false) {
         0,
         indents[index] - (space.startsWith('\t') ? INDENT.length : remove),
       )
+      moveChildren()
       continue
     }
     // Only nest under a previous item, and at most one level below it.
@@ -88,12 +113,14 @@ export function listIndentChanges(text, from, to, outdent = false) {
     for (let above = index - 1; above >= 0; above--) {
       if (!lines[above].trim()) continue
       if (isList(above)) parent = indents[above]
-      else if (!/^[ \t]/.test(lines[above])) break
+      else if (!/^[ \t]/.test(lines[above]) && !(first === last && continuationLines.has(above)))
+        break
       if (parent !== null) break
     }
     if (parent === null || indents[index] + INDENT.length > parent + INDENT.length) continue
     changes.push({ from: starts[index], to: starts[index], insert: INDENT })
     indents[index] += INDENT.length
+    moveChildren()
     // Only "1." can start a list inside a paragraph, so the first item of a new sublist restarts.
     const number = lines[index].match(/^([ \t]*)(\d+)(?=[.)])/)
     if (number && number[2] !== '1' && !hasSibling(index, indents[index])) {
@@ -101,7 +128,7 @@ export function listIndentChanges(text, from, to, outdent = false) {
       changes.push({ from: at, to: at + number[2].length, insert: '1' })
     }
   }
-  return changes
+  return changes.sort((a, b) => a.from - b.from || a.to - b.to)
 }
 
 export function applyChanges(text, changes) {

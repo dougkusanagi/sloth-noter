@@ -41,6 +41,16 @@ export function useNotesStore({ persistence, loaded, mode, onHistoryWarning }) {
     if (next.notes !== current.current.notes) {
       next = ensureDocumentTitles(next)
       next = { ...next, notes: syncLinkedTasks(next.notes) }
+      const previous = new Map(current.current.notes.map((note) => [note.id, note]))
+      next = {
+        ...next,
+        notes: next.notes.map((note) => {
+          const before = previous.get(note.id)
+          return before && (before.body !== note.body || before.name !== note.name)
+            ? { ...note, modifiedAt: Date.now() }
+            : note
+        }),
+      }
     }
     noteHistory.observe(current.current, next, historyOrigin)
     current.current = next
