@@ -79,6 +79,26 @@ function fakeHost({ files = {}, aux = null, chosen = '/notes', state = null } = 
 
 const start = (host) => createPersistence(createVaultAdapter(host.invoke, '/notes'))
 
+test('vault keeps note groups and edit dates in auxiliary state', async () => {
+  const host = fakeHost({ files: { 'a.md': '# A' } })
+  const persistence = start(host)
+  const { document } = await persistence.load()
+  const next = {
+    ...document,
+    groups: ['Projetos'],
+    notes: document.notes.map((note) => ({
+      ...note,
+      group: 'Projetos',
+      modifiedAt: 123456,
+    })),
+  }
+  assert.equal(await persistence.save(next), null)
+  const loaded = await start(host).load()
+  assert.deepEqual(loaded.document.groups, ['Projetos'])
+  assert.equal(loaded.document.notes[0].group, 'Projetos')
+  assert.equal(loaded.document.notes[0].modifiedAt, 123456)
+})
+
 test('a missing external file preserves pending text and does not block vault notes', async () => {
   const host = fakeHost({ files: { 'a.md': 'A' } })
   const native = host.invoke

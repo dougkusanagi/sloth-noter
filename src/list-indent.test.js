@@ -36,8 +36,8 @@ test('a selection moves every list item it touches, keeping their shape', () => 
   assert.equal(run('- a\n    - b\n        - c', 0, 21, true), '- a\n- b\n    - c')
   // A selection that ends at the start of a line does not touch that line.
   assert.equal(run('- a\n- b\n- c', 4, 8), '- a\n    - b\n- c')
-  // Lines that are not list items are left alone.
-  assert.equal(run('- a\n- b\ntexto\n- c', 4, 17), '- a\n    - b\ntexto\n- c')
+  // Markdown lazy continuations belong to the item and follow its indentation.
+  assert.equal(run('- a\n- b\ntexto\n- c', 4, 17), '- a\n    - b\n    texto\n- c')
 })
 
 test('Tab does nothing outside lists and inside code', () => {
@@ -50,6 +50,8 @@ test('Tab does nothing outside lists and inside code', () => {
 
 test('a continuation paragraph does not hide the parent item', () => {
   assert.equal(run('- a\n    texto\n- b', 17), '- a\n    texto\n    - b')
+  const lazy = '- a\ntexto\n- b'
+  assert.equal(run(lazy, lazy.indexOf('- b')), '- a\ntexto\n    - b')
 })
 
 test('positions follow the edits', () => {
@@ -61,6 +63,24 @@ test('positions follow the edits', () => {
   const back = listIndentChanges('- a\n    - b', 10, 10, true)
   assert.equal(mapPosition(10, back), 6)
   assert.equal(mapPosition(5, back), 4)
+})
+
+test('moving a parent carries its descendants and continuation paragraphs exactly once', () => {
+  const text = '- anterior\n- pai\n    continuação\n    - filho\n        - neto\n- próximo'
+  const nested =
+    '- anterior\n    - pai\n        continuação\n        - filho\n            - neto\n- próximo'
+  const at = text.indexOf('pai')
+  assert.equal(run(text, at), nested)
+  assert.equal(run(text, at, text.indexOf('- próximo')), nested)
+  assert.equal(run(nested, nested.indexOf('pai'), undefined, true), text)
+})
+
+test('moving a numbered parent keeps child numbering and fenced code intact', () => {
+  const text = '1. anterior\n2. pai\n    1. filho\n\n    ```\n    literal\n    ```\n3. próximo'
+  const nested =
+    '1. anterior\n    1. pai\n        1. filho\n\n        ```\n        literal\n        ```\n3. próximo'
+  assert.equal(run(text, text.indexOf('pai')), nested)
+  assert.equal(run('- pai\n    - filho', 2), '- pai\n    - filho')
 })
 
 test('the first item of a new numbered sublist restarts at 1', () => {

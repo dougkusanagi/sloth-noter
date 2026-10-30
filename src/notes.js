@@ -114,8 +114,11 @@ export function restoreFromTrash(document, id) {
   if (!entry) return document
   const notes = [...document.notes]
   const name = uniqueName(notes, entry.note.name)
+  // The folder may have been renamed or removed while the note was in the trash.
+  const { group, ...restored } = entry.note
   notes.splice(Math.min(entry.index, notes.length), 0, {
-    ...entry.note,
+    ...restored,
+    ...(group && document.groups?.includes(group) ? { group } : {}),
     name,
     revision: entry.note.revision + (name === entry.note.name ? 0 : 1),
   })

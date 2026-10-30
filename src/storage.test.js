@@ -37,6 +37,16 @@ test('creates and restores an empty note and preferences', () => {
   assert.deepEqual(loadDocument(storage).document, document)
 })
 
+test('groups, note dates and sort choice survive a save', () => {
+  const storage = memoryStorage()
+  const document = newDocument()
+  document.groups = ['Projetos']
+  document.notes[0].group = 'Projetos'
+  document.preferences.noteSort = 'alphabetical'
+  assert.equal(saveDocument(storage, document), null)
+  assert.deepEqual(loadDocument(storage).document, document)
+})
+
 test('migrates v1 notes without changing their text', () => {
   const storage = memoryStorage()
   const body = '# olá\n\nlast line\n'

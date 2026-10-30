@@ -38,7 +38,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { t } from './i18n.js'
 import { flushSync } from 'react-dom'
 import { Compartment, EditorSelection, EditorState } from '@codemirror/state'
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
+import { defaultKeymap, history, historyKeymap, redo } from '@codemirror/commands'
 import { EditorView, keymap } from '@codemirror/view'
 import { activeFormats, formatSelection } from './format-selection.js'
 import { blockEdit } from './insert-block.js'
@@ -377,6 +377,8 @@ export function VisualEditor({
             // Ctrl+I is italic here, not "select parent syntax".
             ...defaultKeymap.filter((binding) => binding.key !== 'Mod-i'),
             ...historyKeymap,
+            // CodeMirror binds Ctrl+Shift+Z only on Linux.
+            { key: 'Mod-Shift-z', run: redo, preventDefault: true },
           ]),
           EditorView.lineWrapping,
           EditorView.contentAttributes.of({

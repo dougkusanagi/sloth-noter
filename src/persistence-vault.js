@@ -87,7 +87,15 @@ export function createVaultAdapter(invoke, path, history = null) {
         if (typeof id !== 'string' || taken.has(id)) id = newId()
         taken.add(id)
         known.set(name, { id, body: contents })
-        return { id, name, body: contents, revision: 0 }
+        const meta = aux.noteMeta?.[id]
+        return {
+          id,
+          name,
+          body: contents,
+          revision: 0,
+          ...(meta?.group ? { group: meta.group } : {}),
+          ...(meta?.modifiedAt ? { modifiedAt: meta.modifiedAt } : {}),
+        }
       })
       history?.setEnabled(aux.preferences?.historyEnabled === true)
       const externals = Array.isArray(aux.externals) ? aux.externals.filter(isExternalNote) : []
@@ -105,6 +113,7 @@ export function createVaultAdapter(invoke, path, history = null) {
         version: 3,
         ...(aux.assets ? { assets: aux.assets } : {}),
         notes,
+        groups: Array.isArray(aux.groups) ? aux.groups : [],
         trash,
         openIds,
         pinnedIds: Array.isArray(aux.pinnedIds)
@@ -153,6 +162,16 @@ export function createVaultAdapter(invoke, path, history = null) {
         version: AUX_VERSION,
         assets: document.assets ?? [],
         ids: Object.fromEntries(document.notes.map((note) => [note.name, note.id])),
+        groups: document.groups ?? [],
+        noteMeta: Object.fromEntries(
+          document.notes.map((note) => [
+            note.id,
+            {
+              ...(note.group ? { group: note.group } : {}),
+              ...(note.modifiedAt ? { modifiedAt: note.modifiedAt } : {}),
+            },
+          ]),
+        ),
         openIds: document.openIds,
         pinnedIds: document.pinnedIds ?? [],
         activeId: document.activeId,

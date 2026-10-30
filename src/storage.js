@@ -25,6 +25,7 @@ export function newDocument() {
         name: WELCOME_NAME,
         body: welcomeBody(DEFAULT_LANGUAGE),
         revision: 0,
+        modifiedAt: Date.now(),
       },
     ],
     trash: [],
@@ -53,6 +54,13 @@ function validateNote(note, ids) {
     note.revision < 0
   )
     throw new Error('Invalid saved note')
+  if (note.group !== undefined && (typeof note.group !== 'string' || !note.group.trim()))
+    throw new Error('Invalid note group')
+  if (
+    note.modifiedAt !== undefined &&
+    (!Number.isSafeInteger(note.modifiedAt) || note.modifiedAt < 0)
+  )
+    throw new Error('Invalid note date')
   ids.add(note.id)
 }
 
@@ -67,6 +75,14 @@ export function validateDocument(value) {
     throw new Error('Invalid saved notes')
   const ids = new Set()
   for (const note of value.notes) validateNote(note, ids)
+  if (
+    value.groups !== undefined &&
+    (!Array.isArray(value.groups) ||
+      value.groups.some((group) => typeof group !== 'string' || !group.trim()) ||
+      new Set(value.groups).size !== value.groups.length ||
+      value.notes.some((note) => note.group && !value.groups.includes(note.group)))
+  )
+    throw new Error('Invalid note groups')
   for (const entry of value.trash) {
     if (
       !entry ||
@@ -110,6 +126,8 @@ export function validateDocument(value) {
       throw new Error('Invalid image library')
   }
   const prefs = value.preferences
+  if (prefs?.noteSort !== undefined && !['recent', 'alphabetical'].includes(prefs.noteSort))
+    throw new Error('Invalid note order')
   if (
     !prefs ||
     typeof prefs.tabsVisible !== 'boolean' ||

@@ -1,0 +1,1 @@
+Corrigido: a barra superior do aplicativo no Windows agora oferece uma área maior para arrastar a janela, inclusive quando há abas abertas. O botão de maximizar mostra quando a janela pode ser restaurada ao tamanho anterior, sem exibir um erro quando a consulta desse estado não está disponível no ambiente.
