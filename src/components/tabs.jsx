@@ -6,6 +6,7 @@ import { t } from '../i18n.js'
 import { displayName } from '../note-title.js'
 import { Shortcut } from './main-menu.jsx'
 import { ShortcutButton } from './shortcut-button.jsx'
+import { noteTasks } from '../tasks.js'
 
 /**
  * Tab strip behaviour: drag to reorder, context menu, keeping the active tab in view.
@@ -23,6 +24,8 @@ export function useTabs({
   rename,
   close,
   trash,
+  complete,
+  reopen,
   create,
 }) {
   const [tabMenu, setTabMenu] = useState(null)
@@ -111,6 +114,8 @@ export function useTabs({
       })
     }
     if (action === 'trash') trash(menu.id)
+    if (action === 'complete') complete(menu.id)
+    if (action === 'reopen') reopen(menu.id)
   }
   useEffect(() => {
     const list = tabListRef.current,
@@ -322,6 +327,19 @@ export function useTabs({
           <Shortcut keys="W" />
         </button>
         <div className="table-context-menu-separator" />
+        {(() => {
+          const note = data.notes.find((item) => item.id === tabMenu.id)
+          if (!note || (!note.completedAt && !noteTasks(note.body).length)) return null
+          return (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => runTabMenu(note.completedAt ? 'reopen' : 'complete')}
+            >
+              <span>{t(note.completedAt ? 'completed.reopen' : 'completed.complete')}</span>
+            </button>
+          )
+        })()}
         <button type="button" role="menuitem" onClick={() => runTabMenu('trash')}>
           <span>{t('tabs.trash')}</span>
         </button>

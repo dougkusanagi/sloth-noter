@@ -94,6 +94,7 @@ export function createVaultAdapter(invoke, path, history = null) {
           body: contents,
           revision: 0,
           ...(meta?.group ? { group: meta.group } : {}),
+          ...(meta?.completedAt ? { completedAt: meta.completedAt } : {}),
           ...(meta?.modifiedAt ? { modifiedAt: meta.modifiedAt } : {}),
         }
       })
@@ -168,6 +169,7 @@ export function createVaultAdapter(invoke, path, history = null) {
             note.id,
             {
               ...(note.group ? { group: note.group } : {}),
+              ...(note.completedAt ? { completedAt: note.completedAt } : {}),
               ...(note.modifiedAt ? { modifiedAt: note.modifiedAt } : {}),
             },
           ]),

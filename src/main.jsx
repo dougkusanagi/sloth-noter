@@ -27,6 +27,7 @@ import {
 import { CONTENT_WIDTH, FONT_SIZE, contentWidth } from './storage.js'
 import { WidthFeedback } from './components/width-feedback.jsx'
 import { TrashLibrary } from './components/trash-library.jsx'
+import { CompletedLibrary } from './components/completed-library.jsx'
 import { NoteList } from './components/note-list.jsx'
 import { NewMenu, SortMenu } from './components/library-menus.jsx'
 import { friendlyError } from './errors.js'
@@ -103,6 +104,7 @@ import {
   ListChecks,
   NotebookText,
   Trash2,
+  CheckCircle2,
   Minimize2,
 } from 'lucide-react'
 import { platform } from './platform.js'
@@ -299,6 +301,8 @@ function Workspace({ persistence, loaded }) {
     selectAdjacentTab,
     renameNote,
     deleteNote,
+    completeNote,
+    reopenNote,
     restoreNote,
     purgeNote,
     emptyTrash,
@@ -330,6 +334,8 @@ function Workspace({ persistence, loaded }) {
     rename: renameNote,
     close: closeTab,
     trash: deleteNote,
+    complete: completeNote,
+    reopen: reopenNote,
     create: () => createNote(),
   })
   const sidebarVisible =
@@ -2169,7 +2175,7 @@ function Workspace({ persistence, loaded }) {
             aria-label={t('sidebar.title')}
             data-section={sidebarSection}
           >
-            {sidebarSection === 'trash' ? (
+            {sidebarSection === 'trash' || sidebarSection === 'completed' ? (
               <div className="sidebar-heading">
                 <ShortcutButton
                   className="icon-button"
@@ -2178,14 +2184,16 @@ function Workspace({ persistence, loaded }) {
                 >
                   <ArrowLeft size={16} aria-hidden="true" />
                 </ShortcutButton>
-                <span>{t('trash.title')}</span>
-                <button
-                  className="button quiet danger small"
-                  disabled={!data.trash.length}
-                  onClick={emptyTrash}
-                >
-                  {t('trash.emptyAll')}
-                </button>
+                <span>{t(sidebarSection === 'trash' ? 'trash.title' : 'completed.title')}</span>
+                {sidebarSection === 'trash' && (
+                  <button
+                    className="button quiet danger small"
+                    disabled={!data.trash.length}
+                    onClick={emptyTrash}
+                  >
+                    {t('trash.emptyAll')}
+                  </button>
+                )}
               </div>
             ) : (
               <div
@@ -2202,7 +2210,11 @@ function Workspace({ persistence, loaded }) {
                     >
                       <Icon size={14} aria-hidden="true" />
                       {t(label)}
-                      {section === 'notes' && <span className="count">{data.notes.length}</span>}
+                      {section === 'notes' && (
+                        <span className="count">
+                          {data.notes.filter((note) => !note.completedAt).length}
+                        </span>
+                      )}
                       {section === 'tasks' && openTasks > 0 && (
                         <span className="count">{openTasks}</span>
                       )}
@@ -2250,7 +2262,7 @@ function Workspace({ persistence, loaded }) {
               {sidebarSection === 'notes' ? (
                 <>
                   <NoteList
-                    notes={data.notes}
+                    notes={data.notes.filter((note) => !note.completedAt)}
                     groups={data.groups ?? []}
                     sort={prefs.noteSort ?? 'recent'}
                     query={sidebarQuery}
@@ -2267,6 +2279,7 @@ function Workspace({ persistence, loaded }) {
                     onCreateGroup={createGroup}
                     onRenameNote={renameNote}
                     onTrashNote={deleteNote}
+                    onCompleteNote={completeNote}
                     onMoveGroup={moveNoteGroup}
                   />
                 </>
@@ -2285,6 +2298,14 @@ function Workspace({ persistence, loaded }) {
                   query={sidebarQuery}
                   onRestore={restoreNote}
                   onPurge={purgeNote}
+                />
+              ) : sidebarSection === 'completed' ? (
+                <CompletedLibrary
+                  notes={data.notes.filter((note) => note.completedAt)}
+                  query={sidebarQuery}
+                  onOpen={openNote}
+                  onReopen={reopenNote}
+                  onTrash={deleteNote}
                 />
               ) : (
                 <ImageLibrary
@@ -2319,8 +2340,17 @@ function Workspace({ persistence, loaded }) {
                 />
               )}
             </div>
-            {sidebarSection !== 'trash' && (
+            {sidebarSection !== 'trash' && sidebarSection !== 'completed' && (
               <div className="sidebar-footer">
+                <button className="sidebar-trash" onClick={() => showSection('completed')}>
+                  <CheckCircle2 size={14} aria-hidden="true" />
+                  {t('completed.title')}
+                  {data.notes.some((note) => note.completedAt) && (
+                    <span className="count">
+                      {data.notes.filter((note) => note.completedAt).length}
+                    </span>
+                  )}
+                </button>
                 <button className="sidebar-trash" onClick={() => showSection('trash')}>
                   <Trash2 size={14} aria-hidden="true" />
                   {t('trash.title')}

@@ -110,7 +110,11 @@ export function SortMenu({ value, onChange }) {
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        <ArrowUpDown size={15} aria-hidden="true" />
+        {value === 'alphabetical' ? (
+          <ArrowDownAZ size={15} aria-hidden="true" />
+        ) : (
+          <ArrowUpDown size={15} aria-hidden="true" />
+        )}
       </ShortcutButton>
       {open && (
         <div className="library-menu" role="menu" aria-label={t('library.sort')}>

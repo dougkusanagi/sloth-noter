@@ -1,0 +1,1 @@
+Alterado: As pastas da lista de notas agora aparecem como um bloco destacado, com seta para abrir e fechar, contador e uma linha guia ligando as notas de dentro. Ao arrastar uma nota, uma etiqueta com o nome dela acompanha o cursor e a pasta de destino fica realçada. O botão de ordenar mostra o ícone da ordem atual.

@@ -1,0 +1,1 @@
+Adicionado: Notas com checklist podem ser marcadas como concluídas pelo menu da nota na lista. Elas saem da lista principal e ficam em **Concluídas**, ao lado da Lixeira, onde podem ser abertas, reabertas ou movidas para a Lixeira. Se houver tarefas pendentes, o aplicativo pede confirmação. Essa opção está disponível na interface desktop.

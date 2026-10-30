@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { FilePlus, Folder, FolderPlus, Pencil, Trash2 } from 'lucide-react'
+import { ChevronRight, FilePlus, FileText, Folder, FolderPlus, Pencil, Trash2, CheckCircle2 } from 'lucide-react'
+import { noteTasks } from '../tasks.js'
 import { notePreview, displayName } from '../note-title.js'
 import { t } from '../i18n.js'
 
@@ -54,6 +55,7 @@ export function NoteList({
   onCreateGroup,
   onRenameNote,
   onTrashNote,
+  onCompleteNote,
 }) {
   const searching = Boolean(query.trim())
   const [menu, setMenu] = useState(null)
@@ -111,7 +113,7 @@ export function NoteList({
       )
     })
     state.over = hits.length ? hits.at(-1).dataset.dropGroup : null
-    setDrag({ id: state.id, over: state.over })
+    setDrag({ id: state.id, over: state.over, x: event.clientX, y: event.clientY })
   }
   function endDrag(event, cancelled = false) {
     const state = dragRef.current
@@ -239,6 +241,9 @@ export function NoteList({
       items.push(
         null,
         [Pencil, t('library.rename'), () => onRenameNote(target.id)],
+        ...(noteTasks(notes.find((note) => note.id === target.id)?.body ?? '').length
+          ? [[CheckCircle2, t('completed.complete'), () => onCompleteNote(target.id)]]
+          : []),
         [Trash2, t('library.trash'), () => onTrashNote(target.id)],
       )
     if (target.type === 'group')
@@ -292,7 +297,11 @@ export function NoteList({
     <div
       className="note-list"
       data-drop-group=""
-      data-drop-over={drag?.over === '' || undefined}
+      data-dragging={drag ? '' : undefined}
+      data-drop-over={
+        (drag?.over === '' && groupOf(notes.find((note) => note.id === drag.id) ?? {})) ||
+        undefined
+      }
       onContextMenu={(event) => openMenu(event, { type: 'empty' })}
     >
       {visibleGroups.map((group) => {
@@ -309,13 +318,16 @@ export function NoteList({
             <summary>
               {renamingGroup === group ? (
                 <>
+                  <ChevronRight className="folder-chevron" size={13} aria-hidden="true" />
                   <Folder className="folder-icon" size={14} aria-hidden="true" />
                   <FolderNameInput name={group} onDone={(name) => onRenameGroup(group, name)} />
                 </>
               ) : (
                 <>
+                  <ChevronRight className="folder-chevron" size={13} aria-hidden="true" />
                   <Folder className="folder-icon" size={14} aria-hidden="true" />
-                  {group} <span className="count">{members.length}</span>
+                  <span className="folder-name">{group}</span>
+                  <span className="count">{members.length}</span>
                 </>
               )}
             </summary>
@@ -325,6 +337,14 @@ export function NoteList({
       })}
       {loose.map(renderNote)}
       {contextMenu()}
+      {drag &&
+        createPortal(
+          <div className="note-drag-ghost" style={{ left: drag.x, top: drag.y }}>
+            <FileText size={14} aria-hidden="true" />
+            <span>{displayName(notes.find((note) => note.id === drag.id)?.name ?? '')}</span>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }
