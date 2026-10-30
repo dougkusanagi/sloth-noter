@@ -12,7 +12,7 @@ import {
   uniqueName,
 } from '../notes.js'
 import { isExternalNote } from '../external-notes.js'
-import { toggleTask } from '../tasks.js'
+import { resolvedTasks, toggleTask } from '../tasks.js'
 
 // Note actions shared by the screens: open, create, close, rename, trash and jump to tasks.
 export function useNoteActions({
@@ -214,6 +214,46 @@ export function useNoteActions({
     if (!confirmed) return
     commit(moveToTrash(current.current, id, Date.now()))
   }
+  async function completeNote(id) {
+    const note = current.current.notes.find((item) => item.id === id)
+    if (!note || note.completedAt) return
+    const tasks = resolvedTasks(note.body, current.current.notes)
+    if (!tasks.length) return
+    const pending = tasks.filter((task) => !task.done).length
+    if (
+      pending &&
+      !(await ask({
+        kind: 'confirm',
+        message: t('completed.pending', { count: pending }),
+        confirmLabel: t('completed.complete'),
+      }))
+    )
+      return
+    const old = current.current
+    const openIds = old.openIds.filter((item) => item !== id)
+    commit({
+      ...old,
+      notes: old.notes.map((item) =>
+        item.id === id ? { ...item, completedAt: Date.now() } : item,
+      ),
+      openIds,
+      pinnedIds: (old.pinnedIds ?? []).filter((item) => item !== id),
+      activeId: old.activeId === id ? (openIds.at(-1) ?? null) : old.activeId,
+    })
+  }
+  function reopenNote(id) {
+    const old = current.current
+    commit({
+      ...old,
+      notes: old.notes.map((item) => {
+        if (item.id !== id) return item
+        const note = { ...item }
+        delete note.completedAt
+        return note
+      }),
+    })
+    setSidebarSection('notes')
+  }
   function restoreNote(id) {
     commit(restoreFromTrash(current.current, id))
     if (mode === 'reading') setMode('visual')
@@ -297,6 +337,8 @@ export function useNoteActions({
     selectAdjacentTab,
     renameNote,
     deleteNote,
+    completeNote,
+    reopenNote,
     restoreNote,
     purgeNote,
     emptyTrash,

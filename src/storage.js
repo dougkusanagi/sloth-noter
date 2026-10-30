@@ -61,6 +61,11 @@ function validateNote(note, ids) {
     (!Number.isSafeInteger(note.modifiedAt) || note.modifiedAt < 0)
   )
     throw new Error('Invalid note date')
+  if (
+    note.completedAt !== undefined &&
+    (!Number.isSafeInteger(note.completedAt) || note.completedAt < 0)
+  )
+    throw new Error('Invalid completion date')
   ids.add(note.id)
 }
 
