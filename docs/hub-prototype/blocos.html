@@ -1,0 +1,1056 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sloth Note — protótipo do hub: blocos</title>
+    <style>
+      /* Tokens do protótipo, tirados de src/styles.css. Tema claro por padrão; escuro pelo sistema ou por data-theme. */
+      :root {
+        --background: #f7f6f2;
+        --foreground: #23221e;
+        --muted-foreground: #67645d;
+        --card: #fcfbf8;
+        --secondary: #e8e5de;
+        --border: color-mix(in srgb, #23221e 13%, transparent);
+        --ring: #a65427;
+        --primary: #a65427;
+        --primary-foreground: #ffffff;
+        --destructive: #b3382a;
+        --warning: #96630a;
+        --success: #2a7347;
+        --info: #2f6596;
+        --code-background: #f1efe8;
+        --radius: 10px;
+        --font-sans:
+          system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --background: #171715;
+          --foreground: #ece9e2;
+          --muted-foreground: #aaa69d;
+          --card: #1d1d1a;
+          --secondary: #30302d;
+          --border: rgb(255 255 255 / 12%);
+          --ring: #e2a074;
+          --primary: #e2a074;
+          --primary-foreground: #1d140d;
+          --destructive: #f08a78;
+          --warning: #e5c07b;
+          --success: #6cc58c;
+          --info: #8fb3e8;
+          --code-background: #141412;
+        }
+      }
+      :root[data-theme='dark'] {
+        --background: #171715;
+        --foreground: #ece9e2;
+        --muted-foreground: #aaa69d;
+        --card: #1d1d1a;
+        --secondary: #30302d;
+        --border: rgb(255 255 255 / 12%);
+        --ring: #e2a074;
+        --primary: #e2a074;
+        --primary-foreground: #1d140d;
+        --destructive: #f08a78;
+        --warning: #e5c07b;
+        --success: #6cc58c;
+        --info: #8fb3e8;
+        --code-background: #141412;
+      }
+      html {
+        background: var(--background);
+        color: var(--foreground);
+        padding: 16px;
+      }
+      body {
+        max-width: 1100px;
+        margin: 0 auto !important;
+        background: var(--background);
+      }
+      .proto-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+      .proto-head b {
+        color: var(--foreground);
+        font-size: 15px;
+      }
+      .proto-head a {
+        color: var(--primary);
+      }
+
+      :root {
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.45;
+      }
+      button,
+      select,
+      input {
+        font: inherit;
+        color: inherit;
+      }
+      button:focus-visible,
+      select:focus-visible,
+      input:focus-visible,
+      [tabindex]:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+      .muted {
+        color: var(--muted-foreground);
+      }
+      .small {
+        font-size: 12px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        padding: 3px;
+        border-radius: calc(var(--radius) + 2px);
+        background: var(--secondary);
+      }
+      .tabs button {
+        flex: 1 1 auto;
+        border: 0;
+        background: none;
+        padding: 6px 10px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        color: var(--muted-foreground);
+      }
+      .tabs button[aria-selected='true'] {
+        background: var(--background);
+        color: var(--foreground);
+        box-shadow: 0 0 0 1px var(--border);
+      }
+      .chip {
+        border: 1px solid var(--border);
+        background: none;
+        border-radius: 999px;
+        padding: 3px 10px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .chip[aria-pressed='true'] {
+        border-color: var(--primary);
+        color: var(--primary);
+        background: color-mix(in srgb, var(--primary) 10%, transparent);
+      }
+      .btn {
+        border: 1px solid var(--primary);
+        background: var(--primary);
+        color: var(--primary-foreground);
+        border-radius: 6px;
+        padding: 5px 12px;
+        cursor: pointer;
+      }
+      .btn.ghost {
+        background: none;
+        color: var(--primary);
+      }
+      .box {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--card);
+        padding: 16px;
+        min-width: 0;
+      }
+      .two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .two > * {
+        min-width: 0;
+      }
+      @media (max-width: 620px) {
+        .two {
+          grid-template-columns: 1fr;
+        }
+      }
+      .where {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 12px;
+      }
+      @media (max-width: 620px) {
+        .where {
+          grid-template-columns: 1fr;
+        }
+      }
+      .where h4 {
+        margin: 0 0 4px;
+        font-size: 13px;
+      }
+      .where p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+      h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+      }
+      .file {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--muted-foreground);
+        margin: 0 0 4px;
+      }
+      pre {
+        margin: 0 0 10px;
+        padding: 10px;
+        background: var(--code-background);
+        border-radius: 6px;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        line-height: 1.5;
+        overflow-x: auto;
+        white-space: pre;
+      }
+      .hl {
+        background: color-mix(in srgb, var(--success) 20%, transparent);
+      }
+      .c {
+        color: var(--muted-foreground);
+      }
+      .link {
+        color: var(--primary);
+        cursor: pointer;
+        background: none;
+        border: 0;
+        padding: 0;
+        text-align: left;
+      }
+      .q {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 10px 12px;
+      }
+      .q-h {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted-foreground);
+        margin-bottom: 6px;
+      }
+      .grp {
+        font-size: 12px;
+        font-weight: 600;
+        margin: 8px 0 2px;
+      }
+      .task {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        padding: 3px 0;
+      }
+      .box-ck {
+        width: 18px;
+        height: 18px;
+        flex: none;
+        border-radius: 50%;
+        border: 1.5px solid var(--muted-foreground);
+        background: none;
+        cursor: pointer;
+        margin-top: 1px;
+        display: grid;
+        place-items: center;
+        font-size: 10px;
+        padding: 0;
+      }
+      .s-doing {
+        border-color: var(--info);
+        background: linear-gradient(90deg, var(--info) 50%, transparent 50%);
+      }
+      .s-wait {
+        border-color: var(--warning);
+        color: var(--warning);
+      }
+      .s-done {
+        border-color: var(--success);
+        background: var(--success);
+        color: var(--background);
+      }
+      .task.done span.t {
+        text-decoration: line-through;
+        color: var(--muted-foreground);
+      }
+      .due {
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+      .due.soon {
+        color: var(--warning);
+      }
+      .toast {
+        margin-top: 8px;
+        font-size: 13px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .field {
+        display: grid;
+        gap: 3px;
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+      .field label {
+        color: var(--muted-foreground);
+      }
+      .field input,
+      .field select {
+        background: var(--background);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 5px 8px;
+        width: 100%;
+      }
+      .bar {
+        display: inline-flex;
+        width: 80px;
+        height: 6px;
+        border-radius: 3px;
+        overflow: hidden;
+        background: var(--secondary);
+        vertical-align: middle;
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+        background: var(--success);
+      }
+      .tree {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .tree .tree {
+        padding-left: 18px;
+        border-left: 1px solid var(--border);
+        margin-left: 8px;
+      }
+      .node {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 4px;
+        border-radius: 6px;
+      }
+      .node.sel {
+        background: color-mix(in srgb, var(--primary) 10%, transparent);
+      }
+      .tw {
+        width: 20px;
+        height: 20px;
+        border: 0;
+        background: none;
+        cursor: pointer;
+        color: var(--muted-foreground);
+        padding: 0;
+      }
+      .node .name {
+        flex: 1;
+        min-width: 0;
+        text-align: left;
+        background: none;
+        border: 0;
+        cursor: pointer;
+        padding: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .crumb {
+        font-size: 13px;
+        color: var(--muted-foreground);
+        margin-bottom: 8px;
+      }
+      .crumb b {
+        color: var(--foreground);
+        font-weight: 600;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 13px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 6px 6px;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        font-weight: 500;
+        color: var(--muted-foreground);
+        font-size: 12px;
+      }
+      .stat {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin: 6px 0 10px;
+      }
+      .stat div {
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+      .stat b {
+        display: block;
+        font-size: 18px;
+        color: var(--foreground);
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="proto-head">
+      <span
+        ><b>Consulta embutida, modelos, relações e subpáginas</b> · protótipo, dados fictícios, nada
+        é gravado</span
+      ><span
+        ><a href="../HUB-DE-PROJETOS.md">Proposta</a> ·
+        <a href="base-de-projetos.html">← Base de projetos</a></span
+      >
+    </header>
+    <div class="tabs" role="tablist" aria-label="Ideias">
+      <button role="tab" id="t-q" aria-controls="p-q" aria-selected="true">
+        Bloco de consulta
+      </button>
+      <button role="tab" id="t-m" aria-controls="p-m" aria-selected="false" tabindex="-1">
+        Modelo de projeto
+      </button>
+      <button role="tab" id="t-r" aria-controls="p-r" aria-selected="false" tabindex="-1">
+        Relações e somas
+      </button>
+      <button role="tab" id="t-s" aria-controls="p-s" aria-selected="false" tabindex="-1">
+        Subpáginas
+      </button>
+    </div>
+
+    <!-- 1. Bloco de consulta -->
+    <section role="tabpanel" id="p-q" aria-labelledby="t-q">
+      <div class="two">
+        <div class="box">
+          <h3>À Fazer <span class="small muted">(Leitura)</span></h3>
+          <div class="row" style="margin-bottom: 8px" id="presets"></div>
+          <div class="q" id="qres"></div>
+          <div id="qtoast" aria-live="polite"></div>
+        </div>
+        <div class="box">
+          <div class="row" style="justify-content: space-between; margin-bottom: 6px">
+            <strong style="font-size: 13px">O mesmo trecho no .md</strong>
+          </div>
+          <pre id="qsrc"></pre>
+          <p class="small muted" style="margin: 0">
+            Ao marcar uma tarefa no resultado, o app altera a linha na nota do projeto, não no hub.
+            O bloco só guarda a pergunta.
+          </p>
+        </div>
+      </div>
+      <div class="where">
+        <div class="box">
+          <h4>No .md</h4>
+          <p>
+            Só o bloco <code>```tasks</code> com a consulta em texto. Os resultados não são
+            gravados.
+          </p>
+        </div>
+        <div class="box">
+          <h4>Só no app</h4>
+          <p>O cálculo dos resultados e o estado recolhido de cada grupo.</p>
+        </div>
+        <div class="box">
+          <h4>No Obsidian</h4>
+          <p>
+            Com o plugin Tasks, o bloco mostra a mesma lista. Sem o plugin, aparece como bloco de
+            código legível. Use só um subconjunto da sintaxe dele.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Modelo -->
+    <section role="tabpanel" id="p-m" aria-labelledby="t-m" hidden>
+      <div class="two">
+        <div class="box">
+          <h3>Novo projeto</h3>
+          <div class="field">
+            <label for="mn">Nome</label><input id="mn" value="Sistema Agenda" />
+          </div>
+          <div class="field">
+            <label for="mt">Modelo</label
+            ><select id="mt">
+              <option value="web">Sistema web</option>
+              <option value="site">Site</option>
+              <option value="pessoal">Pessoal</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="mc">Cliente</label
+            ><select id="mc">
+              <option value="">Nenhum</option>
+              <option>Loja Aurora</option>
+              <option>Escola Regente</option>
+              <option>Estúdio Bio</option>
+            </select>
+          </div>
+          <div class="field">
+            <label
+              ><input type="checkbox" id="mh" checked style="width: auto" /> Adicionar ao hub
+              <b>À Fazer</b></label
+            >
+          </div>
+          <div class="row"><button class="btn" id="mgo">Criar projeto</button></div>
+          <div id="mtoast" aria-live="polite" class="toast"></div>
+          <p class="small muted">
+            Modelos são notas comuns na pasta <code>Modelos/</code>. Editar o modelo é editar um
+            .md.
+          </p>
+        </div>
+        <div class="box">
+          <p class="file" id="mfile"></p>
+          <pre id="mout"></pre>
+          <p class="file">À Fazer.md</p>
+          <pre id="mhub"></pre>
+          <p class="file">Modelos/Sistema web.md</p>
+          <pre id="mtpl"></pre>
+        </div>
+      </div>
+      <div class="where">
+        <div class="box">
+          <h4>No .md</h4>
+          <p>
+            O modelo é uma nota em <code>Modelos/</code> com <code>{{title}}</code> e
+            <code>{{date}}</code>. O projeto criado é um .md comum.
+          </p>
+        </div>
+        <div class="box">
+          <h4>Só no app</h4>
+          <p>Qual pasta guarda os modelos e o último modelo usado.</p>
+        </div>
+        <div class="box">
+          <h4>No Obsidian</h4>
+          <p>
+            O plugin nativo Modelos (Templates) usa os mesmos <code>{{title}}</code> e
+            <code>{{date}}</code>: dá para usar a mesma pasta nos dois.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Relações -->
+    <section role="tabpanel" id="p-r" aria-labelledby="t-r" hidden>
+      <div class="two">
+        <div class="box">
+          <div class="row" style="justify-content: space-between">
+            <h3 id="rname" style="margin: 0"></h3>
+            <label class="small muted"
+              >Cliente
+              <select
+                id="rsel"
+                style="
+                  background: var(--background);
+                  border: 1px solid var(--border);
+                  border-radius: 6px;
+                  padding: 2px 6px;
+                "
+              ></select
+            ></label>
+          </div>
+          <p class="small muted" style="margin: 4px 0 8px">
+            Nota do cliente. O texto é seu; o quadro abaixo é calculado.
+          </p>
+          <div class="stat" id="rstat"></div>
+          <table>
+            <thead>
+              <tr>
+                <th>Projeto</th>
+                <th>Status</th>
+                <th>Tarefas</th>
+                <th>Prazo</th>
+              </tr>
+            </thead>
+            <tbody id="rrows"></tbody>
+          </table>
+          <p class="small muted" style="margin: 10px 0 0">
+            Na nota do projeto, o campo <b>Cliente</b> é um link: clicar abre esta nota.
+          </p>
+        </div>
+        <div class="box">
+          <p class="file" id="rfile"></p>
+          <pre id="rsrc"></pre>
+          <p class="file">Sistema Catálogo.md</p>
+          <pre><span class="c">---</span>
+status: Ativo
+<span class="hl">cliente: "[[Loja Aurora]]"</span>
+prazo: 2026-11-20
+<span class="c">---</span></pre>
+        </div>
+      </div>
+      <div class="where">
+        <div class="box">
+          <h4>No .md</h4>
+          <p>
+            A relação é um link numa propriedade (<code>cliente: "[[Loja Aurora]]"</code>). A nota
+            do cliente não muda.
+          </p>
+        </div>
+        <div class="box">
+          <h4>Só no app</h4>
+          <p>As somas (projetos, tarefas abertas, próximo prazo). Nada é copiado para o .md.</p>
+        </div>
+        <div class="box">
+          <h4>No Obsidian</h4>
+          <p>
+            O link aparece em Propriedades e em Menções (backlinks). Um bloco
+            <code>base</code> filtrado por <code>cliente</code> lista os projetos, mas sem contar
+            tarefas.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Subpáginas -->
+    <section role="tabpanel" id="p-s" aria-labelledby="t-s" hidden>
+      <div class="two">
+        <div class="box">
+          <div class="crumb" id="scrumb"></div>
+          <ul class="tree" id="stree" role="tree" aria-label="Projetos e subpáginas"></ul>
+          <div class="row" style="margin-top: 10px">
+            <input
+              id="snew"
+              placeholder="Nome da subpágina"
+              aria-label="Nome da subpágina"
+              style="
+                flex: 1;
+                min-width: 120px;
+                background: var(--background);
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                padding: 5px 8px;
+              "
+            /><button class="btn ghost" id="sadd">Nova subpágina</button>
+          </div>
+          <p class="small muted" style="margin: 8px 0 0">
+            O progresso de cada item soma o das subpáginas, como o hub já faz hoje com os projetos.
+          </p>
+        </div>
+        <div class="box">
+          <p class="file" id="sfile"></p>
+          <pre id="ssrc"></pre>
+          <p class="small muted" style="margin: 0">
+            O caminho no topo vem de quem tem link para a nota. Não precisa de pastas nem de um
+            campo <code>pai</code>.
+          </p>
+        </div>
+      </div>
+      <div class="where">
+        <div class="box">
+          <h4>No .md</h4>
+          <p>
+            Só <code>## [[Subpágina]]</code> na nota pai, como no hub atual. Cada subpágina é um .md
+            na mesma pasta.
+          </p>
+        </div>
+        <div class="box">
+          <h4>Só no app</h4>
+          <p>A árvore, o caminho no topo, o que está recolhido e as somas de progresso.</p>
+        </div>
+        <div class="box">
+          <h4>No Obsidian</h4>
+          <p>Links e Menções normais. A árvore não existe lá, mas cada link leva à subpágina.</p>
+        </div>
+      </div>
+    </section>
+
+    <script>
+      const $ = (id) => document.getElementById(id)
+      const esc = (s) =>
+        String(s).replace(
+          /[&<>"]/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
+        )
+
+      // Abas (padrão WAI-ARIA)
+      const tabs = [...document.querySelectorAll('[role=tab]')]
+      function openTab(t, focus) {
+        tabs.forEach((b) => {
+          const on = b === t
+          b.setAttribute('aria-selected', on)
+          b.tabIndex = on ? 0 : -1
+          $(b.getAttribute('aria-controls')).hidden = !on
+        })
+        if (focus) t.focus()
+      }
+      tabs.forEach((b, i) => {
+        b.addEventListener('click', () => openTab(b))
+        b.addEventListener('keydown', (e) => {
+          const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key]
+          if (d) {
+            e.preventDefault()
+            openTab(tabs[(i + d + tabs.length) % tabs.length], true)
+          }
+        })
+      })
+
+      // ---------- 1. Bloco de consulta ----------
+      const TODAY = '2026-11-03'
+      const T = [
+        { p: 'Sistema Catálogo', s: 'doing', x: 'Importação de planilha', d: '2026-11-12' },
+        { p: 'Sistema Catálogo', s: 'wait', x: 'Logo nova (cliente)' },
+        { p: 'Sistema Catálogo', s: 'todo', x: 'Página de busca', d: '2026-11-07' },
+        { p: 'Site da Bio', s: 'doing', x: 'Publicar contato', d: '2026-11-06' },
+        { p: 'Sistema Regente', s: 'wait', x: 'Acesso ao servidor da escola' },
+        { p: 'Sistema Regente', s: 'wait', x: 'Lista de turmas 2027' },
+        { p: 'Sistema Inventário', s: 'doing', x: 'Modelo de estoque', d: '2026-11-25' },
+        { p: 'Sistema Inventário', s: 'doing', x: 'Leitor de código de barras' },
+        { p: 'Financeiro', s: 'todo', x: 'Pagar DAS', d: '2026-11-05' },
+        { p: 'Sloth Noter', s: 'doing', x: 'Etapa 1: status das tarefas', d: '2026-11-17' },
+        { p: 'Sloth Noter', s: 'doing', x: 'Ícones dos status' },
+        { p: 'Sloth Noter', s: 'wait', x: 'Teste do IME no celular' },
+      ]
+      const PRE = [
+        {
+          k: 'doing',
+          n: 'Fazendo agora',
+          q: ['status.type is IN_PROGRESS', 'group by filename'],
+          f: (t) => t.s === 'doing',
+        },
+        {
+          k: 'wait',
+          n: 'Esperando alguém',
+          q: ['status.name includes Esperando', 'group by filename'],
+          f: (t) => t.s === 'wait',
+        },
+        {
+          k: 'due',
+          n: 'Vence em 7 dias',
+          q: ['not done', 'due on or before 2026-11-10', 'sort by due'],
+          f: (t) => t.d && t.d <= '2026-11-10' && t.s !== 'done',
+          flat: true,
+        },
+      ]
+      let pre = 0,
+        lastDone = null
+      const ck = { todo: '', doing: '', wait: '…', done: '✓' }
+      const lbl = { todo: 'A fazer', doing: 'Fazendo', wait: 'Esperando', done: 'Feita' }
+      const dfmt = (d) => d.slice(8) + '/' + d.slice(5, 7)
+      function renderQ() {
+        const P = PRE[pre]
+        $('presets').innerHTML = PRE.map(
+          (x, i) =>
+            `<button class="chip" aria-pressed="${i === pre}" data-pre="${i}">${x.n}</button>`,
+        ).join('')
+        const list = T.filter((t) => P.f(t) || t === lastDone).sort((a, b) =>
+          P.flat ? ((a.d || '9') < (b.d || '9') ? -1 : 1) : 0,
+        )
+        const item = (
+          t,
+        ) => `<div class="task ${t.s === 'done' ? 'done' : ''}"><button class="box-ck s-${t.s}" data-t="${T.indexOf(t)}" aria-label="${esc(t.x)}: ${lbl[t.s]}. Marcar como feita">${ck[t.s]}</button>
+    <span><span class="t">${esc(t.x)}</span> ${t.d ? `<span class="due ${t.d <= '2026-11-06' ? 'soon' : ''}">📅 ${dfmt(t.d)}</span>` : ''}${P.flat ? ` <span class="small muted">· ${esc(t.p)}</span>` : ''}</span></div>`
+        let html = ''
+        if (P.flat) html = list.map(item).join('')
+        else {
+          const g = {}
+          list.forEach((t) => (g[t.p] ||= []).push(t))
+          html = Object.entries(g)
+            .map(
+              ([p, ts]) =>
+                `<div class="grp"><button class="link">${esc(p)}</button> <span class="muted small">${ts.length}</span></div>${ts.map(item).join('')}`,
+            )
+            .join('')
+        }
+        $('qres').innerHTML =
+          `<div class="q-h"><span>${P.n}</span><span>${list.filter((t) => t.s !== 'done').length} tarefas</span></div>${html || '<p class="muted">Nenhuma tarefa nesta consulta.</p>'}`
+        $('qsrc').innerHTML =
+          esc('# À Fazer\n\n## Foco\n') +
+          `<span class="hl">${esc('```tasks\n' + P.q.join('\n') + '\n```')}</span>` +
+          esc('\n\n## [[Sistema Catálogo]]\n## [[Site da Bio]]\n') +
+          '<span class="c">…</span>'
+      }
+      document.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-pre], [data-t], [data-undo]')
+        if (!b) return
+        if (b.dataset.pre) {
+          pre = +b.dataset.pre
+          lastDone = null
+          $('qtoast').innerHTML = ''
+          renderQ()
+          return
+        }
+        if (b.dataset.t) {
+          const t = T[+b.dataset.t]
+          if (t.s === 'done') return
+          t.prev = t.s
+          t.s = 'done'
+          lastDone = t
+          $('qtoast').innerHTML =
+            `<div class="toast"><span>Feita em <b>${esc(t.p)}.md</b>: <code>- [x] ${esc(t.x)} ✅ ${TODAY}</code></span><button class="chip" data-undo="${T.indexOf(t)}">Desfazer</button></div>`
+          renderQ()
+          return
+        }
+        if (b.dataset.undo) {
+          const t = T[+b.dataset.undo]
+          t.s = t.prev
+          lastDone = null
+          $('qtoast').innerHTML = ''
+          renderQ()
+        }
+      })
+      renderQ()
+
+      // ---------- 2. Modelo ----------
+      const TPL = {
+        web: {
+          tags: 'projeto, web',
+          body: [
+            '## Backend',
+            '- [ ] Modelagem do banco',
+            '- [ ] Autenticação',
+            '## Frontend',
+            '- [ ] Layout base',
+            '- [ ] Telas principais',
+            '## Entrega',
+            '- [ ] Publicar em produção',
+            '- [ ] Treinar o cliente',
+          ],
+        },
+        site: {
+          tags: 'projeto, site',
+          body: [
+            '## Conteúdo',
+            '- [ ] Textos',
+            '- [ ] Imagens',
+            '## Publicação',
+            '- [ ] Domínio',
+            '- [ ] Formulário de contato',
+          ],
+        },
+        pessoal: { tags: 'projeto, pessoal', body: ['## Próximos passos', '- [ ] '] },
+      }
+      let created = false
+      function tplText(kind, name, cli, real) {
+        const t = TPL[kind]
+        const v = (a, b) => (real ? a : b)
+        return [
+          '---',
+          `tags: [${t.tags}]`,
+          'status: Planejado',
+          `cliente: ${v(cli ? `"[[${cli}]]"` : '', '')}`,
+          `inicio: ${v('2026-11-03', '{{date}}')}`,
+          'prazo:',
+          '---',
+          `# ${v(name, '{{title}}')}`,
+          '',
+          ...t.body,
+          '',
+          '## Arquivo',
+        ].join('\n')
+      }
+      function renderM() {
+        const name = $('mn').value.trim() || 'Sem título',
+          kind = $('mt').value,
+          cli = $('mc').value
+        $('mfile').textContent = `${name}.md ${created ? '(criada)' : '(prévia)'}`
+        $('mout').textContent = tplText(kind, name, cli, true)
+        $('mtpl').previousElementSibling.textContent =
+          `Modelos/${$('mt').selectedOptions[0].text}.md`
+        $('mtpl').textContent = tplText(kind, name, cli, false)
+        $('mhub').innerHTML =
+          esc('# À Fazer\n…\n## [[Smart Photo Edit]]\n## [[Sloth Noter]]') +
+          ($('mh').checked ? `\n<span class="hl">${esc(`## [[${name}]]`)}</span>` : '')
+      }
+      ;['mn', 'mt', 'mc', 'mh'].forEach((id) =>
+        $(id).addEventListener('input', () => {
+          created = false
+          $('mtoast').innerHTML = ''
+          renderM()
+        }),
+      )
+      $('mgo').addEventListener('click', () => {
+        if (!$('mn').value.trim()) {
+          $('mtoast').innerHTML =
+            '<span style="color:var(--destructive)">Escreva um nome para o projeto.</span>'
+          $('mn').focus()
+          return
+        }
+        created = true
+        renderM()
+        $('mtoast').innerHTML =
+          `<span>Nota <b>${esc($('mn').value.trim())}</b> criada${$('mh').checked ? ' e ligada no hub' : ''}.</span>`
+      })
+      renderM()
+
+      // ---------- 3. Relações ----------
+      const PJ = [
+        { n: 'Sistema Catálogo', c: 'Loja Aurora', st: 'Ativo', t: [3, 7], pz: '2026-11-20' },
+        { n: 'Sistema Inventário', c: 'Loja Aurora', st: 'Ativo', t: [1, 12], pz: '2027-01-30' },
+        { n: 'Vitrine de Natal', c: 'Loja Aurora', st: 'Concluído', t: [6, 6], pz: '2025-12-10' },
+        { n: 'Sistema Regente', c: 'Escola Regente', st: 'Pausado', t: [2, 9], pz: '2026-12-15' },
+        { n: 'Site da Bio', c: 'Estúdio Bio', st: 'Ativo', t: [5, 6], pz: '2026-11-08' },
+      ]
+      const CLI = {
+        'Loja Aurora': 'Contato: Ana (compras).\nPrefere reuniões às terças.',
+        'Escola Regente': 'Contato: secretaria.\nFérias em janeiro.',
+        'Estúdio Bio': 'Contato por WhatsApp.',
+      }
+      $('rsel').innerHTML = Object.keys(CLI)
+        .map((c) => `<option>${c}</option>`)
+        .join('')
+      function renderR() {
+        const c = $('rsel').value,
+          ps = PJ.filter((p) => p.c === c)
+        const open = ps.filter((p) => p.st !== 'Concluído')
+        const done = open.reduce((a, p) => a + p.t[0], 0),
+          tot = open.reduce((a, p) => a + p.t[1], 0)
+        const next = open.map((p) => p.pz).sort()[0]
+        $('rname').textContent = c
+        $('rstat').innerHTML =
+          `<div><b>${open.length}</b>projetos abertos</div><div><b>${tot - done}</b>tarefas abertas</div><div><b>${next ? dfmt(next) : '—'}</b>próximo prazo</div>`
+        $('rrows').innerHTML = ps
+          .map(
+            (p) =>
+              `<tr${p.st === 'Concluído' ? ' class="muted"' : ''}><td><button class="link">${esc(p.n)}</button></td><td>${p.st}</td><td><span class="bar"><i style="width:${(p.t[0] / p.t[1]) * 100}%"></i></span> ${p.t[0]}/${p.t[1]}</td><td>${dfmt(p.pz)}</td></tr>`,
+          )
+          .join('')
+        $('rfile').textContent = `${c}.md`
+        $('rsrc').textContent = `---\ntags: [cliente]\n---\n# ${c}\n${CLI[c]}`
+      }
+      $('rsel').addEventListener('change', renderR)
+      renderR()
+
+      // ---------- 4. Subpáginas ----------
+      const N = {
+        'À Fazer': { k: ['Sistema Catálogo', 'Sloth Noter', 'Ideias'], t: [0, 0] },
+        'Sistema Catálogo': { k: ['API Catálogo', 'App Catálogo'], t: [3, 7] },
+        'API Catálogo': { k: [], t: [4, 6] },
+        'App Catálogo': { k: ['Telas do app'], t: [1, 3] },
+        'Telas do app': { k: [], t: [2, 8] },
+        'Sloth Noter': { k: ['Quadro', 'Android'], t: [12, 20] },
+        Quadro: { k: [], t: [0, 9] },
+        Android: { k: [], t: [5, 11] },
+        Ideias: { k: ['Telas do app'], t: [0, 4] },
+      }
+      let ssel = 'App Catálogo'
+      const closed = new Set(['Ideias'])
+      const sum = (n, seen = new Set()) => {
+        if (seen.has(n)) return [0, 0]
+        seen.add(n)
+        return N[n].k.reduce(
+          (a, k) => {
+            const s = sum(k, seen)
+            return [a[0] + s[0], a[1] + s[1]]
+          },
+          [...N[n].t],
+        )
+      }
+      const parents = (n) => Object.keys(N).filter((p) => N[p].k.includes(n))
+      function path(n, seen = new Set()) {
+        const p = parents(n).find((x) => !seen.has(x))
+        seen.add(n)
+        return p ? [...path(p, seen), n] : [n]
+      }
+      function li(n, depth, seen) {
+        const kids = N[n].k,
+          open = !closed.has(n),
+          [d, t] = sum(n),
+          loop = seen.has(n)
+        const s2 = new Set(seen).add(n)
+        return `<li role="treeitem" aria-level="${depth}" ${kids.length ? `aria-expanded="${open}"` : ''} aria-selected="${n === ssel}">
+    <div class="node ${n === ssel ? 'sel' : ''}">${kids.length ? `<button class="tw" data-tog="${esc(n)}" aria-label="${open ? 'Recolher' : 'Expandir'} ${esc(n)}">${open ? '▾' : '▸'}</button>` : '<span class="tw"></span>'}
+    <button class="name" data-sel="${esc(n)}">${esc(n)}</button>${t ? `<span class="bar"><i style="width:${(d / t) * 100}%"></i></span><span class="small muted">${d}/${t}</span>` : ''}</div>
+    ${kids.length && open && !loop ? `<ul class="tree" role="group">${kids.map((k) => li(k, depth + 1, s2)).join('')}</ul>` : ''}</li>`
+      }
+      function renderS() {
+        $('stree').innerHTML = li('À Fazer', 1, new Set())
+        const p = path(ssel),
+          others = parents(ssel).slice(1)
+        $('scrumb').innerHTML =
+          p
+            .map((x, i) =>
+              i === p.length - 1
+                ? `<b>${esc(x)}</b>`
+                : `<button class="link" data-sel="${esc(x)}">${esc(x)}</button>`,
+            )
+            .join(' › ') +
+          (others.length
+            ? ` <span class="small">· também ligada em ${others.map(esc).join(', ')}</span>`
+            : '')
+        $('sfile').textContent = `${ssel}.md`
+        const own = N[ssel]
+        const lines = [`# ${ssel}`, '']
+        if (own.t[1])
+          lines.push(
+            '## Tarefas',
+            `- [x] … (${own.t[0]} ${own.t[0] === 1 ? 'feita' : 'feitas'})`,
+            `- [ ] … (${own.t[1] - own.t[0]} ${own.t[1] - own.t[0] === 1 ? 'aberta' : 'abertas'})`,
+            '',
+          )
+        $('ssrc').innerHTML =
+          esc(lines.join('\n')) +
+          own.k.map((k) => `<span class="hl">${esc(`## [[${k}]]`)}</span>`).join('\n')
+      }
+      document.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-tog], [data-sel]')
+        if (!b) return
+        if (b.dataset.tog) {
+          const n = b.dataset.tog
+          closed.has(n) ? closed.delete(n) : closed.add(n)
+          renderS()
+          document.querySelector(`[data-tog="${CSS.escape(n)}"]`)?.focus()
+        } else {
+          ssel = b.dataset.sel
+          renderS()
+          document.querySelector(`#stree [data-sel="${CSS.escape(ssel)}"]`)?.focus()
+        }
+      })
+      $('sadd').addEventListener('click', () => {
+        const v = $('snew').value.trim()
+        if (!v) {
+          $('snew').focus()
+          return
+        }
+        if (!N[v]) N[v] = { k: [], t: [0, 0] }
+        if (!N[ssel].k.includes(v)) N[ssel].k.push(v)
+        closed.delete(ssel)
+        $('snew').value = ''
+        renderS()
+      })
+      renderS()
+    </script>
+  </body>
+</html>

@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sloth Note — protótipo do hub: base de projetos</title>
+    <style>
+      /* Tokens do protótipo, tirados de src/styles.css. Tema claro por padrão; escuro pelo sistema ou por data-theme. */
+      :root {
+        --background: #f7f6f2;
+        --foreground: #23221e;
+        --muted-foreground: #67645d;
+        --card: #fcfbf8;
+        --secondary: #e8e5de;
+        --border: color-mix(in srgb, #23221e 13%, transparent);
+        --ring: #a65427;
+        --primary: #a65427;
+        --primary-foreground: #ffffff;
+        --destructive: #b3382a;
+        --warning: #96630a;
+        --success: #2a7347;
+        --info: #2f6596;
+        --code-background: #f1efe8;
+        --radius: 10px;
+        --font-sans:
+          system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --background: #171715;
+          --foreground: #ece9e2;
+          --muted-foreground: #aaa69d;
+          --card: #1d1d1a;
+          --secondary: #30302d;
+          --border: rgb(255 255 255 / 12%);
+          --ring: #e2a074;
+          --primary: #e2a074;
+          --primary-foreground: #1d140d;
+          --destructive: #f08a78;
+          --warning: #e5c07b;
+          --success: #6cc58c;
+          --info: #8fb3e8;
+          --code-background: #141412;
+        }
+      }
+      :root[data-theme='dark'] {
+        --background: #171715;
+        --foreground: #ece9e2;
+        --muted-foreground: #aaa69d;
+        --card: #1d1d1a;
+        --secondary: #30302d;
+        --border: rgb(255 255 255 / 12%);
+        --ring: #e2a074;
+        --primary: #e2a074;
+        --primary-foreground: #1d140d;
+        --destructive: #f08a78;
+        --warning: #e5c07b;
+        --success: #6cc58c;
+        --info: #8fb3e8;
+        --code-background: #141412;
+      }
+      html {
+        background: var(--background);
+        color: var(--foreground);
+        padding: 16px;
+      }
+      body {
+        max-width: 1100px;
+        margin: 0 auto !important;
+        background: var(--background);
+      }
+      .proto-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+      .proto-head b {
+        color: var(--foreground);
+        font-size: 15px;
+      }
+      .proto-head a {
+        color: var(--primary);
+      }
+
+      :root {
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      button,
+      select,
+      input {
+        font: inherit;
+        color: inherit;
+      }
+      .muted {
+        color: var(--muted-foreground);
+      }
+      .small {
+        font-size: 12px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .between {
+        justify-content: space-between;
+      }
+      .seg {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        padding: 3px;
+        border-radius: calc(var(--radius) + 2px);
+        background: var(--secondary);
+      }
+      .seg button {
+        border: 0;
+        background: none;
+        padding: 5px 10px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        color: var(--muted-foreground);
+      }
+      .seg button[aria-pressed='true'] {
+        background: var(--background);
+        color: var(--foreground);
+        box-shadow: 0 0 0 1px var(--border);
+      }
+      .chip {
+        border: 1px solid var(--border);
+        background: none;
+        border-radius: 999px;
+        padding: 3px 10px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .chip[aria-pressed='true'] {
+        border-color: var(--primary);
+        color: var(--primary);
+        background: color-mix(in srgb, var(--primary) 10%, transparent);
+      }
+      .chip.add {
+        border-style: dashed;
+        color: var(--muted-foreground);
+      }
+      .ctl {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+      .ctl select {
+        background: var(--background);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 3px 6px;
+        color: var(--foreground);
+      }
+      button:focus-visible,
+      select:focus-visible,
+      input:focus-visible,
+      [tabindex]:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+      .box {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--card);
+        padding: 16px;
+      }
+      .view {
+        margin-top: 10px;
+        min-height: 330px;
+      }
+      .scroll {
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 600px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 7px 8px;
+        border-bottom: 1px solid var(--border);
+        white-space: nowrap;
+      }
+      th {
+        font-weight: 500;
+        color: var(--muted-foreground);
+        font-size: 12px;
+        cursor: pointer;
+        user-select: none;
+      }
+      th button {
+        all: unset;
+        cursor: pointer;
+      }
+      tbody tr {
+        cursor: pointer;
+      }
+      tbody tr:hover {
+        background: color-mix(in srgb, var(--foreground) 5%, transparent);
+      }
+      tr.sel,
+      .card.sel,
+      .li.sel {
+        background: color-mix(in srgb, var(--primary) 9%, transparent) !important;
+      }
+      .grp {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted-foreground);
+        padding: 12px 8px 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .link {
+        color: var(--primary);
+      }
+      .st {
+        display: inline-block;
+        font-size: 12px;
+        padding: 1px 8px;
+        border-radius: 999px;
+      }
+      .st-Ativo {
+        background: color-mix(in srgb, var(--success) 18%, transparent);
+        color: var(--success);
+      }
+      .st-Planejado {
+        background: color-mix(in srgb, var(--info) 18%, transparent);
+        color: var(--info);
+      }
+      .st-Pausado {
+        background: color-mix(in srgb, var(--warning) 20%, transparent);
+        color: var(--warning);
+      }
+      .st-Concluído {
+        background: var(--secondary);
+        color: var(--muted-foreground);
+      }
+      .bar {
+        display: inline-flex;
+        width: 90px;
+        height: 6px;
+        border-radius: 3px;
+        overflow: hidden;
+        background: var(--secondary);
+        vertical-align: middle;
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+      }
+      .b-done {
+        background: var(--success);
+      }
+      .b-doing {
+        background: var(--info);
+      }
+      .b-wait {
+        background: var(--warning);
+      }
+      .tag {
+        font-size: 12px;
+        color: var(--muted-foreground);
+        margin-right: 6px;
+      }
+      .warn {
+        color: var(--warning);
+        font-size: 12px;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 10px;
+      }
+      .card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        cursor: pointer;
+        background: var(--card);
+      }
+      .cover {
+        height: 54px;
+        display: flex;
+        align-items: flex-end;
+        padding: 6px 10px;
+        font-weight: 600;
+        font-size: 20px;
+        color: color-mix(in srgb, var(--foreground) 55%, transparent);
+      }
+      .card .body {
+        padding: 8px 10px 10px;
+        display: grid;
+        gap: 5px;
+      }
+      .card .t {
+        font-weight: 600;
+      }
+      .li {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 7px 8px;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+      }
+      .li .t {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .cal {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        border-left: 1px solid var(--border);
+        border-top: 1px solid var(--border);
+      }
+      .cal > div {
+        border-right: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        min-height: 58px;
+        padding: 3px;
+        font-size: 11px;
+        overflow: hidden;
+      }
+      .cal .hd {
+        min-height: 0;
+        text-align: center;
+        color: var(--muted-foreground);
+      }
+      .cal .out {
+        opacity: 0.4;
+      }
+      .cal .today .d {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        border-radius: 999px;
+        padding: 0 5px;
+      }
+      .ev {
+        display: block;
+        margin-top: 2px;
+        padding: 1px 4px;
+        border-radius: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: pointer;
+        border: 0;
+        width: 100%;
+        text-align: left;
+        font-size: 11px;
+      }
+      .ev.p {
+        background: color-mix(in srgb, var(--primary) 18%, transparent);
+      }
+      .ev.k {
+        background: var(--secondary);
+      }
+      .tl {
+        position: relative;
+        min-width: 620px;
+      }
+      .tl-h {
+        display: grid;
+        grid-template-columns: 140px repeat(7, 1fr);
+        font-size: 11px;
+        color: var(--muted-foreground);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 4px;
+      }
+      .tl-r {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        align-items: center;
+        height: 32px;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+      }
+      .tl-r .n {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding-right: 8px;
+      }
+      .tl-track {
+        position: relative;
+        height: 100%;
+      }
+      .tl-bar {
+        position: absolute;
+        top: 8px;
+        height: 16px;
+        border-radius: 4px;
+        background: color-mix(in srgb, var(--primary) 30%, transparent);
+        overflow: hidden;
+      }
+      .tl-bar i {
+        display: block;
+        height: 100%;
+        background: color-mix(in srgb, var(--primary) 70%, transparent);
+      }
+      .tl-now {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--destructive);
+      }
+      .lower {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .lower > * {
+        min-width: 0;
+      }
+      .agenda {
+        display: grid;
+        gap: 2px;
+      }
+      .agenda .dt {
+        font-size: 12px;
+        color: var(--muted-foreground);
+        padding: 8px 0 2px;
+      }
+      .agenda .ev {
+        font-size: 13px;
+        padding: 6px 8px;
+      }
+      @media (max-width: 620px) {
+        .lower {
+          grid-template-columns: 1fr;
+        }
+      }
+      .props {
+        display: grid;
+        grid-template-columns: 82px 1fr;
+        gap: 6px 8px;
+        align-items: center;
+        font-size: 13px;
+      }
+      .props label,
+      .props .k {
+        color: var(--muted-foreground);
+      }
+      .props select,
+      .props input {
+        width: 100%;
+        background: var(--background);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 3px 6px;
+        min-width: 0;
+      }
+      h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+      }
+      .file {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--muted-foreground);
+        margin: 0 0 4px;
+      }
+      pre {
+        margin: 0 0 10px;
+        padding: 10px;
+        background: var(--code-background);
+        border-radius: 6px;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        line-height: 1.5;
+        overflow-x: auto;
+        white-space: pre;
+      }
+      .c {
+        color: var(--muted-foreground);
+      }
+      .y {
+        color: var(--info);
+      }
+      .hl {
+        background: color-mix(in srgb, var(--warning) 22%, transparent);
+      }
+      .where {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 12px;
+      }
+      @media (max-width: 620px) {
+        .where {
+          grid-template-columns: 1fr;
+        }
+      }
+      .where h4 {
+        margin: 0 0 4px;
+        font-size: 13px;
+      }
+      .where p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="proto-head">
+      <span
+        ><b>Base de projetos: vistas, propriedades e vistas salvas</b> · protótipo, dados fictícios,
+        nada é gravado</span
+      ><span
+        ><a href="../HUB-DE-PROJETOS.md">Proposta</a> ·
+        <a href="blocos.html">Consulta, modelos, relações e subpáginas →</a></span
+      >
+    </header>
+    <div id="app">
+      <div class="row between">
+        <div>
+          <strong>À Fazer</strong>
+          <span class="muted small">· base de projetos ligados pelo hub</span>
+        </div>
+        <div class="seg" role="group" aria-label="Tipo de vista" id="layouts"></div>
+      </div>
+
+      <div class="row" style="margin-top: 10px" id="saved" aria-label="Vistas salvas"></div>
+
+      <div class="row" style="margin-top: 8px">
+        <label class="ctl"
+          >Status
+          <select id="f">
+            <option value="all">Todos</option>
+            <option>Planejado</option>
+            <option>Ativo</option>
+            <option>Pausado</option>
+            <option>Concluído</option>
+          </select></label
+        >
+        <label class="ctl"
+          >Agrupar
+          <select id="g">
+            <option value="none">Nenhum</option>
+            <option value="st">Status</option>
+            <option value="cli">Cliente</option>
+            <option value="tags">Tag</option>
+          </select></label
+        >
+        <label class="ctl"
+          >Ordenar
+          <select id="s">
+            <option value="pz">Prazo</option>
+            <option value="n">Nome</option>
+            <option value="pr">Progresso</option>
+          </select></label
+        >
+        <span id="dirty"></span>
+      </div>
+
+      <div class="view" id="view"></div>
+
+      <div class="lower">
+        <div class="box" id="detail" aria-live="polite"></div>
+        <div class="box">
+          <div class="row between" style="margin-bottom: 8px">
+            <h3 style="margin: 0">O que fica gravado</h3>
+            <div class="seg" role="group" aria-label="Onde gravar as vistas salvas">
+              <button data-store="md">Vistas no .md</button
+              ><button data-store="app">Vistas só no app</button>
+            </div>
+          </div>
+          <div id="code"></div>
+        </div>
+      </div>
+
+      <div class="where">
+        <div class="box">
+          <h4>No .md</h4>
+          <p>
+            Propriedades no frontmatter de cada projeto. Com "Vistas no .md", um bloco
+            <code>base</code> no hub guarda tabela, cartões e lista.
+          </p>
+        </div>
+        <div class="box">
+          <h4>Só no app</h4>
+          <p>
+            Vista aberta, largura de colunas, mês do calendário, vistas de calendário e linha do
+            tempo, tudo em <code>noteMeta</code>. Progresso e "parado há N dias" são calculados.
+          </p>
+        </div>
+        <div class="box">
+          <h4>No Obsidian</h4>
+          <p>
+            Frontmatter aparece no painel Propriedades. O bloco <code>base</code> abre como vista do
+            Bases (plugin nativo). Calendário e linha do tempo não existem lá.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const TODAY = new Date(2026, 10, 3)
+      const P = [
+        {
+          n: 'Sistema Catálogo',
+          st: 'Ativo',
+          cli: 'Loja Aurora',
+          ini: '2026-09-01',
+          pz: '2026-11-20',
+          tags: ['web', 'laravel'],
+          pri: 'Alta',
+          t: [3, 1, 1, 2],
+          up: 0,
+        },
+        {
+          n: 'Site da Bio',
+          st: 'Ativo',
+          cli: 'Estúdio Bio',
+          ini: '2026-10-10',
+          pz: '2026-11-08',
+          tags: ['site'],
+          pri: 'Média',
+          t: [5, 1, 0, 0],
+          up: 1,
+        },
+        {
+          n: 'Sistema Regente',
+          st: 'Pausado',
+          cli: 'Escola Regente',
+          ini: '2026-08-15',
+          pz: '2026-12-15',
+          tags: ['web', 'laravel'],
+          pri: 'Média',
+          t: [2, 0, 2, 5],
+          up: 23,
+        },
+        {
+          n: 'Sistema Inventário',
+          st: 'Ativo',
+          cli: 'Loja Aurora',
+          ini: '2026-10-20',
+          pz: '2027-01-30',
+          tags: ['web'],
+          pri: 'Alta',
+          t: [1, 2, 0, 9],
+          up: 2,
+        },
+        {
+          n: 'Ideias',
+          st: 'Ativo',
+          cli: '',
+          ini: '',
+          pz: '',
+          tags: ['pessoal'],
+          pri: 'Baixa',
+          t: [0, 0, 0, 4],
+          up: 6,
+        },
+        {
+          n: 'Financeiro',
+          st: 'Ativo',
+          cli: '',
+          ini: '2026-11-01',
+          pz: '2026-11-05',
+          tags: ['pessoal'],
+          pri: 'Alta',
+          t: [4, 0, 0, 1],
+          up: 0,
+        },
+        {
+          n: 'Smart Photo Edit',
+          st: 'Planejado',
+          cli: '',
+          ini: '2026-12-01',
+          pz: '2027-02-28',
+          tags: ['app'],
+          pri: 'Baixa',
+          t: [0, 0, 0, 8],
+          up: 40,
+        },
+        {
+          n: 'Sloth Noter',
+          st: 'Ativo',
+          cli: '',
+          ini: '2026-06-01',
+          pz: '2026-12-20',
+          tags: ['tauri', 'app'],
+          pri: 'Alta',
+          t: [12, 2, 1, 5],
+          up: 0,
+        },
+      ]
+      const DUE = [
+        { p: 'Financeiro', d: '2026-11-05', x: 'Pagar DAS' },
+        { p: 'Site da Bio', d: '2026-11-06', x: 'Publicar contato' },
+        { p: 'Sistema Catálogo', d: '2026-11-12', x: 'Importar preços' },
+        { p: 'Sloth Noter', d: '2026-11-17', x: 'Etapa 1: status' },
+        { p: 'Sistema Inventário', d: '2026-11-25', x: 'Modelo de estoque' },
+      ]
+      const LAYOUTS = [
+        ['table', 'Tabela'],
+        ['cards', 'Galeria'],
+        ['list', 'Lista'],
+        ['calendar', 'Calendário'],
+        ['timeline', 'Linha do tempo'],
+      ]
+      let views = [
+        { name: 'Todos', layout: 'table', f: 'all', g: 'none', s: 'pz' },
+        { name: 'Ativos', layout: 'cards', f: 'Ativo', g: 'none', s: 'pz' },
+        { name: 'Por cliente', layout: 'list', f: 'all', g: 'cli', s: 'n' },
+        { name: 'Prazos', layout: 'calendar', f: 'all', g: 'none', s: 'pz' },
+        { name: 'Roteiro', layout: 'timeline', f: 'all', g: 'none', s: 'pz' },
+      ]
+      let active = 0
+      let cur = { ...views[0] }
+      let sel = 'Sistema Catálogo'
+      let store = 'md'
+      let calMonth = new Date(2026, 10, 1)
+      let newCount = 0
+
+      const $ = (id) => document.getElementById(id)
+      const esc = (s) =>
+        String(s).replace(
+          /[&<>"]/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
+        )
+      const parse = (s) => {
+        const [y, m, d] = s.split('-').map(Number)
+        return new Date(y, m - 1, d)
+      }
+      const fmt = (s) =>
+        s
+          ? parse(s)
+              .toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+              .replace('.', '')
+          : '—'
+      const total = (p) => p.t.reduce((a, b) => a + b, 0)
+      const pct = (p) => (total(p) ? p.t[0] / total(p) : 0)
+      const bar = (p, w = 90) => {
+        const T = total(p) || 1
+        const label = `${p.t[0]} feitas, ${p.t[1]} fazendo, ${p.t[2]} esperando, ${p.t[3]} a fazer`
+        return `<span class="bar" style="width:${w}px" role="img" aria-label="${label}"><i class="b-done" style="width:${(p.t[0] / T) * 100}%"></i><i class="b-doing" style="width:${(p.t[1] / T) * 100}%"></i><i class="b-wait" style="width:${(p.t[2] / T) * 100}%"></i></span> <span class="small muted">${p.t[0]}/${total(p)}</span>`
+      }
+      const stale = (p) =>
+        p.st === 'Ativo' && p.up >= 14 ? `<span class="warn">parado há ${p.up} dias</span>` : ''
+      const late = (p) => p.pz && parse(p.pz) < TODAY && p.st !== 'Concluído'
+      const st = (s) => `<span class="st st-${s}">${s}</span>`
+      const cli = (p) =>
+        p.cli ? `<span class="link">${esc(p.cli)}</span>` : '<span class="muted">—</span>'
+
+      function rows() {
+        let r = P.filter((p) => cur.f === 'all' || p.st === cur.f)
+        const key = { pz: (p) => p.pz || '9999', n: (p) => p.n, pr: (p) => -pct(p) }[cur.s]
+        return r.sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0))
+      }
+      function groups(r) {
+        if (cur.g === 'none') return [['', r]]
+        const m = new Map()
+        for (const p of r) {
+          const ks = cur.g === 'st' ? [p.st] : cur.g === 'cli' ? [p.cli || 'Sem cliente'] : p.tags
+          for (const k of ks) {
+            if (!m.has(k)) m.set(k, [])
+            m.get(k).push(p)
+          }
+        }
+        return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'))
+      }
+      const selAttr = (p) => `data-p="${esc(p.n)}" tabindex="0" ${p.n === sel ? 'class="sel"' : ''}`
+
+      function viewTable() {
+        const head = [
+          ['n', 'Projeto'],
+          [null, 'Status'],
+          [null, 'Cliente'],
+          ['pz', 'Prazo'],
+          ['pr', 'Tarefas'],
+          [null, 'Tags'],
+        ]
+          .map(
+            ([k, l]) =>
+              `<th scope="col">${k ? `<button data-sort="${k}">${l}${cur.s === k ? ' ↓' : ''}</button>` : l}</th>`,
+          )
+          .join('')
+        let body = ''
+        for (const [g, list] of groups(rows())) {
+          if (g) body += `<tr><td colspan="6" class="grp">${esc(g)} · ${list.length}</td></tr>`
+          body += list
+            .map(
+              (p) =>
+                `<tr ${selAttr(p)}><td><strong>${esc(p.n)}</strong> ${stale(p)}</td><td>${st(p.st)}</td><td>${cli(p)}</td><td${late(p) ? ' class="warn"' : ''}>${fmt(p.pz)}</td><td>${bar(p)}</td><td>${p.tags.map((t) => `<span class="tag">#${t}</span>`).join('')}</td></tr>`,
+            )
+            .join('')
+        }
+        return `<div class="scroll"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`
+      }
+      const hue = (s) => [...s].reduce((a, c) => a + c.charCodeAt(0), 0) % 360
+      function viewCards() {
+        return groups(rows())
+          .map(
+            ([g, list]) =>
+              `${g ? `<div class="grp">${esc(g)} · ${list.length}</div>` : ''}<div class="cards">${list
+                .map(
+                  (p) => `
+    <div class="card ${p.n === sel ? 'sel' : ''}" data-p="${esc(p.n)}" tabindex="0">
+      <div class="cover" style="background:linear-gradient(135deg, hsl(${hue(p.n)} 45% 60% / .35), hsl(${hue(p.n) + 40} 45% 60% / .15))">${esc(
+        p.n
+          .split(' ')
+          .map((w) => w[0])
+          .join('')
+          .slice(0, 2),
+      )}</div>
+      <div class="body"><span class="t">${esc(p.n)}</span><span class="row">${st(p.st)} <span class="small muted">${fmt(p.pz)}</span></span>${bar(p, 80)}<span class="small">${cli(p)}</span>${stale(p)}</div>
+    </div>`,
+                )
+                .join('')}</div>`,
+          )
+          .join('')
+      }
+      function viewList() {
+        return groups(rows())
+          .map(
+            ([g, list]) =>
+              `${g ? `<div class="grp">${esc(g)} · ${list.length}</div>` : ''}${list
+                .map(
+                  (p) => `
+    <div class="li ${p.n === sel ? 'sel' : ''}" data-p="${esc(p.n)}" tabindex="0"><span class="t"><strong>${esc(p.n)}</strong> <span class="small muted">${p.cli ? '· ' + esc(p.cli) : ''}</span> ${stale(p)}</span>${bar(p, 60)}<span class="small muted" style="width:52px;text-align:right">${fmt(p.pz)}</span></div>`,
+                )
+                .join('')}`,
+          )
+          .join('')
+      }
+      function viewCalendar() {
+        const y = calMonth.getFullYear(),
+          m = calMonth.getMonth()
+        const start = new Date(y, m, 1 - new Date(y, m, 1).getDay())
+        const vis = new Set(rows().map((p) => p.n))
+        const iso = (d) =>
+          `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        const label = calMonth
+          .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+          .replace(/^./, (c) => c.toUpperCase())
+        const head = `<div class="row between" style="margin-bottom:6px"><div class="row"><button class="chip" data-cal="-1" aria-label="Mês anterior">‹</button><strong>${label}</strong><button class="chip" data-cal="1" aria-label="Próximo mês">›</button></div>
+    <span class="small muted">⚑ prazo do projeto (frontmatter) · ☐ tarefa com <code>📅 data</code></span></div>`
+        const evs = (k) =>
+          P.filter((p) => vis.has(p.n) && p.pz === k)
+            .map(
+              (p) =>
+                `<button class="ev p" data-p="${esc(p.n)}" title="Prazo do projeto: ${esc(p.n)}">⚑ ${esc(p.n)}</button>`,
+            )
+            .concat(
+              DUE.filter((t) => vis.has(t.p) && t.d === k).map(
+                (t) =>
+                  `<button class="ev k" data-p="${esc(t.p)}" title="Tarefa de ${esc(t.p)}">☐ ${esc(t.x)}${window.innerWidth < 520 ? ` <span class="muted">· ${esc(t.p)}</span>` : ''}</button>`,
+              ),
+            )
+            .join('')
+        if (window.innerWidth < 520) {
+          let out = ''
+          for (let d = new Date(y, m, 1); d.getMonth() === m; d.setDate(d.getDate() + 1)) {
+            const e = evs(iso(d))
+            if (e)
+              out += `<div class="dt">${d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' })}${iso(d) === iso(TODAY) ? ' · hoje' : ''}</div>${e}`
+          }
+          return (
+            head +
+            `<p class="small muted" style="margin:0 0 4px">No celular, o mês vira agenda.</p><div class="agenda">${out || '<p class="muted">Nada neste mês.</p>'}</div>`
+          )
+        }
+        const weeks = Math.ceil((new Date(y, m, 1).getDay() + new Date(y, m + 1, 0).getDate()) / 7)
+        let cells = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+          .map((d) => `<div class="hd">${d}</div>`)
+          .join('')
+        for (let i = 0; i < weeks * 7; i++) {
+          const d = new Date(start)
+          d.setDate(start.getDate() + i)
+          const k = iso(d)
+          const ev = evs(k)
+          cells += `<div class="${d.getMonth() !== m ? 'out' : ''} ${k === iso(TODAY) ? 'today' : ''}"><span class="d">${d.getDate()}</span>${ev}</div>`
+        }
+        return head + `<div class="cal">${cells}</div>`
+      }
+      function viewTimeline() {
+        const a = new Date(2026, 7, 1),
+          b = new Date(2027, 2, 1),
+          span = b - a
+        const months = []
+        for (let d = new Date(a); d < b; d.setMonth(d.getMonth() + 1))
+          months.push(d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''))
+        const pos = (d) => Math.max(0, Math.min(100, ((d - a) / span) * 100))
+        const r = rows().sort((x, y) => ((x.ini || '9') < (y.ini || '9') ? -1 : 1))
+        const lines = r
+          .map((p) => {
+            const inner =
+              p.ini && p.pz
+                ? `<div class="tl-bar" style="left:${pos(parse(p.ini))}%;width:${pos(parse(p.pz)) - pos(parse(p.ini))}%" title="${fmt(p.ini)} a ${fmt(p.pz)}"><i style="width:${pct(p) * 100}%"></i></div>`
+                : '<span class="small muted" style="padding-left:6px">sem início ou prazo</span>'
+            return `<div class="tl-r ${p.n === sel ? 'sel' : ''}" data-p="${esc(p.n)}" tabindex="0"><span class="n">${esc(p.n)}</span><div class="tl-track">${inner}</div></div>`
+          })
+          .join('')
+        return `<div class="scroll"><div class="tl"><div class="tl-h"><span></span>${months.map((m) => `<span>${m}</span>`).join('')}</div>
+    <div style="position:relative">${lines}<div class="tl-now" style="left:calc(140px + (100% - 140px) * ${pos(TODAY) / 100})" title="Hoje"></div></div></div></div>
+    <p class="small muted">A barra vai de <code>inicio</code> a <code>prazo</code>; o trecho escuro é a parte feita.</p>`
+      }
+
+      function renderDetail() {
+        const p = P.find((x) => x.n === sel)
+        const opt = (list, v) =>
+          list.map((o) => `<option ${o === v ? 'selected' : ''}>${o}</option>`).join('')
+        $('detail').innerHTML = `<h3>${esc(p.n)}</h3>
+    <div class="props">
+      <label for="pst">Status</label><select id="pst" data-k="st">${opt(['Planejado', 'Ativo', 'Pausado', 'Concluído'], p.st)}</select>
+      <label for="pcli">Cliente</label><input id="pcli" data-k="cli" value="${esc(p.cli)}" placeholder="Vazio">
+      <label for="pini">Início</label><input id="pini" type="date" data-k="ini" value="${p.ini}">
+      <label for="ppz">Prazo</label><input id="ppz" type="date" data-k="pz" value="${p.pz}">
+      <label for="ppri">Prioridade</label><select id="ppri" data-k="pri">${opt(['Alta', 'Média', 'Baixa'], p.pri)}</select>
+      <span class="k">Tags</span><span>${p.tags.map((t) => `<span class="tag">#${t}</span>`).join('')}</span>
+      <span class="k">Tarefas</span><span>${bar(p, 70)}</span>
+    </div>
+    <p class="small muted" style="margin:10px 0 0">Edite aqui: o frontmatter ao lado muda. "Tarefas" é calculado, não é gravado.</p>`
+      }
+
+      function yamlProject(p) {
+        const L = [
+          '---',
+          `tags: [projeto${p.tags.map((t) => ', ' + t).join('')}]`,
+          `status: ${p.st}`,
+        ]
+        if (p.cli) L.push(`cliente: "[[${p.cli}]]"`)
+        if (p.ini) L.push(`inicio: ${p.ini}`)
+        if (p.pz) L.push(`prazo: ${p.pz}`)
+        L.push(
+          `prioridade: ${p.pri}`,
+          '---',
+          `# ${p.n}`,
+          '',
+          '## Backend',
+          '- [x] Rotas de produtos ✅ 2026-10-28',
+          '- [/] Importação de planilha 📅 2026-11-12',
+          '## Frontend',
+          '- [>] Logo nova (cliente)',
+          '- [ ] Página de busca',
+        )
+        return L.map((l) => esc(l).replace(/^(\w+):/, '<span class="y">$1</span>:')).join('\n')
+      }
+      const BTYPE = { table: 'table', cards: 'cards', list: 'list' }
+      const SORTK = { pz: 'prazo', n: 'file.name', pr: null }
+      const GROUPK = { st: 'status', cli: 'cliente', tags: 'tags' }
+      function codeHub() {
+        const base = views.filter((v) => BTYPE[v.layout])
+        const appOnly = views.filter((v) => !BTYPE[v.layout])
+        let hub = '# À Fazer\nTeste de subtítulo\n'
+        if (store === 'md') {
+          hub += '\n```base\nfilters:\n  and:\n    - file.hasTag("projeto")\nviews:\n'
+          for (const v of base) {
+            const mark = views.indexOf(v) === active && dirty() ? ' class="hl"' : ''
+            const vv = views.indexOf(v) === active ? cur : v
+            let s = `  - type: ${BTYPE[vv.layout] || BTYPE[v.layout]}\n    name: ${v.name}\n`
+            if (vv.f !== 'all') s += `    filters:\n      and:\n        - 'status == "${vv.f}"'\n`
+            if (vv.g !== 'none') s += `    groupBy:\n      property: ${GROUPK[vv.g]}\n`
+            s += SORTK[vv.s]
+              ? `    sort:\n      - property: ${SORTK[vv.s]}\n`
+              : '    # ordenar por progresso: só no app\n'
+            hub += `<span${mark}>${esc(s)}</span>`
+          }
+          hub += '```\n'
+        }
+        hub +=
+          '\n## [[Sistema Catálogo]]\n## [[Site da Bio]]\n<span class="c">…os outros projetos, como hoje</span>'
+        const metaViews = store === 'md' ? appOnly : views
+        const meta = {
+          'À Fazer.md': {
+            vistaAberta: views[active].name,
+            ...(views[active].layout === 'calendar' ? { mes: '2026-11' } : {}),
+            vistas: metaViews.map((v) => ({
+              nome: v.name,
+              tipo: v.layout,
+              filtro: v.f,
+              agrupar: v.g,
+              ordenar: v.s,
+            })),
+          },
+        }
+        const m = meta['À Fazer.md']
+        const metaTxt = `{ "À Fazer.md": {\n  "vistaAberta": ${JSON.stringify(m.vistaAberta)},${m.mes ? `\n  "mes": "${m.mes}",` : ''}\n  "vistas": [${m.vistas.map((v) => '\n    ' + JSON.stringify(v)).join(',')}\n  ]\n} }`
+        return `<p class="file">À Fazer.md</p><pre>${hub}</pre>
+    <p class="file">${esc(sel)}.md</p><pre>${yamlProject(P.find((x) => x.n === sel))}</pre>
+    <p class="file">noteMeta (estado do app, fora do .md)</p><pre>${esc(metaTxt)}</pre>`
+      }
+
+      const dirty = () => ['layout', 'f', 'g', 's'].some((k) => cur[k] !== views[active][k])
+      function render() {
+        $('layouts').innerHTML = LAYOUTS.map(
+          ([k, l]) => `<button data-layout="${k}" aria-pressed="${cur.layout === k}">${l}</button>`,
+        ).join('')
+        $('saved').innerHTML =
+          '<span class="small muted">Vistas:</span>' +
+          views
+            .map(
+              (v, i) =>
+                `<button class="chip" data-view="${i}" aria-pressed="${i === active}">${esc(v.name)}${i === active && dirty() ? ' •' : ''}</button>`,
+            )
+            .join('') +
+          '<button class="chip add" data-new>+ Nova vista</button>'
+        $('f').value = cur.f
+        $('g').value = cur.g
+        $('s').value = cur.s
+        $('dirty').innerHTML = dirty()
+          ? `<button class="chip" data-save>Salvar em "${esc(views[active].name)}"</button>`
+          : ''
+        $('view').innerHTML = {
+          table: viewTable,
+          cards: viewCards,
+          list: viewList,
+          calendar: viewCalendar,
+          timeline: viewTimeline,
+        }[cur.layout]()
+        document
+          .querySelectorAll('[data-store]')
+          .forEach((b) => b.setAttribute('aria-pressed', b.dataset.store === store))
+        renderDetail()
+        $('code').innerHTML = codeHub()
+      }
+
+      document.addEventListener('click', (e) => {
+        const t = e.target.closest('button, [data-p]')
+        if (!t) return
+        if (t.dataset.layout) cur.layout = t.dataset.layout
+        else if (t.dataset.view) {
+          active = +t.dataset.view
+          cur = { ...views[active] }
+        } else if ('new' in t.dataset) {
+          views.push({ ...cur, name: `Vista ${++newCount}` })
+          active = views.length - 1
+        } else if ('save' in t.dataset) {
+          views[active] = { ...cur, name: views[active].name }
+        } else if (t.dataset.store) store = t.dataset.store
+        else if (t.dataset.sort) cur.s = t.dataset.sort
+        else if (t.dataset.cal)
+          calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + +t.dataset.cal, 1)
+        else if (t.dataset.p) sel = t.dataset.p
+        else return
+        render()
+      })
+      document.addEventListener('keydown', (e) => {
+        const t = e.target.closest('[data-p]')
+        if (t && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault()
+          sel = t.dataset.p
+          render()
+          document.querySelector(`[data-p="${CSS.escape(sel)}"]`)?.focus()
+        }
+      })
+      document.addEventListener('change', (e) => {
+        const id = e.target.id
+        if (id === 'f' || id === 'g' || id === 's') {
+          cur[id] = e.target.value
+          render()
+          return
+        }
+        const k = e.target.dataset.k
+        if (k) {
+          const p = P.find((x) => x.n === sel)
+          p[k] = e.target.value.trim()
+          render()
+          document.getElementById(id)?.focus()
+        }
+      })
+      render()
+    </script>
+  </body>
+</html>
