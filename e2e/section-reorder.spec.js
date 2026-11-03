@@ -245,6 +245,36 @@ test('the grip only shows where a heading has siblings', async ({ page }) => {
   await expect(page.locator('.cm-drag-handle').first()).toBeHidden()
 })
 
+test('the grip sits right next to the heading level pill', async ({ page }) => {
+  const heading = page.locator('.cm-line', { hasText: 'Primeira' })
+  await heading.hover()
+  // The pill widens with its fold chevron on hover; measure after the transition.
+  const gap = async () => {
+    const grip = await heading.locator('.cm-drag-handle').boundingBox()
+    const pill = await heading.locator('.cm-fold-toggle').boundingBox()
+    return pill.x - (grip.x + grip.width)
+  }
+  await expect(heading.locator('.cm-fold-toggle svg')).toHaveCSS('width', '10px')
+  const value = await gap()
+  // Close to the pill, but clear of its touch target (4px past each side).
+  expect(value).toBeGreaterThanOrEqual(4)
+  expect(value).toBeLessThanOrEqual(8)
+})
+
+test('hovering anywhere on the heading row shows the grip', async ({ page }) => {
+  const heading = page.locator('.cm-line', { hasText: 'Primeira' })
+  const grip = heading.locator('.cm-drag-handle')
+  const row = await heading.boundingBox()
+  const pill = await heading.locator('.cm-fold-toggle').boundingBox()
+  // Gap between the pill and the text, left of the grip, and the far end of the row.
+  for (const x of [pill.x + pill.width + 3, row.x - 60, row.x + row.width - 10]) {
+    await page.mouse.move(10, 10)
+    await expect(grip).toHaveCSS('opacity', '0')
+    await page.mouse.move(x, row.y + row.height / 2)
+    await expect(grip).toHaveCSS('opacity', '1')
+  }
+})
+
 test('dragging the first section after the second does not skip to the end', async ({ page }) => {
   const heading = page.locator('.cm-line', { hasText: 'Primeira' })
   await heading.hover()

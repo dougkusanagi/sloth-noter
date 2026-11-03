@@ -139,3 +139,20 @@ test('the shortcut list can be searched by action or by key', async ({ page }) =
   await search.fill('zzz')
   await expect(settings.getByRole('listitem')).toHaveCount(0)
 })
+
+test('the document uses the bundled Noto Serif on every platform', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('.cm-content')).toBeVisible()
+  await expect(page.locator('.cm-content')).toHaveCSS('font-family', /^"Noto Serif Variable"/)
+  // Loaded from the app bundle, not from the system: Windows has no Noto Serif installed.
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        await document.fonts.ready
+        return [...document.fonts].some(
+          (font) => font.family.includes('Noto Serif Variable') && font.status === 'loaded',
+        )
+      }),
+    )
+    .toBe(true)
+})

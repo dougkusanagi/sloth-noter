@@ -492,9 +492,7 @@ html:has(
   flex: none;
 }
 .display-trigger span {
-  font:
-    600 14px/1 Georgia,
-    serif;
+  font: 600 14px/1 var(--serif);
   letter-spacing: -0.02em;
 }
 .display-menu-wrap,
@@ -2390,7 +2388,7 @@ html:has(
   border-radius: var(--radius);
   background: var(--well-bg);
   box-shadow: var(--well);
-  font-family: Georgia, serif;
+  font-family: var(--serif);
   font-size: var(--editor-size);
   line-height: 1.55;
 }
@@ -2650,9 +2648,7 @@ html:has(
   overflow-wrap: break-word;
   color: transparent;
   padding: 28px max(44px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
-  font:
-    var(--editor-size)/1.55 Georgia,
-    serif;
+  font: var(--editor-size)/1.55 var(--serif);
 }
 .source-search-mirror mark {
   color: transparent;

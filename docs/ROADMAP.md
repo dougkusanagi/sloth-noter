@@ -65,6 +65,9 @@ offline já está em andamento, independente dessas capacidades futuras. A ordem
 Android é a do plano de execução; esta lista não a substitui. Todas essas entregas têm prioridade
 sobre IA local, sem substituir os complementos de edição e distribuição acima.
 
+Status de tarefas, arquivo de concluídas na própria nota e modo Quadro estão em
+[plano próprio](plans/status-arquivo-quadro-tarefas.md) (ADRs 0004, 0005 e 0006).
+
 1. **Notas do tipo lista de tarefas e histórico de conclusão.** Criar listas com título e itens na mesma biblioteca, com identificação e filtro por tipo para não misturar com notas comuns. Checkboxes continuam disponíveis no Markdown das notas comuns. Registrar a tarefa, a ocorrência quando houver e a data/hora da conclusão; permitir desfazer a conclusão e consultar “Concluídas hoje” e o histórico por dia. O histórico registra ações do usuário, sem depender do histórico de commits do provedor de armazenamento.
 2. **Recorrência.** Começar com repetição diária e por dias da semana. Cada período tem sua própria ocorrência: uma tarefa diária concluída ontem aparece pendente hoje, mantendo a conclusão anterior. A virada é à meia-noite no fuso definido para a recorrência, sem exigir o app aberto nesse horário; reconciliar as ocorrências ao reabrir. Definir antes da implementação como apresentar períodos não concluídos e como mudanças de fuso afetam a agenda.
 3. **Data, hora e lembretes no desktop.** Separar prazo de conclusão e horário do lembrete; ambos são opcionais. Começar com notificações do sistema e som opcional. Definir o comportamento com app fechado, computador suspenso e lembrete vencido; alarmes persistentes entram em etapa própria, após validar o suporte de cada plataforma.

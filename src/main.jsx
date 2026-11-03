@@ -110,6 +110,8 @@ import {
 } from 'lucide-react'
 import { platform } from './platform.js'
 import { MobileShell } from './mobile/mobile-shell.jsx'
+import '@fontsource-variable/noto-serif/wght.css'
+import '@fontsource-variable/noto-serif/wght-italic.css'
 import './styles.css'
 import './ui.css'
 

@@ -20,6 +20,8 @@
   --shadow-modal:
     0 0 0 1px var(--line), 0 4px 12px rgb(30 24 16 / 8%), 0 28px 72px rgb(30 24 16 / 24%);
   --ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Bundled, so every platform renders the document like Linux does (Windows fell back to Georgia). */
+  --serif: 'Noto Serif Variable', 'Noto Serif', Georgia, serif;
   --mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
   --radius: 10px;
   --radius-md: 8px;
@@ -101,7 +103,7 @@ body {
 .markdown,
 .reading,
 .empty-note {
-  font-family: Georgia, serif;
+  font-family: var(--serif);
 }
 button,
 input,
@@ -173,9 +175,7 @@ textarea {
   background: transparent;
   color: var(--ink);
   padding: 28px max(44px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
-  font:
-    var(--editor-size)/1.55 Georgia,
-    serif;
+  font: var(--editor-size)/1.55 var(--serif);
   caret-color: var(--accent);
   cursor: text;
 }
@@ -234,9 +234,7 @@ textarea:focus-visible {
   border-radius: 7px;
   background: transparent;
   color: var(--ink);
-  font:
-    14px Georgia,
-    serif;
+  font: 14px var(--serif);
   cursor: pointer;
   transition:
     background 0.1s var(--ease),
@@ -285,9 +283,7 @@ textarea:focus-visible {
   border-radius: 7px;
   background: transparent;
   color: var(--muted);
-  font:
-    var(--editor-size)/1.62 Georgia,
-    serif;
+  font: var(--editor-size)/1.62 var(--serif);
   pointer-events: none;
   transition:
     background var(--fast) var(--ease),
@@ -368,7 +364,7 @@ textarea:focus-visible {
 }
 .visual-editor .cm-scroller {
   overflow: auto;
-  font-family: Georgia, serif;
+  font-family: var(--serif);
   padding: 28px max(44px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
 }
 .visual-editor .cm-content {
@@ -376,9 +372,7 @@ textarea:focus-visible {
   min-width: 0;
   width: 100%;
   padding: 0;
-  font:
-    var(--editor-size)/1.62 Georgia,
-    serif;
+  font: var(--editor-size)/1.62 var(--serif);
   caret-color: var(--accent);
 }
 .visual-editor .cm-line {
@@ -490,9 +484,7 @@ textarea:focus-visible {
   grid-template-columns: repeat(var(--table-columns), minmax(0, 1fr));
   width: 100%;
   background: var(--paper);
-  font:
-    0.9em/1.5 Georgia,
-    serif;
+  font: 0.9em/1.5 var(--serif);
 }
 .visual-editor .cm-md-table-row.cm-md-table-head {
   border-radius: var(--radius) var(--radius) 0 0;
@@ -1295,10 +1287,11 @@ textarea:focus-visible {
   }
 }
 
-/* Ordering grip in the left gutter, before the heading level pill. */
+/* Ordering grip in the left gutter, right before the heading level pill (36px wide with
+   its fold chevron, 26px as a plain level badge). */
 .cm-drag-handle {
   position: absolute;
-  right: calc(100% + 3.45rem);
+  right: calc(100% + 0.45rem + 41px);
   top: 50%;
   translate: 0 -50%;
   display: none;
@@ -1340,6 +1333,16 @@ textarea:focus-visible {
   .visual-editor .cm-md-h6:focus-within .cm-drag-handle {
     opacity: 1;
   }
+  /* Hover band over the gutter, so the grip shows from anywhere on the heading row; the
+     pill and grip come later in the line and stay on top of it. */
+  .visual-editor :is(.cm-md-h2, .cm-md-h3, .cm-md-h4, .cm-md-h5, .cm-md-h6)::before {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 0;
+    bottom: 0;
+    width: calc(0.45rem + 41px + 22px);
+  }
   .cm-drag-handle:hover,
   .cm-drag-handle:focus-visible {
     opacity: 1;
@@ -1349,6 +1352,9 @@ textarea:focus-visible {
     outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
     outline-offset: 1px;
   }
+}
+.cm-line:has(.cm-level-badge) .cm-drag-handle {
+  right: calc(100% + 0.45rem + 31px);
 }
 .cm-drag-handle svg {
   width: 16px;
