@@ -381,7 +381,6 @@ textarea:focus-visible {
   box-sizing: border-box;
   width: 1.5em;
   margin-left: -1.5em;
-  padding-right: 0.5em;
   text-align: right;
 }
 .visual-editor .cm-md-link-source {
