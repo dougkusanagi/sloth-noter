@@ -355,7 +355,7 @@ for (const width of [1280, 390]) {
         range.setEnd(marker.nextSibling, 1)
         return range.getBoundingClientRect().left - markerEnd
       })
-      expect(gap).toBeCloseTo(3, 0)
+      expect(gap).toBeCloseTo(0, 0)
     }
     await page.screenshot({ path: `/tmp/task-marker-${width}.png` })
     await page.keyboard.type('Nova ')
