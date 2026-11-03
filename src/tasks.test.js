@@ -217,3 +217,18 @@ test('a wiki-only heading never borrows local checkboxes for its target summary'
   })
   assert.deepEqual(sectionTaskChanges(body, 3, true, notes), [])
 })
+
+test('wiki headings count tasks that reference their own document', () => {
+  const notes = [
+    { name: 'Regente.md', body: '# Regente\n- [ ] Adicionar ao [[Regente]] uma verificação' },
+  ]
+  assert.deepEqual(sectionProgress('## [[Regente]]', [], new Set(), notes).get(1), {
+    done: 0,
+    total: 1,
+  })
+  notes[0].body = notes[0].body.replace('[ ]', '[x]')
+  assert.deepEqual(sectionProgress('## [[Regente]]', [], new Set(), notes).get(1), {
+    done: 1,
+    total: 1,
+  })
+})
