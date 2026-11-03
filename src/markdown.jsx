@@ -4,7 +4,7 @@ import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { t } from './i18n.js'
 import { codeTokens, codeLanguageName } from './syntax-highlight.js'
-import { ChevronDown, Copy } from 'lucide-react'
+import { ChevronDown, Copy, WrapText } from 'lucide-react'
 import { remarkTags, remarkWikiLinks, findNote } from './markdown-model.js'
 import { remarkSections, remarkSourceLayout } from './sections.js'
 import { resolveImage } from './images.js'
@@ -154,6 +154,7 @@ function InlineCode({ children, className }) {
   )
 }
 function CodeBlock({ children, node }) {
+  const [wrap, setWrap] = useState(true)
   const { onCopy } = useContext(MarkdownContext)
   const child = React.Children.toArray(children)[0]
   const source = String(child?.props?.children ?? '').replace(/\n$/, '')
@@ -162,10 +163,21 @@ function CodeBlock({ children, node }) {
   return (
     <div
       className="code-block"
+      data-scroll={!wrap || undefined}
       style={child?.props?.style}
       data-source-line={node.position.start.line}
     >
       <div className="code-block-tools">
+        <button
+          type="button"
+          className="copy-code code-wrap-toggle"
+          aria-label={t('code.wrap')}
+          title={t('code.wrap')}
+          aria-pressed={wrap}
+          onClick={() => setWrap(!wrap)}
+        >
+          <WrapText size={14} aria-hidden="true" />
+        </button>
         <button
           type="button"
           className="copy-code"

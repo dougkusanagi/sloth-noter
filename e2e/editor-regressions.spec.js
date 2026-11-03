@@ -247,7 +247,7 @@ test('images from trash can be reused and do not block keyboard shortcuts', asyn
   await page.getByRole('button', { name: 'Inserir na nota', exact: true }).click()
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(page.locator('textarea')).toHaveValue(/!\[foto\]\(data:image\/png;base64,/)
-  await expect(page.getByRole('button', { name: 'Excluir imagem', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Excluir imagem', exact: true })).toBeEnabled()
 })
 
 test('list text and wrapping keep their horizontal position when the cursor moves', async ({

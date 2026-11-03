@@ -28,7 +28,7 @@ import { displayName, notePreview } from '../note-title.js'
 import { noteSearchResult } from '../note-search.js'
 import { findNote } from '../markdown-model.js'
 import { moveToTrash, restoreFromTrash } from '../notes.js'
-import { libraryImages } from '../images.js'
+import { importImage, libraryImages, markdownImage } from '../images.js'
 import { ImageThumbnail } from '../components/image-library.jsx'
 import { TasksLibrary } from '../components/tasks-library.jsx'
 import { ChangelogPanel } from '../components/changelog-panel.jsx'
@@ -141,6 +141,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const [editingId, setEditingId] = useState(null)
   const editing = active && editingId === active.id
   const [showDone, setShowDone] = useState(false)
+  const [imageBusy, setImageBusy] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
   const content = useRef(null)
   const editor = useRef(null)
@@ -290,6 +291,50 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     commit(updateMobileNote(current.current, active.id, body))
     if (editor.current && editing)
       dispatch({ type: 'position', position: { cursor: editor.current.state.selection.main.head } })
+  }
+  function insertImageMarkdown(text, point, noteId) {
+    const note = current.current.notes.find((item) => item.id === noteId)
+    if (!note) return point
+    const from = Math.min(Math.max(2, point.from), note.body.length)
+    const to = Math.min(Math.max(from, point.to), note.body.length)
+    const insert = `${from && note.body[from - 1] !== '\n' ? '\n' : ''}${text}\n`
+    const view = editor.current
+    if (view?.dom.isConnected && current.current.activeId === noteId) {
+      view.dispatch({
+        changes: { from, to, insert },
+        selection: { anchor: from + insert.length },
+        userEvent: 'input.paste',
+        scrollIntoView: true,
+      })
+    } else {
+      commit(
+        updateMobileNote(
+          current.current,
+          noteId,
+          note.body.slice(0, from) + insert + note.body.slice(to),
+        ),
+      )
+    }
+    return { from: from + insert.length, to: from + insert.length }
+  }
+  async function addMobileImages(files, point) {
+    if (imageBusy || blocked || !active) return
+    const noteId = active.id
+    setImageBusy(true)
+    try {
+      for (const file of files) {
+        const src = await importImage(file, persistence.invoke)
+        commit({
+          ...current.current,
+          assets: [...(current.current.assets ?? []), { name: file.name, src }],
+        })
+        point = insertImageMarkdown(markdownImage(file.name, src), point, noteId)
+      }
+    } catch (cause) {
+      toast.error(t('images.importFailed', { error: friendlyError(cause) }))
+    } finally {
+      setImageBusy(false)
+    }
   }
   function searchNotes(term) {
     if (content.current) content.current.scrollTop = 0
@@ -588,6 +633,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 onChange={updateBody}
                 onOpenWiki={openWiki}
                 onCopy={copy}
+                imageBusy={imageBusy}
+                onImageFiles={addMobileImages}
+                onImageUrl={(url, point) =>
+                  insertImageMarkdown(markdownImage(t('block.image'), url), point, active.id)
+                }
                 onSelectionChange={(selection) =>
                   dispatch({ type: 'position', position: { cursor: selection.head } })
                 }

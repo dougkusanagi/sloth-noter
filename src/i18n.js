@@ -205,7 +205,13 @@ const messages = {
       'A imagem ainda é usada em: {notes}. Remova essas referências antes de excluir.',
     'images.deleteConfirm':
       'Excluir “{name}”? Essa imagem não está em uso. Esta ação não pode ser desfeita.',
+    'images.deleteUsedConfirm':
+      'Excluir “{name}” e removê-la das notas que a usam? O texto alternativo será mantido. Esta ação não pode ser desfeita.',
+    'images.deleteEmbeddedConfirm':
+      'Remover “{name}” das notas que a usam? O texto alternativo será mantido. Esta ação não pode ser desfeita.',
     'images.protected': 'Remova as referências nas notas e na lixeira antes de excluir.',
+    'images.findNotes': 'Encontrar notas',
+    'images.clearNoteFilter': 'Notas com “{name}” · Limpar filtro',
     'images.used': 'Em uso: {count} nota(s)',
     'images.unused': 'Sem uso',
     'images.inTrash': 'Referenciada por uma nota na lixeira',
@@ -213,6 +219,7 @@ const messages = {
     'images.refresh': 'Atualizar imagens',
     'images.loading': 'Carregando imagens…',
     'images.importing': 'Importando…',
+    'images.importFailed': 'Não foi possível adicionar a imagem: {error}',
     'images.invalid': 'Use PNG, JPEG, GIF, WebP, AVIF ou BMP de até 20 MB.',
 
     'sidebar.title': 'Biblioteca',
@@ -335,7 +342,17 @@ const messages = {
       'A pasta de notas não foi encontrada. Reconecte a unidade ou escolha outra pasta.',
     'error.nameExists': 'Já existe uma nota com esse nome.',
 
+    'editor.previewHint': 'Comece a escrever…',
+    'editor.listHint': 'A primeira linha aparece na lista',
+    'editor.slashBefore': 'Digite',
+    'editor.slashAfter': 'para inserir blocos',
+    'editor.slashHint': 'Digite / para inserir blocos',
+    'editor.blockSearch': 'Buscar blocos',
+    'editor.noBlocks': 'Nenhum bloco encontrado.',
+    'editor.titleHint': 'Sem título',
     'code.copy': 'Copiar',
+    'code.wrap': 'Quebrar linhas',
+    'code.scroll': 'Rolar código horizontalmente',
     'code.copied': 'Copiado',
     'code.copyFailed': 'Não foi possível copiar',
 
@@ -671,7 +688,13 @@ const messages = {
     'images.inUseOnDisk':
       'The image is still used in: {notes}. Remove those references before deleting.',
     'images.deleteConfirm': 'Delete “{name}”? This image is unused. This action cannot be undone.',
+    'images.deleteUsedConfirm':
+      'Delete “{name}” and remove it from notes that use it? Alternative text will be kept. This cannot be undone.',
+    'images.deleteEmbeddedConfirm':
+      'Remove “{name}” from notes that use it? Alternative text will be kept. This cannot be undone.',
     'images.protected': 'Remove references in notes and trash before deleting.',
+    'images.findNotes': 'Find notes',
+    'images.clearNoteFilter': 'Notes with “{name}” · Clear filter',
     'images.used': 'Used in {count} note(s)',
     'images.unused': 'Unused',
     'images.inTrash': 'Referenced by a note in trash',
@@ -679,6 +702,7 @@ const messages = {
     'images.refresh': 'Refresh images',
     'images.loading': 'Loading images…',
     'images.importing': 'Importing…',
+    'images.importFailed': 'Could not add the image: {error}',
     'images.invalid': 'Use PNG, JPEG, GIF, WebP, AVIF or BMP up to 20 MB.',
 
     'sidebar.title': 'Library',
@@ -799,7 +823,17 @@ const messages = {
       'The notes folder was not found. Reconnect the drive or choose another folder.',
     'error.nameExists': 'A note with that name already exists.',
 
+    'editor.previewHint': 'Start writing…',
+    'editor.listHint': 'The first line shows in the list',
+    'editor.slashBefore': 'Type',
+    'editor.slashAfter': 'to insert blocks',
+    'editor.slashHint': 'Type / to insert blocks',
+    'editor.blockSearch': 'Search blocks',
+    'editor.noBlocks': 'No blocks found.',
+    'editor.titleHint': 'Untitled',
     'code.copy': 'Copy',
+    'code.wrap': 'Wrap lines',
+    'code.scroll': 'Scroll code horizontally',
     'code.copied': 'Copied',
     'code.copyFailed': 'Could not copy',
 

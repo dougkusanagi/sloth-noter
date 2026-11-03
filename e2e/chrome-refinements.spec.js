@@ -79,7 +79,7 @@ test('sidebar layout updates rails and insert control, and short notes do not sc
   expect(Math.abs(rail.bottom - last.bottom)).toBeLessThan(2)
   await expect(page.locator('.insert-trigger')).toBeVisible()
   const trigger = await bounds('.insert-trigger')
-  expect(Math.abs(trigger.left - (parent.left - 34))).toBeLessThan(2)
+  expect(trigger.left).toBeGreaterThanOrEqual(parent.left)
   expect(
     await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight),
   ).toBe(true)

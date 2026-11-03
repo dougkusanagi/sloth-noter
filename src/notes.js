@@ -2,6 +2,7 @@ export function isDiscardableEmptyNote(note) {
   return (
     (note?.body === '' ||
       note?.body === '# ' ||
+      note?.body === '# \n' ||
       note?.body === `# ${note?.name.replace(/\.md$/i, '')}`) &&
     note.revision === 0 &&
     /^new note(?: \(\d+\))?\.md$/i.test(note.name)

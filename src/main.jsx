@@ -89,6 +89,7 @@ import {
   clearImageCache,
   markdownImage,
   replaceDocumentImage,
+  removeDocumentImage,
   dataUrlBytes,
 } from './images.js'
 import {
@@ -185,6 +186,7 @@ function Workspace({ persistence, loaded }) {
     setBlocked,
   } = useNotesStore({ persistence, loaded, mode, onHistoryWarning: setImportError })
   const [sidebarQuery, setSidebarQuery] = useState('')
+  const [imageNoteFilter, setImageNoteFilter] = useState(null)
   const [renamingGroup, setRenamingGroup] = useState(null)
   const sidebarSearchRef = useRef(null)
   const [sidebarSection, setSidebarSection] = useState('notes')
@@ -1141,19 +1143,24 @@ function Workspace({ persistence, loaded }) {
   }
 
   async function deleteImage(image) {
-    const referenced = noteImages(allNotes(current.current)).some(
-      (entry) => entry.src === image.src,
-    )
-    if (referenced) return
     if (
       !(await ask({
         kind: 'confirm',
-        message: t('images.deleteConfirm', { name: image.name }),
+        message: t(
+          image.noteIds.length && /^(data:|https?:)/i.test(image.src)
+            ? 'images.deleteEmbeddedConfirm'
+            : image.noteIds.length
+              ? 'images.deleteUsedConfirm'
+              : 'images.deleteConfirm',
+          {
+            name: image.name,
+          },
+        ),
         confirmLabel: t('images.delete'),
       }))
     )
       return
-    await removeImages([image])
+    await removeImages([image], image.noteIds.length > 0)
   }
   async function deleteUnusedImages(images) {
     if (
@@ -1167,7 +1174,7 @@ function Workspace({ persistence, loaded }) {
       return
     await removeImages(images)
   }
-  async function removeImages(images) {
+  async function removeImages(images, force = false) {
     setImageBusy(true)
     setImportError('')
     toast.dismiss('image-delete')
@@ -1175,16 +1182,22 @@ function Workspace({ persistence, loaded }) {
       const failure = await writer.current.whenIdle()
       if (failure) throw new Error(failure)
       for (const image of images) {
-        if (noteImages(allNotes(current.current)).some((entry) => entry.src === image.src))
+        if (
+          !force &&
+          noteImages(allNotes(current.current)).some((entry) => entry.src === image.src)
+        )
           throw new Error(t('images.protected'))
-        if (persistence.invoke && !/^(data:|https?:)/i.test(image.src))
-          await persistence.invoke('image_delete', { name: normalizeImageSource(image.src) })
+        const document = removeDocumentImage(current.current, image.src)
         commit({
-          ...current.current,
+          ...document,
           assets: (current.current.assets ?? []).filter(
             (asset) => normalizeImageSource(asset.src) !== image.src,
           ),
         })
+        const saveFailure = await writer.current.whenIdle()
+        if (saveFailure) throw new Error(saveFailure)
+        if (persistence.invoke && !/^(data:|https?:)/i.test(image.src))
+          await persistence.invoke('image_delete', { name: normalizeImageSource(image.src), force })
       }
       setSelectedImage(null)
       refreshImages()
@@ -2017,6 +2030,7 @@ function Workspace({ persistence, loaded }) {
   function showSection(section) {
     setSidebarSection(section)
     setSidebarQuery('')
+    setImageNoteFilter(null)
   }
   const documentStats = useMemo(
     () => textStatistics(active?.body.replace(/^# /, '') ?? ''),
@@ -2261,8 +2275,17 @@ function Workspace({ persistence, loaded }) {
             <div className="sidebar-items">
               {sidebarSection === 'notes' ? (
                 <>
+                  {imageNoteFilter && (
+                    <button className="button quiet" onClick={() => setImageNoteFilter(null)}>
+                      {t('images.clearNoteFilter', { name: imageNoteFilter.name })}
+                    </button>
+                  )}
                   <NoteList
-                    notes={data.notes.filter((note) => !note.completedAt)}
+                    notes={data.notes.filter((note) =>
+                      imageNoteFilter
+                        ? imageNoteFilter.noteIds.includes(note.id)
+                        : !note.completedAt,
+                    )}
                     groups={data.groups ?? []}
                     sort={prefs.noteSort ?? 'recent'}
                     query={sidebarQuery}
@@ -2310,6 +2333,7 @@ function Workspace({ persistence, loaded }) {
               ) : (
                 <ImageLibrary
                   images={images}
+                  imageVersion={imageVersion}
                   query={sidebarQuery}
                   busy={imageBusy}
                   loading={imagesLoading}
@@ -2324,6 +2348,11 @@ function Workspace({ persistence, loaded }) {
                   onDownload={downloadImage}
                   onDeleteUnused={deleteUnusedImages}
                   onOpenNote={openNote}
+                  onFindNotes={(image) => {
+                    setImageNoteFilter(image)
+                    setSidebarQuery('')
+                    setSidebarSection('notes')
+                  }}
                   onDropImage={(image, position) => {
                     if (blocked || switching || imageBusy || !active) return
                     const target = document.elementFromPoint(position.x, position.y)

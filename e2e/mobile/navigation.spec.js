@@ -498,3 +498,63 @@ test('swipe feedback fits mobile and desktop with long titles', async ({ page },
     await expect(page.locator('[data-note-id="long"]')).toBeVisible()
   }
 })
+
+test('a new empty note shows title and block hints', async ({ page }) => {
+  await page.getByRole('button', { name: 'Nova nota', exact: true }).tap()
+  await expect(page.locator('.cm-empty-title')).toHaveAttribute(
+    'data-placeholder',
+    'Sem título',
+  )
+  await expect(page.locator('.cm-empty-body')).toHaveAttribute(
+    'data-placeholder',
+    'Comece a escrever…',
+  )
+  if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/sloth-mobile-real.png' })
+})
+
+test('the slash menu inserts an image URL in a mobile note', async ({ page }) => {
+  await page.getByRole('button', { name: 'Nova nota', exact: true }).tap()
+  await expect(page.locator('.cm-content')).toBeFocused()
+  await page.keyboard.type('Fotos')
+  await page.keyboard.press('Tab')
+  await page.keyboard.type('/')
+  await page.getByRole('textbox', { name: 'Buscar blocos' }).fill('imagem')
+  await page.getByRole('button', { name: 'Imagem', exact: true }).tap()
+  if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/sloth-mobile-image-panel.png' })
+  await page.getByRole('textbox', { name: 'URL da imagem' }).fill('https://example.com/foto.png')
+  await page.getByRole('button', { name: 'Inserir URL', exact: true }).tap()
+  await expect
+    .poll(() =>
+      page.evaluate((key) => {
+        const document = JSON.parse(localStorage.getItem(key))
+        return document.notes.find((note) => note.id === document.activeId).body
+      }, STORAGE_KEY),
+    )
+    .toContain('![Imagem](https://example.com/foto.png)')
+})
+
+test('the slash menu imports a file in a mobile note', async ({ page }) => {
+  await page.getByRole('button', { name: 'Nova nota', exact: true }).tap()
+  await expect(page.locator('.cm-content')).toBeFocused()
+  await page.keyboard.type('Fotos')
+  await page.keyboard.press('Tab')
+  await page.keyboard.type('/')
+  await page.getByRole('textbox', { name: 'Buscar blocos' }).fill('imagem')
+  await page.getByRole('button', { name: 'Imagem', exact: true }).tap()
+  await page.locator('.image-insert input[type=file]').setInputFiles({
+    name: 'foto.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1Z0AAAAASUVORK5CYII=',
+      'base64',
+    ),
+  })
+  await expect
+    .poll(() =>
+      page.evaluate((key) => {
+        const document = JSON.parse(localStorage.getItem(key))
+        return document.notes.find((note) => note.id === document.activeId).body
+      }, STORAGE_KEY),
+    )
+    .toContain('![foto.png](data:image/png;base64,')
+})

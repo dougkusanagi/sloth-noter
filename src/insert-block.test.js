@@ -54,5 +54,7 @@ test('offers editable headings, lists, tables and code blocks', () => {
     selectionTo: 10,
   })
   assert.deepEqual(blockTemplate('code'), { text: '```\n\n```', selectionFrom: 4, selectionTo: 4 })
+  assert.equal(blockTemplate('h1'), null)
+  assert.equal(blockEdit('# Título\n\n', 10, 10, 'h1'), null)
   assert.equal(blockTemplate('other'), null)
 })

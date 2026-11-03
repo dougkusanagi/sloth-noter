@@ -1,6 +1,35 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { importImage, bytesDataUrl, markdownImage, libraryImages, resolveImage } from './images.js'
+import {
+  importImage,
+  bytesDataUrl,
+  markdownImage,
+  libraryImages,
+  resolveImage,
+  removeDocumentImage,
+} from './images.js'
+
+test('removing an embedded image keeps alternative text in notes and trash', () => {
+  const source = 'data:image/png;base64,AAAA'
+  const note = { id: 'a', revision: 0, body: `Texto ![Foto](${source}) fim` }
+  const result = removeDocumentImage({ notes: [note], trash: [{ note }], assets: [] }, source)
+  assert.equal(result.notes[0].body, 'Texto Foto fim')
+  assert.equal(result.trash[0].note.body, 'Texto Foto fim')
+  assert.equal(note.revision, 0)
+})
+
+test('removing a file image handles encoded paths and reference-style images', () => {
+  const note = {
+    id: 'a',
+    revision: 0,
+    body: '# Nota\n\n![Foto][img]\n\n[img]: <assets/minha%20foto.png>',
+  }
+  const result = removeDocumentImage(
+    { notes: [note], trash: [], assets: [] },
+    'assets/minha foto.png',
+  )
+  assert.equal(result.notes[0].body, '# Nota\n\nFoto\n\n')
+})
 test('imports actual raster bytes even without a browser MIME type and rejects disguised text', async () => {
   const bytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 1])
   const file = { name: 'photo.png', size: bytes.length, arrayBuffer: async () => bytes.buffer }

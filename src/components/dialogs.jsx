@@ -198,6 +198,10 @@ export function FindDialog({
           if (event.target === inputRef.current) onStep(event.shiftKey ? -1 : 1)
           else onReplace(event.ctrlKey || event.metaKey)
         }
+        if (event.target === inputRef.current && ['ArrowUp', 'ArrowDown'].includes(event.key)) {
+          event.preventDefault()
+          onStep(event.key === 'ArrowUp' ? -1 : 1)
+        }
         if (event.altKey) {
           const key = { c: 'caseSensitive', w: 'wholeWord', r: 'regex', p: 'preserveCase' }[
             event.key.toLowerCase()

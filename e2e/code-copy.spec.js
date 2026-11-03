@@ -58,7 +58,9 @@ for (const mode of ['Padrão', 'Leitura']) {
     })
     await page.getByRole('radio', { name: mode, exact: true }).check({ force: true })
     for (let index = 0; index < blocks.length; index++) {
-      const button = page.locator('.copy-code').nth(index)
+      const button = page
+        .locator('.copy-code:not(.code-editor-wrap):not(.code-wrap-toggle)')
+        .nth(index)
       for (let step = 0; step < 12 && !(await button.isVisible()); step++) {
         await page.evaluate(() => window.scrollBy(0, 150))
       }

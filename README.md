@@ -10,8 +10,8 @@ Um bloco de notas com Markdown para escrever, organizar ideias e fechar a janela
 - **Notas conectadas:** abas, links `[[Nota]]`, referências a títulos e lista de notas que apontam para o documento atual.
 - **Busca onde precisar:** encontre notas pelo nome, pesquise no conteúdo de todas elas com trechos destacados ou busque e substitua dentro de uma nota.
 - **Listas e tarefas:** sublistas, reordenação pelo teclado, visão de tarefas na biblioteca e controles para concluir as tarefas de uma seção.
-- **Markdown além do básico:** tabelas editáveis, citações, notas de rodapé, blocos de código com realce de sintaxe e botão de copiar.
-- **Imagens junto das ideias:** cole ou arraste arquivos, reutilize imagens da biblioteca e encontre as que estão sem uso.
+- **Markdown além do básico:** digite `/` numa linha vazia para buscar blocos; copie blocos de código e escolha entre quebrar linhas e rolar horizontalmente.
+- **Imagens junto das ideias:** cole ou arraste arquivos, reutilize imagens da biblioteca e encontre as notas que as utilizam.
 - **Um espaço para se concentrar:** modo de foco, temas claro e escuro, fonte, tamanho e largura do texto ajustáveis. Interface em português do Brasil ou inglês.
 
 ## Primeiros passos
@@ -30,18 +30,19 @@ A página Welcome pode ser excluída. Para gerar uma cópia atualizada, abra a p
 
 Use `Ctrl` no Windows/Linux e `Cmd` no macOS. Atalhos como criar e fechar abas podem ser interceptados pelo navegador; no desktop, pertencem ao app.
 
-| Ação                                 | Atalho                         |
-| ------------------------------------ | ------------------------------ |
-| Nova nota                            | `Ctrl+T`                       |
-| Menu principal / biblioteca          | `F10` / `Ctrl+Alt+B`           |
-| Encontrar nota pelo nome             | `Ctrl+P`                       |
-| Buscar no conteúdo de todas as notas | `Ctrl+Shift+F`                 |
-| Buscar / substituir na nota atual    | `Ctrl+F` / `Ctrl+H`            |
-| Paleta de comandos                   | `Ctrl+Shift+P`                 |
-| Padrão / Código / Leitura            | `Ctrl+Alt+1` / `2` / `3`       |
-| Modo de foco                         | `Ctrl+Alt+F`                   |
-| Negrito / itálico / link             | `Ctrl+B` / `Ctrl+I` / `Ctrl+K` |
-| Configurações                        | `Ctrl+,`                       |
+| Ação                                         | Atalho                         |
+| -------------------------------------------- | ------------------------------ |
+| Nova nota                                    | `Ctrl+T`                       |
+| Menu principal / biblioteca                  | `F10` / `Ctrl+Alt+B`           |
+| Encontrar nota pelo nome                     | `Ctrl+P`                       |
+| Buscar no conteúdo de todas as notas         | `Ctrl+Shift+F`                 |
+| Buscar / substituir na nota atual            | `Ctrl+F` / `Ctrl+H`            |
+| Selecionar próxima ocorrência no modo Padrão | `Ctrl+D`                       |
+| Paleta de comandos                           | `Ctrl+Shift+P`                 |
+| Padrão / Código / Leitura                    | `Ctrl+Alt+1` / `2` / `3`       |
+| Modo de foco                                 | `Ctrl+Alt+F`                   |
+| Negrito / itálico / link                     | `Ctrl+B` / `Ctrl+I` / `Ctrl+K` |
+| Configurações                                | `Ctrl+,`                       |
 
 A lista completa está em **Configurações → Atalhos** e na [documentação de recursos](docs/RECURSOS.md).
 

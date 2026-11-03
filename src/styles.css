@@ -279,19 +279,82 @@ textarea:focus-visible {
 .insert-trigger {
   position: fixed;
   z-index: 4;
-  width: 24px;
+  width: auto;
   height: 24px;
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: color-mix(in srgb, var(--muted) 75%, transparent);
-  font: 20px/1 var(--ui);
-  cursor: pointer;
+  color: var(--muted);
+  font:
+    var(--editor-size)/1.62 Georgia,
+    serif;
+  pointer-events: none;
   transition:
     background var(--fast) var(--ease),
     color var(--fast) var(--ease),
     box-shadow var(--fast) var(--ease),
     rotate var(--medium) var(--ease-spring);
+}
+.visual-editor .cm-empty-title,
+.visual-editor .cm-empty-body {
+  position: relative;
+}
+.visual-editor .cm-empty-title::after,
+.visual-editor .cm-empty-body::after {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+/* Three levels: title, body example, then a small usage tip. */
+.visual-editor .cm-empty-title::after {
+  opacity: 0.6;
+}
+.visual-editor .cm-empty-body::after {
+  opacity: 0.55;
+  font-style: italic;
+}
+.visual-editor .cm-empty-hint {
+  position: absolute;
+  top: calc(100% + 0.9em);
+  left: 0;
+  right: 0;
+  color: var(--muted);
+  font: 0.78em/1.6 var(--ui);
+  white-space: normal;
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
+}
+.visual-editor .cm-empty-hint kbd {
+  display: inline-block;
+  min-width: 1.5em;
+  padding: 0 0.35em;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--control);
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+}
+.visual-editor.block-menu-open .cm-empty-hint {
+  display: none;
+}
+.block-search {
+  width: calc(100% - 16px);
+  margin: 8px;
+  padding: 7px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.block-no-results {
+  margin: 4px 12px 12px;
+  color: var(--muted);
+  font: 13px var(--ui);
 }
 .insert-trigger:hover,
 .insert-trigger[aria-expanded='true'],
@@ -303,9 +366,6 @@ textarea:focus-visible {
     0 0 0 1px var(--edge),
     var(--lift);
 }
-.insert-trigger[aria-expanded='true'] {
-  rotate: 45deg;
-}
 .visual-editor .cm-scroller {
   overflow: auto;
   font-family: Georgia, serif;
@@ -313,6 +373,8 @@ textarea:focus-visible {
 }
 .visual-editor .cm-content {
   min-height: 100%;
+  min-width: 0;
+  width: 100%;
   padding: 0;
   font:
     var(--editor-size)/1.62 Georgia,
@@ -329,6 +391,12 @@ textarea:focus-visible {
 }
 .visual-editor .cm-selectionBackground {
   background: color-mix(in srgb, var(--accent) 25%, transparent) !important;
+}
+.visual-editor .cm-cursor {
+  border-left-color: var(--accent);
+}
+.visual-editor .cm-content > .cm-line:first-child {
+  padding-bottom: calc(var(--editor-size) * 1.62);
 }
 .visual-editor .cm-md-h1 {
   --md-prefix-width: 0.82em;
@@ -397,6 +465,24 @@ textarea:focus-visible {
   padding-left: 1em;
   /* The sticky copy badge can float over any line, so keep its column clear. */
   padding-right: var(--copy-reserve);
+}
+.visual-editor .cm-code-no-wrap {
+  white-space: pre;
+  overflow-x: hidden;
+  overflow-wrap: normal;
+}
+.code-block-scroll {
+  position: fixed;
+  z-index: 3;
+  height: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.code-block-scroll > div {
+  height: 1px;
+}
+.code-block-scroll[hidden] {
+  display: none;
 }
 .visual-editor .cm-md-table-row {
   position: relative;
@@ -700,6 +786,10 @@ textarea:focus-visible {
   font-weight: 600;
   letter-spacing: -0.02em;
 }
+.markdown > .md-section:first-child > h1,
+.markdown > h1:first-child {
+  margin-bottom: calc(var(--editor-size) * 1.62);
+}
 .markdown h2 {
   font-size: 1.32em;
   font-weight: 600;
@@ -779,6 +869,16 @@ textarea:focus-visible {
   top: 12px;
   right: 10px;
   align-self: flex-start;
+}
+.code-block-tools .code-wrap-toggle {
+  margin-right: 8px;
+}
+.markdown .code-block[data-scroll] pre code {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+.markdown .code-block[data-scroll] pre {
+  overflow-x: auto;
 }
 .markdown pre code {
   font: 0.85em/1.7 var(--mono);

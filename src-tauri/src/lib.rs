@@ -478,11 +478,11 @@ fn note_read_dropped(
 }
 
 #[tauri::command]
-fn image_delete(app: AppHandle, name: String) -> Result<(), String> {
+fn image_delete(app: AppHandle, name: String, force: Option<bool>) -> Result<(), String> {
     let root = image_root(&app)?;
     images::image_path(&root, &name)?;
     // Protect actual image references in notes edited outside the app as well.
-    if configured_vault(&app)?.is_some() {
+    if !force.unwrap_or(false) && configured_vault(&app)?.is_some() {
         let references: Vec<String> = vault::list(&root)
             .map_err(|e| errors::describe(&e))?
             .into_iter()

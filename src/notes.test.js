@@ -10,6 +10,7 @@ import {
 
 test('identifies untouched new notes that can be discarded', () => {
   assert.equal(isDiscardableEmptyNote({ name: 'new note.md', body: '', revision: 0 }), true)
+  assert.equal(isDiscardableEmptyNote({ name: 'new note.md', body: '# \n', revision: 0 }), true)
   assert.equal(isDiscardableEmptyNote({ name: 'new note (7).md', body: '', revision: 0 }), true)
   assert.equal(isDiscardableEmptyNote({ name: 'new note.md', body: 'text', revision: 1 }), false)
   assert.equal(isDiscardableEmptyNote({ name: 'untitled.md', body: '', revision: 0 }), false)

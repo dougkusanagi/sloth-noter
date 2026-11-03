@@ -24,6 +24,41 @@ export function selectionLineSignature(state) {
 
 export const taskNotes = Facet.define({ combine: (values) => values[0] ?? [] })
 
+/**
+ * The line that shows the empty-body placeholder, or 0 when the body has text.
+ * It follows the cursor inside a blank body, so only one hint ever shows.
+ */
+export function emptyBodyLine(state) {
+  const doc = state.doc
+  if (doc.lines < 2 || doc.sliceString(doc.line(1).to).trim()) return 0
+  if (state.readOnly) return 2
+  const cursor = doc.lineAt(state.selection.main.head).number
+  return cursor >= 2 ? cursor : 2
+}
+
+// Usage tip under an empty note body: where the preview comes from, and the / key.
+class EmptyBodyHintWidget extends WidgetType {
+  eq() {
+    return true
+  }
+  toDOM() {
+    const hint = document.createElement('span')
+    hint.className = 'cm-empty-hint'
+    hint.setAttribute('aria-hidden', 'true')
+    const key = document.createElement('kbd')
+    key.textContent = '/'
+    hint.append(
+      `${t('editor.listHint')} · ${t('editor.slashBefore')} `,
+      key,
+      ` ${t('editor.slashAfter')}`,
+    )
+    return hint
+  }
+  ignoreEvent() {
+    return true
+  }
+}
+
 class ProgressWidget extends WidgetType {
   constructor(done, total) {
     super()
@@ -194,6 +229,7 @@ export function decorationsFor(view) {
     selectedLines.push({ first, last })
     for (let number = first; number <= last; number++) editing.add(number)
   }
+  const placeholderLine = emptyBodyLine(view.state)
   const text = doc.toString()
   const tree = markdownTree(text)
   const foldable = new Map()
@@ -429,6 +465,15 @@ export function decorationsFor(view) {
       if (shape.kind === 'ordered' && indent && listDepths.has(number))
         ranges.push(Decoration.replace({}).range(line.from, line.from + indent))
       const attrs = lineAttributes(line, shape, active, listDepths.get(number))
+      if (number === 1 && line.text === '# ') {
+        attrs.class += ' cm-empty-title'
+        attrs['data-placeholder'] = t('editor.titleHint')
+      }
+      if (number === placeholderLine && !line.text) {
+        attrs.class += ' cm-empty-body'
+        attrs['data-placeholder'] = t('editor.previewHint')
+        ranges.push(Decoration.widget({ widget: new EmptyBodyHintWidget(), side: 1 }).range(line.from))
+      }
       if (shape.kind === 'paragraph' && continuations.has(number) && !listDepths.has(number)) {
         // Text continuing a list item lines up with the item's own text.
         if (indent) ranges.push(Decoration.replace({}).range(line.from, line.from + indent))

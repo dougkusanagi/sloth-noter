@@ -53,8 +53,7 @@ for (const mode of ['visual', 'source']) {
     )
     await expect(page.locator('.image-item')).toHaveCount(1)
     await page.locator('.image-item').click({ button: 'right' })
-    await expect(page.getByRole('menuitem', { name: 'Excluir imagem', exact: true })).toBeDisabled()
-    await expect(page.locator('#image-delete-reason')).toContainText('notas e na lixeira')
+    await expect(page.getByRole('menuitem', { name: 'Excluir imagem', exact: true })).toBeEnabled()
   })
 }
 

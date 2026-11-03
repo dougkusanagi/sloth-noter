@@ -3,7 +3,7 @@ import { headingFileName, nameFromHeading, uniqueName } from '../notes.js'
 import { renameWikiReferences } from '../markdown-model.js'
 
 export function newMobileNote(document, title = '', id = crypto.randomUUID()) {
-  const body = ensureTitle('', title)
+  const body = title.trim() ? ensureTitle('', title) : '# \n'
   const note = {
     id,
     name: uniqueName(document.notes, nameFromHeading(body, [], id) ?? 'new note.md'),

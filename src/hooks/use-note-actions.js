@@ -81,7 +81,7 @@ export function useNoteActions({
 
   function createNote(name = 'new note.md', body = '', group = undefined) {
     const blank = !body
-    body = ensureTitle(body, name.replace(/\.md$/i, ''))
+    body = blank && name === 'new note.md' ? '# \n' : ensureTitle(body, name.replace(/\.md$/i, ''))
     const old = current.current
     const note = {
       id: crypto.randomUUID(),

@@ -28,9 +28,14 @@ export function blockEdit(text, from, to, action) {
       selectionTo: titleEnd + 2 + template.selectionTo,
     }
   }
-  const prefix = { h2: '## ', h3: '### ', h4: '#### ', quote: '> ', list: '- ', numbered: '1. ' }[
-    action
-  ]
+  const prefix = {
+    h2: '## ',
+    h3: '### ',
+    h4: '#### ',
+    quote: '> ',
+    list: '- ',
+    numbered: '1. ',
+  }[action]
   if (prefix) {
     const start = text.lastIndexOf('\n', from - 1) + 1
     const newline = text.indexOf('\n', Math.max(from, to - 1))

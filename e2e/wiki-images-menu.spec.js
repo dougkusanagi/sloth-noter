@@ -50,6 +50,7 @@ test('image insertion respects the cursor and undo retains an unused manageable 
   await page
     .locator('input[type=file][accept^="image/png"]')
     .setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: png })
+  await expect(page.locator('.cm-image-preview')).toHaveCount(1)
   await page.keyboard.press('Control+z')
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(page.locator('textarea')).toHaveValue('# Imagem\n\nAntes\n\nDepois')
@@ -76,7 +77,7 @@ test('used images are protected and the library and shortcut dialog are accessib
   await page.keyboard.press('Control+Shift+l')
   // The help page's own sloth image is listed too, so pick the uploaded one.
   await page.locator('.image-item', { hasText: 'foto.png' }).click()
-  await expect(page.getByRole('button', { name: 'Excluir imagem', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Excluir imagem', exact: true })).toBeEnabled()
   expect(
     (
       await new AxeBuilder({ page })
@@ -209,8 +210,8 @@ async function openImagePanel(page) {
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+End')
-  await page.getByRole('button', { name: 'Inserir bloco', exact: true }).click()
-  await page.getByRole('menuitem', { name: 'Imagem', exact: true }).click()
+  await page.keyboard.type('/')
+  await page.getByRole('button', { name: 'Imagem', exact: true }).click()
 }
 test('the insert menu adds images from a URL', async ({ page }) => {
   await openImagePanel(page)
@@ -304,4 +305,33 @@ test('native window drops route into the upload field instead of inserting a pat
   await expect(page.locator('textarea')).toHaveValue(
     /!\[#101 Calça Jeans Básica.png\]\(data:image\/png;base64,/,
   )
+})
+
+test('finds notes using an image and removes an embedded image after confirmation', async ({
+  page,
+}) => {
+  await source(page, '# Receita\n\n')
+  await page.locator('textarea').focus()
+  await page.keyboard.press('Control+End')
+  await page
+    .locator('input[type=file][accept^="image/png"]')
+    .setInputFiles({ name: 'ingrediente.png', mimeType: 'image/png', buffer: png })
+  await expect(page.locator('textarea')).toHaveValue(/!\[ingrediente.png\]/)
+  await page.keyboard.press('Control+Shift+l')
+  const image = page.locator('.image-item', { hasText: 'ingrediente.png' })
+  await image.click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Encontrar notas' }).click()
+  await expect(page.getByRole('button', { name: /Limpar filtro/ })).toBeVisible()
+  await expect(page.locator('.note-item')).toHaveCount(1)
+  await page.getByRole('button', { name: /Limpar filtro/ }).click()
+  await page.keyboard.press('Control+Shift+l')
+  await image.click()
+  await page.getByRole('button', { name: 'Excluir imagem', exact: true }).click()
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Excluir imagem', exact: true })
+    .click()
+  await expect(page.locator('.image-item', { hasText: 'ingrediente.png' })).toHaveCount(0)
+  await expect(page.locator('textarea')).toHaveValue(/ingrediente.png/)
+  await expect(page.locator('textarea')).not.toHaveValue(/data:image/)
 })

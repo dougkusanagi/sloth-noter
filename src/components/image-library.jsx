@@ -5,7 +5,7 @@ import { resolveImage } from '../images.js'
 import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
 
-export function ImageThumbnail({ src, alt = '' }) {
+export function ImageThumbnail({ src, alt = '', version = 0 }) {
   const host = useRef(null)
   const [url, setUrl] = useState(null)
   const [failed, setFailed] = useState(false)
@@ -35,7 +35,7 @@ export function ImageThumbnail({ src, alt = '' }) {
       stopped = true
       observer.disconnect()
     }
-  }, [src])
+  }, [src, version])
   return (
     <div ref={host} className="image-thumbnail">
       {url && !failed ? (
@@ -65,8 +65,10 @@ export function ImageLibrary({
   onDelete,
   onDownload,
   onOpenNote,
+  onFindNotes,
   onDropImage,
   onDeleteUnused,
+  imageVersion,
 }) {
   const [filter, setFilter] = useState('all')
   const [hintSeen, setHintSeen] = useState(() => localStorage.getItem(HINT_KEY) === '1')
@@ -114,7 +116,7 @@ export function ImageLibrary({
       document.removeEventListener('keydown', onKey, true)
     }
   }, [menu])
-  const canDelete = (image) => !busy && !image.noteIds.length
+  const canDelete = () => !busy
   function startDrag(event, image) {
     if (event.button !== 0 || busy || !active) return
     setMenu(null)
@@ -163,7 +165,7 @@ export function ImageLibrary({
           <ArrowLeft size={14} aria-hidden="true" />
           {t('images.back')}
         </button>
-        <ImageThumbnail src={image.src} alt={image.name} />
+        <ImageThumbnail src={image.src} alt={image.name} version={imageVersion} />
         <h3>{image.name}</h3>
         <p className="image-usage" data-used={image.noteIds.length > 0 || undefined}>
           {image.noteIds.length
@@ -190,7 +192,7 @@ export function ImageLibrary({
           <button
             className="button danger"
             disabled={!canDelete(image)}
-            title={image.noteIds.length ? t('images.protected') : t('images.delete')}
+            title={!canDelete(image) ? t('images.protected') : t('images.delete')}
             onClick={() => onDelete(image)}
           >
             <Trash2 size={14} aria-hidden="true" />
@@ -209,7 +211,7 @@ export function ImageLibrary({
             </p>
           )
         })}
-        {image.noteIds.length > 0 && <p className="dialog-hint">{t('images.protected')}</p>}
+        {!canDelete(image) && <p className="dialog-hint">{t('images.protected')}</p>}
       </div>
     )
   return (
@@ -276,7 +278,7 @@ export function ImageLibrary({
                 onSelect(image.src)
               }}
             >
-              <ImageThumbnail src={image.src} />
+              <ImageThumbnail src={image.src} version={imageVersion} />
               <span className="image-name">{image.name}</span>
               <small data-used={image.noteIds.length > 0 || undefined}>
                 {image.noteIds.length
@@ -313,6 +315,12 @@ export function ImageLibrary({
             {[
               ['images.insert', Plus, () => onInsert(menuImage), !active || busy],
               ['images.manage', ImageIcon, () => onSelect(menuImage.src), busy],
+              [
+                'images.findNotes',
+                ImageIcon,
+                () => onFindNotes(menuImage),
+                busy || !menuImage.noteIds.length,
+              ],
               ['images.rename', Pencil, () => onRename(menuImage), busy],
               ['images.download', Download, () => onDownload(menuImage), busy],
               ['images.delete', Trash2, () => onDelete(menuImage), !canDelete(menuImage)],
@@ -323,7 +331,7 @@ export function ImageLibrary({
                 role="menuitem"
                 disabled={disabled}
                 aria-describedby={
-                  label === 'images.delete' && menuImage.noteIds.length
+                  label === 'images.delete' && !canDelete(menuImage)
                     ? 'image-delete-reason'
                     : undefined
                 }
@@ -336,7 +344,7 @@ export function ImageLibrary({
                 <span>{t(label)}</span>
               </button>
             ))}
-            {menuImage.noteIds.length > 0 && (
+            {!canDelete(menuImage) && (
               <p id="image-delete-reason" className="dialog-hint">
                 {t('images.protected')}
               </p>
