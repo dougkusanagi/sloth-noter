@@ -147,12 +147,21 @@ test('bottom navigation opens tasks without editing and hides above the keyboard
   await expect(page.getByRole('navigation')).toBeHidden()
 })
 
-test('visible theme control persists and system follows device changes', async ({ page }) => {
-  await page.getByRole('button', { name: 'Escuro', exact: true }).tap()
+async function chooseTheme(page, name) {
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name, exact: true }).tap()
+  await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
+}
+
+test('theme control lives in the main menu, persists and system follows device', async ({
+  page,
+}) => {
+  await expect(page.getByRole('button', { name: 'Escuro', exact: true })).toHaveCount(0)
+  await chooseTheme(page, 'Escuro')
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  await page.getByRole('button', { name: 'Sistema', exact: true }).tap()
+  await chooseTheme(page, 'Sistema')
   await page.emulateMedia({ colorScheme: 'light' })
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
   await page.emulateMedia({ colorScheme: 'dark' })
@@ -210,9 +219,7 @@ test('mobile layouts and changelog remain usable with long content in both theme
   page,
 }, testInfo) => {
   for (const theme of ['light', 'dark']) {
-    await page
-      .getByRole('button', { name: theme === 'light' ? 'Claro' : 'Escuro', exact: true })
-      .tap()
+    await chooseTheme(page, theme === 'light' ? 'Claro' : 'Escuro')
     for (const [width, height] of [
       [320, 740],
       [360, 740],
@@ -497,4 +504,422 @@ test('swipe feedback fits mobile and desktop with long titles', async ({ page },
     })
     await expect(page.locator('[data-note-id="long"]')).toBeVisible()
   }
+})
+
+async function openShareSheet(page) {
+  await page.locator('[data-note-id="shopping"]').dispatchEvent('pointerdown', {
+    isPrimary: true,
+    button: 0,
+    clientX: 50,
+    clientY: 100,
+  })
+  await expect(page.getByRole('dialog')).toBeVisible()
+}
+
+test('share sends the note text once and ignores cancellation', async ({ page }) => {
+  await page.evaluate(() => {
+    window.sent = []
+    navigator.share = (data) => {
+      window.sent.push(data)
+      return new Promise((resolve, reject) =>
+        setTimeout(
+          () => (window.sent.length > 1 ? resolve() : reject(new DOMException('', 'AbortError'))),
+          200,
+        ),
+      )
+    }
+  })
+  await openShareSheet(page)
+  const share = page.getByRole('button', { name: 'Compartilhar texto', exact: true })
+  await share.dblclick()
+  await expect.poll(() => page.evaluate(() => window.sent.length)).toBe(1)
+  expect(await page.evaluate(() => window.sent[0])).toEqual({
+    title: 'Compras',
+    text: '# Compras\n\nFrutas para o café da manhã\n\n- [ ] Comprar maçãs',
+  })
+  await page.waitForTimeout(400)
+  await expect(page.locator('[data-sonner-toast]')).toHaveCount(0)
+})
+
+test('share failure keeps the sheet and shows a message', async ({ page }) => {
+  await page.evaluate(() => {
+    navigator.share = () => Promise.reject(new Error('falha'))
+  })
+  await openShareSheet(page)
+  await page.getByRole('button', { name: 'Compartilhar texto', exact: true }).click()
+  await expect(page.locator('[data-sonner-toast]')).toContainText('Não foi possível compartilhar')
+  await expect(page.getByRole('dialog')).toBeVisible()
+})
+
+test('without system sharing the sheet offers an explicit copy', async ({ page }) => {
+  await page.evaluate(() => {
+    navigator.share = undefined
+    window.copied = []
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: async (text) => window.copied.push(text) },
+      configurable: true,
+    })
+  })
+  await openShareSheet(page)
+  await expect(page.getByRole('button', { name: 'Compartilhar texto' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Copiar texto da nota', exact: true }).click()
+  await expect(page.locator('[data-sonner-toast]')).toContainText('Copiado')
+  expect(await page.evaluate(() => window.copied)).toEqual([
+    '# Compras\n\nFrutas para o café da manhã\n\n- [ ] Comprar maçãs',
+  ])
+})
+
+test('main menu button sits left of the title on the same row', async ({ page }) => {
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 800 })
+    const menu = await page.getByRole('button', { name: 'Mais opções' }).boundingBox()
+    const title = await page.locator('.mobile-header h1').boundingBox()
+    expect(menu.x).toBeLessThan(title.x)
+    expect(Math.abs(menu.y + menu.height / 2 - (title.y + title.height / 2))).toBeLessThan(12)
+  }
+})
+
+test('open note header offers the same actions as the list', async ({ page }) => {
+  await page.locator('[data-note-id="shopping"]').tap()
+  await page.getByRole('button', { name: 'Ações de Compras', exact: true }).tap()
+  await expect(
+    page
+      .getByRole('button', { name: 'Compartilhar texto' })
+      .or(page.getByRole('button', { name: 'Copiar texto da nota' })),
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
+  await expect(page.getByRole('button', { name: 'Ações de Compras', exact: true })).toBeFocused()
+  await page.getByRole('button', { name: 'Ações de Compras', exact: true }).tap()
+  await page.getByRole('button', { name: 'Mover para a lixeira' }).tap()
+  await expect(page.getByRole('searchbox')).toBeVisible()
+  await expect(page.locator('[data-note-id="shopping"]')).toHaveCount(0)
+  await expect(page.locator('[data-sonner-toast]')).toContainText('lixeira')
+})
+
+test('trash screen restores and permanently deletes after confirmation', async ({ page }) => {
+  for (const id of ['shopping', 'meeting']) {
+    await page.locator(`[data-note-id="${id}"]`).evaluate((el) => el.scrollIntoView())
+    await page
+      .locator(`[data-note-id="${id}"]`)
+      .locator('xpath=..')
+      .getByRole('button')
+      .last()
+      .tap()
+    await page.getByRole('button', { name: 'Mover para a lixeira' }).tap()
+  }
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: /^Lixeira \(2\)/ }).tap()
+  await expect(page.locator('.mobile-trash-row')).toHaveCount(2)
+  await page.locator('.mobile-trash-row').first().getByRole('button', { name: 'Restaurar' }).tap()
+  await expect(page.locator('.mobile-trash-row')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Excluir definitivamente' }).tap()
+  await page.getByRole('button', { name: 'Cancelar' }).tap()
+  await expect(page.locator('.mobile-trash-row')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Excluir definitivamente' }).tap()
+  await page.getByRole('button', { name: 'Confirmar exclusão' }).tap()
+  await expect(page.getByText('A lixeira está vazia.')).toBeVisible()
+  await page.reload()
+  await expect(page.getByText('A lixeira está vazia.')).toBeVisible()
+})
+
+test('settings screen changes text size, resets it and opens Novidades', async ({ page }) => {
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Configurações', exact: true }).tap()
+  const slider = page.getByRole('slider', { name: 'Tamanho do texto' })
+  await slider.fill('20')
+  await expect(page.locator('.mobile-prefs output')).toHaveText('20px')
+  await page.reload()
+  await expect(page.locator('.mobile-prefs output')).toHaveText('20px')
+  await page.getByRole('button', { name: 'Restaurar', exact: true }).tap()
+  await expect(page.locator('.mobile-prefs output')).toHaveText('16px')
+  await page.getByRole('button', { name: 'Novidades', exact: true }).tap()
+  await expect(page.locator('.changelog-page')).toBeVisible()
+  await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
+  await expect(slider).toBeVisible()
+})
+
+test('find in note steps through matches without opening the editor', async ({ page }) => {
+  await page.locator('[data-note-id="meeting"]').tap()
+  await page.getByRole('button', { name: 'Ações de Reunião', exact: true }).tap()
+  await page.getByRole('button', { name: 'Buscar na nota', exact: true }).tap()
+  const box = page.getByRole('searchbox', { name: 'Buscar na nota' })
+  await expect(box).toBeFocused()
+  await box.fill('o')
+  await expect(page.locator('.mobile-find output')).toHaveText(/^1\/\d+$/)
+  const first = await page.evaluate(() => window.getSelection().toString())
+  expect(first.toLowerCase()).toBe('o')
+  await page.getByRole('button', { name: 'Próximo resultado' }).tap()
+  await expect(page.locator('.mobile-find output')).toHaveText(/^2\/\d+$/)
+  await box.fill('zzzz')
+  await expect(page.locator('.mobile-find output')).toHaveText('Nenhum resultado')
+  await expect(page.locator('.cm-content')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
+  await expect(page.locator('.mobile-find')).toHaveCount(0)
+})
+
+test('system bar icons follow the app theme through the native bridge', async ({ page }) => {
+  await page.evaluate(() => {
+    window.bars = []
+    window.SlothSystem = { setDarkBars: (dark) => window.bars.push(dark) }
+  })
+  await chooseTheme(page, 'Escuro')
+  await expect.poll(() => page.evaluate(() => window.bars.at(-1))).toBe(true)
+  await chooseTheme(page, 'Claro')
+  await expect.poll(() => page.evaluate(() => window.bars.at(-1))).toBe(false)
+})
+
+test('reading view folds and unfolds sections', async ({ page }) => {
+  await page.evaluate((key) => {
+    const doc = JSON.parse(localStorage.getItem(key))
+    doc.notes.unshift({
+      id: 'sections',
+      name: 'Seções.md',
+      body: '# Seções\n\n## Primeira\n\nTexto da primeira.\n\n## Segunda\n\nTexto da segunda.',
+      revision: 0,
+    })
+    localStorage.setItem(key, JSON.stringify(doc))
+  }, STORAGE_KEY)
+  await page.reload()
+  await page.locator('[data-note-id="sections"]').tap()
+  await expect(page.getByText('Texto da primeira.')).toBeVisible()
+  await page
+    .getByRole('button', { name: /Recolher/ })
+    .first()
+    .tap()
+  await expect(page.getByText('Texto da primeira.')).toBeHidden()
+  await expect(page.getByText('Texto da segunda.')).toBeVisible()
+  await page
+    .getByRole('button', { name: /Expandir/ })
+    .first()
+    .tap()
+  await expect(page.getByText('Texto da primeira.')).toBeVisible()
+})
+
+test('wide table scrolls inside its box and keeps the first column visible', async ({ page }) => {
+  await page.evaluate((key) => {
+    const cols = Array.from({ length: 12 }, (_, i) => `Coluna ${i + 1} com título longo`)
+    const row = (cells) => `| ${cells.join(' | ')} |`
+    const lines = ['# Larga', '', row(cols), row(cols.map(() => '---'))]
+    lines.push(row(cols.map((_, i) => `valor-${i}-aaaaaaaaaaaa`)))
+    const doc = JSON.parse(localStorage.getItem(key))
+    doc.notes.unshift({ id: 'wide', name: 'Larga.md', body: lines.join('\n'), revision: 0 })
+    localStorage.setItem(key, JSON.stringify(doc))
+  }, STORAGE_KEY)
+  await page.reload()
+  await page.locator('[data-note-id="wide"]').tap()
+  const table = page.getByRole('table').first()
+  await expect(table).toHaveAttribute('tabindex', '0')
+  await expect(table).toHaveAttribute('aria-label', /Tabela com \d+ linhas/)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  const before = await table.locator('th').first().boundingBox()
+  await table.evaluate((el) => (el.scrollLeft = 400))
+  const after = await table.locator('th').first().boundingBox()
+  const box = await table.boundingBox()
+  expect(await table.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0)
+  expect(Math.abs(after.x - before.x)).toBeLessThan(2)
+  expect(after.x).toBeGreaterThanOrEqual(box.x - 1)
+})
+
+test('opening a task highlights its line in the note', async ({ page }) => {
+  await page.evaluate((key) => {
+    const doc = JSON.parse(localStorage.getItem(key))
+    const filler = Array.from({ length: 40 }, (_, i) => `Linha ${i}\n`).join('\n')
+    doc.notes.unshift({
+      id: 'tasks',
+      name: 'Plano.md',
+      body: `# Plano\n\n- [ ] Primeira tarefa\n\n${filler}\n- [ ] Tarefa distante`,
+      revision: 0,
+    })
+    localStorage.setItem(key, JSON.stringify(doc))
+  }, STORAGE_KEY)
+  await page.reload()
+  await page.getByRole('button', { name: 'Tarefas' }).tap()
+  await page.getByRole('button', { name: /Abrir tarefa na nota: Tarefa distante/ }).tap()
+  const target = page.locator('.mobile-located')
+  await expect(target).toContainText('Tarefa distante')
+  await expect(target).toBeInViewport()
+  await expect(page.locator('.cm-content')).toHaveCount(0)
+  await expect(target).toHaveCount(0, { timeout: 5000 })
+})
+
+test('completing a task offers undo', async ({ page }) => {
+  await page.getByRole('button', { name: 'Tarefas' }).tap()
+  const box = page.getByRole('checkbox', { name: /Comprar maçãs/ })
+  await box.tap()
+  await expect(box).toHaveCount(0)
+  await page.locator('[data-sonner-toast]').getByRole('button', { name: 'Desfazer' }).tap()
+  await expect(box).toBeVisible()
+  await expect(box).not.toBeChecked()
+  await page.getByRole('button', { name: 'Notas' }).tap()
+  await page.locator('[data-note-id="shopping"]').tap()
+  await expect(page.locator('.markdown')).toContainText('Comprar maçãs')
+})
+
+test('dragging the sheet heading down closes it; a short drag does not', async ({ page }) => {
+  await page.locator('[data-note-id="shopping"]').dispatchEvent('pointerdown', {
+    isPrimary: true,
+    button: 0,
+    clientX: 50,
+    clientY: 100,
+  })
+  const heading = page.locator('.mobile-sheet-heading')
+  await expect(heading).toBeVisible()
+  const box = await heading.boundingBox()
+  const x = box.x + box.width / 2
+  const y = box.y + box.height / 2
+  const drag = async (distance) => {
+    await heading.dispatchEvent('pointerdown', { pointerId: 7, clientX: x, clientY: y })
+    await heading.dispatchEvent('pointermove', { pointerId: 7, clientX: x, clientY: y + distance })
+    await heading.dispatchEvent('pointerup', { pointerId: 7, clientX: x, clientY: y + distance })
+  }
+  await drag(30)
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await drag(150)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('identical and nested tasks open at their own line', async ({ page }) => {
+  await page.evaluate((key) => {
+    const doc = JSON.parse(localStorage.getItem(key))
+    const filler = Array.from({ length: 30 }, (_, i) => `Linha ${i}\n`).join('\n')
+    doc.notes.unshift({
+      id: 'dups',
+      name: 'Repetidas.md',
+      body: `# Repetidas\n\n- [ ] Igual\n\n${filler}\n- [ ] Igual\n  - [ ] Filho aninhado`,
+      revision: 0,
+    })
+    localStorage.setItem(key, JSON.stringify(doc))
+  }, STORAGE_KEY)
+  await page.reload()
+  await page.getByRole('button', { name: 'Tarefas' }).tap()
+  const same = page.getByRole('button', { name: /Abrir tarefa na nota: Igual/ })
+  await expect(same).toHaveCount(2)
+  await same.nth(1).tap()
+  const lines = await page.evaluate(() => {
+    const target = document.querySelector('.mobile-located')
+    return [target?.dataset.sourceLine, target?.textContent]
+  })
+  expect(Number(lines[0])).toBeGreaterThan(30)
+  expect(lines[1]).toContain('Igual')
+  await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
+  await page.getByRole('button', { name: /Abrir tarefa na nota: Filho aninhado/ }).tap()
+  await expect(page.locator('.mobile-located')).toContainText('Filho aninhado')
+  await expect(page.locator('.cm-content')).toHaveCount(0)
+})
+
+test('launcher shortcut creates exactly one note and opens it for editing', async ({ page }) => {
+  await page.evaluate(() => {
+    let pending = 'new-note'
+    window.SlothSystem = {
+      takeAction: () => {
+        const action = pending
+        pending = ''
+        return action
+      },
+    }
+  })
+  const before = await page.locator('.mobile-note-open').count()
+  await page.evaluate(() => window.__nativeAction?.())
+  await expect(page.locator('.cm-content')).toBeVisible()
+  await page.evaluate(() => window.__nativeAction?.())
+  await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
+  await expect(page.locator('.mobile-note-open')).toHaveCount(before + 1)
+})
+
+test('shared text becomes one note after validation', async ({ page }) => {
+  await page.evaluate(() => {
+    window.queue = ['   ', 'Linha um\r\nLinha dois', 'x'.repeat(1_000_001)]
+    window.SlothSystem = {
+      takeAction: () => '',
+      takeSharedText: () => window.queue.shift() ?? '',
+    }
+  })
+  const before = await page.locator('.mobile-note-open').count()
+  await page.evaluate(() => window.__nativeAction?.())
+  await expect(page.locator('.mobile-note-open')).toHaveCount(before)
+  await page.evaluate(() => window.__nativeAction?.())
+  await expect(page.locator('.markdown')).toContainText('Linha um')
+  await expect(page.locator('.markdown')).toContainText('Linha dois')
+  await expect(page.locator('.cm-content')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
+  await page.evaluate(() => window.__nativeAction?.())
+  await expect(page.locator('[data-sonner-toast]').last()).toContainText('grande demais')
+  await expect(page.locator('.mobile-note-open')).toHaveCount(before + 1)
+})
+
+test('share as .md file appears only with the native bridge and sends name and text', async ({
+  page,
+}) => {
+  await page.locator('[data-note-id="shopping"]').dispatchEvent('pointerdown', {
+    isPrimary: true,
+    button: 0,
+    clientX: 50,
+    clientY: 100,
+  })
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Compartilhar como arquivo .md' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
+  await page.evaluate(() => {
+    window.files = []
+    window.SlothShare = { shareFile: (name, text) => (window.files.push({ name, text }), true) }
+  })
+  await page.locator('[data-note-id="shopping"]').dispatchEvent('pointerdown', {
+    isPrimary: true,
+    button: 0,
+    clientX: 50,
+    clientY: 100,
+  })
+  await page.getByRole('button', { name: 'Compartilhar como arquivo .md' }).tap()
+  expect(await page.evaluate(() => window.files)).toEqual([
+    {
+      name: 'Compras.md',
+      text: '# Compras\n\nFrutas para o café da manhã\n\n- [ ] Comprar maçãs',
+    },
+  ])
+})
+
+test('backup exports, rejects a broken file and restores only after confirmation', async ({
+  page,
+}, testInfo) => {
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Configurações', exact: true }).tap()
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Exportar backup' }).tap()
+  const file = testInfo.outputPath('backup.json')
+  await (await download).saveAs(file)
+  await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
+  await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
+  await page.locator('[data-note-id="meeting"]').dispatchEvent('pointerdown', {
+    isPrimary: true,
+    button: 0,
+    clientX: 50,
+    clientY: 100,
+  })
+  await page.getByRole('button', { name: 'Mover para a lixeira' }).tap()
+  await expect(page.locator('[data-note-id="meeting"]')).toHaveCount(0)
+  await expect(page.locator('[data-sonner-toast]')).toHaveCount(0, { timeout: 15000 })
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Configurações', exact: true }).tap()
+  const input = page.locator('input[type="file"]')
+  await input.setInputFiles({
+    name: 'ruim.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{broken'),
+  })
+  await expect(page.getByRole('alert').first()).toBeVisible()
+  await expect(page.getByRole('alertdialog')).toHaveCount(0)
+  await input.setInputFiles(file)
+  await expect(page.getByRole('alertdialog')).toContainText(/substituir/i)
+  await page.getByRole('button', { name: 'Cancelar' }).tap()
+  await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
+  await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
+  await expect(page.locator('[data-note-id="meeting"]')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Configurações', exact: true }).tap()
+  await input.setInputFiles(file)
+  await page.getByRole('button', { name: 'Substituir' }).tap()
+  await expect(page.locator('[data-sonner-toast]').last()).toContainText('restaurado')
+  await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
+  await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
+  await expect(page.locator('[data-note-id="meeting"]')).toHaveCount(1)
 })

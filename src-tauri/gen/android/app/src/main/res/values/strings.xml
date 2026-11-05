@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">"Sloth Note"</string>
     <string name="main_activity_title">"Sloth Note"</string>
+    <string name="shortcut_new_note">Nova nota</string>
 </resources>

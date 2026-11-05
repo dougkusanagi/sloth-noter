@@ -7,7 +7,7 @@ export function useNavigation(current) {
   useEffect(() => {
     let storage
     try {
-      storage = window.sessionStorage
+      storage = window.localStorage // route metadata only; survives Android process death
     } catch {
       /* storage can be disabled */
     }

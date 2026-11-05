@@ -495,7 +495,7 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-create {
   flex-wrap: wrap;
 }
 [data-platform='mobile'] .mobile-header h1 {
-  flex-basis: 100%;
+  flex: 1 1 8rem;
   white-space: normal;
   overflow-wrap: anywhere;
 }
@@ -557,4 +557,176 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-create {
 }
 [data-platform='mobile'] .mobile-swipe-row[data-swipe-ready] .mobile-swipe-hint {
   box-shadow: inset 0 -2px var(--danger);
+}
+
+[data-platform='mobile'] .mobile-sheet .mobile-theme {
+  margin: 4px 0 8px;
+}
+[data-platform='mobile'] .mobile-sheet .mobile-theme button {
+  flex: 1;
+  width: auto;
+  justify-content: center;
+}
+
+[data-platform='mobile'] .mobile-trash {
+  padding: 8px 16px;
+}
+[data-platform='mobile'] .mobile-trash-row {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+[data-platform='mobile'] .mobile-trash-row h2 {
+  margin: 0;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+[data-platform='mobile'] .mobile-trash-row p {
+  margin: 4px 0 8px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+[data-platform='mobile'] .mobile-trash-row div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+[data-platform='mobile'] .mobile-trash-row button {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
+
+[data-platform='mobile'] .mobile-prefs {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 16px;
+}
+[data-platform='mobile'] .mobile-prefs p {
+  margin: 0;
+  color: var(--muted);
+}
+[data-platform='mobile'] .mobile-prefs div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+[data-platform='mobile'] .mobile-prefs input[type='range'] {
+  flex: 1;
+  min-height: 48px;
+}
+[data-platform='mobile'] .mobile-prefs button {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
+
+[data-platform='mobile'] .mobile-find {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+}
+[data-platform='mobile'] .mobile-find input {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+}
+[data-platform='mobile'] .mobile-find output {
+  min-width: 3.5em;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+[data-platform='mobile'] .markdown .fold-toggle {
+  position: static;
+  translate: none;
+  float: left;
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  margin: -10px 4px -10px -12px;
+  padding: 0;
+  opacity: 1;
+}
+[data-platform='mobile'] .markdown .fold-toggle svg {
+  width: 20px;
+  height: 20px;
+  transition: rotate 0.12s;
+}
+[data-platform='mobile'] .markdown .fold-toggle[aria-expanded='false'] svg {
+  rotate: -90deg;
+}
+[data-platform='mobile'] .markdown .fold-toggle::before {
+  display: none;
+}
+[data-platform='mobile'] .markdown .fold-toggle {
+  margin-left: -8px;
+}
+
+/* Wide tables scroll inside their own box; the first column stays visible. */
+[data-platform='mobile'] .markdown table th:first-child,
+[data-platform='mobile'] .markdown table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--bg, Canvas);
+  box-shadow: 1px 0 0 var(--line);
+}
+[data-platform='mobile'] .markdown table:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+[data-platform='mobile'] .markdown .mobile-located {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-platform='mobile'] .markdown .mobile-located {
+    transition: background 0.4s;
+  }
+}
+
+[data-platform='mobile'] .mobile-sheet-heading {
+  touch-action: none;
+  position: relative;
+}
+[data-platform='mobile'] .mobile-sheet-heading::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  translate: -50% 0;
+  border-radius: 2px;
+  background: var(--line);
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-platform='mobile'] .mobile-sheet {
+    transition: transform 0.15s;
+  }
 }

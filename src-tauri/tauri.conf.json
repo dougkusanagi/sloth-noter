@@ -56,7 +56,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIxMjRFQ0U0RkZEQ0M4MjIKUldRaXlOei81T3drc2ZRSGpxTGM4MVdGalc4QU14d2ZUdHJzNDYzYm42blFYMWtNaGZ4ZkI0Y3YK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJCQUFBMjU4QzA3MDMwMzkKUldRNU1IREFXS0txdXk2RHF2QUE2cjlBMXpYSTJlSnpnekpVSTlQV1ZSdVNwOVRSeWlTcXV1ZmkK",
       "endpoints": [
         "https://github.com/dougkusanagi/sloth-noter/releases/latest/download/latest.json"
       ],

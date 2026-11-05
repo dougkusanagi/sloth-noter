@@ -279,7 +279,20 @@ function Heading({ node, children, ...props }) {
     </Tag>
   )
 }
+// A table that scrolls inside its own box must be reachable by keyboard and assistive tech.
+function Table({ node, children, ...props }) {
+  const { focusableTables } = useContext(MarkdownContext)
+  const rows = node.children.flatMap((part) => part.children ?? []).length
+  return focusableTables ? (
+    <table {...props} tabIndex={0} aria-label={t('mobile.tableLabel', { rows })}>
+      {children}
+    </table>
+  ) : (
+    <table {...props}>{children}</table>
+  )
+}
 const components = {
+  table: Table,
   img: Image,
   a: Link,
   li: ListItem,
@@ -293,7 +306,16 @@ const components = {
   h5: Heading,
   h6: Heading,
 }
-export function Markdown({ text, onCopy, onChange, onOpenWiki, notes, folds, onToggleFold }) {
+export function Markdown({
+  text,
+  onCopy,
+  onChange,
+  onOpenWiki,
+  notes,
+  folds,
+  onToggleFold,
+  focusableTables,
+}) {
   const tasks = useMemo(
     () => new Map(resolvedTasks(text, notes).map((task) => [task.line, task])),
     [text, notes],
@@ -307,6 +329,7 @@ export function Markdown({ text, onCopy, onChange, onOpenWiki, notes, folds, onT
     <MarkdownContext.Provider
       value={{
         text,
+        focusableTables,
         onCopy,
         onChange,
         onOpenWiki,
