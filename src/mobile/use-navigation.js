@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import { createNavigation, initialNavigation } from './nav-stack.js'
+import { createNavigation, durableStorage, initialNavigation } from './nav-stack.js'
 
 export function useNavigation(current) {
   const controller = useRef(null)
   const [state, setState] = useState(initialNavigation)
   useEffect(() => {
-    let storage
-    try {
-      storage = window.sessionStorage
-    } catch {
-      /* storage can be disabled */
+    const pick = (name) => {
+      try {
+        return window[name]
+      } catch {
+        return undefined
+      }
     }
+    const storage = durableStorage(pick('sessionStorage'), pick('localStorage'))
     const nav = createNavigation({
       history: window.history,
       events: window,

@@ -734,3 +734,25 @@ test('native share ignores repeated activation while it is pending', async ({ pa
   await page.evaluate(() => window.finishShare())
   await expect(share).toHaveCount(0)
 })
+
+test('reopens the last note after the process loses its session storage', async ({ page }) => {
+  await page.locator('[data-note-id="meeting"]').tap()
+  await expect(page.locator('.markdown')).toContainText('orçamento')
+  await page.evaluate(() => sessionStorage.clear())
+  await page.goto('/?platform=mobile')
+  await expect(page.locator('.markdown')).toContainText('orçamento')
+  await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
+  await expect(page.getByRole('searchbox')).toBeVisible()
+})
+
+test('a saved route to a deleted note opens the list', async ({ page }) => {
+  await page.evaluate(() => {
+    sessionStorage.clear()
+    localStorage.setItem(
+      'sloth.mobile.navigation.v1',
+      JSON.stringify({ screens: [{ name: 'notes' }, { name: 'note', id: 'inexistente' }] }),
+    )
+  })
+  await page.goto('/?platform=mobile')
+  await expect(page.getByRole('searchbox')).toBeVisible()
+})

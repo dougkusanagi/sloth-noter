@@ -46,7 +46,7 @@ Executar 2.1 → 2.2 → 2.3 → 2.4. Essa sequência vem antes da fase 3.
 - [x] **2.3 — Compartilhar texto.** Depende de 2.1/2.2. Implementar adaptador Android e ação na folha
       da lista; prévia web oferece alternativa explícita de copiar quando indisponível. Testar sucesso,
       cancelamento, falha e envio único; validar no APK (pendente: sem aparelho nem `adb` nesta máquina). Não inclui arquivo `.md`, exportação ou recebimento.
-- [ ] **2.4 — Retorno e recuperação nativos.** Integrar e verificar a prioridade camada → teclado →
+- [ ] **2.4 — Retorno e recuperação nativos (parcial: 0.5.4).** Integrar e verificar a prioridade camada → teclado →
       tela → saída, incluindo raiz com gravação pendente/falha. Distinguir recarga, recriação de WebView
       e reinício de processo. Definir persistência durável de metadados de rota e migração se necessária
       para cumprir a restauração após reinício; não salvar texto na navegação. Verificar insets iniciais,
@@ -174,6 +174,12 @@ continua na validação nativa de 2.4; esta etapa qualifica a interface no naveg
 Na etapa 2.3 (2026-11-06) o adaptador Android (`SharePlugin.kt`, `share_text`) e a ação na folha já
 existiam desde 0.4.0; esta etapa acrescentou E2E do caminho nativo simulado (sucesso com texto e
 título, falha com nova tentativa, toque repetido). Seletor real do Android não foi exercitado.
+
+Na etapa 2.4 (parcial, 2026-11-06) a rota (sem texto) passou a ser gravada também em `localStorage`
+(`durableStorage` em `nav-stack.js`); sessionStorage tem prioridade e referências a notas removidas
+voltam à lista. Cobertura: unitário e 2 E2E mobile. **Pendente**: prioridade camada → teclado → tela
+→ saída e raiz com gravação pendente/falha no APK, distinção recarga/recriação de WebView/reinício,
+insets e casos do ADR 0003. Todos dependem de aparelho ou emulador (sem `adb` aqui).
 
 Em cada entrega, registrar testes executados e limitações reais. Vincular os problemas #1–24 do v2 a
 testes/checklists com ambiente e resultado; screenshots devem ser inspecionadas. Usar notas longas,

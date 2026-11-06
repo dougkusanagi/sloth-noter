@@ -79,6 +79,36 @@ export function backTarget(state, keyboardOpen = false) {
   return state.screens.length > 1 ? 'screen' : 'exit'
 }
 
+// Android can kill the process; sessionStorage then disappears. Route metadata (never text) is
+// also kept in localStorage so a cold start reopens the last screen. Session data wins when present.
+export function durableStorage(session, local) {
+  return {
+    getItem(key) {
+      for (const store of [session, local]) {
+        try {
+          const value = store?.getItem(key)
+          if (value !== null && value !== undefined) return value
+        } catch {
+          /* storage can be disabled */
+        }
+      }
+      return null
+    },
+    setItem(key, value) {
+      let saved = false
+      for (const store of [session, local]) {
+        try {
+          store?.setItem(key, value)
+          saved = true
+        } catch {
+          /* storage can be disabled or full */
+        }
+      }
+      if (!saved) throw new Error('navigation storage unavailable')
+    },
+  }
+}
+
 export function loadNavigation(storage, noteExists) {
   try {
     return restoreNavigation(JSON.parse(storage.getItem(NAV_SESSION_KEY)), noteExists)
