@@ -678,3 +678,59 @@ test('copy ignores repeated activation while it is pending', async ({ page }) =>
   await page.evaluate(() => window.finishCopy())
   await expect(page.getByText('Copiado', { exact: true })).toBeVisible()
 })
+
+async function mockNativeShare(page, behavior) {
+  await page.evaluate((behavior) => {
+    window.shareCalls = []
+    window.isTauri = true
+    window.__TAURI_INTERNALS__ = {
+      invoke: (command, args) => {
+        window.shareCalls.push({ command, args })
+        return behavior === 'fail' ? Promise.reject(new Error('sem app')) : Promise.resolve(null)
+      },
+    }
+  }, behavior)
+}
+
+test('shares the note text through the native adapter and closes the sheet', async ({ page }) => {
+  await mockNativeShare(page, 'ok')
+  await page.getByRole('button', { name: 'Ações de Compras' }).tap()
+  await page.getByRole('button', { name: 'Compartilhar texto' }).tap()
+  await expect(page.getByRole('button', { name: 'Compartilhar texto' })).toHaveCount(0)
+  expect(await page.evaluate(() => window.shareCalls)).toEqual([
+    { command: 'share_text', args: { text: notes[0].body, title: 'Compras' } },
+  ])
+})
+
+test('native share failure keeps the sheet open to retry', async ({ page }) => {
+  await mockNativeShare(page, 'fail')
+  await page.getByRole('button', { name: 'Ações de Compras' }).tap()
+  await page.getByRole('button', { name: 'Compartilhar texto' }).tap()
+  await expect(
+    page.getByText('Não foi possível abrir o compartilhamento. Tente de novo.'),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Compartilhar texto' })).toBeEnabled()
+})
+
+test('native share ignores repeated activation while it is pending', async ({ page }) => {
+  await page.evaluate(() => {
+    window.shareCalls = 0
+    window.isTauri = true
+    window.__TAURI_INTERNALS__ = {
+      invoke: () => {
+        window.shareCalls += 1
+        return new Promise((resolve) => {
+          window.finishShare = resolve
+        })
+      },
+    }
+  })
+  await page.getByRole('button', { name: 'Ações de Compras' }).tap()
+  const share = page.getByRole('button', { name: 'Compartilhar texto' })
+  await share.tap()
+  await expect(share).toBeDisabled()
+  await page.evaluate(() => document.querySelector('.mobile-sheet button:disabled').click())
+  expect(await page.evaluate(() => window.shareCalls)).toBe(1)
+  await page.evaluate(() => window.finishShare())
+  await expect(share).toHaveCount(0)
+})
