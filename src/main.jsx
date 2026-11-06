@@ -2646,6 +2646,7 @@ function Workspace({ persistence, loaded }) {
                       wrapPage={pageWrap}
                       notes={data.notes}
                       onCopy={copyCode}
+                      onPaste={persistence.invoke ? () => pasteNativeClipboard() : undefined}
                       imageBusy={imageBusy}
                       onImageFiles={addImages}
                       onImageUrl={(url, point) =>

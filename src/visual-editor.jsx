@@ -53,7 +53,7 @@ import { flushSync } from 'react-dom'
 import { Compartment, EditorSelection, EditorState } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, redo } from '@codemirror/commands'
 import { EditorView, keymap, drawSelection } from '@codemirror/view'
-import { activeFormats, formatSelection } from './format-selection.js'
+import { activeFormats, formatSelection, selectionInCode } from './format-selection.js'
 import { blockEdit } from './insert-block.js'
 import { fencedPasteInEmptyBlock } from './fenced-paste.js'
 import { markdownTree, walk } from './markdown-model.js'
@@ -73,6 +73,9 @@ import {
   Trash2,
   ChevronRight,
   Columns2,
+  Copy,
+  ClipboardPaste,
+  Scissors,
 } from 'lucide-react'
 
 /* eslint-disable react/jsx-key -- static tuples, rendered with explicit keys below */
@@ -85,6 +88,11 @@ const formatButtons = [
   ['heading', 'format.heading', <span>H₂</span>],
   ['quote', 'format.quote', <span>❝</span>],
   ['list', 'format.list', <span>☷</span>],
+]
+const clipboardButtons = [
+  ['copy', 'editor.copy', <Copy size={16} aria-hidden="true" />, 'C'],
+  ['cut', 'editor.cut', <Scissors size={16} aria-hidden="true" />, 'X'],
+  ['paste', 'editor.paste', <ClipboardPaste size={16} aria-hidden="true" />, 'V'],
 ]
 /* eslint-enable react/jsx-key */
 const keysForLabel = (label) =>
@@ -160,6 +168,7 @@ export function VisualEditor({
   onImageFiles,
   onImageUrl,
   onCopy,
+  onPaste,
   imageBusy,
   readOnly = false,
   wrapLines = true,
@@ -195,6 +204,7 @@ export function VisualEditor({
     onImageUrl,
     imageBusy,
     onCopy,
+    onPaste,
   })
   callbacks.current = {
     onChange,
@@ -206,6 +216,7 @@ export function VisualEditor({
     onImageUrl,
     imageBusy,
     onCopy,
+    onPaste,
   }
 
   function positionToolbar(view) {
@@ -224,14 +235,17 @@ export function VisualEditor({
       setToolbar(null)
       return
     }
-    const margin = Math.min(124, window.innerWidth / 2)
+    const text = view.state.doc.toString()
+    const inCode = selectionInCode(markdownTree(text), selection.from, selection.to)
+    const margin = Math.min(inCode ? 60 : 176, window.innerWidth / 2)
     const x = Math.max(margin, Math.min(window.innerWidth - margin, (start.left + end.right) / 2))
     const y = start.top > 55 ? start.top - 8 : end.bottom + 8
     setToolbar({
       x,
       y,
       below: start.top <= 55,
-      active: activeFormats(view.state.doc.toString(), selection.from, selection.to),
+      inCode,
+      active: inCode ? [] : activeFormats(text, selection.from, selection.to),
     })
   }
 
@@ -345,6 +359,35 @@ export function VisualEditor({
     setLinkEditing(false)
     setLinkUrl('')
     positionToolbar(view)
+  }
+
+  async function runClipboard(action) {
+    const view = viewRef.current
+    if (!view) return
+    const { from, to } = view.state.selection.main
+    if (action === 'paste') {
+      view.focus()
+      if (callbacks.current.onPaste) return callbacks.current.onPaste()
+      try {
+        const clipboardData = new DataTransfer()
+        clipboardData.setData('text/plain', await navigator.clipboard.readText())
+        view.contentDOM.dispatchEvent(
+          new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }),
+        )
+      } catch {
+        toast.error(t('editor.pasteFailed'), { id: 'clipboard' })
+      }
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(view.state.sliceDoc(from, to))
+    } catch {
+      toast.error(t('code.copyFailed'), { id: 'clipboard' })
+      return
+    }
+    if (action === 'cut') view.dispatch({ changes: { from, to }, userEvent: 'delete.cut' })
+    else toast.success(t('code.copied'), { id: 'clipboard', duration: 1800 })
+    view.focus()
   }
 
   function runTableMenu(action) {
@@ -991,23 +1034,38 @@ export function VisualEditor({
               </ShortcutButton>
             </form>
           ) : (
-            formatButtons.map(([action, label, icon]) => (
-              <ShortcutButton
-                key={action}
-                type="button"
-                label={t(label)}
-                keys={keysForLabel(label)}
-                aria-pressed={toolbar.active.includes(action)}
-                className={toolbar.active.includes(action) ? 'active' : undefined}
-                onClick={() =>
-                  action === 'link' && !toolbar.active.includes('link')
-                    ? setLinkEditing(true)
-                    : applyFormat(action)
-                }
-              >
-                {icon}
-              </ShortcutButton>
-            ))
+            <>
+              {clipboardButtons.map(([action, label, icon, keys]) => (
+                <ShortcutButton
+                  key={action}
+                  type="button"
+                  label={t(label)}
+                  keys={keys}
+                  onClick={() => runClipboard(action)}
+                >
+                  {icon}
+                </ShortcutButton>
+              ))}
+              {!toolbar.inCode && <span className="format-separator" aria-hidden="true" />}
+              {!toolbar.inCode &&
+                formatButtons.map(([action, label, icon]) => (
+                  <ShortcutButton
+                    key={action}
+                    type="button"
+                    label={t(label)}
+                    keys={keysForLabel(label)}
+                    aria-pressed={toolbar.active.includes(action)}
+                    className={toolbar.active.includes(action) ? 'active' : undefined}
+                    onClick={() =>
+                      action === 'link' && !toolbar.active.includes('link')
+                        ? setLinkEditing(true)
+                        : applyFormat(action)
+                    }
+                  >
+                    {icon}
+                  </ShortcutButton>
+                ))}
+            </>
           )}
         </div>
       )}

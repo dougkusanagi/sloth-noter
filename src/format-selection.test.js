@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { activeFormats, formatSelection } from './format-selection.js'
+import { activeFormats, formatSelection, selectionInCode } from './format-selection.js'
 
 test('applies inline Markdown around selected text', () => {
   assert.deepEqual(formatSelection('um teste aqui', 3, 8, 'bold'), {
@@ -73,4 +73,14 @@ test('detects and removes block styles across selected lines', () => {
     selectionFrom: 0,
     selectionTo: 6,
   })
+})
+
+test('detects a selection inside a fenced code block', async () => {
+  const { markdownTree } = await import('./markdown-model.js')
+  const text = 'Texto **forte**\n\n```sh\n# **aqui**\nls\n```\n\nfim'
+  const tree = markdownTree(text)
+  const inside = text.indexOf('# **aqui**')
+  assert.equal(selectionInCode(tree, inside, inside + 10), true)
+  assert.equal(selectionInCode(tree, 0, 5), false)
+  assert.equal(selectionInCode(tree, 0, inside + 4), false)
 })

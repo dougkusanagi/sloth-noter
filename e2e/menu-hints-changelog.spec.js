@@ -262,3 +262,34 @@ test('command palette highlights the option selected with arrows', async ({ page
     await options.nth(1).getAttribute('id'),
   )
 })
+
+for (const width of [390, 1280]) {
+  test(`selection toolbar offers clipboard actions and hides formatting inside code at ${width}px`, async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.setViewportSize({ width, height: 720 })
+    await sample(page, '# Exemplo\n\nTexto comum\n\n```sh\n# **aqui**\n```\n\nfim')
+    const toolbar = page.getByRole('toolbar', { name: 'Formatação do texto selecionado' })
+    await page.locator('.cm-line', { hasText: 'Texto comum' }).click()
+    await page.keyboard.press('End')
+    await page.keyboard.press('Shift+Home')
+    await expect(toolbar.getByRole('button', { name: 'Copiar', exact: true })).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: 'Negrito', exact: true })).toBeVisible()
+    await page.screenshot({ path: test.info().outputPath(`toolbar-text-${width}.png`) })
+
+    await page.locator('.cm-line', { hasText: '# **aqui**' }).click()
+    await page.keyboard.press('End')
+    await page.keyboard.press('Shift+Home')
+    await expect(toolbar.getByRole('button', { name: 'Recortar', exact: true })).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: 'Negrito', exact: true })).toHaveCount(0)
+    await page.screenshot({ path: test.info().outputPath(`toolbar-code-${width}.png`) })
+    await toolbar.getByRole('button', { name: 'Recortar', exact: true }).click()
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('# **aqui**')
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    await expect(page.locator('textarea')).toHaveValue(
+      '# Exemplo\n\nTexto comum\n\n```sh\n\n```\n\nfim',
+    )
+  })
+}

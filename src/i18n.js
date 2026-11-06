@@ -455,6 +455,10 @@ const messages = {
 
     'editor.visual': 'Editor Markdown visual',
     'editor.formatBar': 'Formatação do texto selecionado',
+    'editor.copy': 'Copiar',
+    'editor.cut': 'Recortar',
+    'editor.paste': 'Colar',
+    'editor.pasteFailed': 'Não foi possível colar. Use Ctrl+V ou permita o acesso à área de transferência.',
     'editor.linkUrl': 'Endereço do link',
     'editor.linkApply': 'Aplicar link',
     'editor.insertBlock': 'Inserir bloco',
@@ -965,6 +969,10 @@ const messages = {
 
     'editor.visual': 'Visual Markdown editor',
     'editor.formatBar': 'Formatting for the selected text',
+    'editor.copy': 'Copy',
+    'editor.cut': 'Cut',
+    'editor.paste': 'Paste',
+    'editor.pasteFailed': 'Could not paste. Use Ctrl+V or allow clipboard access.',
     'editor.linkUrl': 'Link address',
     'editor.linkApply': 'Apply link',
     'editor.insertBlock': 'Insert block',

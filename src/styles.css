@@ -336,6 +336,13 @@ textarea:focus-visible {
     var(--bevel),
     0 0 0 1px var(--edge);
 }
+.format-toolbar .format-separator {
+  flex: none;
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: var(--edge);
+}
 .format-toolbar .format-code {
   font: 12px var(--ui);
 }

@@ -95,3 +95,17 @@ export function formatSelection(text, from, to, action, linkUrl = '') {
     selectionTo: Math.max(start, Math.min(start + insert.length, to + shift * through)),
   }
 }
+
+export function selectionInCode(tree, from, to) {
+  let inside = false
+  const visit = (node) => {
+    if (inside) return
+    const start = node.position?.start.offset,
+      end = node.position?.end.offset
+    if (start === undefined || end < from || start > to) return
+    if (node.type === 'code' && start <= from && to <= end) inside = true
+    else node.children?.forEach(visit)
+  }
+  visit(tree)
+  return inside
+}
