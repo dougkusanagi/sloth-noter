@@ -16,7 +16,7 @@ for (const width of [390, 1280]) {
       [page.locator('.tab-new'), 'Nova nota', ['Ctrl', 'T']],
       [page.locator('.sidebar-toggle'), 'Mostrar/ocultar biblioteca', ['Ctrl', 'Alt', 'B']],
       [page.locator('.menu-trigger'), 'Menu principal', ['F10']],
-      [page.locator('.display-trigger'), 'Aparência do texto', []],
+      [page.locator('.display-trigger'), 'Aparência', []],
       [page.getByRole('radio', { name: 'Código', exact: true }), 'Código', ['Ctrl', 'Alt', '2']],
     ]
     for (const [control, label, keys] of controls) {
@@ -91,22 +91,22 @@ for (const width of [390, 1280]) {
     ).toHaveText(['Ctrl', 'Alt', 'B'])
   })
 
-  test(`theme choice stays visible and persists at ${width}px`, async ({ page }) => {
+  test(`theme choice lives only in the appearance menu and persists at ${width}px`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width, height: 720 })
     await page.goto('/')
-    const themes = page.getByRole('radiogroup', { name: 'Tema', exact: true })
-    await expect(themes).toBeInViewport()
-    await themes.getByRole('radio', { name: 'Escuro', exact: true }).click()
+    await expect(page.getByRole('radiogroup', { name: 'Tema', exact: true })).toHaveCount(0)
+    const open = () => page.getByRole('button', { name: 'Aparência', exact: true }).click()
+    const theme = () => page.getByRole('group', { name: 'Tema', exact: true })
+    await open()
+    await theme().getByRole('menuitemradio', { name: 'Escuro', exact: true }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     await page.reload()
-    await expect(themes.getByRole('radio', { name: 'Escuro', exact: true })).toBeChecked()
-    await themes.getByRole('radio', { name: 'Escuro', exact: true }).focus()
-    await page.keyboard.press('ArrowRight')
-    await expect(themes.getByRole('radio', { name: 'Sistema', exact: true })).toBeFocused()
-    await page.emulateMedia({ colorScheme: 'light' })
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
-    await page.emulateMedia({ colorScheme: 'dark' })
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await open()
+    await expect(
+      theme().getByRole('menuitemradio', { name: 'Escuro', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true')
   })
 
   test(`formatting hints at ${width}px expose real shortcuts on hover and keyboard focus without losing selection`, async ({

@@ -9,54 +9,15 @@ import {
   Sun,
   Moon,
   Focus,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { FONT_SIZE, CONTENT_WIDTH, contentWidth } from '../storage.js'
 import { t } from '../i18n.js'
 import { Shortcut } from './main-menu.jsx'
 import { ShortcutButton } from './shortcut-button.jsx'
 
-const THEMES = [
-  ['light', Sun],
-  ['dark', Moon],
-  ['system', Monitor],
-]
-
-export function ThemeSwitch({ prefs, onChange, className = '' }) {
-  return (
-    <div className={`theme-switch ${className}`} role="radiogroup" aria-label={t('settings.theme')}>
-      {THEMES.map(([theme, Icon], index) => (
-        <ShortcutButton
-          key={theme}
-          type="button"
-          className="icon-button"
-          role="radio"
-          label={t(`theme.${theme}`)}
-          aria-checked={prefs.theme === theme}
-          tabIndex={prefs.theme === theme ? 0 : -1}
-          onClick={() => onChange({ theme })}
-          onKeyDown={(event) => {
-            const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[event.key]
-            if (!step && !['Home', 'End'].includes(event.key)) return
-            event.preventDefault()
-            const next =
-              event.key === 'Home'
-                ? 0
-                : event.key === 'End'
-                  ? THEMES.length - 1
-                  : (index + step + THEMES.length) % THEMES.length
-            onChange({ theme: THEMES[next][0] })
-            event.currentTarget.parentElement.querySelectorAll('button')[next].focus()
-          }}
-        >
-          <Icon size={14} aria-hidden="true" />
-        </ShortcutButton>
-      ))}
-    </div>
-  )
-}
-
 /**
- * The "Aa" popover in the header: theme, text size and text width. Appearance lives here
+ * The appearance popover in the header: focus mode, theme, text size and text width. Appearance lives here
  * so the main menu only holds actions.
  */
 export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
@@ -84,7 +45,6 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
   }, [open])
   return (
     <div className="display-menu-wrap" ref={wrap}>
-      <ThemeSwitch className="header-theme-switch" prefs={prefs} onChange={onChange} />
       <ShortcutButton
         ref={trigger}
         className="icon-button display-trigger"
@@ -94,7 +54,7 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
         aria-controls="display-menu"
         onClick={() => setOpen((value) => !value)}
       >
-        <span aria-hidden="true">Aa</span>
+        <SlidersHorizontal size={16} aria-hidden="true" />
       </ShortcutButton>
       {open && (
         <div

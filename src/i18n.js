@@ -518,7 +518,7 @@ const messages = {
     'images.cleanConfirm.other': 'Excluir definitivamente {count} imagens sem uso?',
     'focus.toggle': 'Modo foco',
     'focus.exit': 'Sair do modo foco',
-    'display.title': 'Aparência do texto',
+    'display.title': 'Aparência',
     'tabs.preview': 'pré-visualização: edite ou clique duas vezes para manter aberta',
   },
   en: {
@@ -1033,7 +1033,7 @@ const messages = {
     'images.cleanConfirm.other': 'Permanently delete {count} unused images?',
     'focus.toggle': 'Focus mode',
     'focus.exit': 'Exit focus mode',
-    'display.title': 'Text appearance',
+    'display.title': 'Appearance',
     'tabs.preview': 'preview: edit or double-click to keep it open',
   },
 }

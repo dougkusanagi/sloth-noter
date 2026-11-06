@@ -39,7 +39,7 @@ import { MainMenu } from './components/main-menu.jsx'
 import { ShortcutButton, ShortcutHint } from './components/shortcut-button.jsx'
 import { shortcutText } from './components/shortcut.jsx'
 import { WindowControls, isMac } from './components/window-controls.jsx'
-import { DisplayMenu, ThemeSwitch } from './components/display-menu.jsx'
+import { DisplayMenu } from './components/display-menu.jsx'
 import { TasksLibrary } from './components/tasks-library.jsx'
 import { resolvedTasks } from './tasks.js'
 import { displayName } from './note-title.js'
@@ -2720,7 +2720,6 @@ function Workspace({ persistence, loaded }) {
             )}
           </div>
           <footer className="document-info">
-            <ThemeSwitch className="footer-theme-switch" prefs={prefs} onChange={updatePrefs} />
             <span
               className="save-status"
               role="status"

@@ -77,7 +77,7 @@ test('desktop clicks invoke window actions only through their own controls', asy
   await page.locator('.cm-content').click()
   await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
   await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: 'Aparência do texto', exact: true }).click()
+  await page.getByRole('button', { name: 'Aparência', exact: true }).click()
   await page.keyboard.press('Escape')
   expect(await page.evaluate(() => window.nativeWindowActions)).toEqual([])
   await page.getByRole('button', { name: 'Minimizar', exact: true }).click()
