@@ -153,6 +153,7 @@ class TaskWidget extends WidgetType {
     input.type = 'checkbox'
     this.updateDOM(input)
     input.className = 'task-checkbox cm-task-checkbox'
+    input.addEventListener('mousedown', (event) => event.preventDefault())
     input.addEventListener('change', () =>
       view.dispatch({
         changes: {

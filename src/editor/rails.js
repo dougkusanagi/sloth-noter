@@ -24,9 +24,14 @@ export const railsLayer = layer({
     view.state.field(foldField, false)?.between(0, doc.length, (from, to) => folds.push([from, to]))
     // The height map can lag behind lines whose styles changed without a resize
     // (e.g. a fresh read-only view); prefer the rendered line when it exists.
+    const renderedLines = new Map()
+    for (const element of view.contentDOM.children) {
+      if (!element.classList.contains('cm-line')) continue
+      const number = doc.lineAt(view.posAtDOM(element, 0)).number
+      renderedLines.set(number, element)
+    }
     const block = (pos) => {
-      const line = view.domAtPos(pos).node
-      const element = (line.nodeType === 1 ? line : line.parentElement)?.closest?.('.cm-line')
+      const element = renderedLines.get(doc.lineAt(pos).number)
       if (!element) return view.lineBlockAt(pos)
       const rect = element.getBoundingClientRect()
       return { top: rect.top - view.documentTop, bottom: rect.bottom - view.documentTop }

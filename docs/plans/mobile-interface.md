@@ -205,11 +205,35 @@ Histórico de conclusão de tarefas é recurso futuro diferente do histórico lo
 continua local e fora do backup/sincronização. Não criar novo ADR para cada ajuste reversível de UI;
 decisões locais ficam neste plano e, ao concluir, seus fatos duráveis vão para a documentação apropriada.
 
+## Andamento atual — 2.3 (2026-11-06)
+
+A ponte Android e a ação Compartilhar texto estão implementadas; a prévia web oferece
+Copiar texto. O Android confirma apenas a abertura do seletor, sem garantir envio pelo
+destino. No Samsung SM-S921B com Android 17, abrir e cancelar o seletor foram verificados
+sem envio; a ação fica disponível após cancelar. O alinhamento ARM64 de 16 KB foi
+confirmado por llvm-readelf. O APK 0.4.0 foi gerado; a primeira instalação confirmou a
+versão. O aparelho foi desconectado antes da reinstalação do último APK.
+
+A entrega 0.4.0 reúne também os branches de layouts do editor, abertura de arquivos no
+Windows e empacotamento para Microsoft Store. Corrigidos cliques de tarefas/controles,
+seleção em código, foco das colunas, retorno de seleção e edição de links em tabelas.
+O padding vertical da primeira linha deslocava a seleção e os pontos de arraste; foi
+removido, mantendo o espaçamento normal do Markdown. As medições das guias usam as
+linhas renderizadas. Os testes de geometria aguardam fontes e layout antes de medir.
+
+Verificação local final: 348 testes JavaScript, 43 Rust e 410 E2E passaram, além de lint,
+formatação, build e consistência de versão. A suíte E2E usou dois workers e uma repetição
+permitida, como no CI; todos passaram na primeira tentativa (3,9 minutos). Seleção de
+código foi conferida em capturas reais de 390 e 1280 px. APK e AppImage são gerados
+localmente; o instalador Windows requer ambiente Windows e não foi gerado neste Linux.
+Nenhum workflow de testes foi alterado e nenhuma tag ou publicação foi criada.
+
+Os dois worktrees t3 antigos têm alterações não commitadas e são preservados, inclusive
+seus branches. Seus commits já estão no histórico principal; não incorporar nem apagar
+essas alterações como parte da limpeza dos branches integrados.
+
 ## Próximo passo
 
-**Executar somente 2.3 — compartilhar texto**, com adaptador Android, ação na folha da lista
-e alternativa explícita de copiar na prévia web quando compartilhar estiver indisponível.
-Validar sucesso, cancelamento, falha, envio único e o fluxo no APK. Não inclui arquivo `.md`,
-exportação ou recebimento. As etapas 2.1 e 2.2 estão concluídas; não iniciar 2.3 no mesmo pedido.
-Informar esse escopo antes de começar; encerrar a etapa com testes, atualização deste plano,
-commit e push da etapa completa. Não iniciar fase 3 nem outra etapa no mesmo pedido.
+Concluir somente a validação nativa pendente de 2.3: envio para um destino e falhas
+nativas. Não marcar a etapa como concluída por testes de navegador, nem iniciar 2.4 ou
+fase 3 antes dessa validação. Não enviar conteúdo a terceiros sem autorização específica.

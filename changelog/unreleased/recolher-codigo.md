@@ -1,1 +1,0 @@
-Adicionado: Use o botão no bloco de código para recolher seu conteúdo e mostrar somente a primeira linha; clique novamente para expandir. O texto da nota permanece intacto. A prévia ocupa uma linha, com reticências; os controles aparecem ao passar o mouse e continuam disponíveis pelo teclado e em telas de toque.

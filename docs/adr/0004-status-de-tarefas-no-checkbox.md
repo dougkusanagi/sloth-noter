@@ -19,13 +19,13 @@ que usa o app pediu para seguir o padrão mais estabelecido do mercado.
 
 O status fica no caractere entre colchetes, com a convenção do plugin Tasks do Obsidian:
 
-| Markdown | Status    | Observação                                                 |
-| -------- | --------- | ---------------------------------------------------------- |
-| `[ ]`    | A fazer   | Padrão GFM.                                                |
-| `[/]`    | Fazendo   | Padrão do plugin Tasks.                                    |
+| Markdown | Status    | Observação                                                             |
+| -------- | --------- | ---------------------------------------------------------------------- |
+| `[ ]`    | A fazer   | Padrão GFM.                                                            |
+| `[/]`    | Fazendo   | Padrão do plugin Tasks.                                                |
 | `[>]`    | Esperando | Não há padrão único; temas como o Minimal usam `>` para tarefa adiada. |
-| `[x]`    | Feita     | Padrão GFM; `[X]` continua aceito.                         |
-| `[-]`    | Cancelada | Padrão do plugin Tasks. Não conta no total do progresso.   |
+| `[x]`    | Feita     | Padrão GFM; `[X]` continua aceito.                                     |
+| `[-]`    | Cancelada | Padrão do plugin Tasks. Não conta no total do progresso.               |
 
 - **Parcial deixa de ser gravado como `[-]`.** Em tarefas com link, o app grava `[/]` (em
   andamento) quando parte das tarefas ligadas está feita, `[x]` quando todas estão feitas e

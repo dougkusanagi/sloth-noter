@@ -1,1 +1,0 @@
-Adicionado: Em Configurações → Editor ou no menu principal, escolha se as linhas das notas e dos blocos de código devem ser quebradas. No menu principal, ajuste a nota aberta individualmente; em cada bloco de código, use o botão de quebra para ajustar apenas o bloco.

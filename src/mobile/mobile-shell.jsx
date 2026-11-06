@@ -11,11 +11,13 @@ import {
   Pin,
   Plus,
   Search,
+  Share2,
   Sun,
   Trash2,
   X,
 } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import { createAppPersistence } from '../persistence-runtime.js'
 import { openWorkspace } from '../boot.js'
 import { useNotesStore } from '../hooks/use-notes-store.js'
@@ -121,6 +123,8 @@ export function MobileShell() {
 }
 
 function MobileWorkspace({ persistence, loaded, onReload }) {
+  const [sharing, setSharing] = useState(false)
+  const sharingRef = useRef(false)
   const [rename, setRename] = useState(null)
   const [renameError, setRenameError] = useState('')
   const press = useRef(null)
@@ -861,6 +865,34 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   }}
                 >
                   {t('menu.rename')}
+                </button>
+                <button
+                  disabled={sharing}
+                  onClick={async () => {
+                    if (sharingRef.current) return
+                    sharingRef.current = true
+                    setSharing(true)
+                    try {
+                      if (isTauri()) {
+                        await invoke('share_text', {
+                          text: actionsNote.body,
+                          title: displayName(actionsNote.name),
+                        })
+                      } else {
+                        await navigator.clipboard.writeText(actionsNote.body)
+                        toast(t('mobile.copied'))
+                      }
+                      back()
+                    } catch {
+                      toast.error(t(isTauri() ? 'mobile.shareFailed' : 'mobile.copyFailed'))
+                    } finally {
+                      sharingRef.current = false
+                      setSharing(false)
+                    }
+                  }}
+                >
+                  <Share2 size={20} />
+                  {t(isTauri() ? 'mobile.shareText' : 'mobile.copyText')}
                 </button>
                 <button disabled={blocked} onClick={() => pinNote(actionsNote.id)}>
                   <Pin size={20} />

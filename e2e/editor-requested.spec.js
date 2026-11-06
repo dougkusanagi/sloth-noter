@@ -14,7 +14,7 @@ test('new note placeholders, slash search and multi-selection', async ({ page })
   await expect(hint.locator('kbd')).toHaveText('/')
   // The tip already shows while the cursor is in the title.
   await expect(hint).toBeVisible()
-  await expect(hint).toHaveCSS('opacity', '0.75')
+  await expect(hint).toHaveCSS('opacity', '1')
   await page.keyboard.type('Teste')
   await expect(editor.locator('.cm-empty-body')).toHaveAttribute(
     'data-placeholder',

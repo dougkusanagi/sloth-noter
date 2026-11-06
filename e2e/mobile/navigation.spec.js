@@ -298,6 +298,10 @@ test('mobile layouts and changelog remain usable with long content in both theme
     await page.setViewportSize({ width: 390, height: 844 })
     await page.getByRole('button', { name: 'Mais opções' }).tap()
     await page.getByRole('button', { name: 'Novidades', exact: true }).tap()
+    await expect(page.locator('.changelog-page')).toContainText(
+      'Compartilhar texto nas ações de uma nota',
+    )
+    await expect(page.locator('.changelog-page')).toContainText('páginas de memória de 16 KB')
     await expect(page.locator('.changelog-page')).toContainText('navegação no Android')
     await expect(page.locator('.changelog-page')).toContainText('No celular, use o comando')
     await expect(page.locator('.changelog-page')).toContainText('Digite / e escolha Colunas')
@@ -628,4 +632,50 @@ test('the slash menu imports a file in a mobile note', async ({ page }) => {
       }, STORAGE_KEY),
     )
     .toContain('![foto.png](data:image/png;base64,')
+})
+
+test('copies a note from its actions in the browser preview', async ({ page }) => {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.getByRole('button', { name: 'Ações de Compras' }).tap()
+  await page.getByRole('button', { name: 'Copiar texto' }).tap()
+  await expect(page.getByText('Copiado', { exact: true })).toBeVisible()
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(notes[0].body)
+})
+
+test('copy failure keeps the actions available to retry', async ({ page }) => {
+  await page.evaluate(() => {
+    Object.defineProperty(navigator.clipboard, 'writeText', {
+      configurable: true,
+      value: () => Promise.reject(new Error('clipboard unavailable')),
+    })
+  })
+  await page.getByRole('button', { name: 'Ações de Compras' }).tap()
+  await page.getByRole('button', { name: 'Copiar texto' }).tap()
+  await expect(
+    page.getByText('Não foi possível copiar. Selecione o texto e tente de novo.'),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Copiar texto' })).toBeEnabled()
+})
+
+test('copy ignores repeated activation while it is pending', async ({ page }) => {
+  await page.evaluate(() => {
+    window.copyCalls = 0
+    Object.defineProperty(navigator.clipboard, 'writeText', {
+      configurable: true,
+      value: () => {
+        window.copyCalls += 1
+        return new Promise((resolve) => {
+          window.finishCopy = resolve
+        })
+      },
+    })
+  })
+  await page.getByRole('button', { name: 'Ações de Compras' }).tap()
+  const copy = page.getByRole('button', { name: 'Copiar texto' })
+  await copy.tap()
+  await expect(copy).toBeDisabled()
+  await page.evaluate(() => document.querySelector('.mobile-sheet button:disabled').click())
+  expect(await page.evaluate(() => window.copyCalls)).toBe(1)
+  await page.evaluate(() => window.finishCopy())
+  await expect(page.getByText('Copiado', { exact: true })).toBeVisible()
 })

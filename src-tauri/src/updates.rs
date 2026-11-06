@@ -6,8 +6,9 @@ use tauri::Manager;
 pub fn update_environment(app: AppHandle) -> bool {
     #[cfg(target_os = "linux")]
     return !cfg!(debug_assertions) && app.env().appimage.is_some();
+    // Store builds are updated by the Microsoft Store, never by the app itself.
     #[cfg(target_os = "windows")]
-    return !cfg!(debug_assertions);
+    return !cfg!(debug_assertions) && !cfg!(feature = "store");
     #[cfg(not(any(target_os = "linux", target_os = "windows")))]
     {
         let _ = app;

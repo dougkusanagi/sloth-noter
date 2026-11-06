@@ -35,6 +35,10 @@ test('Padrão draws continuous rails only for nested lists, one per nesting leve
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+End')
+  await page.evaluate(async () => {
+    await document.fonts.ready
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  })
   const rails = page.locator('.cm-rail')
   // "item" holds a list and "filho" holds one too; sections get no rail.
   await expect(rails).toHaveCount(2)

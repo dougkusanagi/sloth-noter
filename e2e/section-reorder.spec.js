@@ -262,6 +262,10 @@ test('the grip sits right next to the heading level pill', async ({ page }) => {
 })
 
 test('hovering anywhere on the heading row shows the grip', async ({ page }) => {
+  await page.evaluate(async () => {
+    await document.fonts.ready
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  })
   const heading = page.locator('.cm-line', { hasText: 'Primeira' })
   const grip = heading.locator('.cm-drag-handle')
   const row = await heading.boundingBox()

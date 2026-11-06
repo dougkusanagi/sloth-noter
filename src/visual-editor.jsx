@@ -434,6 +434,25 @@ export function VisualEditor({
           EditorState.allowMultipleSelections.of(true),
           keymap.of([
             {
+              key: 'Shift-Home',
+              run: (view) => {
+                const range = view.state.selection.main
+                if (
+                  view.state.selection.ranges.length !== 1 ||
+                  range.head !== view.state.doc.length
+                )
+                  return false
+                view.dispatch({
+                  selection: EditorSelection.single(
+                    range.anchor,
+                    view.state.doc.lineAt(range.head).from,
+                  ),
+                  scrollIntoView: true,
+                })
+                return true
+              },
+            },
+            {
               key: 'Mod-d',
               run: (view) => {
                 const selection = view.state.selection
@@ -608,15 +627,10 @@ export function VisualEditor({
               ) {
                 const from = Number(cell.dataset.cellFrom)
                 const to = Number(cell.dataset.cellTo)
-                const position = view.posAtCoords({ x: event.clientX, y: event.clientY })
                 if (Number.isSafeInteger(from) && Number.isSafeInteger(to)) {
                   event.preventDefault()
                   view.focus()
-                  view.dispatch({
-                    selection: EditorSelection.single(
-                      Math.max(from, Math.min(to, position ?? from)),
-                    ),
-                  })
+                  view.dispatch({ selection: EditorSelection.single(to) })
                   return true
                 }
               }
@@ -788,7 +802,7 @@ export function VisualEditor({
     })
     viewRef.current = view
     const capturePointerSelection = (event) => {
-      if (event.target.closest?.('button')) return
+      if (event.target.closest?.('button, input, select, textarea')) return
       const line = event.target.closest?.('.cm-line')
       const insideColumn = event.target.closest?.('.cm-column-editor')
       const point = { x: event.clientX, y: event.clientY }
@@ -820,6 +834,7 @@ export function VisualEditor({
     }
     view.dom.addEventListener('pointerup', capturePointerSelection)
     const focusBlankArea = (event) => {
+      if (event.target.closest?.('.cm-editor') !== view.dom) return
       if (
         event.target.closest?.(
           '.cm-line, .cm-md-table-cell, button, .format-toolbar, .insert-trigger, .block-menu',
@@ -894,10 +909,14 @@ export function VisualEditor({
       write: () =>
         queueMicrotask(() => {
           const next = readOnlyRef.current
-          if (viewRef.current === view && view.state.readOnly !== next)
+          if (viewRef.current === view && view.state.readOnly !== next) {
             view.dispatch({
               effects: readOnlyCompartment.current.reconfigure(EditorState.readOnly.of(next)),
             })
+            requestAnimationFrame(() => {
+              if (viewRef.current === view) view.dispatch({})
+            })
+          }
         }),
     })
     if (readOnly) {

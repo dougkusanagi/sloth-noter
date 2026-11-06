@@ -21,7 +21,8 @@ test('columns can be edited without losing text or the cursor', async ({ page })
   const second = page.getByRole('textbox', { name: 'Coluna 2' })
   await expect(first).toContainText('Primeira')
   await expect(second).toContainText('Segunda')
-  await first.click()
+  const firstBox = await first.boundingBox()
+  await first.click({ position: { x: 20, y: firstBox.height - 4 } })
   await page.keyboard.press('End')
   await page.keyboard.type(' editada')
   await expect(first).toContainText('Primeira editada')
@@ -88,6 +89,8 @@ test('dragging selected text between columns moves it in one undoable step', asy
     const secondView = EditorView.findFromDOM(document.querySelector('[aria-label="Coluna 3"]'))
     firstView.dispatch({ selection: { anchor: 0, head: firstView.state.doc.length } })
     firstView.focus()
+    await document.fonts.ready
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
     const from = firstView.coordsAtPos(2)
     const to = secondView.coordsAtPos(secondView.state.doc.length)
     return {
@@ -127,6 +130,8 @@ test('selected text can be moved from the note into a column', async ({ page }) 
     const start = parent.state.doc.toString().indexOf('Mover daqui')
     parent.dispatch({ selection: { anchor: start, head: start + 'Mover daqui'.length } })
     parent.focus()
+    await document.fonts.ready
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
     const from = parent.coordsAtPos(start + 3)
     const to = target.coordsAtPos(target.state.doc.length)
     return {
@@ -158,10 +163,12 @@ test('selected text can be moved within one column and restored', async ({ page 
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   const first = page.getByRole('textbox', { name: 'Coluna 1' })
   await expect(first).toContainText('Primeira coisa')
-  const points = await page.evaluate(() => {
+  const points = await page.evaluate(async () => {
     const view = document.querySelector('.cm-columns').columnContext.views[0]
     view.dispatch({ selection: { anchor: 0, head: 8 } })
     view.focus()
+    await document.fonts.ready
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
     const from = view.coordsAtPos(2),
       to = view.coordsAtPos(view.state.doc.length)
     return {

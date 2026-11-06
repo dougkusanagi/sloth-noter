@@ -402,7 +402,6 @@ textarea:focus-visible {
   color: var(--muted);
   font: 0.78em/1.6 var(--ui);
   white-space: normal;
-  opacity: 0.75;
   pointer-events: none;
   user-select: none;
 }
@@ -465,14 +464,19 @@ textarea:focus-visible {
   /* Long hidden link targets must not squeeze the visible text into a thin column. */
   padding-right: min(calc(var(--md-prefix-width, 0px) + var(--md-syntax-reserve, 0ch)), 12%);
 }
+/* Keep code selections above the opaque code background. */
+.visual-editor
+  .cm-editor:has(> .cm-scroller > .cm-content > .cm-md-code)
+  > .cm-scroller
+  > .cm-selectionLayer {
+  z-index: 2 !important;
+  pointer-events: none;
+}
 .visual-editor .cm-selectionBackground {
   background: color-mix(in srgb, var(--accent) 25%, transparent) !important;
 }
 .visual-editor .cm-cursor {
   border-left-color: var(--accent);
-}
-.visual-editor .cm-content > .cm-line:first-child {
-  padding-bottom: calc(var(--editor-size) * 1.62);
 }
 .visual-editor .cm-md-h1 {
   --md-prefix-width: 0.82em;
@@ -677,7 +681,6 @@ textarea:focus-visible {
   .code-copy-layer .code-editor-wrap,
   .code-copy-layer .code-editor-fold {
     opacity: 0;
-    pointer-events: none;
     transition:
       opacity var(--fast) var(--ease),
       box-shadow var(--fast) var(--ease),

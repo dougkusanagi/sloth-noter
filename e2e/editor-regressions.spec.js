@@ -346,6 +346,10 @@ for (const width of [1280, 390]) {
           }
         }),
       )
+    await page.evaluate(async () => {
+      await document.fonts.ready
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    })
     const before = await measure()
     for (const word of ['edição', 'opções', 'filho']) {
       await page.evaluate(async (word) => {

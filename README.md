@@ -86,7 +86,7 @@ No Windows, use JDK 21 para o Gradle 8 (por exemplo, `winget install Microsoft.O
 As notas ficam no armazenamento interno do aplicativo. A seleção de pastas externas ainda não está disponível no Android; use a colagem nativa do teclado para a área de transferência. Esta compilação não é um pacote de publicação na Play Store.
 
 Para conferir a interface mobile no navegador, rode `bun run dev` e abra
-`http://localhost:5173/?platform=mobile`. A lista permite buscar, criar e abrir notas por toque.
+`http://localhost:5173/?platform=mobile`. A lista permite buscar, criar e abrir notas por toque. No Android, use as ações de uma nota para compartilhar seu texto; na prévia web, a ação copia o texto.
 Notas existentes abrem em leitura; use Editar e Pronto para alternar. A interface Android ainda
 está em implementação: veja o [plano em andamento](docs/plans/mobile-interface.md).
 Os testes mobile rodam localmente com `bun run e2e --project=mobile`.
@@ -101,3 +101,5 @@ Os testes mobile rodam localmente com `bun run e2e --project=mobile`.
 Novidades no desktop abre uma nota Markdown pelo menu principal ou por Configurações → Novidades.
 A nota usa os modos normais de leitura, edição e código. Abrir novamente reutiliza a cópia se ela
 continuar igual ao changelog da versão instalada; uma cópia editada não é sobrescrita.
+
+O empacotamento MSIX para a Microsoft Store está descrito em [Desenvolvimento](docs/DESENVOLVIMENTO.md). Consulte também a [política de privacidade](docs/PRIVACIDADE.md).
