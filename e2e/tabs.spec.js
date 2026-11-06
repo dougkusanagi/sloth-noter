@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
     notes: ['Alpha', 'Beta', 'Gamma'].map((id) => ({
       id,
       name: `${id}.md`,
-      body: `# ${id}`,
+      body: `# ${id}\n\n${id === 'Beta' ? 'Planejamento da semana\n\n- [ ] Revisar as prioridades' : 'Anotações e referências do projeto.'}`,
       revision: 1,
     })),
     openIds: ['Alpha', 'Beta', 'Gamma'],
@@ -24,6 +24,103 @@ test.beforeEach(async ({ page }) => {
 })
 
 const names = (page) => page.locator('.tab span')
+
+test('a tab can be viewed beside the active note and switched for editing', async ({ page }) => {
+  if (process.env.CAPTURE_UI) {
+    await page.setViewportSize({ width: 760, height: 720 })
+    await page.evaluate((key) => {
+      const document = JSON.parse(localStorage.getItem(key))
+      document.preferences.fontSize = 24
+      localStorage.setItem(key, JSON.stringify(document))
+    }, STORAGE_KEY)
+    await page.reload()
+    await expect(page.locator('.tab')).toHaveCount(3)
+    await page.getByRole('button', { name: 'Mostrar/ocultar biblioteca' }).click()
+  }
+  await page.locator('.tab').filter({ hasText: 'Alpha' }).click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Ver ao lado' }).click()
+  const side = page.getByRole('complementary', { name: 'Nota ao lado: Alpha' })
+  await expect(side).toContainText('Alpha')
+  await expect(page.locator('.editor-pane-primary')).toContainText('Beta')
+  await expect(side.getByRole('textbox', { name: 'Editor Markdown visual' })).toHaveAttribute(
+    'aria-readonly',
+    'true',
+  )
+  if (process.env.CAPTURE_UI)
+    await page.locator('.editor-panes').screenshot({ path: '/tmp/sloth-split-desktop.png' })
+  await side.getByRole('button', { name: 'Editar Alpha', exact: true }).click()
+  await expect(page.locator('.editor-pane-primary')).toContainText('Alpha')
+  await expect(page.getByRole('complementary', { name: 'Nota ao lado: Beta' })).toBeVisible()
+  await page.getByRole('button', { name: 'Fechar nota ao lado' }).click()
+  await expect(page.locator('.editor-pane-secondary')).toHaveCount(0)
+})
+
+test('dragging a tab onto the editor opens it alongside', async ({ page }) => {
+  const tab = await page.locator('.tab').filter({ hasText: 'Gamma' }).boundingBox()
+  const editor = await page.locator('.editor-shell').boundingBox()
+  await page.mouse.move(tab.x + 20, tab.y + tab.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(editor.x + editor.width / 2, editor.y + 150, { steps: 10 })
+  await page.mouse.up()
+  await expect(page.getByRole('complementary', { name: 'Nota ao lado: Gamma' })).toBeVisible()
+})
+
+test('two notes remain readable at a narrow desktop window', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.locator('.tab').filter({ hasText: 'Alpha' }).click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Ver ao lado' }).click()
+  const side = page.getByRole('complementary', { name: 'Nota ao lado: Alpha' })
+  await side.scrollIntoViewIfNeeded()
+  await expect(side).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/sloth-split-narrow.png' })
+})
+
+test('toggling a task in the side note changes that note only', async ({ page }) => {
+  await page.locator('.tab').filter({ hasText: 'Alpha' }).click()
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page.locator('textarea').fill('# Alpha\n\n- [ ] Revisar documento')
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  await page.locator('.tab').filter({ hasText: 'Beta' }).click()
+  await page.locator('.tab').filter({ hasText: 'Alpha' }).click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Ver ao lado' }).click()
+  const side = page.getByRole('complementary', { name: 'Nota ao lado: Alpha' })
+  await side.getByRole('checkbox').check({ force: true })
+  await expect
+    .poll(() =>
+      page.evaluate((key) => {
+        const document = JSON.parse(localStorage.getItem(key))
+        return document.notes.find((note) => note.id === 'Alpha').body
+      }, STORAGE_KEY),
+    )
+    .toContain('- [x] Revisar documento')
+  await expect(page.locator('.editor-pane-primary')).toContainText('Beta')
+})
+
+test('each side scrolls independently when both notes are long', async ({ page }) => {
+  await page.evaluate((key) => {
+    const document = JSON.parse(localStorage.getItem(key))
+    for (const note of document.notes)
+      note.body = `# ${note.id}\n\n${'Texto de exemplo.\n\n'.repeat(120)}Fim ${note.id}`
+    localStorage.setItem(key, JSON.stringify(document))
+  }, STORAGE_KEY)
+  await page.reload()
+  await page.locator('.tab').filter({ hasText: 'Alpha' }).click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Ver ao lado' }).click()
+  const primary = page.locator('.editor-pane-primary > .visual-editor > .cm-editor > .cm-scroller')
+  const side = page.locator('.editor-pane-secondary > .visual-editor > .cm-editor > .cm-scroller')
+  await primary.evaluate((node) => {
+    node.scrollTop = node.scrollHeight
+  })
+  await expect.poll(() => primary.evaluate((node) => node.scrollTop)).toBeGreaterThan(100)
+  expect(await side.evaluate((node) => node.scrollTop)).toBe(0)
+  await side.evaluate((node) => {
+    node.scrollTop = node.scrollHeight
+  })
+  await expect.poll(() => side.evaluate((node) => node.scrollTop)).toBeGreaterThan(100)
+  await page.getByRole('button', { name: 'Editar Alpha' }).click()
+  await expect(page.locator('.editor-pane-primary')).toContainText('Alpha')
+})
 
 test('dragging reorders tabs in both directions and persists across reload', async ({ page }) => {
   const first = await page.locator('.tab').first().boundingBox()

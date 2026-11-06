@@ -17,7 +17,11 @@ flowchart TD
   updater --> binary[Instalação do AppImage ou NSIS]
   updates --> saves[Fila de gravação antes de instalar e reiniciar]
   desktop --> editor[VisualEditor CodeMirror e Markdown]
+  desktop --> sideNote[Nota lateral em leitura]
+  sideNote --> editor
   mobile --> editor
+  editor --> columns[Editores de colunas e visualização Markdown]
+  columns --> store
   store --> runtime[createAppPersistence]
   runtime --> web[Armazenamento do navegador]
   runtime --> native[Ponte Tauri Rust]

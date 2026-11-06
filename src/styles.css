@@ -165,6 +165,88 @@ textarea:focus-visible {
   min-width: 0;
   cursor: text;
 }
+.editor-panes {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+.editor-pane-primary {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.editor-panes.split {
+  height: calc(100dvh - 120px);
+  min-height: 420px;
+  flex: none;
+}
+.editor-panes.split > * {
+  width: 50%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.editor-pane-secondary {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--edge);
+}
+.editor-pane-header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 4px 8px;
+  background: var(--bg);
+  font: 12px var(--ui);
+}
+.editor-pane-header .button {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.editor-pane-header .icon-button {
+  margin-left: auto;
+}
+.editor-panes.split .visual-editor,
+.editor-panes.split textarea {
+  min-height: 0;
+  height: 100%;
+}
+.editor-panes.split .visual-editor {
+  display: flex;
+  flex-direction: column;
+}
+.editor-panes.split
+  :is(.editor-pane-primary, .editor-pane-secondary)
+  > .visual-editor
+  > .cm-editor {
+  flex: 1;
+  min-height: 0;
+}
+.editor-panes.split .source-editor-wrap {
+  min-height: 0;
+}
+@media (max-width: 700px) {
+  .editor-panes.split {
+    flex-direction: column;
+    height: auto;
+  }
+  .editor-panes.split > * {
+    width: 100%;
+    height: 50vh;
+    flex: none;
+  }
+  .editor-pane-secondary {
+    border-top: 1px solid var(--edge);
+    border-left: 0;
+  }
+}
 textarea {
   display: block;
   width: 100%;
@@ -460,10 +542,153 @@ textarea:focus-visible {
   /* The sticky copy badge can float over any line, so keep its column clear. */
   padding-right: var(--copy-reserve);
 }
+.cm-accordion-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  vertical-align: middle;
+}
+.cm-accordion-toggle:hover,
+.cm-accordion-toggle:focus-visible {
+  background: var(--active);
+}
+.cm-columns {
+  margin: 8px 0;
+}
+.cm-columns-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+}
+.cm-columns-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.markdown-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+  margin: calc(var(--gap) * var(--line)) 0 0;
+}
+.markdown-column {
+  min-width: 0;
+}
+.cm-column-editor {
+  min-width: 0;
+  border: 1px solid var(--edge);
+  border-radius: 7px;
+  padding: 8px;
+}
+.cm-column-preview {
+  min-width: 0;
+}
+.cm-column-preview .markdown {
+  padding: 0;
+  font-size: inherit;
+}
+.cm-column-drop-marker {
+  position: fixed;
+  z-index: 100;
+  width: 2px;
+  background: var(--accent);
+  pointer-events: none;
+}
+.cm-add-column {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.cm-remove-columns {
+  margin-left: auto;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: 12px var(--ui);
+  cursor: pointer;
+}
+.cm-remove-columns:hover,
+.cm-remove-columns:focus-visible {
+  color: var(--ink);
+}
+.cm-add-column:hover,
+.cm-add-column:focus-visible {
+  background: var(--active);
+}
+.visual-editor .cm-column-editor .cm-editor {
+  min-height: 72px;
+  height: auto;
+}
+.visual-editor .cm-column-editor .cm-scroller {
+  overflow: auto;
+  padding: 0;
+}
+.visual-editor .cm-column-editor .cm-content {
+  min-height: 56px;
+  padding: 0;
+}
+.visual-editor[data-wrap-page='false'] .cm-column-editor .cm-content {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+@media (max-width: 600px) {
+  .cm-columns-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .markdown-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .visual-editor .cm-code-no-wrap {
   white-space: pre;
   overflow-x: hidden;
   overflow-wrap: normal;
+}
+.visual-editor .cm-code-wrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.visual-editor .cm-code-collapsed {
+  white-space: pre;
+  overflow: hidden;
+  overflow-wrap: normal;
+  text-overflow: ellipsis;
+}
+@media (hover: hover) and (pointer: fine) {
+  .code-copy-layer .code-editor-wrap,
+  .code-copy-layer .code-editor-fold {
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity var(--fast) var(--ease),
+      box-shadow var(--fast) var(--ease),
+      transform var(--fast) var(--ease);
+  }
+  .code-copy-layer .is-code-hovered,
+  .code-copy-layer .code-editor-wrap:focus-visible,
+  .code-copy-layer .code-editor-fold:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 .code-block-scroll {
   position: fixed;

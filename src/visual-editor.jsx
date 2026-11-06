@@ -17,8 +17,21 @@ import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
 import { emptyBodyLine, liveMarkdown, taskNotes } from './editor/live-decorations.js'
 import { foldField } from './editor/folding.js'
+import { accordionField } from './editor/accordion.js'
+import {
+  columnDrag,
+  columnImageHandler,
+  columnReadServices,
+  columnsField,
+} from './editor/columns.js'
 import { railsLayer } from './editor/rails.js'
-import { codeCopyHandler, codeWrap, stickyCodeCopy } from './editor/code-copy.js'
+import {
+  codeCopyHandler,
+  codeFold,
+  codeWrap,
+  setCodeWrapping,
+  stickyCodeCopy,
+} from './editor/code-copy.js'
 import {
   insertTableColumnAt,
   insertTableRowAt,
@@ -58,6 +71,8 @@ import {
   Quote,
   Table as TableIcon,
   Trash2,
+  ChevronRight,
+  Columns2,
 } from 'lucide-react'
 
 /* eslint-disable react/jsx-key -- static tuples, rendered with explicit keys below */
@@ -86,6 +101,8 @@ const blockButtons = [
   ['numbered', 'block.numbered'],
   ['table', 'block.table'],
   ['code', 'block.code'],
+  ['accordion', 'block.accordion'],
+  ['columns', 'block.columns'],
   ['image', 'block.image'],
   ['link', 'format.link'],
 ]
@@ -106,6 +123,8 @@ const blockIcons = {
   numbered: ListOrdered,
   table: TableIcon,
   code: CodeXml,
+  accordion: ChevronRight,
+  columns: Columns2,
   image: ImagePlus,
   link: Link,
 }
@@ -143,8 +162,11 @@ export function VisualEditor({
   onCopy,
   imageBusy,
   readOnly = false,
+  wrapLines = true,
+  wrapPage = wrapLines,
 }) {
   const notesCompartment = useRef(new Compartment())
+  const wrappingCompartment = useRef(new Compartment())
   const readOnlyCompartment = useRef(new Compartment())
   const readOnlyRef = useRef(readOnly)
   readOnlyRef.current = readOnly
@@ -292,6 +314,14 @@ export function VisualEditor({
     setBlockMenu(false)
     setInsertAt(null)
     view.focus()
+    if (action === 'columns') {
+      const from = edit.from + edit.insert.indexOf('<!-- sloth:columns -->')
+      requestAnimationFrame(() =>
+        view.dom
+          .querySelector(`[data-columns-from="${from}"] .cm-column-editor .cm-content`)
+          ?.focus(),
+      )
+    }
   }
 
   function applyFormat(action, url = '') {
@@ -400,6 +430,7 @@ export function VisualEditor({
           history(),
           drawSelection(),
           codeWrap,
+          codeFold,
           EditorState.allowMultipleSelections.of(true),
           keymap.of([
             {
@@ -465,7 +496,7 @@ export function VisualEditor({
             // CodeMirror binds Ctrl+Shift+Z only on Linux.
             { key: 'Mod-Shift-z', run: redo, preventDefault: true },
           ]),
-          EditorView.lineWrapping,
+          wrappingCompartment.current.of(wrapPage ? EditorView.lineWrapping : []),
           EditorView.contentAttributes.of({
             'aria-label': t('editor.visual'),
             spellcheck: 'false',
@@ -568,6 +599,27 @@ export function VisualEditor({
                 view.dispatch({ selection: EditorSelection.single(from), scrollIntoView: true })
                 return true
               }
+              if (
+                cell &&
+                event.target.closest?.('.cm-md-inline-link') &&
+                !view.state.readOnly &&
+                !event.ctrlKey &&
+                !event.metaKey
+              ) {
+                const from = Number(cell.dataset.cellFrom)
+                const to = Number(cell.dataset.cellTo)
+                const position = view.posAtCoords({ x: event.clientX, y: event.clientY })
+                if (Number.isSafeInteger(from) && Number.isSafeInteger(to)) {
+                  event.preventDefault()
+                  view.focus()
+                  view.dispatch({
+                    selection: EditorSelection.single(
+                      Math.max(from, Math.min(to, position ?? from)),
+                    ),
+                  })
+                  return true
+                }
+              }
               const wiki = event.target.closest?.('[data-wiki]')
               if (wiki) {
                 event.preventDefault()
@@ -586,8 +638,39 @@ export function VisualEditor({
                 openExternalLink(link.dataset.href).catch((error) => toast.error(String(error)))
                 return true
               }
+              if (link && !view.state.readOnly && !event.ctrlKey && !event.metaKey) {
+                const position = view.posAtCoords({ x: event.clientX, y: event.clientY }, false)
+                if (position != null) {
+                  const from = view.posAtDOM(link, 0)
+                  const to = from + link.textContent.length
+                  event.preventDefault()
+                  view.focus()
+                  view.dispatch({
+                    selection: EditorSelection.single(Math.max(from, Math.min(to, position))),
+                  })
+                  return true
+                }
+              }
               if (cell || event.target.closest?.('button')) return false
               const line = event.target.closest?.('.cm-line')
+              if (
+                line === event.target &&
+                line.querySelector('[data-wiki]') &&
+                !view.state.readOnly
+              ) {
+                const position = view.posAtCoords({ x: event.clientX, y: event.clientY }, false)
+                if (position != null) {
+                  const bounds = view.state.doc.lineAt(view.posAtDOM(line, 0))
+                  event.preventDefault()
+                  view.focus()
+                  view.dispatch({
+                    selection: EditorSelection.single(
+                      Math.max(bounds.from, Math.min(bounds.to, position)),
+                    ),
+                  })
+                  return true
+                }
+              }
               if (line && !line.classList.contains('cm-md-table-row')) return false
               const position =
                 view.posAtCoords({ x: event.clientX, y: event.clientY }) ??
@@ -651,6 +734,14 @@ export function VisualEditor({
             },
           }),
           foldField,
+          accordionField,
+          columnsField,
+          columnDrag,
+          columnImageHandler.of((files, point) => callbacks.current.onImageFiles?.(files, point)),
+          columnReadServices.of({
+            onCopy: (text) => callbacks.current.onCopy?.(text),
+            onOpenWiki: (target) => callbacks.current.onOpenWiki?.(target),
+          }),
           railsLayer,
           notesCompartment.current.of(taskNotes.of(notes)),
           liveMarkdown,
@@ -698,7 +789,34 @@ export function VisualEditor({
     viewRef.current = view
     const capturePointerSelection = (event) => {
       if (event.target.closest?.('button')) return
-      queueMicrotask(() => callbacks.current.onSelectionChange?.(view.state.selection.main))
+      const line = event.target.closest?.('.cm-line')
+      const insideColumn = event.target.closest?.('.cm-column-editor')
+      const point = { x: event.clientX, y: event.clientY }
+      const modified = event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
+      queueMicrotask(() => {
+        if (!view.dom.isConnected) return
+        const selection = view.state.selection.main
+        if (
+          line?.isConnected &&
+          !insideColumn &&
+          !modified &&
+          !view.state.readOnly &&
+          !line.classList.contains('cm-md-table-row') &&
+          selection.empty
+        ) {
+          const bounds = view.state.doc.lineAt(view.posAtDOM(line, 0))
+          if (selection.head < bounds.from || selection.head > bounds.to) {
+            const position = view.posAtCoords(point, false)
+            if (position != null)
+              view.dispatch({
+                selection: EditorSelection.single(
+                  Math.max(bounds.from, Math.min(bounds.to, position)),
+                ),
+              })
+          }
+        }
+        callbacks.current.onSelectionChange?.(view.state.selection.main)
+      })
     }
     view.dom.addEventListener('pointerup', capturePointerSelection)
     const focusBlankArea = (event) => {
@@ -755,6 +873,16 @@ export function VisualEditor({
   }, [body])
 
   useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: wrappingCompartment.current.reconfigure(wrapPage ? EditorView.lineWrapping : []),
+    })
+  }, [wrapPage, noteId])
+
+  useEffect(() => {
+    viewRef.current?.dispatch({ effects: setCodeWrapping.of(wrapLines) })
+  }, [wrapLines, noteId])
+
+  useEffect(() => {
     const view = viewRef.current
     if (!view) return
     // A view created read-only keeps stale line heights for unrevealed lines, which
@@ -801,6 +929,7 @@ export function VisualEditor({
   return (
     <div
       className={`visual-editor${readOnly ? ' read-only' : ''}${blockMenu ? ' block-menu-open' : ''}`}
+      data-wrap-page={wrapPage}
       ref={host}
     >
       {toolbar && (

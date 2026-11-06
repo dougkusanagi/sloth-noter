@@ -2,6 +2,7 @@
 
 ## Changelog do aplicativo
 
+- Em toda mudança que afete quem usa o aplicativo, atualize a seção **Novidades** na mesma entrega e confira a entrada na interface; não deixe esse registro para depois.
 - A página **Novidades** (menu principal e Configurações) lê `changelog/unreleased/*.md` e `CHANGELOG.md` diretamente. São a fonte única do registro; não mantenha uma cópia no código da interface.
 - **Todo commit, por mínimo que seja, deve incrementar a versão do projeto e adicionar ou atualizar o changelog no próprio commit.** Isso inclui correções, recursos, refatorações internas, testes, documentação e formatação. Prepare os registros antes de concluir o commit, para que estejam atualizados imediatamente após ele; não faça um segundo commit apenas para registrar o anterior.
 - Use SemVer: quebra de compatibilidade → major; funcionalidade nova compatível → minor; demais mudanças → patch. Atualize `package.json`, `src-tauri/Cargo.toml` e a entrada do aplicativo em `src-tauri/Cargo.lock` de forma consistente; `tauri.conf.json` continua lendo a versão de `package.json`. Consolide os fragmentos correspondentes à mudança em `changelog/X.Y.Z.md` no mesmo commit, preservando as imagens referenciadas.

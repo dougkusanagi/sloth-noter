@@ -90,6 +90,48 @@ test('desktop clicks invoke window actions only through their own controls', asy
   ])
 })
 
+test('native text and image pastes stay inside the focused column', async ({ page }) => {
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page
+    .locator('textarea')
+    .fill(
+      '# Clipboard\n\n<!-- sloth:columns -->\n\n<!-- sloth:column -->\n\nPrimeira\n\n<!-- sloth:column -->\n\nSegunda\n\n<!-- /sloth:columns -->',
+    )
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  const column = page.getByRole('textbox', { name: 'Coluna 2' })
+  await column.focus()
+  await page.keyboard.press('Control+End')
+  await page.evaluate(() => {
+    window.nativeClipboard = { kind: 'text', text: ' colado' }
+  })
+  await page.keyboard.press('Control+v')
+  await expect(column).toContainText('Segunda colado')
+  await page.evaluate((bytes) => {
+    window.nativeClipboard = { kind: 'image', bytes }
+  }, png)
+  await page.keyboard.press('Control+v')
+  await expect(column).toContainText('![clipboard.png]')
+  await expect
+    .poll(() => page.evaluate(() => window.nativeDocument.notes[0].body))
+    .toContain('Segunda colado![clipboard.png]')
+  await expect(page.getByRole('textbox', { name: 'Coluna 1' })).toHaveText('Primeira')
+})
+
+test('pasting into the side reading pane does not modify the active note', async ({ page }) => {
+  await page.keyboard.press('Control+t')
+  await expect(page.locator('.cm-empty-title')).toBeVisible()
+  await expect(page.locator('.cm-content')).toBeFocused()
+  await page.keyboard.type('Outra nota')
+  await page.locator('.tab').filter({ hasText: 'Clipboard' }).click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Ver ao lado' }).click()
+  const side = page.getByRole('complementary', { name: 'Nota ao lado: Clipboard' })
+  await side.getByRole('textbox', { name: 'Editor Markdown visual' }).focus()
+  await page.keyboard.press('Control+v')
+  expect(await page.evaluate(() => window.nativeClipboardReads)).toBe(0)
+  await expect(page.locator('.editor-pane-primary')).toContainText('Outra nota')
+  expect(await page.evaluate(() => Object.keys(window.nativeImages).length)).toBe(0)
+})
+
 for (const mode of ['visual', 'source']) {
   test(`opening or refocusing the editor cannot paste populated clipboard events in ${mode}`, async ({
     page,

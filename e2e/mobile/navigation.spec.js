@@ -80,6 +80,71 @@ test('#7 restores the open note after reload and returns to the saved search', a
   await expect(page.getByRole('searchbox')).toHaveValue('compras')
 })
 
+test('line wrapping can be changed for one note on mobile', async ({ page }) => {
+  await page.locator('[data-note-id="shopping"]').tap()
+  await page.getByRole('button', { name: 'Ações de Compras' }).tap()
+  if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/sloth-wrap-mobile.png' })
+  await page.getByRole('button', { name: 'Alternar quebra nesta nota' }).tap()
+  await expect(page.locator('.markdown')).toHaveAttribute('data-no-wrap', 'true')
+  await page.getByRole('button', { name: 'Editar', exact: true }).tap()
+  await expect(page.locator('.cm-content')).not.toHaveClass(/cm-lineWrapping/)
+  await page.reload()
+  await expect(page.locator('.markdown')).toHaveAttribute('data-no-wrap', 'true')
+})
+
+test('a collapsible Markdown block opens and closes in mobile reading', async ({ page }) => {
+  await page.locator('[data-note-id="shopping"]').tap()
+  await page.getByRole('button', { name: 'Editar', exact: true }).tap()
+  await page.evaluate(async () => {
+    const { EditorView } = await import('/node_modules/.vite/deps/@codemirror_view.js')
+    const view = EditorView.findFromDOM(document.querySelector('.cm-editor'))
+    view.dispatch({
+      changes: {
+        from: 0,
+        to: view.state.doc.length,
+        insert:
+          '# Compras\n\n<details>\n<summary>Detalhes</summary>\n\nTexto importante\n\n</details>',
+      },
+    })
+  })
+  await page.getByRole('button', { name: 'Pronto', exact: true }).tap()
+  const details = page.locator('.markdown details').filter({ hasText: 'Detalhes' })
+  await expect(details.locator('summary')).toHaveText('Detalhes')
+  await expect(details.getByText('Texto importante')).toBeVisible()
+  await details.locator('summary').tap()
+  await expect(details.getByText('Texto importante')).toBeHidden()
+  await details.locator('summary').tap()
+  await expect(details.getByText('Texto importante')).toBeVisible()
+  if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/sloth-accordion-mobile.png' })
+})
+
+test('columns stay readable and editable on mobile', async ({ page }) => {
+  await page.locator('[data-note-id="shopping"]').tap()
+  await page.getByRole('button', { name: 'Editar', exact: true }).tap()
+  await page.evaluate(async () => {
+    const { EditorView } = await import('/node_modules/.vite/deps/@codemirror_view.js')
+    const view = EditorView.findFromDOM(document.querySelector('.visual-editor > .cm-editor'))
+    const text =
+      '# Compras\n\n<!-- sloth:columns -->\n\n<!-- sloth:column -->\n\n**Frutas**\n\n<!-- sloth:column -->\n\nPão e café\n\n<!-- /sloth:columns -->'
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } })
+  })
+  const first = page.getByRole('textbox', { name: 'Coluna 1' })
+  const second = page.getByRole('textbox', { name: 'Coluna 2' })
+  await expect(first).toContainText('**Frutas**')
+  await expect(second).toContainText('Pão e café')
+  const addButton = await page.getByRole('button', { name: 'Adicionar coluna' }).boundingBox()
+  expect(addButton.width).toBeGreaterThanOrEqual(44)
+  expect(addButton.height).toBeGreaterThanOrEqual(44)
+  if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/sloth-columns-mobile-edit.png' })
+  await page.getByRole('button', { name: 'Pronto', exact: true }).tap()
+  const columns = page.locator('.markdown-columns .markdown-column')
+  await expect(columns).toHaveCount(2)
+  await expect(columns.first().locator('strong')).toHaveText('Frutas')
+  await expect(columns.last()).toContainText('Pão e café')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/sloth-columns-mobile.png' })
+})
+
 test('#22 list scroll survives opening and returning from a note', async ({ page }) => {
   await page.locator('[data-note-id="note-30"]').scrollIntoViewIfNeeded()
   const before = await page.locator('.mobile-content').evaluate((el) => el.scrollTop)
@@ -234,6 +299,15 @@ test('mobile layouts and changelog remain usable with long content in both theme
     await page.getByRole('button', { name: 'Mais opções' }).tap()
     await page.getByRole('button', { name: 'Novidades', exact: true }).tap()
     await expect(page.locator('.changelog-page')).toContainText('navegação no Android')
+    await expect(page.locator('.changelog-page')).toContainText('No celular, use o comando')
+    await expect(page.locator('.changelog-page')).toContainText('Digite / e escolha Colunas')
+    for (const name of ['colunas', 'bloco-recolhivel', 'notas-lado-a-lado']) {
+      const image = page.locator(`.changelog-page img[src="/changelog/${name}.png"]`)
+      await image.scrollIntoViewIfNeeded()
+      await expect
+        .poll(() => image.evaluate((node) => node.complete && node.naturalWidth > 0))
+        .toBe(true)
+    }
     const illustration = page.locator('.changelog-page img[src="/changelog/mobile-navigation.png"]')
     await illustration.scrollIntoViewIfNeeded()
     await expect(illustration).toBeVisible()
@@ -501,10 +575,7 @@ test('swipe feedback fits mobile and desktop with long titles', async ({ page },
 
 test('a new empty note shows title and block hints', async ({ page }) => {
   await page.getByRole('button', { name: 'Nova nota', exact: true }).tap()
-  await expect(page.locator('.cm-empty-title')).toHaveAttribute(
-    'data-placeholder',
-    'Sem título',
-  )
+  await expect(page.locator('.cm-empty-title')).toHaveAttribute('data-placeholder', 'Sem título')
   await expect(page.locator('.cm-empty-body')).toHaveAttribute(
     'data-placeholder',
     'Comece a escrever…',

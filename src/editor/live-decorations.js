@@ -1,6 +1,7 @@
 import { isolateHistory } from '@codemirror/commands'
 import { markdownTree, walk, imageReferences } from '../markdown-model.js'
-import { tableAt, tableDecorations } from './table.js'
+import { tableAt, tableDecorations, tableSelectionColumn } from './table.js'
+import { parseTableLine } from '../markdown-table.js'
 import { addInlineDecorations } from './inline-decorations.js'
 import { resolveImage } from '../images.js'
 import { t } from '../i18n.js'
@@ -18,7 +19,12 @@ const highlightedBlocks = new WeakMap()
 
 export function selectionLineSignature(state) {
   return state.selection.ranges
-    .map((range) => `${state.doc.lineAt(range.from).number}:${state.doc.lineAt(range.to).number}`)
+    .map((range) => {
+      const line = state.doc.lineAt(range.head)
+      const parsed = parseTableLine(line.text)
+      const column = parsed ? tableSelectionColumn({ state }, line, parsed) : -1
+      return `${state.doc.lineAt(range.from).number}:${state.doc.lineAt(range.to).number}:${column}`
+    })
     .join(',')
 }
 
@@ -472,7 +478,9 @@ export function decorationsFor(view) {
       if (number === placeholderLine && !line.text) {
         attrs.class += ' cm-empty-body'
         attrs['data-placeholder'] = t('editor.previewHint')
-        ranges.push(Decoration.widget({ widget: new EmptyBodyHintWidget(), side: 1 }).range(line.from))
+        ranges.push(
+          Decoration.widget({ widget: new EmptyBodyHintWidget(), side: 1 }).range(line.from),
+        )
       }
       if (shape.kind === 'paragraph' && continuations.has(number) && !listDepths.has(number)) {
         // Text continuing a list item lines up with the item's own text.

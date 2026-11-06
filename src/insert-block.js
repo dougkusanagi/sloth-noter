@@ -1,3 +1,6 @@
+import { t } from './i18n.js'
+import { columnsTemplate } from './columns.js'
+
 const blocks = {
   h2: ['## ', 3, 3],
   h3: ['### ', 4, 4],
@@ -10,6 +13,20 @@ const blocks = {
 }
 
 export function blockTemplate(action) {
+  if (action === 'columns') {
+    const text = columnsTemplate(['', ''])
+    const start = text.indexOf('<!-- sloth:column -->') + '<!-- sloth:column -->\n\n'.length
+    return { text, selectionFrom: start, selectionTo: start }
+  }
+  if (action === 'accordion') {
+    const prefix = '<details>\n<summary>'
+    const title = t('accordion.title')
+    return {
+      text: `${prefix}${title}</summary>\n\n\n\n</details>`,
+      selectionFrom: prefix.length,
+      selectionTo: prefix.length + title.length,
+    }
+  }
   const block = blocks[action]
   return block ? { text: block[0], selectionFrom: block[1], selectionTo: block[2] } : null
 }
@@ -72,8 +89,15 @@ export function blockEdit(text, from, to, action) {
   }
   const before = text[from - 1] === '\n' ? '' : '\n\n'
   const after = to < text.length && text[to] !== '\n' ? '\n\n' : ''
-  const selected = action === 'code' ? text.slice(from, to) : ''
-  const insert = action === 'code' && selected ? `\`\`\`\n${selected}\n\`\`\`` : template.text
+  const selected = ['code', 'accordion', 'columns'].includes(action) ? text.slice(from, to) : ''
+  const insert =
+    action === 'code' && selected
+      ? `\`\`\`\n${selected}\n\`\`\``
+      : action === 'accordion' && selected
+        ? template.text.replace('\n\n\n\n</details>', `\n\n${selected}\n\n</details>`)
+        : action === 'columns' && selected
+          ? columnsTemplate([selected, ''])
+          : template.text
   return {
     from,
     to,
@@ -82,6 +106,8 @@ export function blockEdit(text, from, to, action) {
     selectionTo:
       from +
       before.length +
-      (selected ? template.selectionFrom + selected.length : template.selectionTo),
+      (selected && action === 'code'
+        ? template.selectionFrom + selected.length
+        : template.selectionTo),
   }
 }

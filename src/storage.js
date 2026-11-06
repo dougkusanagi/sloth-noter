@@ -133,6 +133,16 @@ export function validateDocument(value) {
   const prefs = value.preferences
   if (prefs?.noteSort !== undefined && !['recent', 'alphabetical'].includes(prefs.noteSort))
     throw new Error('Invalid note order')
+  if (prefs?.wrapLines !== undefined && typeof prefs.wrapLines !== 'boolean')
+    throw new Error('Invalid line wrapping preference')
+  if (
+    prefs?.wrapLinesByNote !== undefined &&
+    (!prefs.wrapLinesByNote ||
+      Array.isArray(prefs.wrapLinesByNote) ||
+      typeof prefs.wrapLinesByNote !== 'object' ||
+      Object.values(prefs.wrapLinesByNote).some((value) => typeof value !== 'boolean'))
+  )
+    throw new Error('Invalid note line wrapping preferences')
   if (
     !prefs ||
     typeof prefs.tabsVisible !== 'boolean' ||

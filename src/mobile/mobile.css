@@ -268,6 +268,11 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-create {
   margin: auto;
   font-size: 1.0625rem;
 }
+[data-platform='mobile'] .markdown[data-no-wrap] :is(p, li, h1, h2, h3, h4, h5, h6) {
+  white-space: pre;
+  overflow-x: auto;
+  overflow-wrap: normal;
+}
 [data-platform='mobile'] .markdown table {
   display: block;
   max-width: 100%;

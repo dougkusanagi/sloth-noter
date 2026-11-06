@@ -201,6 +201,10 @@ for (const width of [390, 1280]) {
     await expect(source).toHaveValue(/^# Novidades\n/)
     const original = await source.inputValue()
     expect(original).toContain('Busca pelo bloco Tabela no menu de inserção')
+    expect(original).toContain('No celular, use o comando `/` e escolha Imagem')
+    expect(original).toContain('Digite `/` e escolha Colunas')
+    expect(original).toContain('Digite `/` e escolha Bloco recolhível')
+    expect(original).toContain('Ver ao lado')
     expect(original).toContain('F10 abre ou fecha o menu principal')
     expect(original).toContain('Baixar atualização')
     expect(original).toContain('modo Leitura agora mostra a nota')
@@ -253,5 +257,8 @@ test('command palette highlights the option selected with arrows', async ({ page
   await page.keyboard.press('ArrowDown')
   await expect(options.nth(1)).toHaveAttribute('aria-selected', 'true')
   await expect(options.nth(1)).toHaveCSS('box-shadow', /inset/)
-  await expect(input).toHaveAttribute('aria-activedescendant', await options.nth(1).getAttribute('id'))
+  await expect(input).toHaveAttribute(
+    'aria-activedescendant',
+    await options.nth(1).getAttribute('id'),
+  )
 })

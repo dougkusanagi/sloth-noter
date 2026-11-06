@@ -133,11 +133,18 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const [warning, setWarning] = useState('')
   const store = useNotesStore({ persistence, loaded, mode: 'visual', onHistoryWarning: setWarning })
   const { data, current, commit, writer, saving, error, blocked } = store
-  const { prefs, updatePrefs } = usePrefs({ data, current, commit })
+  const { prefs, updatePrefs: savePrefs } = usePrefs({ data, current, commit })
+  function updatePrefs(change) {
+    savePrefs('wrapLines' in change ? { ...change, wrapLinesByNote: {} } : change)
+  }
   const { state, dispatch } = useNavigation(current)
   const route = state.screens.at(-1)
   const layer = state.layers.at(-1)
   const active = route.name === 'note' ? data.notes.find((note) => note.id === route.id) : null
+  const pageWrap =
+    active && Object.hasOwn(prefs.wrapLinesByNote ?? {}, active.id)
+      ? prefs.wrapLinesByNote[active.id]
+      : prefs.wrapLines !== false
   const [editingId, setEditingId] = useState(null)
   const editing = active && editingId === active.id
   const [showDone, setShowDone] = useState(false)
@@ -473,6 +480,15 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             )}
           </button>
         )}
+        {active && (
+          <button
+            className="mobile-icon"
+            aria-label={t('mobile.noteActions', { name: displayName(active.name) })}
+            onClick={() => dispatch({ type: 'layer', route: { name: 'sheet', id: active.id } })}
+          >
+            <MoreHorizontal size={22} />
+          </button>
+        )}
         {root && (
           <button
             className="mobile-icon"
@@ -626,6 +642,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           (active ? (
             editing ? (
               <VisualEditor
+                wrapLines={prefs.wrapLines !== false}
+                wrapPage={pageWrap}
                 key={active.id}
                 noteId={active.id}
                 notes={data.notes}
@@ -652,6 +670,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               />
             ) : (
               <Markdown
+                wrapLines={prefs.wrapLines !== false}
+                wrapPage={pageWrap}
                 text={active.body}
                 notes={data.notes}
                 onChange={blocked ? undefined : updateBody}
@@ -816,6 +836,22 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             ) : actionsNote ? (
               <>
                 <button
+                  onClick={() => {
+                    const currentValue = Object.hasOwn(prefs.wrapLinesByNote ?? {}, actionsNote.id)
+                      ? prefs.wrapLinesByNote[actionsNote.id]
+                      : prefs.wrapLines !== false
+                    updatePrefs({
+                      wrapLinesByNote: {
+                        ...prefs.wrapLinesByNote,
+                        [actionsNote.id]: !currentValue,
+                      },
+                    })
+                    back()
+                  }}
+                >
+                  {t('menu.wrapPage')}
+                </button>
+                <button
                   data-rename-trigger
                   disabled={blocked || Boolean(actionsNote.external)}
                   onClick={() => {
@@ -840,14 +876,24 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 </button>
               </>
             ) : (
-              <button
-                onClick={() => {
-                  dispatch({ type: 'push', route: { name: 'settings' } })
-                }}
-              >
-                <NotebookText size={20} />
-                {t('settings.changelog')}
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    updatePrefs({ wrapLines: prefs.wrapLines === false })
+                    back()
+                  }}
+                >
+                  {t('menu.wrapAll')}
+                </button>
+                <button
+                  onClick={() => {
+                    dispatch({ type: 'push', route: { name: 'settings' } })
+                  }}
+                >
+                  <NotebookText size={20} />
+                  {t('settings.changelog')}
+                </button>
+              </>
             )}
           </section>
         </div>

@@ -86,7 +86,7 @@ export function NoteList({
     const target = item.getBoundingClientRect()
     if (target.top < bounds.top) scroller.scrollTop += target.top - bounds.top
     else if (target.bottom > bounds.bottom) scroller.scrollTop += target.bottom - bounds.bottom
-  }, [activeId, activeName])
+  }, [activeId, activeName, query])
 
   useEffect(() => {
     if (!menu) return

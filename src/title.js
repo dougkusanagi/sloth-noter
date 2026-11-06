@@ -51,9 +51,27 @@ const clamp = (selection, map = (position) => position) =>
 export const mandatoryTitle = EditorState.transactionFilter.of((transaction) => {
   const body = transaction.newDoc.toString()
   const normalized = ensureTitle(body)
-  const selection = transaction.newSelection
+  let selection = transaction.newSelection
+  const previous = transaction.startState.selection
+  // Some webviews report the replaced range as still selected for the first
+  // typed character. Collapse it at the end of the insertion before the next input.
+  if (
+    transaction.isUserEvent('input.type') &&
+    !transaction.isUserEvent('input.type.compose') &&
+    !transaction.selection &&
+    previous.ranges.length === 1 &&
+    !previous.main.empty
+  ) {
+    let end = null,
+      count = 0
+    transaction.changes.iterChanges((from, to, _newFrom, newTo, inserted) => {
+      count++
+      if (from === previous.main.from && to === previous.main.to && inserted.length) end = newTo
+    })
+    if (count === 1 && end !== null) selection = EditorSelection.single(end)
+  }
   if (normalized === body) {
-    if (selection.ranges.some((range) => range.from < 2))
+    if (selection !== transaction.newSelection || selection.ranges.some((range) => range.from < 2))
       return [transaction, { selection: clamp(selection), sequential: true }]
     return transaction
   }

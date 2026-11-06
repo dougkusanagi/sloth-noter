@@ -2653,6 +2653,10 @@ html:has(
 .source-search-mirror mark {
   color: transparent;
 }
+.source-editor-wrap[data-no-wrap] .source-search-mirror {
+  white-space: pre;
+  overflow-wrap: normal;
+}
 .source-editor-wrap textarea {
   position: relative;
 }
