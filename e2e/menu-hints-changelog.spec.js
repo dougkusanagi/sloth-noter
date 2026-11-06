@@ -208,7 +208,7 @@ for (const width of [390, 1280]) {
     await release.click()
     await expect(document).toContainText('páginas de memória de 16 KB')
     await document.locator('[data-wiki^="Novidades"]').click()
-    await expect(document).toContainText('Versão 0.5.1')
+    await expect(document).toContainText('Um resumo de cada versão do Sloth Note')
     await page.context().setOffline(false)
     const tabs = page.locator('.tab-wrap')
     const count = await tabs.count()

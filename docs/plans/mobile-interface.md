@@ -175,6 +175,9 @@ Na etapa 2.3 (2026-11-06) o adaptador Android (`SharePlugin.kt`, `share_text`) e
 existiam desde 0.4.0; esta etapa acrescentou E2E do caminho nativo simulado (sucesso com texto e
 título, falha com nova tentativa, toque repetido). Seletor real do Android não foi exercitado.
 
+Decisão do usuário (0.5.5): o tema não fica visível no cabeçalho; no celular ele está em Mais opções
+(raiz). Isso substitui o requisito antigo de "tema visível no cabeçalho" deste plano e do v2.
+
 Na etapa 2.4 (parcial, 2026-11-06) a rota (sem texto) passou a ser gravada também em `localStorage`
 (`durableStorage` em `nav-stack.js`); sessionStorage tem prioridade e referências a notas removidas
 voltam à lista. Cobertura: unitário e 2 E2E mobile. **Pendente**: prioridade camada → teclado → tela

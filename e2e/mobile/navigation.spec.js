@@ -212,12 +212,20 @@ test('bottom navigation opens tasks without editing and hides above the keyboard
   await expect(page.getByRole('navigation')).toBeHidden()
 })
 
-test('visible theme control persists and system follows device changes', async ({ page }) => {
-  await page.getByRole('button', { name: 'Escuro', exact: true }).tap()
+async function chooseTheme(page, name) {
+  await page.getByRole('button', { name: 'Mais opções', exact: true }).tap()
+  await page.getByRole('dialog').getByRole('button', { name, exact: true }).tap()
+  await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
+}
+
+test('theme control in More options persists and system follows device changes', async ({
+  page,
+}) => {
+  await chooseTheme(page, 'Escuro')
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  await page.getByRole('button', { name: 'Sistema', exact: true }).tap()
+  await chooseTheme(page, 'Sistema')
   await page.emulateMedia({ colorScheme: 'light' })
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
   await page.emulateMedia({ colorScheme: 'dark' })
@@ -275,9 +283,7 @@ test('mobile layouts and changelog remain usable with long content in both theme
   page,
 }, testInfo) => {
   for (const theme of ['light', 'dark']) {
-    await page
-      .getByRole('button', { name: theme === 'light' ? 'Claro' : 'Escuro', exact: true })
-      .tap()
+    await chooseTheme(page, theme === 'light' ? 'Claro' : 'Escuro')
     for (const [width, height] of [
       [320, 740],
       [360, 740],
@@ -755,4 +761,10 @@ test('a saved route to a deleted note opens the list', async ({ page }) => {
   })
   await page.goto('/?platform=mobile')
   await expect(page.getByRole('searchbox')).toBeVisible()
+})
+
+test('the header has no standalone theme buttons', async ({ page }) => {
+  await expect(page.locator('.mobile-header .mobile-theme')).toHaveCount(0)
+  await page.locator('[data-note-id="shopping"]').tap()
+  await expect(page.locator('.mobile-header .mobile-theme')).toHaveCount(0)
 })

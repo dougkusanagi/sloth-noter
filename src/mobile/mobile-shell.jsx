@@ -431,7 +431,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       <main className="mobile-shell" data-platform="mobile">
         <header className="mobile-header">
           <h1>Sloth Note</h1>
-          <ThemeControl theme={prefs.theme} onChange={updatePrefs} />
         </header>
         <div className="mobile-empty" role="alert">
           <p>{t('mobile.readFailed')}</p>
@@ -462,7 +461,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         <h1 ref={heading} tabIndex={-1} title={title}>
           {root && route.name === 'notes' ? 'Sloth Note' : title}
         </h1>
-        <ThemeControl theme={prefs.theme} onChange={updatePrefs} />
         {active && (
           <button
             className="mobile-edit"
@@ -909,6 +907,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               </>
             ) : (
               <>
+                <ThemeControl theme={prefs.theme} onChange={updatePrefs} />
                 <button
                   onClick={() => {
                     updatePrefs({ wrapLines: prefs.wrapLines === false })
