@@ -9,7 +9,7 @@ import {
   Sun,
   Moon,
   Focus,
-  SlidersHorizontal,
+  Palette,
 } from 'lucide-react'
 import { FONT_SIZE, CONTENT_WIDTH, contentWidth } from '../storage.js'
 import { t } from '../i18n.js'
@@ -54,7 +54,7 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
         aria-controls="display-menu"
         onClick={() => setOpen((value) => !value)}
       >
-        <SlidersHorizontal size={16} aria-hidden="true" />
+        <Palette size={16} aria-hidden="true" />
       </ShortcutButton>
       {open && (
         <div

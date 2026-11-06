@@ -6,6 +6,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 Nenhuma mudança pendente.
 
+## [0.5.2] — 2026-11-06
+
+Registro completo em `changelog/0.5.2.md`.
+
 ## [0.5.1] — 2026-11-06
 
 Registro completo em `changelog/0.5.1.md`.
@@ -48,5 +52,4 @@ Registro completo em `changelog/0.2.0.md`.
 
 ## [0.1.0]
 
-- Editor Markdown com modos Padrão, Código e Leitura, abas, busca, lixeira, importação/exportação e backup.
-- Aplicativo Tauri V2 com estado em arquivo versionado.
+Registro completo em `changelog/0.1.0.md`.

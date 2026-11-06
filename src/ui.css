@@ -3086,6 +3086,15 @@ html:has(
   font: 14px/1.65 var(--ui);
   overflow-wrap: anywhere;
 }
+.changelog-page a {
+  color: var(--accent);
+}
+.changelog-page em {
+  color: var(--muted);
+}
+.release-open .document-info {
+  display: none;
+}
 .changelog-intro {
   color: var(--muted);
 }

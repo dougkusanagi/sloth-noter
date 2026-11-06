@@ -298,27 +298,26 @@ test('mobile layouts and changelog remain usable with long content in both theme
     await page.setViewportSize({ width: 390, height: 844 })
     await page.getByRole('button', { name: 'Mais opções' }).tap()
     await page.getByRole('button', { name: 'Novidades', exact: true }).tap()
-    await expect(page.locator('.changelog-page')).toContainText(
-      'Compartilhar texto nas ações de uma nota',
-    )
-    await expect(page.locator('.changelog-page')).toContainText('páginas de memória de 16 KB')
-    await expect(page.locator('.changelog-page')).toContainText('navegação no Android')
-    await expect(page.locator('.changelog-page')).toContainText('No celular, use o comando')
-    await expect(page.locator('.changelog-page')).toContainText('Digite / e escolha Colunas')
-    for (const name of ['colunas', 'bloco-recolhivel', 'notas-lado-a-lado']) {
+    const changelog = page.locator('.changelog-page')
+    await expect(changelog).toContainText('Versão 0.4.0')
+    await expect(changelog).toContainText('Colunas, blocos recolhíveis')
+    await expect(changelog).not.toContainText('páginas de memória de 16 KB')
+    await changelog
+      .getByRole('link', { name: 'Ver detalhes →' })
+      .nth((await changelog.locator('h2').allTextContents()).indexOf('Versão 0.4.0'))
+      .tap()
+    await expect(changelog).toContainText('páginas de memória de 16 KB')
+    await expect(changelog).toContainText('Digite / e escolha Colunas')
+    for (const name of ['colunas', 'bloco-recolhivel']) {
       const image = page.locator(`.changelog-page img[src="/changelog/${name}.png"]`)
       await image.scrollIntoViewIfNeeded()
       await expect
         .poll(() => image.evaluate((node) => node.complete && node.naturalWidth > 0))
         .toBe(true)
     }
-    const illustration = page.locator('.changelog-page img[src="/changelog/mobile-navigation.png"]')
-    await illustration.scrollIntoViewIfNeeded()
-    await expect(illustration).toBeVisible()
-    await expect
-      .poll(() => illustration.evaluate((img) => img.complete && img.naturalWidth > 0))
-      .toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`changelog-390-${theme}.png`) })
+    await changelog.getByRole('link', { name: '← Todas as versões' }).tap()
+    await expect(changelog).toContainText('Versão 0.5.1')
     await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
     await page.getByRole('button', { name: 'Fechar', exact: true }).tap()
   }

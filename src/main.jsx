@@ -1,6 +1,6 @@
 import { saveBeforeUpdate } from './app-updates.js'
 import { useAppUpdates, UpdateNotice } from './components/app-updates.jsx'
-import { changelogMarkdown } from './components/changelog-panel.jsx'
+import { changelogDocument, changelogTarget } from './components/changelog-panel.jsx'
 import { pasteGesture } from './paste-intent.js'
 import { quickOpenNotes } from './quick-open.js'
 import { textStatistics } from './text-statistics.js'
@@ -182,6 +182,7 @@ function Workspace({ persistence, loaded }) {
   const [settingsSection, setSettingsSection] = useState('appearance')
   const [mode, setMode] = useState('visual')
   const [splitId, setSplitId] = useState(null)
+  const [releaseDoc, setReleaseDoc] = useState(null)
   const [importError, setImportError] = useState('')
   const {
     data,
@@ -295,6 +296,10 @@ function Workspace({ persistence, loaded }) {
   const [middleClickPasteGuard] = useState(createMiddleClickPasteGuard)
   const returnFocus = useRef(null)
   const active = data.notes.find((note) => note.id === data.activeId) ?? null
+  useEffect(() => setReleaseDoc(null), [active?.id])
+  useLayoutEffect(() => {
+    if (releaseDoc) window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [releaseDoc])
   const splitNote =
     active && data.notes.find((note) => note.id === splitId && note.id !== data.activeId)
   const choices = useMemo(
@@ -2096,14 +2101,7 @@ function Workspace({ persistence, loaded }) {
         createNote(welcome.name, welcome.body)
       }, false),
     updates: () => runMenu(() => appUpdates.check(), false),
-    changelog: () =>
-      runMenu(() => {
-        const body = changelogMarkdown()
-        const existing = current.current.notes.find((note) => note.body === body)
-        if (existing) openNote(existing.id)
-        else createNote(`${t('settings.changelog')}.md`, body)
-        setMode('reading')
-      }, false),
+    changelog: () => runMenu(() => setReleaseDoc('hub'), false),
     history: () =>
       runMenu(() => {
         setSettingsSection('history')
@@ -2504,7 +2502,7 @@ function Workspace({ persistence, loaded }) {
           </aside>
         )}
         <section
-          className="editor-shell"
+          className={releaseDoc ? 'editor-shell release-open' : 'editor-shell'}
           tabIndex={-1}
           onMouseDownCapture={middleClickPasteGuard.mouse}
           onMouseUpCapture={middleClickPasteGuard.mouse}
@@ -2570,7 +2568,35 @@ function Workspace({ persistence, loaded }) {
                   </button>
                 </div>
               )}
-              {active ? (
+              {releaseDoc ? (
+                <div className="release-doc">
+                  <div className="external-bar">
+                    <span className="external-path">
+                      {t('settings.changelog')} · {t('changelog.readOnly')}
+                    </span>
+                    <button type="button" onClick={() => setReleaseDoc(null)}>
+                      {t('changelog.close')}
+                    </button>
+                  </div>
+                  <VisualEditor
+                    key={`changelog:${releaseDoc}:${prefs.language}`}
+                    noteId={`changelog:${releaseDoc}`}
+                    notes={data.notes}
+                    body={changelogDocument(releaseDoc === 'hub' ? null : releaseDoc)}
+                    readOnly
+                    wrapLines
+                    wrapPage
+                    onCopy={copyCode}
+                    onOpenWiki={(target) => {
+                      const next = changelogTarget(target)
+                      if (next) setReleaseDoc(next)
+                      else openWiki(target)
+                    }}
+                    onChange={() => {}}
+                    onReady={() => {}}
+                  />
+                </div>
+              ) : active ? (
                 <NoteViewport
                   key={`${active.id}:${mode === 'source' ? 'source' : 'visual'}:${prefs.language}`}
                   noteId={active.id}

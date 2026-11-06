@@ -74,9 +74,12 @@ const messages = {
     'updates.restartFailed':
       'A atualização foi instalada, mas não foi possível reiniciar. Use Reiniciar aplicativo ou feche e abra o app.',
     'changelog.intro':
-      'Acompanhe as novidades e melhorias do Sloth Note. Este registro acompanha o aplicativo e pode ser lido offline.',
+      'Um resumo de cada versão do Sloth Note. Abra uma versão para ler os detalhes. Este registro acompanha o app e funciona offline.',
     'changelog.pending': 'Em desenvolvimento',
-    'changelog.archive': 'Registro anterior',
+    'changelog.read': 'Ver detalhes →',
+    'changelog.back': '← Todas as versões',
+    'changelog.readOnly': 'Somente leitura',
+    'changelog.close': 'Fechar Novidades',
     'settings.theme': 'Tema',
     'settings.themeHint': 'Segue o sistema por padrão.',
     'settings.language': 'Idioma',
@@ -458,7 +461,8 @@ const messages = {
     'editor.copy': 'Copiar',
     'editor.cut': 'Recortar',
     'editor.paste': 'Colar',
-    'editor.pasteFailed': 'Não foi possível colar. Use Ctrl+V ou permita o acesso à área de transferência.',
+    'editor.pasteFailed':
+      'Não foi possível colar. Use Ctrl+V ou permita o acesso à área de transferência.',
     'editor.linkUrl': 'Endereço do link',
     'editor.linkApply': 'Aplicar link',
     'editor.insertBlock': 'Inserir bloco',
@@ -593,9 +597,12 @@ const messages = {
     'updates.restartFailed':
       'The update was installed, but the app could not restart. Choose Restart app or close and reopen the app.',
     'changelog.intro':
-      'Explore what’s new and improved in Sloth Note. This log ships with the app and is available offline. Entries are written in Portuguese.',
+      'A summary of each Sloth Note version. Open a version to read the details. This log ships with the app and works offline. Entries are written in Portuguese.',
     'changelog.pending': 'In development',
-    'changelog.archive': 'Earlier entries',
+    'changelog.read': 'See details →',
+    'changelog.back': '← All versions',
+    'changelog.readOnly': 'Read only',
+    'changelog.close': 'Close What’s new',
     'settings.theme': 'Theme',
     'settings.themeHint': 'Follows the system by default.',
     'settings.language': 'Language',
