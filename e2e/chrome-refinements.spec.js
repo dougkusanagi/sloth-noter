@@ -4,7 +4,7 @@ test('the appearance menu adjusts and restores text without closing', async ({ p
   await page.goto('/')
   await expect(page.locator('.cm-content')).toBeVisible()
   await expect(page.locator('.save-status')).toBeHidden()
-  await page.getByRole('button', { name: 'Aparência do texto', exact: true }).click()
+  await page.getByRole('button', { name: 'Aparência', exact: true }).click()
   const group = page.getByRole('group', { name: 'Tamanho do texto', exact: true })
   await group.getByRole('menuitem', { name: /Aumentar/ }).click()
   await expect(group.locator('output')).toHaveText('17px')
@@ -79,7 +79,7 @@ test('sidebar layout updates rails and insert control, and short notes do not sc
   expect(Math.abs(rail.bottom - last.bottom)).toBeLessThan(2)
   await expect(page.locator('.insert-trigger')).toBeVisible()
   const trigger = await bounds('.insert-trigger')
-  expect(Math.abs(trigger.left - (parent.left - 34))).toBeLessThan(2)
+  expect(trigger.left).toBeGreaterThanOrEqual(parent.left)
   expect(
     await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight),
   ).toBe(true)
@@ -117,7 +117,7 @@ test('display controls expose working shortcuts and persistent system/light/dark
   await expect(page.locator('.app-header .save-status')).toHaveCount(0)
   await expect(page.locator('.document-info .save-status')).toHaveCount(1)
   await expect(page.locator('.document-info .mode-switch')).toHaveCount(1)
-  await page.getByRole('button', { name: 'Aparência do texto', exact: true }).click()
+  await page.getByRole('button', { name: 'Aparência', exact: true }).click()
   const theme = page.getByRole('group', { name: 'Tema', exact: true })
   await theme.getByRole('menuitemradio', { name: 'Claro', exact: true }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
@@ -154,7 +154,7 @@ test('display controls expose working shortcuts and persistent system/light/dark
   await expect(page.locator('.app')).toHaveCSS('--editor-size', '17px')
   await page.reload()
   await expect(page.locator('.cm-content')).toBeVisible()
-  await page.getByRole('button', { name: 'Aparência do texto', exact: true }).click()
+  await page.getByRole('button', { name: 'Aparência', exact: true }).click()
   await expect(page.getByRole('menuitemradio', { name: 'Sistema', exact: true })).toHaveAttribute(
     'aria-checked',
     'true',

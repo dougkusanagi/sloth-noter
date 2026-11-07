@@ -7,6 +7,8 @@ mod errors;
 mod history;
 mod images;
 mod migration;
+#[cfg(target_os = "android")]
+mod share;
 mod store;
 mod updates;
 mod vault;
@@ -478,11 +480,11 @@ fn note_read_dropped(
 }
 
 #[tauri::command]
-fn image_delete(app: AppHandle, name: String) -> Result<(), String> {
+fn image_delete(app: AppHandle, name: String, force: Option<bool>) -> Result<(), String> {
     let root = image_root(&app)?;
     images::image_path(&root, &name)?;
     // Protect actual image references in notes edited outside the app as well.
-    if configured_vault(&app)?.is_some() {
+    if !force.unwrap_or(false) && configured_vault(&app)?.is_some() {
         let references: Vec<String> = vault::list(&root)
             .map_err(|e| errors::describe(&e))?
             .into_iter()
@@ -602,6 +604,15 @@ fn prefer_native_wayland() {
     }
 }
 
+#[cfg(target_os = "android")]
+use share::share_text;
+
+#[cfg(not(target_os = "android"))]
+#[tauri::command]
+async fn share_text(_text: String, _title: String) -> Result<(), String> {
+    Err("Sharing is only available on Android".into())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(target_os = "linux")]
@@ -621,10 +632,22 @@ pub fn run() {
             let _ = window.set_focus();
         }
     }));
+    #[cfg(target_os = "android")]
+    let builder = builder.plugin(
+        tauri::plugin::Builder::<_, ()>::new("sloth-share")
+            .setup(|app, api| {
+                app.manage(share::Share(
+                    api.register_android_plugin("dev.slothnote.app", "SharePlugin")?,
+                ));
+                Ok(())
+            })
+            .build(),
+    );
     builder
         .setup(|app| {
             #[cfg(desktop)]
-            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
             let _ = history::maintain(&app.path().app_data_dir()?.join("history"));
             migration::recover(&app.path().app_data_dir()?.join("migration.json"))
                 .map_err(std::io::Error::other)?;
@@ -638,6 +661,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            share_text,
             updates::update_environment,
             updates::update_restart,
             history_maintain,

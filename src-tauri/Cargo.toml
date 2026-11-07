@@ -1,6 +1,6 @@
 [package]
 name = "sloth-note"
-version = "0.3.0"
+version = "0.5.6"
 description = "Offline Markdown editor with notes in files the user controls"
 edition = "2021"
 rust-version = "1.85"
@@ -8,6 +8,10 @@ rust-version = "1.85"
 [lib]
 name = "sloth_note_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+# Microsoft Store (MSIX) build: disables the built-in updater.
+store = []
 
 [build-dependencies]
 tauri-build = { version = "=2.6.3", features = [] }

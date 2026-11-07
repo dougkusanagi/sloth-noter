@@ -51,3 +51,35 @@ for (const width of [390, 1280]) {
     await expect(page.locator('textarea')).toHaveValue(body)
   })
 }
+
+for (const width of [390, 1280]) {
+  test(`table links reveal their source for editing at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto('/')
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    await page
+      .locator('textarea')
+      .fill(
+        '# Links\n\n| Site | Nota |\n| --- | --- |\n| [Exemplo](https://example.com) | [[Interno]] |\n\nFim',
+      )
+    await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+    const cells = page
+      .locator('.cm-md-table-row:not(.cm-md-table-divider)')
+      .nth(1)
+      .locator('.cm-md-table-cell')
+    await cells.nth(0).locator('.cm-md-inline-link').click()
+    await expect(cells.nth(0)).toContainText('[Exemplo](https://example.com)')
+    await expect(cells.nth(1)).toHaveText('Interno')
+    await page.keyboard.press('ArrowLeft')
+    await page.keyboard.type('x')
+    await expect(cells.nth(0)).toContainText('x')
+    await cells.nth(1).locator('.cm-md-inline-link').click()
+    await expect(cells.nth(1)).toContainText('[[Interno]]')
+    await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
+    await expect(page.locator('.visual-editor.read-only .cm-md-table-cell').last()).toHaveText(
+      'Interno',
+    )
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    await expect(page.locator('textarea')).toHaveValue(/\[Exemplo\]\(https:\/\/example\.comx\)/)
+  })
+}

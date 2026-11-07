@@ -56,7 +56,8 @@ export function ShortcutHint({ label, keys, children }) {
     onClick: () => setPosition(null),
     onKeyDown: (event) => {
       if (event.key === 'Escape' && position) {
-        if (!event.currentTarget.closest('[role="menu"], [role="dialog"]')) event.stopPropagation()
+        if (!event.currentTarget.closest('[role="menu"], [role="dialog"], .block-menu'))
+          event.stopPropagation()
         setPosition(null)
       }
     },

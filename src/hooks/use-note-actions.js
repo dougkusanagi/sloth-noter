@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
 import { t } from '../i18n.js'
 import { ensureTitle } from '../title.js'
@@ -81,7 +82,7 @@ export function useNoteActions({
 
   function createNote(name = 'new note.md', body = '', group = undefined) {
     const blank = !body
-    body = ensureTitle(body, name.replace(/\.md$/i, ''))
+    body = blank && name === 'new note.md' ? '# \n' : ensureTitle(body, name.replace(/\.md$/i, ''))
     const old = current.current
     const note = {
       id: crypto.randomUUID(),
@@ -91,22 +92,22 @@ export function useNoteActions({
       modifiedAt: Date.now(),
       ...(group && old.groups?.includes(group) ? { group } : {}),
     }
-    commit({
-      ...old,
-      notes: [...old.notes, note],
-      openIds: [...old.openIds, note.id],
-      activeId: note.id,
+    flushSync(() => {
+      commit({
+        ...old,
+        notes: [...old.notes, note],
+        openIds: [...old.openIds, note.id],
+        activeId: note.id,
+      })
+      if (mode === 'reading') setMode('visual')
+      if (palette) closePalette()
     })
-    if (mode === 'reading') setMode('visual')
-    if (palette) closePalette()
-    setTimeout(() => {
-      focusEditor()
-      if (blank) {
-        const end = note.body.split('\n')[0].length
-        if (mode === 'source') editorRef.current?.setSelectionRange(2, end)
-        else visualRef.current?.dispatch({ selection: { anchor: 2, head: end } })
-      }
-    }, 0)
+    focusEditor()
+    if (blank) {
+      const end = note.body.split('\n')[0].length
+      if (mode === 'source') editorRef.current?.setSelectionRange(2, end)
+      else visualRef.current?.dispatch({ selection: { anchor: 2, head: end } })
+    }
   }
 
   function closeTab(id) {

@@ -3,8 +3,10 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { t } from './i18n.js'
+import { remarkAccordions } from './accordions.js'
+import { remarkColumns } from './columns.js'
 import { codeTokens, codeLanguageName } from './syntax-highlight.js'
-import { ChevronDown, Copy } from 'lucide-react'
+import { ChevronDown, Copy, WrapText } from 'lucide-react'
 import { remarkTags, remarkWikiLinks, findNote } from './markdown-model.js'
 import { remarkSections, remarkSourceLayout } from './sections.js'
 import { resolveImage } from './images.js'
@@ -154,7 +156,10 @@ function InlineCode({ children, className }) {
   )
 }
 function CodeBlock({ children, node }) {
-  const { onCopy } = useContext(MarkdownContext)
+  const { onCopy, wrapLines = true } = useContext(MarkdownContext)
+  const [wrap, setWrap] = useState(wrapLines)
+  useEffect(() => setWrap(wrapLines), [wrapLines])
+  const [folded, setFolded] = useState(false)
   const child = React.Children.toArray(children)[0]
   const source = String(child?.props?.children ?? '').replace(/\n$/, '')
   const language = child?.props?.className?.replace('language-', '') ?? ''
@@ -162,10 +167,30 @@ function CodeBlock({ children, node }) {
   return (
     <div
       className="code-block"
+      data-scroll={!wrap || undefined}
       style={child?.props?.style}
       data-source-line={node.position.start.line}
     >
       <div className="code-block-tools">
+        <button
+          type="button"
+          className="copy-code code-wrap-toggle"
+          aria-label={t(folded ? 'code.expand' : 'code.collapse')}
+          aria-expanded={!folded}
+          onClick={() => setFolded(!folded)}
+        >
+          <ChevronDown size={14} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className="copy-code code-wrap-toggle"
+          aria-label={t('code.wrap')}
+          title={t('code.wrap')}
+          aria-pressed={wrap}
+          onClick={() => setWrap(!wrap)}
+        >
+          <WrapText size={14} aria-hidden="true" />
+        </button>
         <button
           type="button"
           className="copy-code"
@@ -177,7 +202,9 @@ function CodeBlock({ children, node }) {
         </button>
       </div>
       <pre>
-        <code>{highlightedCode(codeTokens(source, language))}</code>
+        <code>
+          {highlightedCode(codeTokens(folded ? `${source.split('\n')[0]}…` : source, language))}
+        </code>
       </pre>
     </div>
   )
@@ -315,6 +342,8 @@ export function Markdown({
   folds,
   onToggleFold,
   focusableTables,
+  wrapLines = true,
+  wrapPage = wrapLines,
 }) {
   const tasks = useMemo(
     () => new Map(resolvedTasks(text, notes).map((task) => [task.line, task])),
@@ -330,6 +359,7 @@ export function Markdown({
       value={{
         text,
         focusableTables,
+        wrapLines,
         onCopy,
         onChange,
         onOpenWiki,
@@ -341,9 +371,11 @@ export function Markdown({
         checklists,
       }}
     >
-      <article className="markdown">
+      <article className="markdown" data-no-wrap={!wrapPage || undefined}>
         <ReactMarkdown
           remarkPlugins={[
+            remarkColumns,
+            remarkAccordions,
             remarkGfm,
             remarkWikiLinks,
             remarkPartialTasks,

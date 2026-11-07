@@ -88,11 +88,14 @@ for (const width of [390, 1280]) {
     await native(page, { holdDownload: true, holdVerification: true })
     await page.goto('/')
     await expect(notice(page)).toContainText('Sloth Note 0.2.0 está disponível.')
-    if (width === 1280)
+    if (width === 1280) {
+      await page.getByRole('button', { name: 'Aparência', exact: true }).click()
       await page
-        .getByRole('radiogroup', { name: 'Tema', exact: true })
-        .getByRole('radio', { name: 'Escuro', exact: true })
+        .getByRole('group', { name: 'Tema', exact: true })
+        .getByRole('menuitemradio', { name: 'Escuro', exact: true })
         .click()
+      await page.keyboard.press('Escape')
+    }
     await download(page).click()
     await expect(page.getByRole('progressbar')).toHaveAttribute('value', '40')
     await expect(download(page)).toBeDisabled()

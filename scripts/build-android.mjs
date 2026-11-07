@@ -6,6 +6,13 @@ import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const env = { ...process.env, VITE_TARGET: 'mobile' }
+// Android devices with 16 KB pages require ELF segments aligned to 16 KB.
+env.CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS = [
+  env.CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS,
+  '-C link-arg=-Wl,-z,max-page-size=16384',
+]
+  .filter(Boolean)
+  .join(' ')
 if (process.platform === 'win32') {
   env.PATH = `${path.join(env.USERPROFILE, '.cargo', 'bin')};${env.PATH}`
   env.ANDROID_HOME ||= path.join(env.LOCALAPPDATA, 'Android', 'Sdk')

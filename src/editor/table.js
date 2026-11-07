@@ -263,7 +263,14 @@ export function tableDecorations(ranges, view, line, number, table) {
           ),
         }).range(line.from + cell.from, line.from + cell.rawTo),
       )
-      addInlineRangeDecorations(ranges, line, cell.from, cell.to, false)
+      addInlineRangeDecorations(
+        ranges,
+        line,
+        cell.from,
+        cell.to,
+        active && !view.state.readOnly,
+        true,
+      )
     } else
       ranges.push(
         Decoration.widget({

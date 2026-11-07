@@ -193,10 +193,15 @@ for (const width of [1280, 390]) {
     await page.locator('textarea').fill(body)
     await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
     await expect(page.locator('.cm-md-code').first()).toBeVisible()
+    await page.evaluate(async () => {
+      await document.fonts.ready
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    })
     const anchors = ['INICIO', 'FIMCODIGO', 'DEPOIS']
     const live = await positions(page, '.cm-content', anchors)
     await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
     await expect(page.locator('.visual-editor.read-only')).toBeVisible()
+    await expect.poll(() => positions(page, '.cm-content', anchors)).toEqual(live)
     const read = await positions(page, '.cm-content', anchors)
     for (const anchor of anchors) {
       expect(Math.abs(read[anchor][0] - live[anchor][0]), `${anchor} vertical`).toBeLessThan(0.5)
@@ -208,6 +213,7 @@ for (const width of [1280, 390]) {
         .evaluate((scroller) => scroller.scrollWidth <= scroller.clientWidth),
     ).toBe(true)
     await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+    await expect.poll(() => positions(page, '.cm-content', anchors)).toEqual(live)
     const returned = await positions(page, '.cm-content', anchors)
     expect(returned).toEqual(live)
   })

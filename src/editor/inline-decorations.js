@@ -3,18 +3,19 @@ import { inlineSyntax } from '../live-markdown.js'
 import { safeHref } from '../markdown.jsx'
 import { t } from '../i18n.js'
 
-export function addInlineRangeDecorations(ranges, line, from, to, editing) {
+export function addInlineRangeDecorations(ranges, line, from, to, editing, linksOnly = false) {
   for (const token of inlineSyntax(line.text.slice(from, to), line.definitions ?? '')) {
     const start = line.from + from + token.start,
       end = line.from + from + token.end
     const contentStart = line.from + from + token.contentStart,
       contentEnd = line.from + from + token.contentEnd
-    if (!editing) {
+    const editingToken = editing && (!linksOnly || token.kind === 'wiki' || token.kind === 'link')
+    if (!editingToken) {
       if (start < contentStart) ranges.push(Decoration.replace({}).range(start, contentStart))
       if (contentEnd < end) ranges.push(Decoration.replace({}).range(contentEnd, end))
     }
     if (contentEnd <= contentStart) continue
-    if (editing && (token.kind === 'wiki' || token.kind === 'link')) {
+    if (editingToken && (token.kind === 'wiki' || token.kind === 'link')) {
       ranges.push(Decoration.mark({ class: 'cm-md-link-source' }).range(contentStart, contentEnd))
     } else if (token.kind === 'wiki') {
       ranges.push(

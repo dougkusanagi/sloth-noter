@@ -491,47 +491,9 @@ html:has(
   position: relative;
   flex: none;
 }
-.display-trigger span {
-  font:
-    600 14px/1 Georgia,
-    serif;
-  letter-spacing: -0.02em;
-}
-.display-menu-wrap,
-.theme-switch {
+.display-menu-wrap {
   display: flex;
   align-items: center;
-}
-.theme-switch {
-  gap: 1px;
-  margin-right: 4px;
-}
-.theme-switch .icon-button {
-  width: 28px;
-  height: 30px;
-}
-.theme-switch [aria-checked='true'] {
-  color: var(--ink);
-  background: var(--hover);
-}
-.footer-theme-switch {
-  display: none;
-}
-@media (max-width: 600px) {
-  .header-theme-switch {
-    display: none;
-  }
-  .footer-theme-switch {
-    position: fixed;
-    left: 12px;
-    bottom: 44px;
-    z-index: 5;
-    display: flex;
-    padding: 3px;
-    border-radius: 9px;
-    background: var(--paper);
-    box-shadow: var(--shadow-pop);
-  }
 }
 .tabs {
   align-self: stretch;
@@ -897,6 +859,11 @@ html:has(
   background: var(--hover);
   outline: 0;
 }
+.block-menu button:focus {
+  background: var(--active);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  outline: 0;
+}
 .main-menu button:active:not(:disabled),
 .block-menu button:active,
 .table-context-menu button:active:not(:disabled),
@@ -1196,14 +1163,18 @@ html:has(
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
   color: var(--muted);
-  box-shadow: var(--bevel), inset 1px 0 0 var(--line);
+  box-shadow:
+    var(--bevel),
+    inset 1px 0 0 var(--line);
 }
 .split-button .split-toggle[aria-expanded='true'] svg {
   transform: rotate(180deg);
 }
 .split-button .split-toggle svg,
 .button.sidebar-add svg {
-  transition: transform var(--fast) var(--ease), color var(--fast) var(--ease);
+  transition:
+    transform var(--fast) var(--ease),
+    color var(--fast) var(--ease);
 }
 .button.sidebar-sort {
   color: var(--muted);
@@ -1271,7 +1242,9 @@ html:has(
   border-radius: var(--radius);
   background: color-mix(in srgb, var(--ink) 3%, transparent);
   box-shadow: inset 0 0 0 1px var(--line);
-  transition: background var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+  transition:
+    background var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
 }
 .note-group > summary {
   display: flex;
@@ -2108,11 +2081,8 @@ html:has(
 }
 .results button.selected,
 .command-row.selected {
-  background: var(--control);
-  box-shadow:
-    var(--bevel),
-    0 0 0 1px var(--edge),
-    var(--lift);
+  background: var(--active);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 .command-row svg {
   flex: none;
@@ -2382,7 +2352,7 @@ html:has(
   border-radius: var(--radius);
   background: var(--well-bg);
   box-shadow: var(--well);
-  font-family: Georgia, serif;
+  font-family: var(--serif);
   font-size: var(--editor-size);
   line-height: 1.55;
 }
@@ -2642,12 +2612,14 @@ html:has(
   overflow-wrap: break-word;
   color: transparent;
   padding: 28px max(44px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
-  font:
-    var(--editor-size)/1.55 Georgia,
-    serif;
+  font: var(--editor-size)/1.55 var(--serif);
 }
 .source-search-mirror mark {
   color: transparent;
+}
+.source-editor-wrap[data-no-wrap] .source-search-mirror {
+  white-space: pre;
+  overflow-wrap: normal;
 }
 .source-editor-wrap textarea {
   position: relative;
@@ -3113,6 +3085,15 @@ html:has(
 .changelog-page {
   font: 14px/1.65 var(--ui);
   overflow-wrap: anywhere;
+}
+.changelog-page a {
+  color: var(--accent);
+}
+.changelog-page em {
+  color: var(--muted);
+}
+.release-open .document-info {
+  display: none;
 }
 .changelog-intro {
   color: var(--muted);

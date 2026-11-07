@@ -163,6 +163,17 @@ export function SettingsDialog({
           )}
           {section === 'editor' && (
             <>
+              <Row
+                id="settings-wrap-lines"
+                title={t('settings.wrapLines')}
+                hint={t('settings.wrapLinesHint')}
+              >
+                <Switch
+                  id="settings-wrap-lines"
+                  checked={prefs.wrapLines !== false}
+                  onChange={(wrapLines) => onChange({ wrapLines })}
+                />
+              </Row>
               <Row id="settings-font" title={t('settings.fontSize')} hint={t('settings.fontHint')}>
                 <FontSlider
                   id="settings-font"

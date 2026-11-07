@@ -47,7 +47,7 @@ for (const theme of ['dark', 'light']) {
     await page.getByRole('button', { name: /^Tarefas/ }).click()
     await page.waitForTimeout(300)
     await page.screenshot({ path: `/tmp/shots/${theme}-tasks.png` })
-    await page.getByRole('button', { name: 'Aparência do texto' }).click()
+    await page.getByRole('button', { name: 'Aparência' }).click()
     await page.waitForTimeout(300)
     await page.screenshot({ path: `/tmp/shots/${theme}-display.png` })
     await page.keyboard.press('Escape')

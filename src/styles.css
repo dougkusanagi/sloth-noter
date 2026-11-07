@@ -20,6 +20,8 @@
   --shadow-modal:
     0 0 0 1px var(--line), 0 4px 12px rgb(30 24 16 / 8%), 0 28px 72px rgb(30 24 16 / 24%);
   --ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Bundled, so every platform renders the document like Linux does (Windows fell back to Georgia). */
+  --serif: 'Noto Serif Variable', 'Noto Serif', Georgia, serif;
   --mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
   --radius: 10px;
   --radius-md: 8px;
@@ -101,7 +103,7 @@ body {
 .markdown,
 .reading,
 .empty-note {
-  font-family: Georgia, serif;
+  font-family: var(--serif);
 }
 button,
 input,
@@ -163,6 +165,88 @@ textarea:focus-visible {
   min-width: 0;
   cursor: text;
 }
+.editor-panes {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+.editor-pane-primary {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.editor-panes.split {
+  height: calc(100dvh - 120px);
+  min-height: 420px;
+  flex: none;
+}
+.editor-panes.split > * {
+  width: 50%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.editor-pane-secondary {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--edge);
+}
+.editor-pane-header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 4px 8px;
+  background: var(--bg);
+  font: 12px var(--ui);
+}
+.editor-pane-header .button {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.editor-pane-header .icon-button {
+  margin-left: auto;
+}
+.editor-panes.split .visual-editor,
+.editor-panes.split textarea {
+  min-height: 0;
+  height: 100%;
+}
+.editor-panes.split .visual-editor {
+  display: flex;
+  flex-direction: column;
+}
+.editor-panes.split
+  :is(.editor-pane-primary, .editor-pane-secondary)
+  > .visual-editor
+  > .cm-editor {
+  flex: 1;
+  min-height: 0;
+}
+.editor-panes.split .source-editor-wrap {
+  min-height: 0;
+}
+@media (max-width: 700px) {
+  .editor-panes.split {
+    flex-direction: column;
+    height: auto;
+  }
+  .editor-panes.split > * {
+    width: 100%;
+    height: 50vh;
+    flex: none;
+  }
+  .editor-pane-secondary {
+    border-top: 1px solid var(--edge);
+    border-left: 0;
+  }
+}
 textarea {
   display: block;
   width: 100%;
@@ -173,9 +257,7 @@ textarea {
   background: transparent;
   color: var(--ink);
   padding: 28px max(44px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
-  font:
-    var(--editor-size)/1.55 Georgia,
-    serif;
+  font: var(--editor-size)/1.55 var(--serif);
   caret-color: var(--accent);
   cursor: text;
 }
@@ -234,9 +316,7 @@ textarea:focus-visible {
   border-radius: 7px;
   background: transparent;
   color: var(--ink);
-  font:
-    14px Georgia,
-    serif;
+  font: 14px var(--serif);
   cursor: pointer;
   transition:
     background 0.1s var(--ease),
@@ -255,6 +335,13 @@ textarea:focus-visible {
   box-shadow:
     var(--bevel),
     0 0 0 1px var(--edge);
+}
+.format-toolbar .format-separator {
+  flex: none;
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: var(--edge);
 }
 .format-toolbar .format-code {
   font: 12px var(--ui);
@@ -279,19 +366,79 @@ textarea:focus-visible {
 .insert-trigger {
   position: fixed;
   z-index: 4;
-  width: 24px;
+  width: auto;
   height: 24px;
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: color-mix(in srgb, var(--muted) 75%, transparent);
-  font: 20px/1 var(--ui);
-  cursor: pointer;
+  color: var(--muted);
+  font: var(--editor-size)/1.62 var(--serif);
+  pointer-events: none;
   transition:
     background var(--fast) var(--ease),
     color var(--fast) var(--ease),
     box-shadow var(--fast) var(--ease),
     rotate var(--medium) var(--ease-spring);
+}
+.visual-editor .cm-empty-title,
+.visual-editor .cm-empty-body {
+  position: relative;
+}
+.visual-editor .cm-empty-title::after,
+.visual-editor .cm-empty-body::after {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+/* Three levels: title, body example, then a small usage tip. */
+.visual-editor .cm-empty-title::after {
+  opacity: 0.6;
+}
+.visual-editor .cm-empty-body::after {
+  opacity: 0.55;
+  font-style: italic;
+}
+.visual-editor .cm-empty-hint {
+  position: absolute;
+  top: calc(100% + 0.9em);
+  left: 0;
+  right: 0;
+  color: var(--muted);
+  font: 0.78em/1.6 var(--ui);
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+.visual-editor .cm-empty-hint kbd {
+  display: inline-block;
+  min-width: 1.5em;
+  padding: 0 0.35em;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--control);
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+}
+.visual-editor.block-menu-open .cm-empty-hint {
+  display: none;
+}
+.block-search {
+  width: calc(100% - 16px);
+  margin: 8px;
+  padding: 7px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.block-no-results {
+  margin: 4px 12px 12px;
+  color: var(--muted);
+  font: 13px var(--ui);
 }
 .insert-trigger:hover,
 .insert-trigger[aria-expanded='true'],
@@ -303,20 +450,17 @@ textarea:focus-visible {
     0 0 0 1px var(--edge),
     var(--lift);
 }
-.insert-trigger[aria-expanded='true'] {
-  rotate: 45deg;
-}
 .visual-editor .cm-scroller {
   overflow: auto;
-  font-family: Georgia, serif;
+  font-family: var(--serif);
   padding: 28px max(44px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
 }
 .visual-editor .cm-content {
   min-height: 100%;
+  min-width: 0;
+  width: 100%;
   padding: 0;
-  font:
-    var(--editor-size)/1.62 Georgia,
-    serif;
+  font: var(--editor-size)/1.62 var(--serif);
   caret-color: var(--accent);
 }
 .visual-editor .cm-line {
@@ -327,8 +471,19 @@ textarea:focus-visible {
   /* Long hidden link targets must not squeeze the visible text into a thin column. */
   padding-right: min(calc(var(--md-prefix-width, 0px) + var(--md-syntax-reserve, 0ch)), 12%);
 }
+/* Keep code selections above the opaque code background. */
+.visual-editor
+  .cm-editor:has(> .cm-scroller > .cm-content > .cm-md-code)
+  > .cm-scroller
+  > .cm-selectionLayer {
+  z-index: 2 !important;
+  pointer-events: none;
+}
 .visual-editor .cm-selectionBackground {
   background: color-mix(in srgb, var(--accent) 25%, transparent) !important;
+}
+.visual-editor .cm-cursor {
+  border-left-color: var(--accent);
 }
 .visual-editor .cm-md-h1 {
   --md-prefix-width: 0.82em;
@@ -381,7 +536,6 @@ textarea:focus-visible {
   box-sizing: border-box;
   width: 1.5em;
   margin-left: -1.5em;
-  padding-right: 0.5em;
   text-align: right;
 }
 .visual-editor .cm-md-link-source {
@@ -399,15 +553,173 @@ textarea:focus-visible {
   /* The sticky copy badge can float over any line, so keep its column clear. */
   padding-right: var(--copy-reserve);
 }
+.cm-accordion-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  vertical-align: middle;
+}
+.cm-accordion-toggle:hover,
+.cm-accordion-toggle:focus-visible {
+  background: var(--active);
+}
+.cm-columns {
+  margin: 8px 0;
+}
+.cm-columns-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+}
+.cm-columns-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.markdown-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+  margin: calc(var(--gap) * var(--line)) 0 0;
+}
+.markdown-column {
+  min-width: 0;
+}
+.cm-column-editor {
+  min-width: 0;
+  border: 1px solid var(--edge);
+  border-radius: 7px;
+  padding: 8px;
+}
+.cm-column-preview {
+  min-width: 0;
+}
+.cm-column-preview .markdown {
+  padding: 0;
+  font-size: inherit;
+}
+.cm-column-drop-marker {
+  position: fixed;
+  z-index: 100;
+  width: 2px;
+  background: var(--accent);
+  pointer-events: none;
+}
+.cm-add-column {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.cm-remove-columns {
+  margin-left: auto;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: 12px var(--ui);
+  cursor: pointer;
+}
+.cm-remove-columns:hover,
+.cm-remove-columns:focus-visible {
+  color: var(--ink);
+}
+.cm-add-column:hover,
+.cm-add-column:focus-visible {
+  background: var(--active);
+}
+.visual-editor .cm-column-editor .cm-editor {
+  min-height: 72px;
+  height: auto;
+}
+.visual-editor .cm-column-editor .cm-scroller {
+  overflow: auto;
+  padding: 0;
+}
+.visual-editor .cm-column-editor .cm-content {
+  min-height: 56px;
+  padding: 0;
+}
+.visual-editor[data-wrap-page='false'] .cm-column-editor .cm-content {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+@media (max-width: 600px) {
+  .cm-columns-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .markdown-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.visual-editor .cm-code-no-wrap {
+  white-space: pre;
+  overflow-x: hidden;
+  overflow-wrap: normal;
+}
+.visual-editor .cm-code-wrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.visual-editor .cm-code-collapsed {
+  white-space: pre;
+  overflow: hidden;
+  overflow-wrap: normal;
+  text-overflow: ellipsis;
+}
+@media (hover: hover) and (pointer: fine) {
+  .code-copy-layer .code-editor-wrap,
+  .code-copy-layer .code-editor-fold {
+    opacity: 0;
+    transition:
+      opacity var(--fast) var(--ease),
+      box-shadow var(--fast) var(--ease),
+      transform var(--fast) var(--ease);
+  }
+  .code-copy-layer .is-code-hovered,
+  .code-copy-layer .code-editor-wrap:focus-visible,
+  .code-copy-layer .code-editor-fold:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+.code-block-scroll {
+  position: fixed;
+  z-index: 3;
+  height: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.code-block-scroll > div {
+  height: 1px;
+}
+.code-block-scroll[hidden] {
+  display: none;
+}
 .visual-editor .cm-md-table-row {
   position: relative;
   display: grid;
   grid-template-columns: repeat(var(--table-columns), minmax(0, 1fr));
   width: 100%;
   background: var(--paper);
-  font:
-    0.9em/1.5 Georgia,
-    serif;
+  font: 0.9em/1.5 var(--serif);
 }
 .visual-editor .cm-md-table-row.cm-md-table-head {
   border-radius: var(--radius) var(--radius) 0 0;
@@ -701,6 +1013,10 @@ textarea:focus-visible {
   font-weight: 600;
   letter-spacing: -0.02em;
 }
+.markdown > .md-section:first-child > h1,
+.markdown > h1:first-child {
+  margin-bottom: calc(var(--editor-size) * 1.62);
+}
 .markdown h2 {
   font-size: 1.32em;
   font-weight: 600;
@@ -780,6 +1096,16 @@ textarea:focus-visible {
   top: 12px;
   right: 10px;
   align-self: flex-start;
+}
+.code-block-tools .code-wrap-toggle {
+  margin-right: 8px;
+}
+.markdown .code-block[data-scroll] pre code {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+.markdown .code-block[data-scroll] pre {
+  overflow-x: auto;
 }
 .markdown pre code {
   font: 0.85em/1.7 var(--mono);
@@ -1196,10 +1522,11 @@ textarea:focus-visible {
   }
 }
 
-/* Ordering grip in the left gutter, before the heading level pill. */
+/* Ordering grip in the left gutter, right before the heading level pill (36px wide with
+   its fold chevron, 26px as a plain level badge). */
 .cm-drag-handle {
   position: absolute;
-  right: calc(100% + 3.45rem);
+  right: calc(100% + 0.45rem + 41px);
   top: 50%;
   translate: 0 -50%;
   display: none;
@@ -1241,6 +1568,16 @@ textarea:focus-visible {
   .visual-editor .cm-md-h6:focus-within .cm-drag-handle {
     opacity: 1;
   }
+  /* Hover band over the gutter, so the grip shows from anywhere on the heading row; the
+     pill and grip come later in the line and stay on top of it. */
+  .visual-editor :is(.cm-md-h2, .cm-md-h3, .cm-md-h4, .cm-md-h5, .cm-md-h6)::before {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 0;
+    bottom: 0;
+    width: calc(0.45rem + 41px + 22px);
+  }
   .cm-drag-handle:hover,
   .cm-drag-handle:focus-visible {
     opacity: 1;
@@ -1250,6 +1587,9 @@ textarea:focus-visible {
     outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
     outline-offset: 1px;
   }
+}
+.cm-line:has(.cm-level-badge) .cm-drag-handle {
+  right: calc(100% + 0.45rem + 31px);
 }
 .cm-drag-handle svg {
   width: 16px;
@@ -1308,7 +1648,6 @@ body.cm-section-dragging {
   display: inline-flex;
   justify-content: flex-end;
   width: 25px;
-  padding-right: 3px;
   margin-left: -25px;
   white-space: pre;
   text-align: right;

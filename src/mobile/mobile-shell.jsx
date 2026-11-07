@@ -11,11 +11,11 @@ import {
   Pin,
   Plus,
   Search,
+  Share2,
   Sun,
   Trash2,
   Settings,
   FileText,
-  Share2,
   Copy,
   X,
 } from 'lucide-react'
@@ -35,7 +35,7 @@ import { BackupPanel } from './backup-panel.jsx'
 import { ReadingFind } from './reading-find.jsx'
 import { FONT_SIZE } from '../storage.js'
 import { moveToTrash, purgeFromTrash, restoreFromTrash } from '../notes.js'
-import { libraryImages } from '../images.js'
+import { importImage, libraryImages, markdownImage } from '../images.js'
 import { ImageThumbnail } from '../components/image-library.jsx'
 import { TasksLibrary } from '../components/tasks-library.jsx'
 import { ChangelogPanel } from '../components/changelog-panel.jsx'
@@ -146,14 +146,22 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const [warning, setWarning] = useState('')
   const store = useNotesStore({ persistence, loaded, mode: 'visual', onHistoryWarning: setWarning })
   const { data, current, commit, writer, saving, error, blocked } = store
-  const { prefs, updatePrefs } = usePrefs({ data, current, commit })
+  const { prefs, updatePrefs: savePrefs } = usePrefs({ data, current, commit })
+  function updatePrefs(change) {
+    savePrefs('wrapLines' in change ? { ...change, wrapLinesByNote: {} } : change)
+  }
   const { state, dispatch } = useNavigation(current)
   const route = state.screens.at(-1)
   const layer = state.layers.at(-1)
   const active = route.name === 'note' ? data.notes.find((note) => note.id === route.id) : null
+  const pageWrap =
+    active && Object.hasOwn(prefs.wrapLinesByNote ?? {}, active.id)
+      ? prefs.wrapLinesByNote[active.id]
+      : prefs.wrapLines !== false
   const [editingId, setEditingId] = useState(null)
   const editing = active && editingId === active.id
   const [showDone, setShowDone] = useState(false)
+  const [imageBusy, setImageBusy] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
   const content = useRef(null)
   const editor = useRef(null)
@@ -318,6 +326,50 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     commit(updateMobileNote(current.current, active.id, body))
     if (editor.current && editing)
       dispatch({ type: 'position', position: { cursor: editor.current.state.selection.main.head } })
+  }
+  function insertImageMarkdown(text, point, noteId) {
+    const note = current.current.notes.find((item) => item.id === noteId)
+    if (!note) return point
+    const from = Math.min(Math.max(2, point.from), note.body.length)
+    const to = Math.min(Math.max(from, point.to), note.body.length)
+    const insert = `${from && note.body[from - 1] !== '\n' ? '\n' : ''}${text}\n`
+    const view = editor.current
+    if (view?.dom.isConnected && current.current.activeId === noteId) {
+      view.dispatch({
+        changes: { from, to, insert },
+        selection: { anchor: from + insert.length },
+        userEvent: 'input.paste',
+        scrollIntoView: true,
+      })
+    } else {
+      commit(
+        updateMobileNote(
+          current.current,
+          noteId,
+          note.body.slice(0, from) + insert + note.body.slice(to),
+        ),
+      )
+    }
+    return { from: from + insert.length, to: from + insert.length }
+  }
+  async function addMobileImages(files, point) {
+    if (imageBusy || blocked || !active) return
+    const noteId = active.id
+    setImageBusy(true)
+    try {
+      for (const file of files) {
+        const src = await importImage(file, persistence.invoke)
+        commit({
+          ...current.current,
+          assets: [...(current.current.assets ?? []), { name: file.name, src }],
+        })
+        point = insertImageMarkdown(markdownImage(file.name, src), point, noteId)
+      }
+    } catch (cause) {
+      toast.error(t('images.importFailed', { error: friendlyError(cause) }))
+    } finally {
+      setImageBusy(false)
+    }
   }
   function searchNotes(term) {
     if (content.current) content.current.scrollTop = 0
@@ -673,6 +725,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           (active ? (
             editing ? (
               <VisualEditor
+                wrapLines={prefs.wrapLines !== false}
+                wrapPage={pageWrap}
                 key={active.id}
                 noteId={active.id}
                 notes={data.notes}
@@ -680,6 +734,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 onChange={updateBody}
                 onOpenWiki={openWiki}
                 onCopy={copy}
+                imageBusy={imageBusy}
+                onImageFiles={addMobileImages}
+                onImageUrl={(url, point) =>
+                  insertImageMarkdown(markdownImage(t('block.image'), url), point, active.id)
+                }
                 onSelectionChange={(selection) =>
                   dispatch({ type: 'position', position: { cursor: selection.head } })
                 }
@@ -694,6 +753,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               />
             ) : (
               <Markdown
+                wrapLines={prefs.wrapLines !== false}
+                wrapPage={pageWrap}
                 text={active.body}
                 notes={data.notes}
                 onChange={blocked ? undefined : updateBody}
@@ -987,6 +1048,22 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             ) : actionsNote ? (
               <>
                 <button
+                  onClick={() => {
+                    const currentValue = Object.hasOwn(prefs.wrapLinesByNote ?? {}, actionsNote.id)
+                      ? prefs.wrapLinesByNote[actionsNote.id]
+                      : prefs.wrapLines !== false
+                    updatePrefs({
+                      wrapLinesByNote: {
+                        ...prefs.wrapLinesByNote,
+                        [actionsNote.id]: !currentValue,
+                      },
+                    })
+                    back()
+                  }}
+                >
+                  {t('menu.wrapPage')}
+                </button>
+                <button
                   data-rename-trigger
                   disabled={blocked || Boolean(actionsNote.external)}
                   onClick={() => {
@@ -1050,6 +1127,14 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 >
                   <Settings size={20} />
                   {t('menu.settings')}
+                </button>
+                <button
+                  onClick={() => {
+                    updatePrefs({ wrapLines: prefs.wrapLines === false })
+                    back()
+                  }}
+                >
+                  {t('menu.wrapAll')}
                 </button>
                 <button
                   onClick={() => {

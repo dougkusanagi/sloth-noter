@@ -27,6 +27,7 @@ export function useTabs({
   complete,
   reopen,
   create,
+  split,
 }) {
   const [tabMenu, setTabMenu] = useState(null)
   const [draggingTab, setDraggingTab] = useState(null)
@@ -39,11 +40,21 @@ export function useTabs({
   function startTabDrag(event, id) {
     if (event.button !== 0) return
     suppressTabClick.current = false
-    tabDrag.current = { id, x: event.clientX, index: null }
+    tabDrag.current = { id, x: event.clientX, index: null, split: false }
     event.currentTarget.setPointerCapture(event.pointerId)
   }
   function moveTabDrag(event) {
     const drag = tabDrag.current
+    if (!drag) return
+    const listBounds = tabListRef.current.getBoundingClientRect()
+    if (event.clientY > listBounds.bottom + 30) {
+      drag.split = true
+      suppressTabClick.current = true
+      setDraggingTab(drag.id)
+      setTabDropIndex(null)
+      return
+    }
+    drag.split = false
     if (!drag || (drag.index === null && Math.abs(event.clientX - drag.x) < 6)) return
     suppressTabClick.current = true
     setDraggingTab(drag.id)
@@ -71,7 +82,13 @@ export function useTabs({
     setTabDropIndex(null)
     if (event.currentTarget.hasPointerCapture(event.pointerId))
       event.currentTarget.releasePointerCapture(event.pointerId)
-    if (!cancelled && drag?.index !== null && drag?.index !== undefined) {
+    if (
+      !cancelled &&
+      drag?.split &&
+      document.elementFromPoint(event.clientX, event.clientY)?.closest('.editor-shell')
+    ) {
+      split(drag.id)
+    } else if (!cancelled && drag?.index !== null && drag?.index !== undefined) {
       const next = moveTab(current.current, drag.id, drag.index)
       if (next !== current.current) commit(next)
     }
@@ -90,6 +107,7 @@ export function useTabs({
     if (!menu || !current.current.notes.some((note) => note.id === menu.id)) return
     setTabMenu(null)
     if (action === 'open') open(menu.id)
+    if (action === 'split') split(menu.id)
     if (action === 'rename') rename(menu.id)
     if (action === 'pin') {
       keep(menu.id)
@@ -294,6 +312,14 @@ export function useTabs({
       >
         <button ref={tabMenuFirst} type="button" role="menuitem" onClick={() => runTabMenu('open')}>
           <span>{t('tabs.open')}</span>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          disabled={tabMenu.id === data.activeId}
+          onClick={() => runTabMenu('split')}
+        >
+          <span>{t('tabs.openAlongside')}</span>
         </button>
         <button type="button" role="menuitem" onClick={() => runTabMenu('rename')}>
           <span>{t('tabs.rename')}</span>

@@ -54,6 +54,16 @@ test('nested guides start after the first visual line of a wrapped parent in bot
   const rail = page.locator('.cm-rail')
   await expect(rail).toBeVisible()
   const parentLine = page.locator('.cm-md-task').first()
+  await expect
+    .poll(async () => {
+      const rect = await parentLine.boundingBox()
+      const guide = await rail.boundingBox()
+      const lineHeight = await parentLine.evaluate((el) =>
+        parseFloat(getComputedStyle(el).lineHeight),
+      )
+      return Math.abs(guide.y - (rect.y + lineHeight))
+    })
+    .toBeLessThan(2)
   const rect = await parentLine.boundingBox()
   const guide = await rail.boundingBox()
   const lineHeight = await parentLine.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight))
@@ -62,7 +72,7 @@ test('nested guides start after the first visual line of a wrapped parent in bot
   await page.screenshot({ path: 'test-results/parent-list-guide.png' })
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
   await expect(page.locator('.visual-editor.read-only')).toBeVisible()
-  expect(await rail.boundingBox()).toEqual(guide)
+  await expect.poll(() => rail.boundingBox()).toEqual(guide)
 })
 
 test('image menu covers the scrollbar outside the library scroll container', async ({ page }) => {

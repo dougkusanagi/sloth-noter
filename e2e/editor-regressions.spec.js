@@ -247,7 +247,7 @@ test('images from trash can be reused and do not block keyboard shortcuts', asyn
   await page.getByRole('button', { name: 'Inserir na nota', exact: true }).click()
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(page.locator('textarea')).toHaveValue(/!\[foto\]\(data:image\/png;base64,/)
-  await expect(page.getByRole('button', { name: 'Excluir imagem', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Excluir imagem', exact: true })).toBeEnabled()
 })
 
 test('list text and wrapping keep their horizontal position when the cursor moves', async ({
@@ -284,6 +284,15 @@ test('list text and wrapping keep their horizontal position when the cursor move
   expect(after.height).toBeCloseTo(before.height, 0)
   const marker = await page.locator('.cm-md-list-marker').boundingBox()
   expect(marker.x + marker.width).toBeCloseTo(after.left, 0)
+  const gap = await page.locator('.cm-md-list-marker').evaluate((element) => {
+    const range = document.createRange()
+    range.selectNodeContents(element)
+    const end = range.getBoundingClientRect().right
+    range.setStart(element.nextSibling, 0)
+    range.setEnd(element.nextSibling, 1)
+    return range.getBoundingClientRect().left - end
+  })
+  expect(gap).toBeCloseTo(0, 0)
   await page.locator('.cm-line').filter({ hasText: 'Outro texto' }).click()
   expect((await textPosition()).left).toBeCloseTo(before.left, 0)
 })
@@ -337,6 +346,10 @@ for (const width of [1280, 390]) {
           }
         }),
       )
+    await page.evaluate(async () => {
+      await document.fonts.ready
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    })
     const before = await measure()
     for (const word of ['edição', 'opções', 'filho']) {
       await page.evaluate(async (word) => {
@@ -355,7 +368,7 @@ for (const width of [1280, 390]) {
         range.setEnd(marker.nextSibling, 1)
         return range.getBoundingClientRect().left - markerEnd
       })
-      expect(gap).toBeCloseTo(3, 0)
+      expect(gap).toBeCloseTo(0, 0)
     }
     await page.screenshot({ path: `/tmp/task-marker-${width}.png` })
     await page.keyboard.type('Nova ')
@@ -393,3 +406,30 @@ test('welcome art loads from the app for new and legacy notes without GitHub acc
     .toBe(true)
   expect(external).toEqual([])
 })
+
+for (const width of [390, 1280]) {
+  test(`cursor meets list text across marker types (${width}px)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    const body = '# Listas\n\n- Alfa\n* Beta\n+ Gama\n    - Filho\n1. Número\n- [ ] Tarefa'
+    await source(page, body)
+    await visual(page)
+    for (const word of ['Alfa', 'Beta', 'Gama', 'Filho', 'Número', 'Tarefa']) {
+      const gap = await page.evaluate(async (word) => {
+        const { EditorView } = await import('/node_modules/.vite/deps/@codemirror_view.js')
+        const view = EditorView.findFromDOM(document.querySelector('.cm-editor'))
+        const position = view.state.doc.toString().indexOf(word)
+        view.dispatch({ selection: { anchor: position } })
+        view.focus()
+        await new Promise(requestAnimationFrame)
+        const cursor = view.coordsAtPos(position)
+        const line = view.domAtPos(position)
+        const range = document.createRange()
+        range.setStart(line.node, line.offset)
+        range.setEnd(line.node, line.offset + 1)
+        return range.getBoundingClientRect().left - cursor.left
+      }, word)
+      expect(Math.abs(gap)).toBeLessThan(1.5)
+      if (word === 'Alfa') await page.screenshot({ path: `/tmp/list-cursor-${width}.png` })
+    }
+  })
+}

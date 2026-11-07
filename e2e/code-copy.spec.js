@@ -58,7 +58,9 @@ for (const mode of ['Padrão', 'Leitura']) {
     })
     await page.getByRole('radio', { name: mode, exact: true }).check({ force: true })
     for (let index = 0; index < blocks.length; index++) {
-      const button = page.locator('.copy-code').nth(index)
+      const button = page
+        .locator('.copy-code:not(.code-editor-wrap):not(.code-editor-fold):not(.code-wrap-toggle)')
+        .nth(index)
       for (let step = 0; step < 12 && !(await button.isVisible()); step++) {
         await page.evaluate(() => window.scrollBy(0, 150))
       }
@@ -113,5 +115,41 @@ for (const [mode, width] of [
       return false
     })
     expect(overlap).toBe(false)
+  })
+}
+
+for (const width of [390, 1280]) {
+  test(`collapsed code has one line and reveals its controls on hover at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 })
+    await page.goto('/')
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    const line =
+      'Uma primeira linha de código longa o bastante para ultrapassar a largura disponível '.repeat(
+        8,
+      )
+    await page.locator('textarea').fill(`# Nota\n\n\`\`\`markdown\n${line}\nsegunda linha\n\`\`\``)
+    await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+    const first = page.locator('.cm-line', { hasText: 'Uma primeira linha' })
+    await first.hover({ position: { x: 10, y: 10 } })
+    const fold = page.getByRole('button', { name: 'Recolher código' })
+    await expect(fold).toHaveCSS('opacity', '1')
+    await fold.click()
+    const collapsed = page.locator('.cm-code-collapsed')
+    await expect(collapsed).toHaveCount(1)
+    await expect(collapsed).toHaveCSS('white-space', 'pre')
+    await expect(collapsed).toHaveCSS('text-overflow', 'ellipsis')
+    await expect(collapsed).toContainText('…')
+    await expect(page.locator('.cm-line', { hasText: 'segunda linha' })).toHaveCount(0)
+    await page.mouse.move(0, 0)
+    await expect(page.getByRole('button', { name: 'Expandir código' })).toHaveCSS('opacity', '0')
+    await expect(page.getByRole('button', { name: /Quebrar linhas/i }).last()).toHaveCSS(
+      'opacity',
+      '0',
+    )
+    await first.hover({ position: { x: 10, y: 10 } })
+    await page.getByRole('button', { name: 'Expandir código' }).click()
+    await expect(page.locator('.cm-line', { hasText: 'segunda linha' })).toHaveCount(1)
   })
 }

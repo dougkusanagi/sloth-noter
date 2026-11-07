@@ -1,1 +1,0 @@
-Corrigido: ao usar **Baixar backup**, o app mostra que está preparando o arquivo e avisa quando o download é iniciado, com orientação para conferir a pasta de downloads. Se a preparação falhar, o aviso informa o erro como uma falha de backup. Cliques repetidos durante a preparação não iniciam cópias simultâneas.

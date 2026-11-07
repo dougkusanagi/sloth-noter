@@ -1,6 +1,6 @@
 import { saveBeforeUpdate } from './app-updates.js'
 import { useAppUpdates, UpdateNotice } from './components/app-updates.jsx'
-import { changelogMarkdown } from './components/changelog-panel.jsx'
+import { changelogDocument, changelogTarget } from './components/changelog-panel.jsx'
 import { pasteGesture } from './paste-intent.js'
 import { quickOpenNotes } from './quick-open.js'
 import { textStatistics } from './text-statistics.js'
@@ -39,7 +39,7 @@ import { MainMenu } from './components/main-menu.jsx'
 import { ShortcutButton, ShortcutHint } from './components/shortcut-button.jsx'
 import { shortcutText } from './components/shortcut.jsx'
 import { WindowControls, isMac } from './components/window-controls.jsx'
-import { DisplayMenu, ThemeSwitch } from './components/display-menu.jsx'
+import { DisplayMenu } from './components/display-menu.jsx'
 import { TasksLibrary } from './components/tasks-library.jsx'
 import { resolvedTasks } from './tasks.js'
 import { displayName } from './note-title.js'
@@ -61,6 +61,12 @@ import { openWorkspace } from './boot.js'
 import { createAppPersistence } from './persistence-runtime.js'
 import { VAULT_DISCONNECT, connectVault } from './persistence-vault.js'
 import { VisualEditor } from './visual-editor.jsx'
+import {
+  columnSelectionAt,
+  columnViewAt,
+  revealColumnMatch,
+  setColumnHighlights,
+} from './editor/columns.js'
 import {
   ConfirmDialog,
   ConflictDialog,
@@ -89,6 +95,7 @@ import {
   clearImageCache,
   markdownImage,
   replaceDocumentImage,
+  removeDocumentImage,
   dataUrlBytes,
 } from './images.js'
 import {
@@ -106,9 +113,12 @@ import {
   Trash2,
   CheckCircle2,
   Minimize2,
+  X,
 } from 'lucide-react'
 import { platform } from './platform.js'
 import { MobileShell } from './mobile/mobile-shell.jsx'
+import '@fontsource-variable/noto-serif/wght.css'
+import '@fontsource-variable/noto-serif/wght-italic.css'
 import './styles.css'
 import './ui.css'
 
@@ -171,6 +181,8 @@ function App() {
 function Workspace({ persistence, loaded }) {
   const [settingsSection, setSettingsSection] = useState('appearance')
   const [mode, setMode] = useState('visual')
+  const [splitId, setSplitId] = useState(null)
+  const [releaseDoc, setReleaseDoc] = useState(null)
   const [importError, setImportError] = useState('')
   const {
     data,
@@ -185,6 +197,7 @@ function Workspace({ persistence, loaded }) {
     setBlocked,
   } = useNotesStore({ persistence, loaded, mode, onHistoryWarning: setImportError })
   const [sidebarQuery, setSidebarQuery] = useState('')
+  const [imageNoteFilter, setImageNoteFilter] = useState(null)
   const [renamingGroup, setRenamingGroup] = useState(null)
   const sidebarSearchRef = useRef(null)
   const [sidebarSection, setSidebarSection] = useState('notes')
@@ -283,11 +296,24 @@ function Workspace({ persistence, loaded }) {
   const [middleClickPasteGuard] = useState(createMiddleClickPasteGuard)
   const returnFocus = useRef(null)
   const active = data.notes.find((note) => note.id === data.activeId) ?? null
+  useEffect(() => setReleaseDoc(null), [active?.id])
+  useLayoutEffect(() => {
+    if (releaseDoc) window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [releaseDoc])
+  const splitNote =
+    active && data.notes.find((note) => note.id === splitId && note.id !== data.activeId)
   const choices = useMemo(
     () => (palette ? quickOpenNotes(data.notes, data.openIds, query) : []),
     [palette, data.notes, data.openIds, query],
   )
-  const { prefs, updatePrefs } = usePrefs({ data, current, commit })
+  const { prefs, updatePrefs: savePrefs } = usePrefs({ data, current, commit })
+  const pageWrap =
+    active && Object.hasOwn(prefs.wrapLinesByNote ?? {}, active.id)
+      ? prefs.wrapLinesByNote[active.id]
+      : prefs.wrapLines !== false
+  function updatePrefs(change) {
+    savePrefs('wrapLines' in change ? { ...change, wrapLinesByNote: {} } : change)
+  }
   const {
     previewId,
     setPreviewId,
@@ -329,7 +355,10 @@ function Workspace({ persistence, loaded }) {
     commit,
     tabsVisible: prefs.tabsVisible,
     previewId,
-    open: openNote,
+    open: (id) => {
+      if (id === splitId && active) setSplitId(active.id)
+      openNote(id)
+    },
     keep: keepNote,
     rename: renameNote,
     close: closeTab,
@@ -337,6 +366,9 @@ function Workspace({ persistence, loaded }) {
     complete: completeNote,
     reopen: reopenNote,
     create: () => createNote(),
+    split: (id) => {
+      if (id !== current.current.activeId) setSplitId(id)
+    },
   })
   const sidebarVisible =
     !focusMode && (prefs.sidebarVisible ?? !window.matchMedia('(max-width: 600px)').matches)
@@ -546,28 +578,32 @@ function Workspace({ persistence, loaded }) {
     })
     if (accepted) createNote(parts.name, `# ${parts.name.replace(/\.md$/i, '')}\n\n`)
   }
-  function updateBody(body, editorChanges, readTransactions = () => []) {
+  function updateBody(
+    body,
+    editorChanges,
+    readTransactions = () => [],
+    noteId = current.current.activeId,
+  ) {
     const old = current.current
     // A file opened in place keeps its own first line.
-    const active = old.notes.find((note) => note.id === old.activeId)
+    const active = old.notes.find((note) => note.id === noteId)
+    if (!active) return
     if (!isExternalNote(active ?? {})) body = ensureTitle(body)
-    const previousBody = old.notes.find((note) => note.id === old.activeId)?.body ?? ''
+    const previousBody = active.body
     const transactions = noteHistory.enabled ? readTransactions(previousBody, body) : []
-    if (previousBody !== body) {
+    if (previousBody !== body && noteId === old.activeId) {
       const changes =
         editorChanges ?? pendingSearchChanges.current ?? documentChanges(previousBody, body)
       setFindOptions((options) =>
         options.scope ? { ...options, scope: mapSearchScope(options.scope, changes) } : options,
       )
     }
-    if (old.activeId === previewId) setPreviewId(null)
+    if (noteId === previewId) setPreviewId(null)
     // The name of a file opened in place is its file name; the title never renames it.
-    const name = isExternalNote(active ?? {})
-      ? null
-      : nameFromHeading(body, old.notes, old.activeId)
-    const previousName = old.notes.find((note) => note.id === old.activeId)?.name
+    const name = isExternalNote(active ?? {}) ? null : nameFromHeading(body, old.notes, noteId)
+    const previousName = active.name
     const rewrite = (note) => {
-      const active = note.id === old.activeId
+      const active = note.id === noteId
       const content = active ? body : note.body
       const nextBody =
         name && previousName && name !== previousName
@@ -954,13 +990,26 @@ function Workspace({ persistence, loaded }) {
   nativeDropHandler.current = (dropped, position) => {
     const { notes, others } = splitDrop(dropped)
     if (notes.length && !blocked && !switching) routeNoteDrop(notes, position)
+    if (
+      others.length &&
+      document.elementFromPoint(position.x, position.y)?.closest('.editor-pane-secondary')
+    ) {
+      setImportError(t('tabs.sideReadOnlyImage'))
+      return
+    }
     if (others.length)
-      routeNativeImageDrop(others, position, (files, point) =>
-        addImages(
-          files,
-          insertionPoint({ dataTransfer: true, clientX: point.x, clientY: point.y }),
-        ),
-      )
+      routeNativeImageDrop(others, position, (files, point) => {
+        const view = columnViewAt(document.elementFromPoint(point.x, point.y))
+        if (view) {
+          const pos = view.posAtCoords({ x: point.x, y: point.y })
+          if (pos != null) view.dispatch({ selection: { anchor: pos } })
+          void addColumnImages(files, view, current.current.activeId)
+        } else
+          addImages(
+            files,
+            insertionPoint({ dataTransfer: true, clientX: point.x, clientY: point.y }),
+          )
+      })
   }
   useEffect(() => {
     if (!persistence.invoke) return
@@ -1057,7 +1106,35 @@ function Workspace({ persistence, loaded }) {
       setImageBusy(false)
     }
   }
-  async function pasteNativeClipboard() {
+  async function addColumnImages(files, view, noteId) {
+    if (imageBusy || blocked || switching || !view || view.state.readOnly) return
+    setImageBusy(true)
+    setImportError('')
+    try {
+      for (const file of files) {
+        const src = await importImage(file, persistence.invoke)
+        if (!view.dom.isConnected || current.current.activeId !== noteId)
+          throw new Error(t('columns.imageInterrupted'))
+        commit({
+          ...current.current,
+          assets: [...(current.current.assets ?? []), { name: file.name, src }],
+        })
+        const selection = view.state.selection.main
+        const text = markdownImage(file.name, src)
+        view.dispatch({
+          changes: { from: selection.from, to: selection.to, insert: text },
+          selection: { anchor: selection.from + text.length },
+          userEvent: 'input.paste',
+        })
+      }
+      refreshImages()
+    } catch (cause) {
+      setImportError(String(cause.message ?? cause))
+    } finally {
+      setImageBusy(false)
+    }
+  }
+  async function pasteNativeClipboard(columnView = null) {
     if (
       clipboardBusy.current ||
       imageBusy ||
@@ -1069,7 +1146,10 @@ function Workspace({ persistence, loaded }) {
     )
       return
     const focusEpoch = clipboardFocusEpoch.current
-    const point = insertionPoint()
+    const point = columnView
+      ? { from: columnView.state.selection.main.from, to: columnView.state.selection.main.to }
+      : insertionPoint()
+    const columnSnapshot = columnView?.state.doc.toString()
     const noteId = active.id
     const editorMode = mode
     const view = visualRef.current
@@ -1085,9 +1165,24 @@ function Workspace({ persistence, loaded }) {
       )
         return
       if (contents?.kind === 'image') {
-        await addImages(contents.files, point, noteId)
+        if (columnView) await addColumnImages(contents.files, columnView, noteId)
+        else await addImages(contents.files, point, noteId)
       } else if (contents?.kind === 'text' && current.current.activeId === noteId) {
-        if (editorMode === 'visual' && view === visualRef.current) {
+        if (columnView) {
+          if (!columnView.dom.isConnected) return
+          if (columnView.state.doc.toString() !== columnSnapshot) {
+            setImportError(t('columns.pasteInterrupted'))
+            return
+          }
+          columnView.focus()
+          columnView.dispatch({ selection: { anchor: point.from, head: point.to } })
+          const clipboardData = new DataTransfer()
+          clipboardData.setData('text/plain', contents.text)
+          pasteIntentGuard.dispatchPaste(
+            columnView.contentDOM,
+            new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }),
+          )
+        } else if (editorMode === 'visual' && view === visualRef.current) {
           view.focus()
           view.dispatch({ selection: { anchor: point.from, head: point.to } })
           const clipboardData = new DataTransfer()
@@ -1141,19 +1236,24 @@ function Workspace({ persistence, loaded }) {
   }
 
   async function deleteImage(image) {
-    const referenced = noteImages(allNotes(current.current)).some(
-      (entry) => entry.src === image.src,
-    )
-    if (referenced) return
     if (
       !(await ask({
         kind: 'confirm',
-        message: t('images.deleteConfirm', { name: image.name }),
+        message: t(
+          image.noteIds.length && /^(data:|https?:)/i.test(image.src)
+            ? 'images.deleteEmbeddedConfirm'
+            : image.noteIds.length
+              ? 'images.deleteUsedConfirm'
+              : 'images.deleteConfirm',
+          {
+            name: image.name,
+          },
+        ),
         confirmLabel: t('images.delete'),
       }))
     )
       return
-    await removeImages([image])
+    await removeImages([image], image.noteIds.length > 0)
   }
   async function deleteUnusedImages(images) {
     if (
@@ -1167,7 +1267,7 @@ function Workspace({ persistence, loaded }) {
       return
     await removeImages(images)
   }
-  async function removeImages(images) {
+  async function removeImages(images, force = false) {
     setImageBusy(true)
     setImportError('')
     toast.dismiss('image-delete')
@@ -1175,16 +1275,22 @@ function Workspace({ persistence, loaded }) {
       const failure = await writer.current.whenIdle()
       if (failure) throw new Error(failure)
       for (const image of images) {
-        if (noteImages(allNotes(current.current)).some((entry) => entry.src === image.src))
+        if (
+          !force &&
+          noteImages(allNotes(current.current)).some((entry) => entry.src === image.src)
+        )
           throw new Error(t('images.protected'))
-        if (persistence.invoke && !/^(data:|https?:)/i.test(image.src))
-          await persistence.invoke('image_delete', { name: normalizeImageSource(image.src) })
+        const document = removeDocumentImage(current.current, image.src)
         commit({
-          ...current.current,
+          ...document,
           assets: (current.current.assets ?? []).filter(
             (asset) => normalizeImageSource(asset.src) !== image.src,
           ),
         })
+        const saveFailure = await writer.current.whenIdle()
+        if (saveFailure) throw new Error(saveFailure)
+        if (persistence.invoke && !/^(data:|https?:)/i.test(image.src))
+          await persistence.invoke('image_delete', { name: normalizeImageSource(image.src), force })
       }
       setSelectedImage(null)
       refreshImages()
@@ -1422,14 +1528,18 @@ function Workspace({ persistence, loaded }) {
   }
   function openFind(replace = false) {
     setReplaceOpen(replace)
+    const columnSelection =
+      mode !== 'source' ? columnSelectionAt(document.activeElement, visualRef.current) : null
     const selection =
       mode !== 'source'
-        ? visualRef.current?.state.selection.main
+        ? (columnSelection ?? visualRef.current?.state.selection.main)
         : mode === 'source' && editorRef.current
           ? { from: editorRef.current.selectionStart, to: editorRef.current.selectionEnd }
           : null
     const editorFocused =
-      mode !== 'source' ? visualRef.current?.hasFocus : document.activeElement === editorRef.current
+      mode !== 'source'
+        ? Boolean(columnSelection || visualRef.current?.hasFocus)
+        : document.activeElement === editorRef.current
     if (!findOpen || editorFocused) {
       const selectedText =
         selection && selection.to > selection.from
@@ -1483,7 +1593,8 @@ function Workspace({ persistence, loaded }) {
     const safeIndex = (index + matches.length) % matches.length
     const match = matches[safeIndex]
     if (mode === 'source' && editorRef.current) revealSourceMatch(match, safeIndex)
-    else if (visualRef.current) revealSearchMatch(visualRef.current, match)
+    else if (visualRef.current && !revealColumnMatch(visualRef.current, match))
+      revealSearchMatch(visualRef.current, match)
     findInput.current?.focus({ preventScroll: true })
     setFindIndex(safeIndex)
   }
@@ -1553,6 +1664,11 @@ function Workspace({ persistence, loaded }) {
     const navigate = navigationKey !== findNavigation.current
     findNavigation.current = navigationKey
     if (view) {
+      setColumnHighlights(view, {
+        matches,
+        index,
+        scope: findOpen && findOptions.selectionOnly ? findOptions.scope : null,
+      })
       view.dispatch({
         effects: setSearchHighlights.of({
           matches,
@@ -1560,7 +1676,8 @@ function Workspace({ persistence, loaded }) {
           scope: findOpen && findOptions.selectionOnly ? findOptions.scope : null,
         }),
       })
-      if (navigate && matches[index]) revealSearchMatch(view, matches[index])
+      if (navigate && matches[index] && !revealColumnMatch(view, matches[index]))
+        revealSearchMatch(view, matches[index])
     } else if (navigate && findOpen && matches[index]) {
       revealSourceMatch(matches[index], index)
     }
@@ -1950,6 +2067,14 @@ function Workspace({ persistence, loaded }) {
         menuOpen || commandsOpen || settingsOpen,
       ),
     tabs: () => runMenu(() => updatePrefs({ tabsVisible: !prefs.tabsVisible })),
+    wrapLines: () => runMenu(() => updatePrefs({ wrapLines: prefs.wrapLines === false })),
+    wrapPage: () =>
+      active &&
+      runMenu(() =>
+        updatePrefs({
+          wrapLinesByNote: { ...prefs.wrapLinesByNote, [active.id]: !pageWrap },
+        }),
+      ),
     visual: () => changeMode('visual'),
     source: () => changeMode('source'),
     reading: () => changeMode('reading'),
@@ -1976,14 +2101,7 @@ function Workspace({ persistence, loaded }) {
         createNote(welcome.name, welcome.body)
       }, false),
     updates: () => runMenu(() => appUpdates.check(), false),
-    changelog: () =>
-      runMenu(() => {
-        const body = changelogMarkdown()
-        const existing = current.current.notes.find((note) => note.body === body)
-        if (existing) openNote(existing.id)
-        else createNote(`${t('settings.changelog')}.md`, body)
-        setMode('reading')
-      }, false),
+    changelog: () => runMenu(() => setReleaseDoc('hub'), false),
     history: () =>
       runMenu(() => {
         setSettingsSection('history')
@@ -2017,6 +2135,7 @@ function Workspace({ persistence, loaded }) {
   function showSection(section) {
     setSidebarSection(section)
     setSidebarQuery('')
+    setImageNoteFilter(null)
   }
   const documentStats = useMemo(
     () => textStatistics(active?.body.replace(/^# /, '') ?? ''),
@@ -2261,14 +2380,26 @@ function Workspace({ persistence, loaded }) {
             <div className="sidebar-items">
               {sidebarSection === 'notes' ? (
                 <>
+                  {imageNoteFilter && (
+                    <button className="button quiet" onClick={() => setImageNoteFilter(null)}>
+                      {t('images.clearNoteFilter', { name: imageNoteFilter.name })}
+                    </button>
+                  )}
                   <NoteList
-                    notes={data.notes.filter((note) => !note.completedAt)}
+                    notes={data.notes.filter((note) =>
+                      imageNoteFilter
+                        ? imageNoteFilter.noteIds.includes(note.id)
+                        : !note.completedAt,
+                    )}
                     groups={data.groups ?? []}
                     sort={prefs.noteSort ?? 'recent'}
                     query={sidebarQuery}
                     activeId={active?.id}
                     openIds={data.openIds}
-                    onOpen={previewNote}
+                    onOpen={(id) => {
+                      if (id === splitId && active) setSplitId(active.id)
+                      previewNote(id)
+                    }}
                     onKeep={keepNote}
                     onSearchOpen={openNoteSearch}
                     renamingGroup={renamingGroup}
@@ -2310,6 +2441,7 @@ function Workspace({ persistence, loaded }) {
               ) : (
                 <ImageLibrary
                   images={images}
+                  imageVersion={imageVersion}
                   query={sidebarQuery}
                   busy={imageBusy}
                   loading={imagesLoading}
@@ -2324,10 +2456,19 @@ function Workspace({ persistence, loaded }) {
                   onDownload={downloadImage}
                   onDeleteUnused={deleteUnusedImages}
                   onOpenNote={openNote}
+                  onFindNotes={(image) => {
+                    setImageNoteFilter(image)
+                    setSidebarQuery('')
+                    setSidebarSection('notes')
+                  }}
                   onDropImage={(image, position) => {
                     if (blocked || switching || imageBusy || !active) return
                     const target = document.elementFromPoint(position.x, position.y)
                     if (!target?.closest('.editor-shell') || target.closest('.mode-switch')) return
+                    if (target.closest('.editor-pane-secondary')) {
+                      setImportError(t('tabs.sideReadOnlyImage'))
+                      return
+                    }
                     insertMarkdown(
                       markdownImage(image.name, image.src),
                       insertionPoint({
@@ -2361,7 +2502,7 @@ function Workspace({ persistence, loaded }) {
           </aside>
         )}
         <section
-          className="editor-shell"
+          className={releaseDoc ? 'editor-shell release-open' : 'editor-shell'}
           tabIndex={-1}
           onMouseDownCapture={middleClickPasteGuard.mouse}
           onMouseUpCapture={middleClickPasteGuard.mouse}
@@ -2374,12 +2515,13 @@ function Workspace({ persistence, loaded }) {
               !event.shiftKey &&
               !event.altKey &&
               !event.isComposing &&
+              !event.target.closest?.('.editor-pane-secondary') &&
               event.key.toLowerCase() === 'v' &&
               event.target.closest?.('.cm-content, textarea')
             ) {
               event.preventDefault()
               event.stopPropagation()
-              pasteNativeClipboard()
+              pasteNativeClipboard(columnViewAt(event.target))
             }
           }}
           onPasteCapture={(event) => {
@@ -2407,116 +2549,203 @@ function Workspace({ persistence, loaded }) {
             const files = clipboardImageFiles(event.clipboardData)
             if (files.length) {
               event.preventDefault()
-              addImages(files)
+              const view = columnViewAt(event.target)
+              if (view) addColumnImages(files, view, active?.id)
+              else addImages(files)
             }
           }}
         >
           <WidthFeedback width={contentWidth(prefs)} mode={mode} />
-          {active?.external && (
-            <div className="external-bar">
-              <span className="external-path" title={active.external.path}>
-                {t('external.path', { path: active.external.path })}
-              </span>
-              <button type="button" onClick={() => copyExternalToNotes(active.id)}>
-                {t('external.copy')}
-              </button>
-            </div>
-          )}
-          {active ? (
-            <NoteViewport
-              key={`${active.id}:${mode === 'source' ? 'source' : 'visual'}:${prefs.language}`}
-              noteId={active.id}
-              mode={mode === 'source' ? 'source' : 'visual'}
-              positions={notePositions.current}
-              visualRef={visualRef}
-              editorRef={editorRef}
-            >
-              {mode === 'source' ? (
-                <div className="source-editor-wrap">
-                  <div className="source-search-mirror" aria-hidden="true">
-                    <SourceSearchHighlights
-                      body={active.body}
-                      matches={findOpen ? findResult.matches : []}
-                      index={findIndex}
-                      scope={findOpen && findOptions.selectionOnly ? findOptions.scope : null}
-                    />
-                    {'\n'}
+          <div className={splitNote ? 'editor-panes split' : 'editor-panes'}>
+            <div className="editor-pane-primary">
+              {active?.external && (
+                <div className="external-bar">
+                  <span className="external-path" title={active.external.path}>
+                    {t('external.path', { path: active.external.path })}
+                  </span>
+                  <button type="button" onClick={() => copyExternalToNotes(active.id)}>
+                    {t('external.copy')}
+                  </button>
+                </div>
+              )}
+              {releaseDoc ? (
+                <div className="release-doc">
+                  <div className="external-bar">
+                    <span className="external-path">
+                      {t('settings.changelog')} · {t('changelog.readOnly')}
+                    </span>
+                    <button type="button" onClick={() => setReleaseDoc(null)}>
+                      {t('changelog.close')}
+                    </button>
                   </div>
-                  <textarea
-                    ref={editorRef}
-                    key={active.id}
-                    aria-label={t('mode.sourceEditor')}
-                    spellCheck="false"
-                    value={active.body}
-                    onChange={changeSource}
-                    onFocus={(event) => {
-                      const field = event.currentTarget
-                      updateSelectionStatistics(
-                        field.value.slice(field.selectionStart, field.selectionEnd),
-                      )
+                  <VisualEditor
+                    key={`changelog:${releaseDoc}:${prefs.language}`}
+                    noteId={`changelog:${releaseDoc}`}
+                    notes={data.notes}
+                    body={changelogDocument(releaseDoc === 'hub' ? null : releaseDoc)}
+                    readOnly
+                    wrapLines
+                    wrapPage
+                    onCopy={copyCode}
+                    onOpenWiki={(target) => {
+                      const next = changelogTarget(target)
+                      if (next) setReleaseDoc(next)
+                      else openWiki(target)
                     }}
-                    onSelect={(event) => {
-                      const field = event.currentTarget
-                      if (field.selectionStart < 2)
-                        field.setSelectionRange(
-                          2,
-                          Math.max(2, field.selectionEnd),
-                          field.selectionDirection,
-                        )
-                      updateSelectionStatistics(
-                        field.value.slice(field.selectionStart, field.selectionEnd),
-                      )
-                    }}
-                    onKeyDown={wrapSourceSelection}
-                    onKeyUp={(event) => {
-                      if (
-                        event.shiftKey ||
-                        ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a')
-                      )
-                        captureSearchSelection({
-                          from: event.currentTarget.selectionStart,
-                          to: event.currentTarget.selectionEnd,
-                        })
-                    }}
-                    onPointerUp={(event) =>
-                      captureSearchSelection({
-                        from: event.currentTarget.selectionStart,
-                        to: event.currentTarget.selectionEnd,
-                      })
-                    }
-                    onScroll={(event) => {
-                      const mirror = event.currentTarget.previousElementSibling
-                      mirror.scrollTop = event.currentTarget.scrollTop
-                      mirror.scrollLeft = event.currentTarget.scrollLeft
-                    }}
+                    onChange={() => {}}
+                    onReady={() => {}}
                   />
                 </div>
-              ) : (
-                <VisualEditor
-                  notes={data.notes}
-                  onCopy={copyCode}
-                  imageBusy={imageBusy}
-                  onImageFiles={addImages}
-                  onImageUrl={(url, point) => insertMarkdown(markdownImage('Imagem', url), point)}
-                  onOpenWiki={openWiki}
-                  key={`${active.id}:${prefs.language}`}
+              ) : active ? (
+                <NoteViewport
+                  key={`${active.id}:${mode === 'source' ? 'source' : 'visual'}:${prefs.language}`}
                   noteId={active.id}
-                  readOnly={mode === 'reading'}
-                  body={active.body}
-                  onChange={updateBody}
-                  onSelectionChange={captureSearchSelection}
-                  onStatisticsSelection={updateSelectionStatistics}
-                  onReady={(view) => {
-                    visualRef.current = view
-                  }}
-                />
+                  mode={mode === 'source' ? 'source' : 'visual'}
+                  positions={notePositions.current}
+                  visualRef={visualRef}
+                  editorRef={editorRef}
+                >
+                  {mode === 'source' ? (
+                    <div className="source-editor-wrap" data-no-wrap={!pageWrap || undefined}>
+                      <div className="source-search-mirror" aria-hidden="true">
+                        <SourceSearchHighlights
+                          body={active.body}
+                          matches={findOpen ? findResult.matches : []}
+                          index={findIndex}
+                          scope={findOpen && findOptions.selectionOnly ? findOptions.scope : null}
+                        />
+                        {'\n'}
+                      </div>
+                      <textarea
+                        ref={editorRef}
+                        wrap={pageWrap ? 'soft' : 'off'}
+                        key={active.id}
+                        aria-label={t('mode.sourceEditor')}
+                        spellCheck="false"
+                        value={active.body}
+                        onChange={changeSource}
+                        onFocus={(event) => {
+                          const field = event.currentTarget
+                          updateSelectionStatistics(
+                            field.value.slice(field.selectionStart, field.selectionEnd),
+                          )
+                        }}
+                        onSelect={(event) => {
+                          const field = event.currentTarget
+                          if (field.selectionStart < 2)
+                            field.setSelectionRange(
+                              2,
+                              Math.max(2, field.selectionEnd),
+                              field.selectionDirection,
+                            )
+                          updateSelectionStatistics(
+                            field.value.slice(field.selectionStart, field.selectionEnd),
+                          )
+                        }}
+                        onKeyDown={wrapSourceSelection}
+                        onKeyUp={(event) => {
+                          if (
+                            event.shiftKey ||
+                            ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a')
+                          )
+                            captureSearchSelection({
+                              from: event.currentTarget.selectionStart,
+                              to: event.currentTarget.selectionEnd,
+                            })
+                        }}
+                        onPointerUp={(event) =>
+                          captureSearchSelection({
+                            from: event.currentTarget.selectionStart,
+                            to: event.currentTarget.selectionEnd,
+                          })
+                        }
+                        onScroll={(event) => {
+                          const mirror = event.currentTarget.previousElementSibling
+                          mirror.scrollTop = event.currentTarget.scrollTop
+                          mirror.scrollLeft = event.currentTarget.scrollLeft
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <VisualEditor
+                      wrapLines={prefs.wrapLines !== false}
+                      wrapPage={pageWrap}
+                      notes={data.notes}
+                      onCopy={copyCode}
+                      onPaste={persistence.invoke ? () => pasteNativeClipboard() : undefined}
+                      imageBusy={imageBusy}
+                      onImageFiles={addImages}
+                      onImageUrl={(url, point) =>
+                        insertMarkdown(markdownImage('Imagem', url), point)
+                      }
+                      onOpenWiki={openWiki}
+                      key={`${active.id}:${prefs.language}`}
+                      noteId={active.id}
+                      readOnly={mode === 'reading'}
+                      body={active.body}
+                      onChange={updateBody}
+                      onSelectionChange={captureSearchSelection}
+                      onStatisticsSelection={updateSelectionStatistics}
+                      onReady={(view) => {
+                        visualRef.current = view
+                      }}
+                    />
+                  )}
+                </NoteViewport>
+              ) : (
+                <div className="empty-note">{t('empty.note')}</div>
               )}
-            </NoteViewport>
-          ) : (
-            <div className="empty-note">{t('empty.note')}</div>
-          )}
+            </div>
+            {splitNote && (
+              <aside
+                className="editor-pane-secondary"
+                aria-label={t('tabs.sidePreview', { name: displayName(splitNote.name) })}
+              >
+                <header className="editor-pane-header">
+                  <button
+                    className="button quiet"
+                    type="button"
+                    aria-label={t('tabs.editSide', { name: displayName(splitNote.name) })}
+                    onClick={() => {
+                      setSplitId(active.id)
+                      openNote(splitNote.id)
+                    }}
+                  >
+                    {displayName(splitNote.name)}
+                  </button>
+                  <span>{t('mode.reading')}</span>
+                  <button
+                    className="icon-button"
+                    type="button"
+                    aria-label={t('tabs.closeSide')}
+                    onClick={() => setSplitId(null)}
+                  >
+                    <X size={16} aria-hidden="true" />
+                  </button>
+                </header>
+                <VisualEditor
+                  key={`side:${splitNote.id}:${prefs.language}`}
+                  noteId={splitNote.id}
+                  notes={data.notes}
+                  body={splitNote.body}
+                  readOnly
+                  wrapLines={prefs.wrapLines !== false}
+                  wrapPage={
+                    Object.hasOwn(prefs.wrapLinesByNote ?? {}, splitNote.id)
+                      ? prefs.wrapLinesByNote[splitNote.id]
+                      : prefs.wrapLines !== false
+                  }
+                  onCopy={copyCode}
+                  onOpenWiki={openWiki}
+                  onChange={(body, changes, transactions) =>
+                    updateBody(body, changes, transactions, splitNote.id)
+                  }
+                  onReady={() => {}}
+                />
+              </aside>
+            )}
+          </div>
           <footer className="document-info">
-            <ThemeSwitch className="footer-theme-switch" prefs={prefs} onChange={updatePrefs} />
             <span
               className="save-status"
               role="status"

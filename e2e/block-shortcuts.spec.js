@@ -34,12 +34,15 @@ for (const width of [390, 1280]) {
   }) => {
     await page.setViewportSize({ width, height: 844 })
     await sample(page)
-    await page.getByRole('button', { name: 'Inserir bloco', exact: true }).click()
+    await page.keyboard.type('/')
     const menu = page.locator('.block-menu')
-    for (const item of await menu.getByRole('menuitem').all()) {
+    for (const item of await menu
+      .getByRole('button')
+      .filter({ has: page.locator('kbd') })
+      .all()) {
       await expect(item.locator('kbd')).toHaveCount(3)
     }
-    const table = menu.getByRole('menuitem', { name: 'Tabela', exact: true })
+    const table = menu.getByRole('button', { name: 'Tabela', exact: true })
     await table.hover()
     await expect(page.getByRole('tooltip').locator('kbd')).toHaveText(['Ctrl', '⇧', '5'])
     if (process.env.CAPTURE_UI) {

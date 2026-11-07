@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronRight, FilePlus, FileText, Folder, FolderPlus, Pencil, Trash2, CheckCircle2 } from 'lucide-react'
+import {
+  ChevronRight,
+  FilePlus,
+  FileText,
+  Folder,
+  FolderPlus,
+  Pencil,
+  Trash2,
+  CheckCircle2,
+} from 'lucide-react'
 import { noteTasks } from '../tasks.js'
 import { notePreview, displayName } from '../note-title.js'
 import { t } from '../i18n.js'
@@ -63,6 +72,21 @@ export function NoteList({
   const dragRef = useRef(null)
   const suppressClick = useRef(false)
   const menuFirst = useRef(null)
+  const activeNote = useRef(null)
+  const activeName = notes.find((note) => note.id === activeId)?.name
+
+  useEffect(() => {
+    const item = activeNote.current
+    if (!item) return
+    const group = item.closest('details')
+    if (group) group.open = true
+    const scroller = item.closest('.sidebar-items')
+    if (!scroller) return
+    const bounds = scroller.getBoundingClientRect()
+    const target = item.getBoundingClientRect()
+    if (target.top < bounds.top) scroller.scrollTop += target.top - bounds.top
+    else if (target.bottom > bounds.bottom) scroller.scrollTop += target.bottom - bounds.bottom
+  }, [activeId, activeName, query])
 
   useEffect(() => {
     if (!menu) return
@@ -163,6 +187,7 @@ export function NoteList({
         data-dragging={drag?.id === note.id || undefined}
       >
         <button
+          ref={note.id === activeId ? activeNote : undefined}
           className="note-item"
           title={note.name}
           aria-label={displayName(note.name)}
@@ -299,8 +324,7 @@ export function NoteList({
       data-drop-group=""
       data-dragging={drag ? '' : undefined}
       data-drop-over={
-        (drag?.over === '' && groupOf(notes.find((note) => note.id === drag.id) ?? {})) ||
-        undefined
+        (drag?.over === '' && groupOf(notes.find((note) => note.id === drag.id) ?? {})) || undefined
       }
       onContextMenu={(event) => openMenu(event, { type: 'empty' })}
     >

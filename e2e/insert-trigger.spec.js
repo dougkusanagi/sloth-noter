@@ -9,7 +9,7 @@ async function openNote(page, body = '# Inserção\n\nPrimeiro parágrafo\n\nÚl
   await page.keyboard.press('Control+Home')
 }
 
-const trigger = (page) => page.getByRole('button', { name: 'Inserir bloco', exact: true })
+const trigger = (page) => page.locator('.insert-trigger')
 
 test('the insert button follows only the typing cursor, including mouse movement in margins', async ({
   page,
@@ -57,8 +57,8 @@ test('the insert button hides on selection, typing and blur, and inserts at the 
   await page.keyboard.press('Control+Home')
   await page.keyboard.press('ArrowDown')
   await page.keyboard.press('ArrowDown')
-  await trigger(page).click()
-  await page.getByRole('menuitem', { name: 'Título 2', exact: true }).click()
+  await page.keyboard.type('/')
+  await page.getByRole('button', { name: 'Título 2', exact: true }).click()
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(page.locator('textarea')).toHaveValue(/^# Inserção\n\n## .*\nPrimeiro parágrafo/)
 })

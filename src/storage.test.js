@@ -47,6 +47,24 @@ test('groups, note dates and sort choice survive a save', () => {
   assert.deepEqual(loadDocument(storage).document, document)
 })
 
+test('line wrapping preferences survive a save and reject malformed values', () => {
+  const storage = memoryStorage()
+  const document = newDocument()
+  document.preferences.wrapLines = false
+  document.preferences.wrapLinesByNote = { welcome: true }
+  assert.equal(saveDocument(storage, document), null)
+  assert.deepEqual(loadDocument(storage).document.preferences, document.preferences)
+  assert.throws(() =>
+    validateDocument({ ...document, preferences: { ...document.preferences, wrapLines: 'false' } }),
+  )
+  assert.throws(() =>
+    validateDocument({
+      ...document,
+      preferences: { ...document.preferences, wrapLinesByNote: { welcome: 'true' } },
+    }),
+  )
+})
+
 test('migrates v1 notes without changing their text', () => {
   const storage = memoryStorage()
   const body = '# olá\n\nlast line\n'

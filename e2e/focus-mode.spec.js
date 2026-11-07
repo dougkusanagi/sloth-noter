@@ -30,7 +30,7 @@ for (const mode of ['Padrão', 'Código', 'Leitura']) {
     page,
   }) => {
     await page.getByRole('radio', { name: mode, exact: true }).check({ force: true })
-    await page.getByRole('button', { name: 'Aparência do texto', exact: true }).click()
+    await page.getByRole('button', { name: 'Aparência', exact: true }).click()
     const toggle = page.getByRole('menuitemcheckbox', { name: /Modo foco/ })
     await expect(toggle).toHaveAttribute('aria-checked', 'false')
     await toggle.click()

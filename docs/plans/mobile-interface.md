@@ -45,8 +45,8 @@ Executar 2.1 → 2.2 → 2.3 → 2.4. Essa sequência vem antes da fase 3.
       cancelamento, exclusão e desfazer; verificar nota aberta e busca ativa.
 - [x] **2.3 — Compartilhar texto.** Depende de 2.1/2.2. Implementar adaptador Android e ação na folha
       da lista; prévia web oferece alternativa explícita de copiar quando indisponível. Testar sucesso,
-      cancelamento, falha e envio único; validar no APK. Não inclui arquivo `.md`, exportação ou recebimento.
-- [ ] **2.4 — Retorno e recuperação nativos.** Integrar e verificar a prioridade camada → teclado →
+      cancelamento, falha e envio único; validar no APK (pendente: sem aparelho nem `adb` nesta máquina). Não inclui arquivo `.md`, exportação ou recebimento.
+- [ ] **2.4 — Retorno e recuperação nativos (parcial: 0.5.4).** Integrar e verificar a prioridade camada → teclado →
       tela → saída, incluindo raiz com gravação pendente/falha. Distinguir recarga, recriação de WebView
       e reinício de processo. Definir persistência durável de metadados de rota e migração se necessária
       para cumprir a restauração após reinício; não salvar texto na navegação. Verificar insets iniciais,
@@ -171,6 +171,19 @@ mudança para vertical e soltura duplicada. Capturas em 320 px e desktop foram c
 assim como a entrada de Novidades e sua imagem local. Gesto do sistema no aparelho Android
 continua na validação nativa de 2.4; esta etapa qualifica a interface no navegador.
 
+Na etapa 2.3 (2026-11-06) o adaptador Android (`SharePlugin.kt`, `share_text`) e a ação na folha já
+existiam desde 0.4.0; esta etapa acrescentou E2E do caminho nativo simulado (sucesso com texto e
+título, falha com nova tentativa, toque repetido). Seletor real do Android não foi exercitado.
+
+Decisão do usuário (0.5.5): o tema não fica visível no cabeçalho; no celular ele está em Mais opções
+(raiz). Isso substitui o requisito antigo de "tema visível no cabeçalho" deste plano e do v2.
+
+Na etapa 2.4 (parcial, 2026-11-06) a rota (sem texto) passou a ser gravada também em `localStorage`
+(`durableStorage` em `nav-stack.js`); sessionStorage tem prioridade e referências a notas removidas
+voltam à lista. Cobertura: unitário e 2 E2E mobile. **Pendente**: prioridade camada → teclado → tela
+→ saída e raiz com gravação pendente/falha no APK, distinção recarga/recriação de WebView/reinício,
+insets e casos do ADR 0003. Todos dependem de aparelho ou emulador (sem `adb` aqui).
+
 Em cada entrega, registrar testes executados e limitações reais. Vincular os problemas #1–24 do v2 a
 testes/checklists com ambiente e resultado; screenshots devem ser inspecionadas. Usar notas longas,
 palavras sem espaços, tabelas válidas de 12 colunas e tabelas iguais, 300 notas e imagens locais com
@@ -204,6 +217,33 @@ proporções variadas quando a tela as exibir. Falhas e dados inválidos ficam e
 Histórico de conclusão de tarefas é recurso futuro diferente do histórico local de versões. O segundo
 continua local e fora do backup/sincronização. Não criar novo ADR para cada ajuste reversível de UI;
 decisões locais ficam neste plano e, ao concluir, seus fatos duráveis vão para a documentação apropriada.
+
+## Andamento atual — 2.3 (2026-11-06)
+
+A ponte Android e a ação Compartilhar texto estão implementadas; a prévia web oferece
+Copiar texto. O Android confirma apenas a abertura do seletor, sem garantir envio pelo
+destino. No Samsung SM-S921B com Android 17, abrir e cancelar o seletor foram verificados
+sem envio; a ação fica disponível após cancelar. O alinhamento ARM64 de 16 KB foi
+confirmado por llvm-readelf. O APK 0.4.0 foi gerado; a primeira instalação confirmou a
+versão. O aparelho foi desconectado antes da reinstalação do último APK.
+
+A entrega 0.4.0 reúne também os branches de layouts do editor, abertura de arquivos no
+Windows e empacotamento para Microsoft Store. Corrigidos cliques de tarefas/controles,
+seleção em código, foco das colunas, retorno de seleção e edição de links em tabelas.
+O padding vertical da primeira linha deslocava a seleção e os pontos de arraste; foi
+removido, mantendo o espaçamento normal do Markdown. As medições das guias usam as
+linhas renderizadas. Os testes de geometria aguardam fontes e layout antes de medir.
+
+Verificação local final: 348 testes JavaScript, 43 Rust e 410 E2E passaram, além de lint,
+formatação, build e consistência de versão. A suíte E2E usou dois workers e uma repetição
+permitida, como no CI; todos passaram na primeira tentativa (3,9 minutos). Seleção de
+código foi conferida em capturas reais de 390 e 1280 px. APK e AppImage são gerados
+localmente; o instalador Windows requer ambiente Windows e não foi gerado neste Linux.
+Nenhum workflow de testes foi alterado e nenhuma tag ou publicação foi criada.
+
+Os dois worktrees t3 antigos têm alterações não commitadas e são preservados, inclusive
+seus branches. Seus commits já estão no histórico principal; não incorporar nem apagar
+essas alterações como parte da limpeza dos branches integrados.
 
 ## Próximo passo
 

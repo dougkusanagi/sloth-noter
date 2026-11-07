@@ -15,10 +15,23 @@ import { clipboardImageFiles } from './clipboard.js'
 import { ImageInsert } from './components/image-insert.jsx'
 import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
-import { liveMarkdown, taskNotes } from './editor/live-decorations.js'
+import { emptyBodyLine, liveMarkdown, taskNotes } from './editor/live-decorations.js'
 import { foldField } from './editor/folding.js'
+import { accordionField } from './editor/accordion.js'
+import {
+  columnDrag,
+  columnImageHandler,
+  columnReadServices,
+  columnsField,
+} from './editor/columns.js'
 import { railsLayer } from './editor/rails.js'
-import { codeCopyHandler, stickyCodeCopy } from './editor/code-copy.js'
+import {
+  codeCopyHandler,
+  codeFold,
+  codeWrap,
+  setCodeWrapping,
+  stickyCodeCopy,
+} from './editor/code-copy.js'
 import {
   insertTableColumnAt,
   insertTableRowAt,
@@ -39,24 +52,30 @@ import { t } from './i18n.js'
 import { flushSync } from 'react-dom'
 import { Compartment, EditorSelection, EditorState } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, redo } from '@codemirror/commands'
-import { EditorView, keymap } from '@codemirror/view'
-import { activeFormats, formatSelection } from './format-selection.js'
+import { EditorView, keymap, drawSelection } from '@codemirror/view'
+import { activeFormats, formatSelection, selectionInCode } from './format-selection.js'
 import { blockEdit } from './insert-block.js'
 import { fencedPasteInEmptyBlock } from './fenced-paste.js'
+import { markdownTree, walk } from './markdown-model.js'
 import {
   ArrowDownToLine,
   ArrowRightToLine,
   CodeXml,
   ImagePlus,
-  Heading1,
   Heading2,
   Heading3,
   Heading4,
   List,
   ListOrdered,
+  Link,
   Quote,
   Table as TableIcon,
   Trash2,
+  ChevronRight,
+  Columns2,
+  Copy,
+  ClipboardPaste,
+  Scissors,
 } from 'lucide-react'
 
 /* eslint-disable react/jsx-key -- static tuples, rendered with explicit keys below */
@@ -65,10 +84,15 @@ const formatButtons = [
   ['bold', 'format.bold', <strong>B</strong>],
   ['italic', 'format.italic', <em>I</em>],
   ['code', 'format.code', <span className="format-code">&lt;/&gt;</span>],
-  ['link', 'format.link', <span aria-hidden="true">↗</span>],
+  ['link', 'format.link', <Link size={16} aria-hidden="true" />],
   ['heading', 'format.heading', <span>H₂</span>],
   ['quote', 'format.quote', <span>❝</span>],
   ['list', 'format.list', <span>☷</span>],
+]
+const clipboardButtons = [
+  ['copy', 'editor.copy', <Copy size={16} aria-hidden="true" />, 'C'],
+  ['cut', 'editor.cut', <Scissors size={16} aria-hidden="true" />, 'X'],
+  ['paste', 'editor.paste', <ClipboardPaste size={16} aria-hidden="true" />, 'V'],
 ]
 /* eslint-enable react/jsx-key */
 const keysForLabel = (label) =>
@@ -85,7 +109,10 @@ const blockButtons = [
   ['numbered', 'block.numbered'],
   ['table', 'block.table'],
   ['code', 'block.code'],
+  ['accordion', 'block.accordion'],
+  ['columns', 'block.columns'],
   ['image', 'block.image'],
+  ['link', 'format.link'],
 ]
 
 function TableMenuIcon({ kind }) {
@@ -96,7 +123,6 @@ function TableMenuIcon({ kind }) {
 }
 
 const blockIcons = {
-  h1: Heading1,
   h2: Heading2,
   h3: Heading3,
   h4: Heading4,
@@ -105,13 +131,29 @@ const blockIcons = {
   numbered: ListOrdered,
   table: TableIcon,
   code: CodeXml,
+  accordion: ChevronRight,
+  columns: Columns2,
   image: ImagePlus,
+  link: Link,
 }
 
 function BlockIcon({ action }) {
   const Icon = blockIcons[action]
   if (!Icon) return null
   return <Icon className="block-icon" aria-hidden="true" />
+}
+
+function insideCodeBlock(state, line) {
+  let inside = false
+  walk(markdownTree(state.doc.toString()), (node) => {
+    if (
+      node.type === 'code' &&
+      node.position.start.line <= line.number &&
+      node.position.end.line >= line.number
+    )
+      inside = true
+  })
+  return inside
 }
 
 export function VisualEditor({
@@ -126,10 +168,14 @@ export function VisualEditor({
   onImageFiles,
   onImageUrl,
   onCopy,
+  onPaste,
   imageBusy,
   readOnly = false,
+  wrapLines = true,
+  wrapPage = wrapLines,
 }) {
   const notesCompartment = useRef(new Compartment())
+  const wrappingCompartment = useRef(new Compartment())
   const readOnlyCompartment = useRef(new Compartment())
   const readOnlyRef = useRef(readOnly)
   readOnlyRef.current = readOnly
@@ -139,6 +185,8 @@ export function VisualEditor({
   const [toolbar, setToolbar] = useState(null)
   const [insertAt, setInsertAt] = useState(null)
   const [blockMenu, setBlockMenu] = useState(false)
+  const [blockQuery, setBlockQuery] = useState('')
+  const blockSearch = useRef(null)
   const [tableMenu, setTableMenu] = useState(null)
   const [imagePanel, setImagePanel] = useState(null)
   const blockMenuRef = useRef(false)
@@ -156,6 +204,7 @@ export function VisualEditor({
     onImageUrl,
     imageBusy,
     onCopy,
+    onPaste,
   })
   callbacks.current = {
     onChange,
@@ -167,6 +216,7 @@ export function VisualEditor({
     onImageUrl,
     imageBusy,
     onCopy,
+    onPaste,
   }
 
   function positionToolbar(view) {
@@ -185,14 +235,17 @@ export function VisualEditor({
       setToolbar(null)
       return
     }
-    const margin = Math.min(124, window.innerWidth / 2)
+    const text = view.state.doc.toString()
+    const inCode = selectionInCode(markdownTree(text), selection.from, selection.to)
+    const margin = Math.min(inCode ? 60 : 176, window.innerWidth / 2)
     const x = Math.max(margin, Math.min(window.innerWidth - margin, (start.left + end.right) / 2))
     const y = start.top > 55 ? start.top - 8 : end.bottom + 8
     setToolbar({
       x,
       y,
       below: start.top <= 55,
-      active: activeFormats(view.state.doc.toString(), selection.from, selection.to),
+      inCode,
+      active: inCode ? [] : activeFormats(text, selection.from, selection.to),
     })
   }
 
@@ -204,9 +257,11 @@ export function VisualEditor({
         if (!view.hasFocus || view.state.readOnly || !view.state.selection.main.empty) return null
         const line = view.state.doc.lineAt(view.state.selection.main.head)
         if (line.text.trim()) return null
+        if (insideCodeBlock(view.state, line)) return null
+        if (line.number === emptyBodyLine(view.state)) return null
         const coords = view.coordsAtPos(line.from)
         if (!coords || coords.top < 46 || coords.top > window.innerHeight) return null
-        return { from: line.from, x: Math.max(5, coords.left - 34), y: coords.top }
+        return { from: line.from, x: coords.left + 4, y: coords.top }
       },
       write: (position) => {
         if (blockMenuRef.current) return
@@ -217,17 +272,41 @@ export function VisualEditor({
 
   function blockMenuLeft() {
     const width = Math.min(290, window.innerWidth - 16)
-    const editorLeft = Math.max(8, host.current?.getBoundingClientRect().left ?? 8)
-    const leftOfTrigger = insertAt.x - width - 8
-    // Use the writing area's empty margin before falling back to an overlay.
-    return leftOfTrigger >= editorLeft
-      ? leftOfTrigger
-      : Math.max(8, Math.min(insertAt.x, window.innerWidth - width - 8))
+    return Math.max(8, Math.min(insertAt.x, window.innerWidth - width - 8))
   }
 
   function insertBlock(action) {
     const view = viewRef.current
     if (!view) return
+    if (action === 'link') {
+      setBlockMenu(false)
+      const selection = view.state.selection.main
+      if (selection.empty) {
+        view.dispatch({
+          changes: { from: selection.from, insert: '[](https://)' },
+          selection: EditorSelection.single(selection.from + 1),
+          userEvent: 'formatacao',
+        })
+        view.focus()
+        return
+      }
+      const result = formatSelection(
+        view.state.doc.toString(),
+        selection.from,
+        selection.to,
+        'link',
+        'https://',
+      )
+      if (result) {
+        view.dispatch({
+          changes: { from: result.from, to: result.to, insert: result.insert },
+          selection: EditorSelection.single(result.selectionFrom, result.selectionTo),
+          userEvent: 'formatacao',
+        })
+        view.focus()
+      }
+      return
+    }
     const selection = view.state.selection.main
     if (action === 'image') {
       const coords = view.coordsAtPos(selection.head)
@@ -249,6 +328,14 @@ export function VisualEditor({
     setBlockMenu(false)
     setInsertAt(null)
     view.focus()
+    if (action === 'columns') {
+      const from = edit.from + edit.insert.indexOf('<!-- sloth:columns -->')
+      requestAnimationFrame(() =>
+        view.dom
+          .querySelector(`[data-columns-from="${from}"] .cm-column-editor .cm-content`)
+          ?.focus(),
+      )
+    }
   }
 
   function applyFormat(action, url = '') {
@@ -274,6 +361,35 @@ export function VisualEditor({
     positionToolbar(view)
   }
 
+  async function runClipboard(action) {
+    const view = viewRef.current
+    if (!view) return
+    const { from, to } = view.state.selection.main
+    if (action === 'paste') {
+      view.focus()
+      if (callbacks.current.onPaste) return callbacks.current.onPaste()
+      try {
+        const clipboardData = new DataTransfer()
+        clipboardData.setData('text/plain', await navigator.clipboard.readText())
+        view.contentDOM.dispatchEvent(
+          new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }),
+        )
+      } catch {
+        toast.error(t('editor.pasteFailed'), { id: 'clipboard' })
+      }
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(view.state.sliceDoc(from, to))
+    } catch {
+      toast.error(t('code.copyFailed'), { id: 'clipboard' })
+      return
+    }
+    if (action === 'cut') view.dispatch({ changes: { from, to }, userEvent: 'delete.cut' })
+    else toast.success(t('code.copied'), { id: 'clipboard', duration: 1800 })
+    view.focus()
+  }
+
   function runTableMenu(action) {
     const menu = tableMenu,
       view = viewRef.current
@@ -289,7 +405,10 @@ export function VisualEditor({
     if (linkEditing) linkInput.current?.focus()
   }, [linkEditing])
   useEffect(() => {
-    if (blockMenu) host.current?.querySelector('.block-menu button')?.focus()
+    if (blockMenu) {
+      setBlockQuery('')
+      requestAnimationFrame(() => blockSearch.current?.focus())
+    }
   }, [blockMenu])
   useEffect(() => {
     if (!blockMenu) return
@@ -352,7 +471,66 @@ export function VisualEditor({
           ),
           mandatoryTitle,
           history(),
+          drawSelection(),
+          codeWrap,
+          codeFold,
+          EditorState.allowMultipleSelections.of(true),
           keymap.of([
+            {
+              key: 'Shift-Home',
+              run: (view) => {
+                const range = view.state.selection.main
+                if (
+                  view.state.selection.ranges.length !== 1 ||
+                  range.head !== view.state.doc.length
+                )
+                  return false
+                view.dispatch({
+                  selection: EditorSelection.single(
+                    range.anchor,
+                    view.state.doc.lineAt(range.head).from,
+                  ),
+                  scrollIntoView: true,
+                })
+                return true
+              },
+            },
+            {
+              key: 'Mod-d',
+              run: (view) => {
+                const selection = view.state.selection
+                const main = selection.main
+                if (main.empty) {
+                  const word = view.state.wordAt(main.head)
+                  if (!word) return false
+                  view.dispatch({ selection: EditorSelection.single(word.from, word.to) })
+                  return true
+                }
+                const text = view.state.sliceDoc(main.from, main.to)
+                const doc = view.state.doc.toString()
+                const occupied = selection.ranges
+                let from = main.to
+                for (let i = 0; i < doc.length; i++) {
+                  let found = doc.indexOf(text, from)
+                  if (found < 0) found = doc.indexOf(text)
+                  if (found < 0) break
+                  if (
+                    !occupied.some((range) => found < range.to && found + text.length > range.from)
+                  ) {
+                    view.dispatch({
+                      selection: EditorSelection.create(
+                        [...occupied, EditorSelection.range(found, found + text.length)],
+                        occupied.length,
+                      ),
+                    })
+                    return true
+                  }
+                  from = found + 1
+                  if (from >= doc.length) from = 0
+                }
+                return true
+              },
+            },
             { key: 'Ctrl-Shift-ArrowUp', run: (view) => moveList(view, -1) },
             { key: 'Ctrl-Shift-ArrowDown', run: (view) => moveList(view, 1) },
             { key: 'Enter', run: (view) => moveTable(view, 'enter') },
@@ -380,7 +558,7 @@ export function VisualEditor({
             // CodeMirror binds Ctrl+Shift+Z only on Linux.
             { key: 'Mod-Shift-z', run: redo, preventDefault: true },
           ]),
-          EditorView.lineWrapping,
+          wrappingCompartment.current.of(wrapPage ? EditorView.lineWrapping : []),
           EditorView.contentAttributes.of({
             'aria-label': t('editor.visual'),
             spellcheck: 'false',
@@ -392,6 +570,24 @@ export function VisualEditor({
                 !((event.ctrlKey || event.metaKey) && event.key === 'Enter')
               )
                 return false
+              if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                const selection = view.state.selection.main
+                const line = view.state.doc.lineAt(selection.head)
+                if (selection.empty && !line.text.trim() && !insideCodeBlock(view.state, line)) {
+                  const coords = view.coordsAtPos(selection.head)
+                  if (coords) {
+                    event.preventDefault()
+                    setInsertAt({
+                      from: line.from,
+                      x: coords.left + 4,
+                      y: coords.top,
+                      hasBodyPlaceholder: line.number === emptyBodyLine(view.state),
+                    })
+                    setBlockMenu(true)
+                    return true
+                  }
+                }
+              }
               const block = blockShortcut(event)
               if (block) {
                 event.preventDefault()
@@ -465,6 +661,22 @@ export function VisualEditor({
                 view.dispatch({ selection: EditorSelection.single(from), scrollIntoView: true })
                 return true
               }
+              if (
+                cell &&
+                event.target.closest?.('.cm-md-inline-link') &&
+                !view.state.readOnly &&
+                !event.ctrlKey &&
+                !event.metaKey
+              ) {
+                const from = Number(cell.dataset.cellFrom)
+                const to = Number(cell.dataset.cellTo)
+                if (Number.isSafeInteger(from) && Number.isSafeInteger(to)) {
+                  event.preventDefault()
+                  view.focus()
+                  view.dispatch({ selection: EditorSelection.single(to) })
+                  return true
+                }
+              }
               const wiki = event.target.closest?.('[data-wiki]')
               if (wiki) {
                 event.preventDefault()
@@ -483,8 +695,39 @@ export function VisualEditor({
                 openExternalLink(link.dataset.href).catch((error) => toast.error(String(error)))
                 return true
               }
+              if (link && !view.state.readOnly && !event.ctrlKey && !event.metaKey) {
+                const position = view.posAtCoords({ x: event.clientX, y: event.clientY }, false)
+                if (position != null) {
+                  const from = view.posAtDOM(link, 0)
+                  const to = from + link.textContent.length
+                  event.preventDefault()
+                  view.focus()
+                  view.dispatch({
+                    selection: EditorSelection.single(Math.max(from, Math.min(to, position))),
+                  })
+                  return true
+                }
+              }
               if (cell || event.target.closest?.('button')) return false
               const line = event.target.closest?.('.cm-line')
+              if (
+                line === event.target &&
+                line.querySelector('[data-wiki]') &&
+                !view.state.readOnly
+              ) {
+                const position = view.posAtCoords({ x: event.clientX, y: event.clientY }, false)
+                if (position != null) {
+                  const bounds = view.state.doc.lineAt(view.posAtDOM(line, 0))
+                  event.preventDefault()
+                  view.focus()
+                  view.dispatch({
+                    selection: EditorSelection.single(
+                      Math.max(bounds.from, Math.min(bounds.to, position)),
+                    ),
+                  })
+                  return true
+                }
+              }
               if (line && !line.classList.contains('cm-md-table-row')) return false
               const position =
                 view.posAtCoords({ x: event.clientX, y: event.clientY }) ??
@@ -548,6 +791,14 @@ export function VisualEditor({
             },
           }),
           foldField,
+          accordionField,
+          columnsField,
+          columnDrag,
+          columnImageHandler.of((files, point) => callbacks.current.onImageFiles?.(files, point)),
+          columnReadServices.of({
+            onCopy: (text) => callbacks.current.onCopy?.(text),
+            onOpenWiki: (target) => callbacks.current.onOpenWiki?.(target),
+          }),
           railsLayer,
           notesCompartment.current.of(taskNotes.of(notes)),
           liveMarkdown,
@@ -594,11 +845,39 @@ export function VisualEditor({
     })
     viewRef.current = view
     const capturePointerSelection = (event) => {
-      if (event.target.closest?.('button')) return
-      queueMicrotask(() => callbacks.current.onSelectionChange?.(view.state.selection.main))
+      if (event.target.closest?.('button, input, select, textarea')) return
+      const line = event.target.closest?.('.cm-line')
+      const insideColumn = event.target.closest?.('.cm-column-editor')
+      const point = { x: event.clientX, y: event.clientY }
+      const modified = event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
+      queueMicrotask(() => {
+        if (!view.dom.isConnected) return
+        const selection = view.state.selection.main
+        if (
+          line?.isConnected &&
+          !insideColumn &&
+          !modified &&
+          !view.state.readOnly &&
+          !line.classList.contains('cm-md-table-row') &&
+          selection.empty
+        ) {
+          const bounds = view.state.doc.lineAt(view.posAtDOM(line, 0))
+          if (selection.head < bounds.from || selection.head > bounds.to) {
+            const position = view.posAtCoords(point, false)
+            if (position != null)
+              view.dispatch({
+                selection: EditorSelection.single(
+                  Math.max(bounds.from, Math.min(bounds.to, position)),
+                ),
+              })
+          }
+        }
+        callbacks.current.onSelectionChange?.(view.state.selection.main)
+      })
     }
     view.dom.addEventListener('pointerup', capturePointerSelection)
     const focusBlankArea = (event) => {
+      if (event.target.closest?.('.cm-editor') !== view.dom) return
       if (
         event.target.closest?.(
           '.cm-line, .cm-md-table-cell, button, .format-toolbar, .insert-trigger, .block-menu',
@@ -652,6 +931,16 @@ export function VisualEditor({
   }, [body])
 
   useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: wrappingCompartment.current.reconfigure(wrapPage ? EditorView.lineWrapping : []),
+    })
+  }, [wrapPage, noteId])
+
+  useEffect(() => {
+    viewRef.current?.dispatch({ effects: setCodeWrapping.of(wrapLines) })
+  }, [wrapLines, noteId])
+
+  useEffect(() => {
     const view = viewRef.current
     if (!view) return
     // A view created read-only keeps stale line heights for unrevealed lines, which
@@ -663,10 +952,14 @@ export function VisualEditor({
       write: () =>
         queueMicrotask(() => {
           const next = readOnlyRef.current
-          if (viewRef.current === view && view.state.readOnly !== next)
+          if (viewRef.current === view && view.state.readOnly !== next) {
             view.dispatch({
               effects: readOnlyCompartment.current.reconfigure(EditorState.readOnly.of(next)),
             })
+            requestAnimationFrame(() => {
+              if (viewRef.current === view) view.dispatch({})
+            })
+          }
         }),
     })
     if (readOnly) {
@@ -684,8 +977,23 @@ export function VisualEditor({
     })
   }, [notes])
 
+  const normalizedQuery = blockQuery
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+  const filteredBlocks = blockButtons.filter(([action, label]) =>
+    `${action} ${t(label)}`
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .includes(normalizedQuery),
+  )
   return (
-    <div className={`visual-editor${readOnly ? ' read-only' : ''}`} ref={host}>
+    <div
+      className={`visual-editor${readOnly ? ' read-only' : ''}${blockMenu ? ' block-menu-open' : ''}`}
+      data-wrap-page={wrapPage}
+      ref={host}
+    >
       {toolbar && (
         <div
           className={`format-toolbar${toolbar.below ? ' below' : ''}`}
@@ -726,43 +1034,55 @@ export function VisualEditor({
               </ShortcutButton>
             </form>
           ) : (
-            formatButtons.map(([action, label, icon]) => (
-              <ShortcutButton
-                key={action}
-                type="button"
-                label={t(label)}
-                keys={keysForLabel(label)}
-                aria-pressed={toolbar.active.includes(action)}
-                className={toolbar.active.includes(action) ? 'active' : undefined}
-                onClick={() =>
-                  action === 'link' && !toolbar.active.includes('link')
-                    ? setLinkEditing(true)
-                    : applyFormat(action)
-                }
-              >
-                {icon}
-              </ShortcutButton>
-            ))
+            <>
+              {clipboardButtons.map(([action, label, icon, keys]) => (
+                <ShortcutButton
+                  key={action}
+                  type="button"
+                  label={t(label)}
+                  keys={keys}
+                  onClick={() => runClipboard(action)}
+                >
+                  {icon}
+                </ShortcutButton>
+              ))}
+              {!toolbar.inCode && <span className="format-separator" aria-hidden="true" />}
+              {!toolbar.inCode &&
+                formatButtons.map(([action, label, icon]) => (
+                  <ShortcutButton
+                    key={action}
+                    type="button"
+                    label={t(label)}
+                    keys={keysForLabel(label)}
+                    aria-pressed={toolbar.active.includes(action)}
+                    className={toolbar.active.includes(action) ? 'active' : undefined}
+                    onClick={() =>
+                      action === 'link' && !toolbar.active.includes('link')
+                        ? setLinkEditing(true)
+                        : applyFormat(action)
+                    }
+                  >
+                    {icon}
+                  </ShortcutButton>
+                ))}
+            </>
           )}
         </div>
       )}
       {insertAt && (
         <>
-          <ShortcutButton
-            type="button"
+          <span
+            hidden={insertAt.hasBodyPlaceholder}
             className="insert-trigger"
-            label={t('editor.insertBlock')}
-            aria-expanded={blockMenu}
+            aria-hidden="true"
             style={{ left: insertAt.x, top: insertAt.y }}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => setBlockMenu((value) => !value)}
           >
-            +
-          </ShortcutButton>
+            {t('editor.slashHint')}
+          </span>
           {blockMenu && (
             <div
               className="block-menu"
-              role="menu"
+              role="group"
               aria-label={t('editor.insertBlock')}
               style={{
                 left: blockMenuLeft(),
@@ -774,7 +1094,9 @@ export function VisualEditor({
                   ),
                 ),
               }}
-              onMouseDown={(event) => event.preventDefault()}
+              onMouseDown={(event) => {
+                if (event.target !== blockSearch.current) event.preventDefault()
+              }}
               onKeyDown={(event) => {
                 const block = blockShortcut(event)
                 if (block) {
@@ -785,17 +1107,32 @@ export function VisualEditor({
                 }
                 const buttons = [...event.currentTarget.querySelectorAll('button')]
                 const index = buttons.indexOf(document.activeElement)
+                if (
+                  event.target !== blockSearch.current &&
+                  event.key.length === 1 &&
+                  !event.ctrlKey &&
+                  !event.metaKey &&
+                  !event.altKey
+                ) {
+                  event.preventDefault()
+                  setBlockQuery((query) => query + event.key)
+                  blockSearch.current?.focus()
+                }
+                if (event.key === 'Enter' && event.target === blockSearch.current) {
+                  event.preventDefault()
+                  buttons[0]?.click()
+                }
                 if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                   event.preventDefault()
                   buttons[
                     (index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length
                   ]?.focus()
                 }
-                if (event.key === 'Home') {
+                if (event.key === 'Home' && event.target !== blockSearch.current) {
                   event.preventDefault()
                   buttons[0]?.focus()
                 }
-                if (event.key === 'End') {
+                if (event.key === 'End' && event.target !== blockSearch.current) {
                   event.preventDefault()
                   buttons.at(-1)?.focus()
                 }
@@ -807,13 +1144,20 @@ export function VisualEditor({
                 if (event.key === 'Tab') setBlockMenu(false)
               }}
             >
-              {blockButtons.map(([action, label]) => (
+              <input
+                ref={blockSearch}
+                className="block-search"
+                value={blockQuery}
+                onChange={(event) => setBlockQuery(event.target.value)}
+                placeholder={t('editor.blockSearch')}
+                aria-label={t('editor.blockSearch')}
+              />
+              {filteredBlocks.map(([action, label]) => (
                 <ShortcutButton
                   key={action}
                   label={t(label)}
                   keys={blockKeys(action)}
                   type="button"
-                  role="menuitem"
                   onClick={() => insertBlock(action)}
                 >
                   <BlockIcon action={action} />
@@ -821,6 +1165,11 @@ export function VisualEditor({
                   {blockKeys(action) && <Shortcut keys={blockKeys(action)} />}
                 </ShortcutButton>
               ))}
+              {!filteredBlocks.length && (
+                <p className="block-no-results" role="status">
+                  {t('editor.noBlocks')}
+                </p>
+              )}
             </div>
           )}
         </>

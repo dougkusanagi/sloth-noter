@@ -1,6 +1,6 @@
 {
   "name": "sloth-note",
-  "version": "0.3.0",
+  "version": "0.5.6",
   "description": "Offline Markdown editor with notes in files the user controls",
   "private": true,
   "type": "module",
@@ -21,12 +21,14 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "e2e": "playwright test",
-    "desktop:update": "bun scripts/update-desktop.mjs"
+    "desktop:update": "bun scripts/update-desktop.mjs",
+    "store:msix": "bun scripts/package-msix.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "6.11.1",
     "@codemirror/state": "6.7.6",
     "@codemirror/view": "6.43.13",
+    "@fontsource-variable/noto-serif": "^5.3.0",
     "@tauri-apps/api": "2.11.1",
     "@tauri-apps/plugin-opener": "~2.5.0",
     "@tauri-apps/plugin-updater": "2.12.0",

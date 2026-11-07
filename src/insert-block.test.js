@@ -46,6 +46,25 @@ test('tables preserve selected paragraph text and code blocks wrap it', () => {
   assert.equal(code.text.slice(code.from, code.to), 'Texto selecionado')
 })
 
+test('collapsible blocks keep selected text as content and select the title', () => {
+  const text = '# Título\n\nTexto selecionado'
+  const result = apply(text, 10, text.length, 'accordion')
+  assert.equal(
+    result.text,
+    '# Título\n\n<details>\n<summary>Título</summary>\n\nTexto selecionado\n\n</details>',
+  )
+  assert.equal(result.text.slice(result.from, result.to), 'Título')
+})
+
+test('columns preserve selected text in the first column', () => {
+  const text = '# Título\n\nTexto selecionado'
+  const result = apply(text, 10, text.length, 'columns')
+  assert.ok(
+    result.text.includes('<!-- sloth:column -->\n\nTexto selecionado\n\n<!-- sloth:column -->'),
+  )
+  assert.ok(result.text.endsWith('<!-- /sloth:columns -->'))
+})
+
 test('offers editable headings, lists, tables and code blocks', () => {
   assert.deepEqual(blockTemplate('h4'), { text: '#### ', selectionFrom: 5, selectionTo: 5 })
   assert.deepEqual(blockTemplate('table'), {
@@ -54,5 +73,7 @@ test('offers editable headings, lists, tables and code blocks', () => {
     selectionTo: 10,
   })
   assert.deepEqual(blockTemplate('code'), { text: '```\n\n```', selectionFrom: 4, selectionTo: 4 })
+  assert.equal(blockTemplate('h1'), null)
+  assert.equal(blockEdit('# Título\n\n', 10, 10, 'h1'), null)
   assert.equal(blockTemplate('other'), null)
 })

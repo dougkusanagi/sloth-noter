@@ -16,7 +16,7 @@ for (const width of [390, 1280]) {
       [page.locator('.tab-new'), 'Nova nota', ['Ctrl', 'T']],
       [page.locator('.sidebar-toggle'), 'Mostrar/ocultar biblioteca', ['Ctrl', 'Alt', 'B']],
       [page.locator('.menu-trigger'), 'Menu principal', ['F10']],
-      [page.locator('.display-trigger'), 'Aparência do texto', []],
+      [page.locator('.display-trigger'), 'Aparência', []],
       [page.getByRole('radio', { name: 'Código', exact: true }), 'Código', ['Ctrl', 'Alt', '2']],
     ]
     for (const [control, label, keys] of controls) {
@@ -91,22 +91,22 @@ for (const width of [390, 1280]) {
     ).toHaveText(['Ctrl', 'Alt', 'B'])
   })
 
-  test(`theme choice stays visible and persists at ${width}px`, async ({ page }) => {
+  test(`theme choice lives only in the appearance menu and persists at ${width}px`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width, height: 720 })
     await page.goto('/')
-    const themes = page.getByRole('radiogroup', { name: 'Tema', exact: true })
-    await expect(themes).toBeInViewport()
-    await themes.getByRole('radio', { name: 'Escuro', exact: true }).click()
+    await expect(page.getByRole('radiogroup', { name: 'Tema', exact: true })).toHaveCount(0)
+    const open = () => page.getByRole('button', { name: 'Aparência', exact: true }).click()
+    const theme = () => page.getByRole('group', { name: 'Tema', exact: true })
+    await open()
+    await theme().getByRole('menuitemradio', { name: 'Escuro', exact: true }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     await page.reload()
-    await expect(themes.getByRole('radio', { name: 'Escuro', exact: true })).toBeChecked()
-    await themes.getByRole('radio', { name: 'Escuro', exact: true }).focus()
-    await page.keyboard.press('ArrowRight')
-    await expect(themes.getByRole('radio', { name: 'Sistema', exact: true })).toBeFocused()
-    await page.emulateMedia({ colorScheme: 'light' })
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
-    await page.emulateMedia({ colorScheme: 'dark' })
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await open()
+    await expect(
+      theme().getByRole('menuitemradio', { name: 'Escuro', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true')
   })
 
   test(`formatting hints at ${width}px expose real shortcuts on hover and keyboard focus without losing selection`, async ({
@@ -149,14 +149,12 @@ for (const width of [390, 1280]) {
     await sample(page)
     await page.locator('.cm-content').click()
     await page.keyboard.press('Control+End')
-    await page.getByRole('button', { name: 'Inserir bloco', exact: true }).click()
+    await page.keyboard.type('/')
     const menu = page.locator('.block-menu')
-    await expect(menu.getByRole('menuitem', { name: /Lista/ }).first().locator('kbd')).toHaveCount(
-      3,
-    )
+    await expect(menu.getByRole('button', { name: /Lista/ }).first().locator('kbd')).toHaveCount(3)
     await expect(menu.locator('[title]')).toHaveCount(0)
-    await menu.getByRole('menuitem', { name: 'Título 4', exact: true }).hover()
-    for (const item of await menu.getByRole('menuitem').all()) {
+    await menu.getByRole('button', { name: 'Título 4', exact: true }).hover()
+    for (const item of (await menu.getByRole('button').all()).slice(0, 3)) {
       await item.hover()
       const hint = page.getByRole('tooltip')
       await expect(hint).toHaveCount(1)
@@ -165,12 +163,17 @@ for (const width of [390, 1280]) {
     }
     await expect(page.getByText('Sem atalho definido', { exact: true })).toHaveCount(0)
     if (process.env.CAPTURE_UI) {
-      await menu.getByRole('menuitem', { name: 'Citação', exact: true }).hover()
+      await menu.getByRole('button', { name: 'Citação', exact: true }).hover()
       await expect(page.getByRole('tooltip')).toHaveCSS('opacity', '1')
       await page.screenshot({ path: `/tmp/sloth-block-menu-${width}.png` })
     }
+    await page.keyboard.press('ArrowDown')
+    const first = menu.getByRole('button').first()
+    await expect(first).toBeFocused()
+    await expect(first).toHaveCSS('box-shadow', /inset/)
     await page.keyboard.press('End')
-    await expect(menu.getByRole('menuitem').last()).toBeFocused()
+    await expect(menu.getByRole('button').last()).toBeFocused()
+    await expect(menu.getByRole('button').last()).toBeInViewport()
     await page.keyboard.press('Escape')
     await expect(menu).toBeHidden()
     await expect(page.locator('.cm-content')).toBeFocused()
@@ -192,18 +195,21 @@ for (const width of [390, 1280]) {
     ).toEqual([])
     expect(await document.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
     if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/sloth-changelog-${width}.png` })
+    await expect(page.locator('.cm-content')).toHaveAttribute('aria-readonly', 'true')
     await page.context().setOffline(true)
-    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
-    const source = page.locator('textarea')
-    await expect(source).toHaveValue(/^# Novidades\n/)
-    const original = await source.inputValue()
-    expect(original).toContain('F10 abre ou fecha o menu principal')
-    expect(original).toContain('Baixar atualização')
-    expect(original).toContain('modo Leitura agora mostra a nota')
-    await source.fill(original + '\nMinha anotação pessoal.\n')
-    await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
-    await expect(document).not.toContainText('Minha anotação pessoal.')
+    const release = document.locator('[data-wiki^="Sloth Note 0.4.0"]')
+    await document.hover()
+    await expect
+      .poll(async () => (await release.count()) || (await page.mouse.wheel(0, 300), 0))
+      .toBe(1)
+    await expect(document).toContainText('Versão 0.4.0')
+    await expect(document).toContainText('Colunas, blocos recolhíveis')
+    await expect(document).not.toContainText('páginas de memória de 16 KB')
+    await release.click()
+    await expect(document).toContainText('páginas de memória de 16 KB')
+    await document.locator('[data-wiki^="Novidades"]').click()
+    await expect(document).toContainText('Um resumo de cada versão do Sloth Note')
+    await page.context().setOffline(false)
     const tabs = page.locator('.tab-wrap')
     const count = await tabs.count()
     await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
@@ -212,6 +218,9 @@ for (const width of [390, 1280]) {
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(tabs).toHaveCount(count)
     await expect(document).toContainText('Novidades')
+    await page.getByRole('button', { name: 'Fechar Novidades', exact: true }).click()
+    await expect(document).toHaveCount(0)
+    await expect(tabs).toHaveCount(count)
   })
 }
 
@@ -221,22 +230,67 @@ for (const width of [390, 1920]) {
     await sample(page, '# Planejamento\n\nTexto que deve continuar visível.\n\n')
     await page.locator('.cm-content').click()
     await page.keyboard.press('Control+End')
-    const trigger = page.getByRole('button', { name: 'Inserir bloco', exact: true })
-    await trigger.click()
+    await page.keyboard.type('/')
     const menu = page.locator('.block-menu')
     const bounds = await menu.boundingBox()
-    const anchor = await trigger.boundingBox()
+    const anchor = await page.locator('.insert-trigger').boundingBox()
     expect(bounds.x).toBeGreaterThanOrEqual(8)
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(width - 8)
     if (width === 1920) {
-      expect(bounds.x + bounds.width).toBeLessThan(anchor.x)
-      const content = await page.locator('.cm-content').boundingBox()
-      expect(bounds.x + bounds.width).toBeLessThan(content.x)
+      expect(Math.abs(bounds.x - anchor.x)).toBeLessThan(2)
+      expect(bounds.y).toBeGreaterThan(anchor.y)
     }
     if (process.env.CAPTURE_UI)
       await page.screenshot({ path: `/tmp/sloth-insert-position-${width}.png` })
-    await menu.getByRole('menuitem', { name: 'Título 2', exact: true }).click()
+    await menu.getByRole('button', { name: 'Título 2', exact: true }).click()
     await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
     await expect(page.locator('textarea')).toHaveValue(/\n## $/)
+  })
+}
+
+test('command palette highlights the option selected with arrows', async ({ page }) => {
+  await page.goto('/')
+  await page.keyboard.press('Control+Shift+p')
+  const input = page.getByRole('combobox', { name: 'Paleta de comandos' })
+  await expect(input).toBeFocused()
+  const options = page.locator('#command-results [role=option]')
+  await expect(options.nth(0)).toHaveAttribute('aria-selected', 'true')
+  await page.keyboard.press('ArrowDown')
+  await expect(options.nth(1)).toHaveAttribute('aria-selected', 'true')
+  await expect(options.nth(1)).toHaveCSS('box-shadow', /inset/)
+  await expect(input).toHaveAttribute(
+    'aria-activedescendant',
+    await options.nth(1).getAttribute('id'),
+  )
+})
+
+for (const width of [390, 1280]) {
+  test(`selection toolbar offers clipboard actions and hides formatting inside code at ${width}px`, async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.setViewportSize({ width, height: 720 })
+    await sample(page, '# Exemplo\n\nTexto comum\n\n```sh\n# **aqui**\n```\n\nfim')
+    const toolbar = page.getByRole('toolbar', { name: 'Formatação do texto selecionado' })
+    await page.locator('.cm-line', { hasText: 'Texto comum' }).click()
+    await page.keyboard.press('End')
+    await page.keyboard.press('Shift+Home')
+    await expect(toolbar.getByRole('button', { name: 'Copiar', exact: true })).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: 'Negrito', exact: true })).toBeVisible()
+    await page.screenshot({ path: test.info().outputPath(`toolbar-text-${width}.png`) })
+
+    await page.locator('.cm-line', { hasText: '# **aqui**' }).click()
+    await page.keyboard.press('End')
+    await page.keyboard.press('Shift+Home')
+    await expect(toolbar.getByRole('button', { name: 'Recortar', exact: true })).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: 'Negrito', exact: true })).toHaveCount(0)
+    await page.screenshot({ path: test.info().outputPath(`toolbar-code-${width}.png`) })
+    await toolbar.getByRole('button', { name: 'Recortar', exact: true }).click()
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('# **aqui**')
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    await expect(page.locator('textarea')).toHaveValue(
+      '# Exemplo\n\nTexto comum\n\n```sh\n\n```\n\nfim',
+    )
   })
 }

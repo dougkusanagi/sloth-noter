@@ -1,5 +1,12 @@
 import { desktopInvoke } from './persistence-desktop.js'
-import { noteReferences, replaceImageSource, normalizeImageSource } from './markdown-model.js'
+import {
+  noteReferences,
+  replaceImageSource,
+  normalizeImageSource,
+  imageReferences,
+  markdownTree,
+  walk,
+} from './markdown-model.js'
 import { t } from './i18n.js'
 import { WELCOME_IMAGE } from './welcome.js'
 
@@ -128,6 +135,37 @@ export function replaceDocumentImage(document, source, target) {
     assets: (document.assets ?? []).map((image) =>
       image.src === source ? { ...image, src: target } : image,
     ),
+  }
+}
+export function removeDocumentImage(document, source) {
+  const remove = (note) => {
+    let body = note.body
+    const references = imageReferences(body).filter(
+      (entry) => normalizeImageSource(entry.src) === normalizeImageSource(source),
+    )
+    const changes = new Map()
+    for (const entry of references) {
+      const node = entry.occurrence ?? entry.node
+      const from = node.position.start.offset
+      changes.set(from, { from, to: node.position.end.offset, text: entry.name })
+    }
+    const linkedDefinitions = new Set()
+    walk(markdownTree(body), (node) => {
+      if (node.type === 'linkReference') linkedDefinitions.add(node.identifier)
+    })
+    for (const entry of references) {
+      if (!entry.occurrence || linkedDefinitions.has(entry.node.identifier)) continue
+      const from = entry.node.position.start.offset
+      changes.set(from, { from, to: entry.node.position.end.offset, text: '' })
+    }
+    for (const change of [...changes.values()].sort((a, b) => b.from - a.from))
+      body = body.slice(0, change.from) + change.text + body.slice(change.to)
+    return body === note.body ? note : { ...note, body, revision: note.revision + 1 }
+  }
+  return {
+    ...document,
+    notes: document.notes.map(remove),
+    trash: document.trash.map((entry) => ({ ...entry, note: remove(entry.note) })),
   }
 }
 export function markdownImage(name, src) {

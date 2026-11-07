@@ -97,3 +97,34 @@ para distribuição. `desktop:dev` não instala atualizações; `desktop:update`
 local de desenvolvimento. A primeira versão com o updater precisa ser instalada manualmente.
 Pacotes baixados ainda não instalados ficam na memória da sessão; fechar o app exige baixar outra vez.
 Esta assinatura é do updater, não uma assinatura de código do Windows ou notarização do macOS.
+
+## Microsoft Store (MSIX)
+
+O instalador NSIS não tem assinatura de código, e o Controle inteligente de aplicativos do
+Windows 11 o bloqueia. Na Microsoft Store, a própria Microsoft assina o pacote MSIX, sem
+certificado pago. A decisão está no [ADR 0007](adr/0007-distribuicao-pela-microsoft-store.md).
+
+1. No Partner Center, crie o produto em **Novo produto → Aplicativo MSIX ou PWA** e reserve o
+   nome **Sloth Note**.
+2. Em **Gerenciamento de produto → Identidade do produto**, copie os três valores para
+   `src-tauri/windows/store/identity.json`:
+   - `Package/Identity/Name` → `name`
+   - `Package/Identity/Publisher` → `publisher` (começa com `CN=`)
+   - `Package/Properties/PublisherDisplayName` → `publisherDisplayName`
+3. Gere o pacote. Requer o Windows SDK (`makeappx.exe`):
+
+   ```sh
+   bun run store:msix              # build com a feature "store" e empacotamento
+   bun run store:msix --skip-build # só empacota o último build
+   ```
+
+   O arquivo fica em `src-tauri/target/release/bundle/msix/Sloth Note_X.Y.Z.0_x64.msix`.
+
+4. Em **Envio → Pacotes**, envie o `.msix`. A Store exige a versão com quatro partes e a última
+   igual a `0`; o script converte `X.Y.Z` em `X.Y.Z.0`. Cada envio precisa de uma versão maior
+   que a anterior.
+
+O build da Store usa a feature Cargo `store`, que desliga o atualizador próprio do app: quem
+atualiza é a Store. O pacote não tem assinatura até ser publicado. Para testar antes do envio,
+ative o Modo de Desenvolvedor do Windows e registre a pasta montada:
+`Add-AppxPackage -Register "src-tauri\target\release\bundle\msix\stage\AppxManifest.xml"`.

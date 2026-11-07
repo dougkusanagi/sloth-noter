@@ -56,7 +56,7 @@ export function sectionProgress(body, tasks = noteTasks(body), collapsed = new S
   const linked = headings.flatMap((heading) => {
     const text = lines[heading.line - 1] ?? ''
     if (!text.includes('[[')) return []
-    const task = resolvedTasks('- [ ] ' + text.replace(/^#+\s*/, ''), notes)[0]
+    const task = resolvedTasks('- [ ] ' + text.replace(/^#+\s*/, ''), notes, new Set(), true)[0]
     return task?.progress ? [{ line: heading.line, ...task.progress }] : []
   })
   for (const heading of headings) {
@@ -153,7 +153,7 @@ function cyclicChecklist(note, notes, path = new Set()) {
 }
 
 /** Resolve linked checklists without modifying source. Cycles retain their manual state. */
-export function resolvedTasks(body, notes = [], ancestors = new Set()) {
+export function resolvedTasks(body, notes = [], ancestors = new Set(), allowCyclicTargets = false) {
   return noteTasks(body).map((task) => {
     if (!task.text.includes('[[')) return task
     const targets = [...new Set(wikiReferences(task.text).map((link) => link.target))]
@@ -161,7 +161,12 @@ export function resolvedTasks(body, notes = [], ancestors = new Set()) {
     const children = []
     for (const target of targets) {
       const note = findNote(notes, target)
-      if (!note || ancestors.has(note) || cyclicChecklist(note, notes, ancestors)) continue
+      if (
+        !note ||
+        ancestors.has(note) ||
+        (!allowCyclicTargets && cyclicChecklist(note, notes, ancestors))
+      )
+        continue
       const path = new Set(ancestors).add(note)
       let tasks = resolvedTasks(note.body, notes, path)
       const { heading } = wikiParts(target)
