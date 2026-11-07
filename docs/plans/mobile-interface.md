@@ -4,8 +4,8 @@ Tipo: tarefa
 
 ## Objetivo
 
-Levar a versão Android à paridade com o desktop (Parte A) e, só depois, entregar as ideias novas
-(Parte B). O **que** fazer está em [requisitos mobile](../plano-mobile.md); este arquivo é a única
+Ordem fixa: (A) paridade da versão Android com o desktop → (B) ideias novas só do mobile →
+(C) ideias novas para as duas plataformas. O **que** fazer está em [requisitos mobile](../plano-mobile.md); este arquivo é a única
 fonte de **ordem, estado e próximo passo**. Se os dois divergirem, os requisitos valem para o
 escopo e este plano vale para o andamento; corrija a divergência no mesmo commit.
 
@@ -14,7 +14,7 @@ escopo e este plano vale para o andamento; corrija a divergência no mesmo commi
 1. Leia `AGENTS.md`, `MEMORY.md`, os [requisitos](../plano-mobile.md) e este plano.
 2. Pegue a **primeira etapa não marcada** da fila cujas dependências estão feitas. Não pule etapas
    nem adiante itens de outra etapa, salvo pedido explícito do usuário. Não comece a Parte B antes
-   do critério da seção 4.3 dos requisitos.
+   do critério da seção 4.3 dos requisitos, nem a Parte C antes de concluir a Parte B.
 3. Faça uma etapa por pedido. Se a etapa for grande, divida em incrementos com commit próprio e
    registre a divisão aqui antes de começar.
 4. Em cada commit, siga o `AGENTS.md`: incremente a versão (`package.json`, `src-tauri/Cargo.toml`,
@@ -152,10 +152,15 @@ Os códigos `P#` são linhas da matriz de paridade (requisitos, seção 4).
       "Nova nota" (entrega única) no emulador.
       Falta: decisão 2 e "Abrir com" `.md`; receber imagens e `.md`; casos do aparelho.
 
-## Fila — Parte B: ideias novas
+## Fila — Parte B: ideias novas só do mobile
 
-Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e detalhes na seção 9 dos
-requisitos: B1, B2 → B8, B9, B10 → B11–B14 → B3 → B15 → B4–B7, B16, B17 (essas exigem ADR).
+Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e detalhes nas seções 9.1 e
+9.2 dos requisitos: B1, B2 → B8, B9, B10 → B11–B14 → B3 → B15 → B4–B7, B17 (essas exigem ADR).
+
+## Depois deste plano — Parte C: ideias para as duas plataformas
+
+Começa só depois da Parte B. As propostas C1–C5 (seção 9.3 dos requisitos) mudam desktop e
+celular e têm documentos próprios; cada uma recebe plano de tarefa próprio quando for aprovada.
 
 ## Validação no aparelho (pendente)
 

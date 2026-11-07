@@ -15,11 +15,18 @@ comprova que um recurso esteja implementado nem validado no APK.
 1. **Parte A — paridade com o desktop (prioridade atual).** Toda função do desktop tem um
    caminho por toque no celular, ou uma exclusão registrada com o motivo (seção 4). A Parte A
    também conclui a base Android: insets, teclado, ciclo de vida, retorno e acessibilidade.
-2. **Parte B — ideias novas (só depois da Parte A).** Recursos que o desktop não tem e que
-   tornam o celular melhor que um port (seção 9). Não comece nenhum item da Parte B antes do
-   critério de passagem da seção 4.3, salvo pedido explícito do usuário.
+2. **Parte B — ideias novas só do mobile (depois da Parte A).** Recursos que o desktop não tem
+   e que tornam o celular melhor que um port (seção 9.1 e 9.2). Não comece nenhum item da Parte
+   B antes do critério de passagem da seção 4.3, salvo pedido explícito do usuário.
+3. **Parte C — ideias novas para as duas plataformas (depois da Parte B).** Recursos que mudam
+   desktop e celular juntos: sincronização, IA, hub de projetos, listas de tarefas com
+   recorrência e lembretes, ponte por QR (seção 9.3). Elas só começam quando a Parte B estiver
+   concluída ou quando o usuário decidir encerrá-la, salvo pedido explícito.
 
-Todo recurso, nas duas partes, passa pelo filtro do [ROADMAP](ROADMAP.md): ele precisa tornar a
+A regra vale para ideias novas. O trabalho já aprovado com plano e ADRs próprios, como status,
+arquivo e Quadro de tarefas (ADRs 0004–0006), segue o próprio plano, e a etapa A17 depende dele.
+
+Todo recurso, nas três partes, passa pelo filtro do [ROADMAP](ROADMAP.md): ele precisa tornar a
 nota mais rápida de criar, de achar ou de fechar. Continuam fora de escopo: colaboração em tempo
 real, plugins, grafo, conta obrigatória e requisição externa obrigatória.
 
@@ -468,9 +475,10 @@ Dentro da casca mobile, o layout segue a largura da janela (limites do Material)
 - Com teclado físico, atalhos do desktop e a folha Buscar e comandos (P42).
 - Não muda o princípio 3: um desktop estreito continua desktop.
 
-## 9. Parte B — ideias novas
+## 9. Ideias novas (Partes B e C)
 
-Só depois do critério da seção 4.3. Cada ideia tem: o que é, por que passa no filtro do ROADMAP,
+A Parte B (9.1 e 9.2) só começa depois do critério da seção 4.3. A Parte C (9.3) só começa
+depois da Parte B. Cada ideia tem: o que é, por que passa no filtro do ROADMAP,
 restrições, alternativa acessível e "pronto quando". As marcadas com **ADR** exigem ADR aceito
 antes de implementar.
 
@@ -479,7 +487,7 @@ antes de implementar.
 | #   | Ideia                           | O que é e restrições                                                                                                                                                                           | Pronto quando                                                                  |
 | --- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | B1  | Transições compartilhadas       | View Transitions API: o título da lista se transforma no H1 da nota, e o inverso ao voltar. Sem suporte ou com `prefers-reduced-motion`, troca sem animação                                    | Abrir e voltar animam sem salto; sem suporte, nada quebra                      |
-| B2  | Háptica com significado         | Vibração curta só em limites: deslizar passa do ponto de exclusão, tarefa concluída, passagem por título (B7). Respeitar a configuração de vibração do sistema; sem efeito decorativo          | Cada evento tem um teste da ponte e conferência no aparelho                    |
+| B2  | Háptica com significado         | Vibração curta só em limites: deslizar passa do ponto de exclusão, tarefa concluída, passagem por título (B11). Respeitar a configuração de vibração do sistema; sem efeito decorativo         | Cada evento tem um teste da ponte e conferência no aparelho                    |
 | B3  | Bloco nas Configurações rápidas | "Nova nota" no painel do sistema (`TileService`), reutilizando a ação de 7.3                                                                                                                   | Uma nota por toque, com app aberto e fechado                                   |
 | B4  | App de notas do sistema         | Papel `ROLE_NOTES` (Android 14+): abrir uma nota nova pela caneta ou pela tela de bloqueio. Definir o que aparece com o aparelho bloqueado antes de implementar (privacidade). **ADR**         | Nota criada na tela de bloqueio sem expor outras notas                         |
 | B5  | Widget de lista fixada          | Widget com as tarefas de uma nota fixada; marcar tarefa sem abrir o app. Exige ler e gravar a nota no lado nativo com as mesmas regras de `tasks.js` e da fila de gravação. **ADR**            | Marcar no widget altera o Markdown igual ao app, sem conflito com o app aberto |
@@ -498,11 +506,26 @@ antes de implementar.
 | B13 | Lupa de tabela                   | Toque longo numa célula mostra a linha inteira como cartão flutuante. Pode resolver a decisão 5 sem impor cartões                                                                                                                     | Cartão mostra cabeçalho: valor de todas as colunas e fecha com voltar         |
 | B14 | Trackpad estrutural              | Deslizar na barra de formatação move o cursor de bloco em bloco Markdown (célula, item, título). Não conflitar com a rolagem da barra                                                                                                 | Cursor chega à célula ou item seguinte sem abrir menu                         |
 | B15 | Quadro com gestos                | Depois de A17: colunas em carrossel; arrastar o cartão para a borda passa à coluna seguinte, com vibração; o menu de status continua                                                                                                  | Gesto e menu geram o mesmo Markdown (ADR 0004)                                |
-| B16 | Ponte por QR, sem conta          | O desktop mostra um QR com uma nota curta; a câmera do celular cria a nota. Sem rede nem servidor. Definir limite de tamanho, formato e o que fazer com imagens. **ADR**                                                              | Nota curta passa do desktop ao celular sem rede; acima do limite, aviso claro |
 | B17 | Captura por câmera com OCR local | Foto de texto vira Markdown (lista ou tabela) no aparelho, sem rede. Avaliar peso da dependência antes. **ADR**                                                                                                                       | Texto reconhecido entra como sugestão editável antes de inserir               |
 
 Ordem sugerida na Parte B: B1, B2 (base para as outras) → B8, B9, B10 (prolongam a Parte A) →
-B11–B14 → B3 → B15 (depois de A17) → B4–B7, B16, B17 (exigem ADR).
+B11–B14 → B3 → B15 (depois de A17) → B4–B7, B17 (exigem ADR).
+
+### 9.3 Parte C — ideias para as duas plataformas
+
+Estas propostas mudam o desktop e o celular. Cada uma tem documento próprio, e nenhuma está
+aprovada só por estar nesta lista.
+
+| #   | Ideia                                                              | Onde está a proposta                                                          | Observação                                                                                                                                    |
+| --- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1  | Ponte por QR, sem conta                                            | Este documento                                                                | O desktop mostra um QR com uma nota curta; a câmera do celular cria a nota. Sem rede nem servidor. Definir limite, formato e imagens. **ADR** |
+| C2  | Sincronização e backup remoto opcionais                            | [IA e sync](IA-E-SYNC.md#6-sincronização-opcional-e-provedor-github), ROADMAP | Backup e sincronização são entregas distintas. O histórico de versões continua fora da rede (ADR 0002). **ADR**                               |
+| C3  | IA local e assistente                                              | [IA e sync](IA-E-SYNC.md)                                                     | O ROADMAP coloca tarefas e sincronização antes da IA local                                                                                    |
+| C4  | Listas de tarefas, histórico de conclusão, recorrência e lembretes | [ROADMAP](ROADMAP.md), itens 1–3 de "Tarefas, sincronização e mobile"         | Exigem IDs estáveis e formato portável antes de implementar                                                                                   |
+| C5  | Hub de projetos                                                    | [Hub de projetos](HUB-DE-PROJETOS.md)                                         | Proposta sem prioridade                                                                                                                       |
+
+Uma ideia da Parte C que precise de algo da Parte B (por exemplo, câmera ou háptica) reaproveita
+o que a Parte B entregou.
 
 ## 10. Decisões
 
@@ -513,7 +536,8 @@ Tomadas:
 3. Modo Código faz parte do escopo mobile.
 4. Sem `setPadding` nativo geral; contrato da seção 3.2.
 5. Tema fora do cabeçalho; no celular, em Mais opções (0.5.5).
-6. Paridade com o desktop (Parte A) antes das ideias novas (Parte B) (2026-11-07).
+6. Ordem (2026-11-07): paridade com o desktop (Parte A) → ideias novas só do mobile (Parte B) →
+   ideias novas para as duas plataformas (Parte C).
 
 Em aberto (decidir antes da etapa indicada):
 

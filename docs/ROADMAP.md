@@ -66,6 +66,11 @@ offline já está em andamento, independente dessas capacidades futuras. A ordem
 Android é a do plano de execução; esta lista não a substitui. Todas essas entregas têm prioridade
 sobre IA local, sem substituir os complementos de edição e distribuição acima.
 
+**Ordem entre mobile e recursos novos (2026-11-07):** paridade do Android com o desktop → ideias
+novas só do mobile → ideias novas para as duas plataformas (itens 1–4 abaixo, IA local, hub de
+projetos). O trabalho já aprovado em plano próprio, como status e Quadro de tarefas, segue seu
+plano. Detalhes na seção 1 dos [requisitos mobile](plano-mobile.md).
+
 Status de tarefas, arquivo de concluídas na própria nota e modo Quadro estão em
 [plano próprio](plans/status-arquivo-quadro-tarefas.md) (ADRs 0004, 0005 e 0006).
 
