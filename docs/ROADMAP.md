@@ -27,10 +27,11 @@
 
 ## Em andamento
 
-- **Android offline:** casca por plataforma, lista/busca, criação, leitura, edição inicial, fixadas e
-  lixeira com desfazer. Tarefas, imagens referenciadas e Novidades têm primeira integração.
-  O [plano de execução](plans/mobile-interface.md) define andamento e próxima etapa; o
-  [plano v2](plano-mobile-v2.md) define o escopo. Compartilhar dados entre as cascas significa
+- **Android offline:** casca por plataforma, lista/busca, criação, leitura, edição inicial, fixadas,
+  lixeira com desfazer, Tarefas, imagens referenciadas e Novidades. A prioridade é a paridade com o
+  desktop; ideias novas vêm depois. Os [requisitos mobile](plano-mobile.md) definem o escopo e a
+  matriz de paridade; o [plano de execução](plans/mobile-interface.md) define a ordem e a próxima
+  etapa. Compartilhar dados entre as cascas significa
   reutilizar modelo e persistência, não sincronizar dispositivos. Validação nativa/IME e recursos
   restantes continuam pendentes; não tratar a versão Android como concluída.
 

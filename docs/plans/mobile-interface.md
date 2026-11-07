@@ -1,283 +1,218 @@
 # Plano: interface Android
 
+Tipo: tarefa
+
 ## Objetivo
 
-Implementar o escopo do [plano mobile v2](../plano-mobile-v2.md), com navegação por toque e
-persistência compartilhada com o desktop. Este arquivo é a única fonte de andamento e próxima
-etapa; o v2 descreve os requisitos, e o v1 preserva o diagnóstico histórico.
+Levar a versão Android à paridade com o desktop (Parte A) e, só depois, entregar as ideias novas
+(Parte B). O **que** fazer está em [requisitos mobile](../plano-mobile.md); este arquivo é a única
+fonte de **ordem, estado e próximo passo**. Se os dois divergirem, os requisitos valem para o
+escopo e este plano vale para o andamento; corrija a divergência no mesmo commit.
 
-Cada incremento termina com commit Conventional Commits e testes afetados locais passando.
-Antes de fechar uma etapa e fazer push, executar toda a suíte local (unitários JS, Rust e E2E
-desktop/mobile), atualizar este plano e conferir as evidências exigidas. Não enviar trabalho parcial
-nem iniciar o incremento seguinte no mesmo pedido. Alteração perceptível no app inclui fragmento
-de changelog no mesmo commit; documentação interna não gera novidade no aplicativo.
+## Como trabalhar (para o agente)
 
-## Passos
+1. Leia `AGENTS.md`, `MEMORY.md`, os [requisitos](../plano-mobile.md) e este plano.
+2. Pegue a **primeira etapa não marcada** da fila cujas dependências estão feitas. Não pule etapas
+   nem adiante itens de outra etapa, salvo pedido explícito do usuário. Não comece a Parte B antes
+   do critério da seção 4.3 dos requisitos.
+3. Faça uma etapa por pedido. Se a etapa for grande, divida em incrementos com commit próprio e
+   registre a divisão aqui antes de começar.
+4. Em cada commit, siga o `AGENTS.md`: incremente a versão (`package.json`, `src-tauri/Cargo.toml`,
+   `src-tauri/Cargo.lock`), adicione o changelog e consolide em `changelog/X.Y.Z.md` no mesmo
+   commit, inclusive em commits só de documentação ou testes. Para mudança visual, inclua captura
+   em `public/changelog/`.
+5. Antes do commit, rode os testes afetados. Ao fechar a etapa, rode a suíte completa da seção 7
+   dos requisitos e confira capturas em 320/390 dp e desktop.
+6. Ao fechar a etapa: marque a caixa, atualize a linha da matriz de paridade (estado e teste que
+   cobre), acrescente à lista "Validação no aparelho" o que ficou sem verificar e atualize o
+   "Próximo passo".
+7. **O aparelho não bloqueia a fila.** Uma etapa fica concluída com código e testes no navegador
+   (e emulador, se houver). O que exige aparelho vai para a lista de validação. Não marque
+   aprovação nativa sem evidência. Antes de dizer que não há aparelho, rode `adb devices`.
+8. Decisão difícil de reverter: escreva ADR na mesma entrega. Ajustes reversíveis de UI ficam
+   registrados neste plano.
 
-### Base implementada
+## Estado atual (conferido no código em 2026-11-07)
 
-Os itens marcados registram código e cobertura de navegador. Não significam aprovação no Android.
+- `src/mobile/mobile-shell.jsx` usa `useNotesStore`, `usePrefs` e a persistência existente.
+  Regras de títulos, nomes e referências wiki são compartilhadas por `src/mobile/note-actions.js`;
+  não há um registro único de ações entre as cascas.
+- Navegação: `nav-stack.js` + `use-navigation.js`, com telas Notas, Tarefas, Imagens, Nota,
+  Lixeira, Configurações (`prefs`) e Novidades (`settings`). Rota sem texto em `sessionStorage` e
+  `localStorage`.
+- Notas: busca por título e texto com trecho, buscas recentes, fixadas, recentes por abertura,
+  toque longo, deslizar para lixeira com desfazer, renomear, compartilhar texto e `.md`.
+- Nota: abre em Ler; Editar usa o `VisualEditor` compartilhado (a barra de seleção flutuante é
+  ocultada pelo CSS mobile). Não há barra de formatação, modo Código nem busca em edição. Leitura
+  tem buscar na nota e recolher seções. Quebra de linha global e por nota.
+- Tarefas: `TasksLibrary` com localizar o trecho e desfazer a conclusão.
+- Imagens: galeria das imagens referenciadas, com a nota de origem. Inserir imagem por arquivo no
+  editor (`addMobileImages`).
+- Configurações: tamanho do texto, backup (exportar e restaurar) e Novidades. Mais opções: tema,
+  Lixeira, Configurações, quebrar linhas, Novidades. Não há Sobre nem idioma.
+- Android: insets e estados do teclado publicados pelo Kotlin; ícones das barras pelo tema
+  (`SlothSystem.setDarkBars`); atalho "Nova nota" e receber texto (`SlothSystem.takeAction`,
+  `takeSharedText`); compartilhar por `SlothShare`. O `WryActivity` gerado mantém o callback de
+  voltar sempre ativo.
 
-- [x] Extrair hooks de estado, ações desktop e preferências; criar casca e projeto E2E mobile.
-- [x] Publicar insets pelo Kotlin e boot JS; adicionar fallback de viewport. Validação nativa em 2.4/4.1.
-- [x] Entregar fixture, testes automatizados e relatório parcial IME (ADR 0003).
-- [x] Criar núcleo e adaptador de navegação com telas, camadas e restauração na mesma sessão.
-- [x] Integrar persistência, carregamento, bloqueio por falha de leitura e nova tentativa.
-- [x] Integrar lista, busca por título/conteúdo, buscas recentes, fixadas e recentes por abertura.
-- [x] Criar/abrir notas, retornar com busca/rolagem, salvar texto e restaurar após recarga.
-- [x] Integrar botões de fixar/lixeira com desfazer e tema visível no cabeçalho.
-- [x] Integrar leitura, edição visual inicial, Tarefas, imagens referenciadas e Novidades.
-- [x] Reconciliar planos, tarefas e limites dos ADRs antes de retomar implementação (2026-10-23).
+## Concluído
 
-### Fase 2 — concluir interações da lista e navegação
+Códigos antigos entre parênteses, para ligar com commits e changelogs.
 
-Executar 2.1 → 2.2 → 2.3 → 2.4. Essa sequência vem antes da fase 3.
+- [x] Base: hooks extraídos, casca e projeto E2E mobile, insets, fixture IME (ADR 0003), núcleo de
+      navegação, persistência, lista, busca, criação, leitura, edição visual inicial, Tarefas,
+      imagens referenciadas, Novidades.
+- [x] Toque longo e renomear, alvos de 48 dp (2.1).
+- [x] Deslizar para lixeira com desfazer (2.2).
+- [x] Compartilhar texto (2.3). Aparelho: abrir e cancelar o seletor verificados.
+- [x] Folha de ações da nota (3.1).
+- [x] Localizar tarefa e desfazer conclusão (3.6).
+- [x] Lixeira e Configurações (5.5).
 
-- [x] **2.1 — Toque longo e renomear.** Reutilizar a folha existente e manter seu botão visível.
-      Acrescentar renomeação por formulário curto com validação, preservação dos dados e referências wiki.
-      Cancelar toque longo ao rolar; não abrir a nota depois de acionar a folha. Conferir nomes longos,
-      duplicados, teclado e retorno de foco. Corrigir alvos de toque do cabeçalho e dos controles da lista
-      afetados para 48 × 48 dp, preservando tema visível e acesso ao título em 320 dp/fonte ampliada.
-      Pronto: E2E dos caminhos por botão/toque longo, renomeação/cancelamento/erro, referências, foco e
-      inspeção mobile/desktop. Fora do incremento: deslizar e compartilhar.
-- [x] **2.2 — Deslizar para lixeira.** Depende de 2.1. Cancelar com rolagem vertical ou gesto pela borda,
-      impedir acionamentos duplicados e preservar desfazer e contexto. Pronto: regressões de gesto,
-      cancelamento, exclusão e desfazer; verificar nota aberta e busca ativa.
-- [x] **2.3 — Compartilhar texto.** Depende de 2.1/2.2. Implementar adaptador Android e ação na folha
-      da lista; prévia web oferece alternativa explícita de copiar quando indisponível. Testar sucesso,
-      cancelamento, falha e envio único; validar no APK (pendente: sem aparelho nem `adb` nesta máquina). Não inclui arquivo `.md`, exportação ou recebimento.
-- [ ] **2.4 — Retorno e recuperação nativos (parcial: 0.5.4).** Integrar e verificar a prioridade camada → teclado →
-      tela → saída, incluindo raiz com gravação pendente/falha. Distinguir recarga, recriação de WebView
-      e reinício de processo. Definir persistência durável de metadados de rota e migração se necessária
-      para cumprir a restauração após reinício; não salvar texto na navegação. Verificar insets iniciais,
-      laterais e finais e coletar os casos pendentes do ADR 0003 que puderem ser exercitados. Pronto:
-      fluxos no APK com evidências, referências inválidas tratadas e regressões automatizadas. Casos
-      dependentes de aparelho ausente continuam explicitamente pendentes; não marcar aprovação nativa.
+## Fila — Parte A: paridade e base Android
 
-### Fase 3 — completar leitura
+Os códigos `P#` são linhas da matriz de paridade (requisitos, seção 4).
 
-- [x] **3.1 — Folha de ações da nota.** Depende da fase 2. Reutilizar ações de 2.1–2.3 no cabeçalho
-      da nota, com foco, retorno e tratamento da nota removida. Não exibir ações futuras como disponíveis.
-- [ ] **3.2 — Interações de leitura.** Busca na nota, links internos/externos e destinos de títulos,
-      recolher/expandir seções, copiar código por toque. Delimitar tamanho de texto e foco com as
-      preferências existentes. Pronto: caminhos de retorno, contexto e ações sem abrir teclado de edição.
-- [ ] **3.3 — Tabela com rolagem local.** Primeira coluna fixa, cabeçalho, contagem e células longas,
-      sem overflow na página. Definir referência ao bloco e validade após editar; testar tabelas iguais.
-- [ ] **3.4 — Cartões.** Depende de 3.3 e da confirmação do padrão para mais de três colunas.
-      Alternador acessível e preferência por tabela sem escrever IDs no Markdown. Referência ambígua
-      deve descartar a preferência com segurança. Não implementar recomendação como decisão tomada.
-- [ ] **3.5 — Tabela em tela cheia.** Depende de 3.3/3.4. Rota identifica nota e bloco; retorno conserva
-      posição. Testar paisagem, zoom, edição anterior ao bloco e tabela removida.
-- [x] **3.6 — Localizar tarefa e desfazer conclusão.** Abrir a nota no trecho correto, com realce
-      temporário e alternativa segura se o texto mudou. Não introduzir recorrência nem histórico de
-      conclusão. Pronto: tarefas iguais, listas aninhadas, conclusão/desfazer e ausência de teclado.
+- [ ] **A1 — Sobre, Configurações e Lixeira completas.** P10, P12, P14, P17.
+      Faz: seção Sobre compartilhada com o desktop (requisitos 5.12), Idioma, Recriar página de
+      ajuda e Esvaziar lixeira com confirmação. Reutiliza `i18n.js`, `welcome.js`, ações de
+      lixeira de `notes.js`. Decidir a decisão em aberto 6 (modo ao abrir) com o usuário ou
+      manter Ler.
+      Pronto: versão exibida igual à de `package.json` no desktop, na web e no APK; idioma muda na
+      hora sem chaves expostas; E2E das quatro ações; Novidades conferida.
+- [ ] **A2 — Retorno, recuperação e voltar preditivo** (2.4, restante). Problemas 5, 7, 25.
+      Faz: prioridade camada → teclado → tela → saída; aviso na raiz com gravação pendente ou
+      falha; ponte que ativa o callback de voltar só quando há algo para desempilhar (requisitos
+      3.4); distinguir recarga, recriação do WebView e reinício.
+      Pronto: unitários e E2E com ponte simulada; casos de aparelho na lista de validação.
+- [ ] **A3 — Ciclo de vida, IME e gravação** (4.1). P18, P19, P25; problemas 6, 12, 14, 17.
+      Faz: envio em `hidden` e `pagehide`; mensagens e recuperação separadas para nota e
+      histórico; ações de backup na falha de gravação; baixar originais com dados corrompidos;
+      medir viewport e IME sem dupla redução; preservar o editor na composição.
+      Pronto: testes de falha independentes (requisitos 3.5); pares, colar inteligente e
+      continuação de listas conferidos com o perfil Android.
+- [ ] **A4 — Modo Código** (4.2). P20. Depende de A3.
+      Faz: comparar `textarea` e CodeMirror sem decorações e registrar a escolha (decisão 3);
+      preferência por nota; teclas de símbolos na barra.
+      Pronto: texto, seleção, desfazer/refazer e histórico preservados ao alternar; editor
+      desktop inalterado.
+- [ ] **A5 — Barra de formatação, Inserir e seleção** (4.3). P21–P24; problemas 13, 16, 19, 23.
+      Depende de A3 e A4. Requisitos 5.6.
+      Pronto: todas as ações do grupo por contexto; Inserir com miniaturas e as mesmas ações do
+      `/`; copiar/recortar/colar na seleção; alvos de 48 dp em 320 dp e fonte 2×; teclado físico
+      sem barra; composição preservada.
+- [ ] **A6 — Buscar e comandos.** P2, P3. Requisitos 5.9.
+      Pronto: notas por nome e texto com contagem e abertura na 1ª ocorrência; `>` com as ações
+      da tela; `#` com títulos; Ctrl+P e Ctrl+Shift+P com teclado físico; foco e voltar corretos.
+- [ ] **A7 — Grupos e ordenação da lista.** P4.
+      Faz: mostrar os grupos do desktop (recolhíveis), ordenação recentes/alfabética e mover de
+      grupo pela folha de ações. Reutiliza o modelo de grupos de `note-list.jsx` sem mudar o
+      desktop.
+      Pronto: grupos criados no desktop aparecem iguais; busca mostra só grupos com resultado.
+- [ ] **A8 — Notas abertas.** P6. Requisitos 5.10.
+      Pronto: abrir, trocar e fechar notas abertas; posição e modo por nota; `openIds` igual ao
+      desktop após recarga.
+- [ ] **A9 — Ações de documento.** P16, P26–P31.
+      Faz: buscar e substituir em edição; Informações (palavras e caracteres por
+      `text-statistics.js`); recolher/expandir todas; mover seção (`section-move.js`); conferir
+      quebra e recolher por bloco de código no toque.
+      Pronto: E2E de cada ação, com desfazer onde o desktop tem.
+- [ ] **A10 — Leitura: concluir interações** (3.2). P32, P33.
+      Faz: conferir destinos `[[Nota#Título]]`, criar nota ausente, links externos e progresso de
+      seções em 320 dp. Buscar na nota e recolher seções já existem.
+      Pronto: retorno e contexto preservados; sem abrir teclado.
+- [ ] **A11 — Tabelas** (3.3 → 3.4 → 3.5 → 4.4). P34. Requisitos 5.4. Decisões 1 e 4 antes de 3.4.
+      Já feito em 3.3: rolagem local, 1ª coluna fixa, contagem no rótulo, foco por teclado.
+      Pronto por parte: cabeçalho fixo e tabelas iguais; cartões; tela cheia com retorno ao
+      ponto; edição por célula preservando Markdown e histórico.
+- [ ] **A12 — Colunas e blocos recolhíveis.** P35. Requisitos 5.5. Decisão 5 antes. Depende de A5.
+      Pronto: leitura e edição em 320 dp e 840 dp; "Mover para a coluna…" com desfazer; Markdown
+      igual ao do desktop.
+- [ ] **A13 — Imagens** (4.5 e 5.4). P36, P37. Requisitos 5.8. Depende de A5.
+      Pronto: câmera e arquivo inserem na nota certa; detalhe com todas as ações do desktop;
+      excluir remove referências; permissão, cancelamento e falha testados.
+- [ ] **A14 — Arquivos** (5.1 restante e 5.2). P38, P39.
+      Já feito: compartilhar `.md` e backup em Configurações.
+      Pronto: exportar e importar pelo seletor do sistema; aviso sobre imagens; conflitos de nome;
+      ida e volta de notas e imagens.
+- [ ] **A15 — Histórico de versões** (5.3). P40. Depende de A3.
+      Pronto: ativação explícita, retenção, limpeza, restauração e aviso separado de falha (ADR 0002).
+- [ ] **A16 — Classes de janela e teclado físico.** P7, P41–P43; problema 26. Requisitos 8.
+      Pronto: média e expandida em 600 e 840 dp e em paisagem; consultar duas notas; troca de
+      classe sem perder estado; atalhos com teclado físico.
+- [ ] **A17 — Status de tarefas e Quadro.** P44. **Bloqueada** até as etapas 1–3 do
+      [plano de status e quadro](status-arquivo-quadro-tarefas.md). Executa a etapa 4 daquele plano.
+- [ ] **A18 — Polimento nativo** (6.1–6.4). Problemas 2, 4, 8–11, 20, 24.
+      Já feito: ícones das barras (6.1); arrastar folhas no navegador (6.2).
+      Falta: fundo das barras e matriz de temas com folhas; conflito do arraste com teclado,
+      rolagem interna e gesto do sistema; TalkBack e escala 1,3×/2× nos fluxos completos; matriz
+      de compatibilidade (rotação, janela dividida, aparelho modesto, casos do ADR 0003).
+- [ ] **A19 — Integração Android** (7.1–7.3). P45, P47.
+      Já feito: receber texto (validação, limite de 1.000.000 caracteres, entrega única) e atalho
+      "Nova nota" (entrega única) no emulador.
+      Falta: decisão 2 e "Abrir com" `.md`; receber imagens e `.md`; casos do aparelho.
 
-### Fase 4 — edição e teclado
+## Fila — Parte B: ideias novas
 
-- [ ] **4.1 — Ciclo de vida, IME e gravação.** Depende de 2.4 e da leitura integrada. Enviar notas e
-      histórico em `hidden` e `pagehide`; mensagens e recuperação independentes para suas falhas.
-      Verificar confirmação nativa, composição ao sair, interrupção durante escrita, cursor, scrollMargins,
-      `opening/closing/open/closed`, teclado flutuante e ausência de dupla redução da viewport.
-      Preservar a instância do editor durante composição e mudanças de insets/preferências (ADR 0003).
-- [ ] **4.2 — Modo Código.** Comparar `textarea` desktop com CodeMirror sem decorações e registrar a
-      escolha antes de implementar. Preservar texto, seleção, histórico e desfazer/refazer; definir
-      preferência por nota sem restaurar teclado automaticamente. Não alterar o editor desktop.
-- [ ] **4.3 — Inserir e barra contextual.** Depende de 4.1/4.2. Até cinco ações no grupo, reduzidas
-      conforme largura; folha explícita para excedentes, Refazer e símbolos. Testar alvos de 48 dp,
-      fonte 2×, 320 dp, teclado físico e composição. Sem dependência exclusiva de toque longo.
-- [ ] **4.4 — Tabela por célula.** Depende de 3.3–3.5 e 4.3. Inserir grade, navegar entre células,
-      editar, adicionar/remover linha/coluna e alinhar, preservando o Markdown e o histórico.
-- [ ] **4.5 — Câmera e inserção de imagens.** Depende de 4.1/4.3. Usar persistência de imagens existente;
-      testar permissão/cancelamento/falha, rotação e nota de destino. Não perder o texto ao voltar da câmera.
+Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e detalhes na seção 9 dos
+requisitos: B1, B2 → B8, B9, B10 → B11–B14 → B3 → B15 → B4–B7, B16, B17 (essas exigem ADR).
 
-### Fase 5 — telas secundárias e arquivos
+## Validação no aparelho (pendente)
 
-- [ ] **5.1 — Compartilhar `.md` e exportar.** (parcial: compartilhar feito; exportar pendente) Depende do adaptador de 2.3. Definir nome, UTF-8,
-      MIME, arquivo temporário, acesso restrito e expiração de permissões. Exportação usa seletor do
-      sistema. Explicar o tratamento de imagens; testar cancelamento/falha sem perder dados.
-- [ ] **5.2 — Importar e backup.** Contrato pelo seletor do sistema, validação de formato, duplicidades,
-      imagens, falta de espaço e restauração sem sobrescrita silenciosa. Backup não inclui diários de
-      versões conforme o contrato atual. Pronto: ida e volta de notas/imagens no APK, incluindo falhas.
-- [ ] **5.3 — Histórico de versões.** Depende de 4.1. Ativação explícita neste dispositivo, retenção,
-      limpeza, estados de erro e restauração registrada, conforme ADR 0002. Sem sincronização de diários.
-- [ ] **5.4 — Galeria completa.** Depende de 4.5 e 5.1. Imagens soltas e referenciadas, detalhe,
-      nota de origem, compartilhamento e exclusão com tratamento de referências.
-- [x] **5.5 — Lixeira e Configurações.** Restauração/exclusão definitiva, preferências existentes e
-      acesso a Novidades; manter a rota de Configurações distinta da tela de Novidades atual. Executar
-      em dois incrementos: 5.5a para lixeira e 5.5b para configurações, cada um com testes e commit próprios.
+Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado ao verificar.
 
-### Fases 6–7 — validação final e integração Android
+- Insets: primeiro frame, recriação do WebView, laterais e finais; teclado flutuante e dividido.
+- IME (ADR 0003): Gboard em português, SwiftKey, Samsung Keyboard, ditado, versões de WebView,
+  animações ativadas.
+- Retorno: gesto e 3 botões; raiz com gravação pendente/falha; prévia do voltar preditivo.
+- Morte do processo durante a escrita e reabertura.
+- Compartilhar: envio concluído a um app de destino; caminho de falha da ponte; conteúdo do `.md`
+  recebido.
+- Receber texto de um app real; textos muito grandes; falha de gravação logo após receber.
+- Atalho "Nova nota" por toque longo real no ícone do launcher, com teclado aberto no retorno.
+- Arrastar folha com teclado aberto, rolagem interna e gesto do sistema.
+- Links externos e destinos de títulos.
+- Rotação em aparelho físico, janela dividida, teclado em paisagem.
+- Backup: download e seletor de restauração no WebView.
 
-- [ ] **6.1 — Barras do sistema.** (parcial: ícones feitos) Integrar tema efetivo aos ícones nativos e ao fundo das barras;
-      testar Claro/Escuro/Sistema e folhas abertas no APK.
-- [ ] **6.2 — Arrastar folhas.** (parcial: ver estado) Acrescentar gesto de fechar sem conflito com rolagem, teclado ou
-      gesto do sistema. Preservar botão de fechar, retorno de foco e navegação acessível.
-- [ ] **6.3 — Acessibilidade nativa.** TalkBack, foco, alvos e escala 1,3×/2× nos fluxos completos.
-      Acessibilidade básica das telas alteradas é verificada em cada incremento; não fica adiada até aqui.
-- [ ] **6.4 — Matriz de compatibilidade.** Rotação, janela dividida, teclado físico, desempenho em
-      aparelho modesto e casos pendentes do ADR 0003 com animações ativadas. Registrar resultados e
-      limitações por ambiente; não marcar a matriz completa enquanto faltarem evidências.
-- [ ] **7.1 — Receber texto compartilhado.** (parcial: ver estado) Criar nota apenas após validar o conteúdo; tratar app
-      aberto/fechado, repetição do intent, cancelamento e gravação. Independente do compartilhamento de saída.
-- [ ] **7.2 — “Abrir com” arquivos.** Fechar cópia interna versus edição do original antes de
-      implementar. Definir URIs/permissões, tipos aceitos, conflitos e reabertura; não extrapolar ADR 0001.
-- [ ] **7.3 — Atalho Android “Nova nota”.** (parcial: ver estado) Validar app aberto/fechado, teclado e nota única por ação.
+## Evidências registradas
 
-## Estado da implementação
-
-A seleção da casca é por plataforma; uma janela desktop estreita continua desktop. Em desenvolvimento,
-`/?platform=mobile` permite a prévia no navegador. Não presumir que o build já elimina todo o código da
-outra casca: conferir o bundle antes de registrar esse resultado.
-
-`MobileShell` usa `useNotesStore` e a persistência existente. As ações desktop ainda dependem de sua
-interface; mobile compartilha regras de títulos, nomes e referências wiki por `note-actions.js`, não
-um registro único de ações. `useNavigation` conecta `nav-stack.js` ao histórico e a `sessionStorage`.
-Notas existentes e rotas restauradas abrem em leitura; criação entra em edição visual. Não há modo
-Código mobile. Restaurar após recarga não comprova sobrevivência à morte do processo Android.
-
-A galeria mostra imagens referenciadas nas notas; não oferece ainda imagens soltas, captura,
-compartilhamento ou exclusão. Tarefas abre a nota sem localizar o trecho e não oferece desfazer da
-conclusão. A rota chamada `settings` atualmente exibe apenas Novidades. Não há datas de modificação
-no modelo; datas relativas na lista dependem de trabalho posterior explicitamente planejado.
-
-O tema é visível no cabeçalho e acompanha Sistema; ícones das barras nativas e alguns alvos de
-40/44 px ainda não cumprem o requisito final. Kotlin publica insets, e CSS aplica o padding com
-`max(barras, IME)`; não há padding nativo nem `--app-height`. Medição do APK pode exigir correção,
-sem presumir o comportamento da viewport a partir dos testes que apenas injetam insets.
-
-## Verificação e evidências
-
-Na revisão documental de 2026-10-23 passaram localmente: 300 testes JavaScript (`bun run test`),
-39 testes Rust (`bun run desktop:test`) e 307 E2E (`bun run e2e`, incluindo 26 mobile).
-Esses resultados não aprovam a matriz nativa nem corrigem as pendências de implementação acima.
-
-Na etapa 2.1 (2026-10-23) passaram localmente: 301 testes JavaScript (`bun run test`),
-39 testes Rust (`bun run desktop:test`) e 310 E2E (`bun run e2e`, incluindo 29 mobile).
-Também passaram lint, build e verificação de formatação dos arquivos alterados. Capturas reais
-conferidas em 320 px, com fonte 2×, e em desktop: formulário de renomeação, alvos de 48 px,
-nomes longos, foco e Novidades com imagem local carregada. A renomeação valida nomes vazios,
-inválidos e repetidos e atualiza referências wiki nas notas e na lixeira. O toque longo cancela
-com movimento/rolagem e não abre a nota ao soltar. A verificação usa navegador; teclado Android
-real e ciclo nativo continuam previstos em 2.4/4.1, sem aprovação nativa nesta entrega.
-
-Na etapa 2.2 (2026-10-23) passaram localmente: 301 testes JavaScript (`bun run test`),
-39 testes Rust (`bun run desktop:test`) e 315 E2E (`bun run e2e --workers=1`, incluindo 34 mobile),
-além de lint, build e formatação dos arquivos alterados. A rodada final gerenciou seu próprio
-servidor pelo Playwright e passou sem falhas. Rodadas anteriores tiveram falhas desktop de foco
-em paralelo e uma queda do servidor reutilizado; não foram usadas como aprovação da suíte.
-Eventos reais de toque cobrem exclusão de nota aberta/fixada com busca ativa, desfazer com
-fixação, manutenção da rolagem, arrastes curtos/verticais/reversos/pelas bordas, cancelamento,
-mudança para vertical e soltura duplicada. Capturas em 320 px e desktop foram conferidas,
-assim como a entrada de Novidades e sua imagem local. Gesto do sistema no aparelho Android
-continua na validação nativa de 2.4; esta etapa qualifica a interface no navegador.
-
-Na etapa 2.3 (2026-11-06) o adaptador Android (`SharePlugin.kt`, `share_text`) e a ação na folha já
-existiam desde 0.4.0; esta etapa acrescentou E2E do caminho nativo simulado (sucesso com texto e
-título, falha com nova tentativa, toque repetido). Seletor real do Android não foi exercitado.
-
-Decisão do usuário (0.5.5): o tema não fica visível no cabeçalho; no celular ele está em Mais opções
-(raiz). Isso substitui o requisito antigo de "tema visível no cabeçalho" deste plano e do v2.
-
-Na etapa 2.4 (parcial, 2026-11-06) a rota (sem texto) passou a ser gravada também em `localStorage`
-(`durableStorage` em `nav-stack.js`); sessionStorage tem prioridade e referências a notas removidas
-voltam à lista. Cobertura: unitário e 2 E2E mobile. **Pendente**: prioridade camada → teclado → tela
-→ saída e raiz com gravação pendente/falha no APK, distinção recarga/recriação de WebView/reinício,
-insets e casos do ADR 0003. Todos dependem de aparelho ou emulador (sem `adb` aqui).
-
-Em cada entrega, registrar testes executados e limitações reais. Vincular os problemas #1–24 do v2 a
-testes/checklists com ambiente e resultado; screenshots devem ser inspecionadas. Usar notas longas,
-palavras sem espaços, tabelas válidas de 12 colunas e tabelas iguais, 300 notas e imagens locais com
-proporções variadas quando a tela as exibir. Falhas e dados inválidos ficam em testes específicos.
+- 2026-10-23, revisão: 300 testes JS, 39 Rust, 307 E2E (26 mobile).
+- 2.1 (2026-10-23): 301 JS, 39 Rust, 310 E2E (29 mobile); capturas em 320 px com fonte 2× e
+  desktop; renomeação valida vazio, inválido e repetido e atualiza referências wiki.
+- 2.2 (2026-10-23): 301 JS, 39 Rust, 315 E2E (34 mobile) com `--workers=1`; eventos reais de toque.
+  Rodadas anteriores com falhas desktop de foco em paralelo não valeram como aprovação.
+- 2.3 (2026-11-02 a 06): emulador Android 36 x86_64 (APK debug arm64, SDK 36, NDK 27, JDK 21) abriu
+  a folha e voltou sem erro; Samsung SM-S921B com Android 17 abriu e cancelou o seletor;
+  alinhamento ARM64 de 16 KB confirmado por `llvm-readelf`. Entrega 0.4.0: 348 JS, 43 Rust e 410
+  E2E (dois workers, uma repetição permitida, todos na 1ª tentativa).
+- 2.4 parcial (0.5.4): rota em `localStorage`; no emulador, Voltar fechou a folha e saiu na raiz; a
+  tela Lixeira voltou após `force-stop`.
+- 6.2: `adb input swipe` fechou a folha no emulador. 6.1: ícones das barras conferidos no emulador.
+- Rotação (2026-11-02, emulador, 2400×1080): recuo lateral respeitado; tela e tema mantidos.
+- 7.1 e 7.3: `am start` com app fechado e aberto criou uma nota por ação; girar não duplicou.
+- 5.1 parcial: a lista do sistema mostrou "Sharing 1 file" com o nome correto.
 
 ## Tentativas que falharam
 
-- Em 2.2, capturar explicitamente o ponteiro de toque na linha interferia na captura implícita
-  do botão. O componente mantém a captura nativa de toque. Reconhecer o arraste apenas pelos
-  eventos de ponteiro também permitia ao Chromium suprimir o clique seguinte no Desfazer;
-  bloquear o `touchmove` somente após reconhecer movimento horizontal resolveu o caso,
-  preservando a rolagem vertical. A regressão usa eventos reais de toque.
-
-- A prévia colaborativa falhou duas vezes com `Preview automation snapshot timed out after 15000ms.`
-  A inspeção visual da integração inicial usou o Playwright existente; não é uma limitação permanente.
-- Sincronizar texto por efeito passivo podia reaplicar texto atrasado durante digitação rápida em
-  EditContext. A integração usa efeito de layout, com cobertura E2E de gravação/recarga.
-- Enter do CodeMirror em perfil Android é assíncrono. O teste espera a quebra de linha antes de
-  digitar, sem pausa fixa.
+- Em 2.2, capturar explicitamente o ponteiro de toque na linha interferia na captura implícita do
+  botão; o componente mantém a captura nativa. Reconhecer o arraste só por eventos de ponteiro
+  deixava o Chromium suprimir o clique seguinte no Desfazer; bloquear `touchmove` só após
+  reconhecer movimento horizontal resolveu, preservando a rolagem vertical.
+- A prévia colaborativa falhou duas vezes com `Preview automation snapshot timed out after 15000ms.`;
+  a inspeção usou o Playwright do projeto.
+- Sincronizar texto por efeito passivo reaplicava texto atrasado em digitação rápida com
+  EditContext; a integração usa efeito de layout.
+- Enter do CodeMirror no perfil Android é assíncrono; o teste espera a quebra de linha, sem pausa fixa.
 
 ## Dúvidas abertas
 
-- Confirmar cartões como padrão para tabelas com mais de três colunas antes de 3.4.
-- Definir referência de bloco de tabela e validade após edição em 3.3, antes de preferência/tela cheia.
-- Escolher editor Código em 4.2; o desktop atual usa `textarea`.
-- Fechar cópia interna versus edição do original em 7.2. Recomendação: cópia interna. Qualquer
-  proposta difícil de reverter deve passar por ADR aprovado, preservando os ADRs 0001 e 0002 aceitos.
-- Compatibilidade nativa ainda pendente conforme ADR 0003: SwiftKey, Gboard em português, IMEs reais,
-  aparelho físico, versões de WebView e animações. O relatório/fixture está entregue; a matriz não.
-
-Histórico de conclusão de tarefas é recurso futuro diferente do histórico local de versões. O segundo
-continua local e fora do backup/sincronização. Não criar novo ADR para cada ajuste reversível de UI;
-decisões locais ficam neste plano e, ao concluir, seus fatos duráveis vão para a documentação apropriada.
-
-## Andamento atual — 2.3 (2026-11-06)
-
-A ponte Android e a ação Compartilhar texto estão implementadas; a prévia web oferece
-Copiar texto. O Android confirma apenas a abertura do seletor, sem garantir envio pelo
-destino. No Samsung SM-S921B com Android 17, abrir e cancelar o seletor foram verificados
-sem envio; a ação fica disponível após cancelar. O alinhamento ARM64 de 16 KB foi
-confirmado por llvm-readelf. O APK 0.4.0 foi gerado; a primeira instalação confirmou a
-versão. O aparelho foi desconectado antes da reinstalação do último APK.
-
-A entrega 0.4.0 reúne também os branches de layouts do editor, abertura de arquivos no
-Windows e empacotamento para Microsoft Store. Corrigidos cliques de tarefas/controles,
-seleção em código, foco das colunas, retorno de seleção e edição de links em tabelas.
-O padding vertical da primeira linha deslocava a seleção e os pontos de arraste; foi
-removido, mantendo o espaçamento normal do Markdown. As medições das guias usam as
-linhas renderizadas. Os testes de geometria aguardam fontes e layout antes de medir.
-
-Verificação local final: 348 testes JavaScript, 43 Rust e 410 E2E passaram, além de lint,
-formatação, build e consistência de versão. A suíte E2E usou dois workers e uma repetição
-permitida, como no CI; todos passaram na primeira tentativa (3,9 minutos). Seleção de
-código foi conferida em capturas reais de 390 e 1280 px. APK e AppImage são gerados
-localmente; o instalador Windows requer ambiente Windows e não foi gerado neste Linux.
-Nenhum workflow de testes foi alterado e nenhuma tag ou publicação foi criada.
-
-Os dois worktrees t3 antigos têm alterações não commitadas e são preservados, inclusive
-seus branches. Seus commits já estão no histórico principal; não incorporar nem apagar
-essas alterações como parte da limpeza dos branches integrados.
+- Decisões em aberto 1–6 da seção 10 dos requisitos, cada uma antes da etapa indicada.
+- Matriz nativa do ADR 0003 continua aberta.
+- Os dois worktrees t3 antigos têm alterações não commitadas; preservá-los com seus branches. Não
+  incorporar nem apagar essas alterações numa limpeza.
 
 ## Próximo passo
 
-2.3 foi implementada em 2026-11-02 (versão 0.3.0): ponte Kotlin `SlothShare` (ACTION_SEND), adaptador
-`src/mobile/share.js`, ação na folha com alternativa de copiar. Evidências: testes JS do adaptador; 3 E2E
-mobile (envio único, cancelamento, falha, cópia); E2E completa com 359 passando e 3 falhas em áreas desktop
-(`tab-position` ×2, `wiki-images-menu` ×1), não comparadas com o HEAD; `update-appimage.test.js` já
-falhava (3 falhas). No emulador Android 36 x86_64 (APK debug arm64, SDK 36, NDK 27, JDK 21) a folha
-abriu com o texto da nota e o botão Voltar do sistema retornou à folha sem erro.
-**Não verificado:** aparelho físico; envio concluído a um app de destino; caminho de falha da ponte.
-O Android não informa o cancelamento da lista do sistema.
-
-**Adiantado em 2026-11-02 (mesma sessão, a pedido do usuário):**
-- 3.1 concluída: botão de ações no cabeçalho da nota; ao mover para a lixeira o app volta à lista (E2E).
-- 5.5 concluída no navegador: Lixeira (Restaurar, Excluir definitivamente com confirmação) e Configurações (tamanho do texto, Restaurar, Novidades), com E2E.
-- Seletor de tema movido para o menu principal; menu à esquerda do título, em uma linha (E2E).
-- 2.4 parcial, verificado no emulador: Voltar fecha a folha e, na raiz, sai do app; a rota passou de
-  sessionStorage para localStorage (só metadados, sem texto) e a tela Lixeira voltou após `force-stop`.
-  Pendentes em 2.4: gravação pendente/falha na raiz, insets laterais/finais, casos do ADR 0003 e
-  distinção entre recarga e recriação da WebView. 2.4 não está concluída.
-
-- 3.2 quase pronta: **Buscar na nota** e recolher/expandir seções (E2E). Copiar código, links wiki e links externos já existiam no Markdown compartilhado; links externos e destinos de títulos não foram verificados no APK, então a 3.2 não está marcada como concluída.
-
-- 3.3 parcial: rolagem local, primeira coluna fixa, contagem de linhas no rótulo e foco por teclado (E2E, tabela de 12 colunas). Faltam cabeçalho fixo na rolagem vertical, referência ao bloco e tabelas iguais; 3.3 não está concluída.
-- 3.6 concluída no navegador: abrir a tarefa no trecho com realce, aviso se a nota mudou, Desfazer na conclusão, tarefas iguais e aninhadas (E2E). Sem verificação em aparelho físico.
-- 6.2 implementada no navegador: arrastar o topo da folha para baixo (mais de 80 px) fecha; botão Fechar e Voltar continuam (E2E com eventos simulados; arraste real por `adb input swipe` fechou a folha no emulador; falta conferir conflito com teclado, rolagem interna e gesto do sistema).
-- 6.1 parcial (só ícones; falta fundo das barras e matriz Claro/Escuro/Sistema com folhas): ponte `SlothSystem.setDarkBars` ajusta os ícones das barras ao tema do app (E2E com ponte simulada; conferência visual no emulador abaixo).
-
-- Evidência de rotação (2026-11-02, emulador Android 36, paisagem 2400×1080): lista, cabeçalho e barra inferior respeitaram o recuo lateral e o app manteve a tela e o tema sem recriar. Não cobre aparelho físico, janela dividida nem teclado em paisagem.
-
-- 7.3 parcial: atalho estático (`shortcuts.xml`, ação `dev.slothnote.app.NEW_NOTE`) e ponte `SlothSystem.takeAction` entregam a ação uma vez. No emulador, `am start -a` com o app fechado e aberto criou uma nota cada; girar a tela não criou outra. Não verificado: toque longo real no ícone do launcher, teclado aberto no retorno e aparelho físico. E2E usa a ponte simulada.
-
-- 7.1 parcial: filtro `SEND text/plain`, ponte `takeSharedText` (entrega única), validação (vazio ignorado, limite de 1.000.000 caracteres) e nota "Texto compartilhado" em leitura. Emulador: `am start -a SEND` com app fechado e aberto criou uma nota por envio; girar a tela não duplicou. E2E com ponte simulada. Não verificado: compartilhamento vindo de um app real, textos muito grandes no aparelho, falha de gravação logo após o recebimento e aparelho físico.
-
-- 5.1 parcial: **Compartilhar como arquivo .md** (`SlothShare.shareFile`: UTF-8, MIME `text/markdown`, FileProvider com leitura temporária, um arquivo por vez em `cache/shared`, apagado a cada envio e na abertura). Emulador: a lista do sistema mostrou "Sharing 1 file" com o nome correto e o arquivo existia no cache. Pendente: exportar pelo seletor do sistema, explicar o tratamento de imagens na interface, cancelamento/falha em aparelho real e conferir o conteúdo recebido por um app de destino.
-
-**Próxima etapa: concluir 2.4**, depois 3.2 (interações de leitura).
+**A1 — Sobre, Configurações e Lixeira completas.** Comece por um componente Sobre compartilhado
+que lê a versão por `getVersion()` no Tauri e por `package.json` no build web.
