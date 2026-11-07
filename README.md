@@ -2,7 +2,7 @@
 
 Um bloco de notas com Markdown para escrever, organizar ideias e fechar a janela sem pensar em salvar. Local, sem conta e com salvamento automático.
 
-![Uma preguiça escrevendo com calma em um caderno](src/assets/welcome-sloth.png)
+![Tela principal do Sloth Note no tema claro, com a lista de notas à esquerda e uma nota com tarefas e tabela aberta no editor](.github/preview.png)
 
 ## Escreva do seu jeito
 
