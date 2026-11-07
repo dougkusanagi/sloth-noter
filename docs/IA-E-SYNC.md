@@ -62,6 +62,12 @@ A interface mostra as etapas em andamento ("Buscando por tags… Lendo 4 resumos
 
 ## 6. Sincronização opcional e provedor GitHub
 
+> **Atualização (2026-11-07):** o primeiro provedor é um servidor próprio no Cloudflare, migrável
+> para uma VPS ([ADR 0009](adr/0009-sincronizacao-por-servidor-proprio.md)); requisitos na
+> [seção 11 do plano mobile](plano-mobile.md#11-sincronização). O GitHub abaixo continua como
+> provedor futuro possível. Se for retomado, prefira um GitHub App com acesso a um único
+> repositório e a API Git Data, em vez de OAuth com escopo `repo` e `git2`.
+
 O app continua local e sem conta por padrão. GitHub é um provedor planejado; também será avaliada uma alternativa gratuita que não exija conta no GitHub. A escolha dessa alternativa permanece em aberto. Backup remoto e sincronização entre dispositivos são entregas distintas.
 
 O contrato de sincronização deve incluir notas, imagens, exclusões, metadados das tarefas e histórico de conclusão, com IDs estáveis, tratamento de conflitos e deduplicação de eventos. O histórico de tarefas é independente dos commits.

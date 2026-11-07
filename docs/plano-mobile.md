@@ -15,11 +15,15 @@ comprova que um recurso esteja implementado nem validado no APK.
 1. **Parte A — paridade com o desktop (prioridade atual).** Toda função do desktop tem um
    caminho por toque no celular, ou uma exclusão registrada com o motivo (seção 4). A Parte A
    também conclui a base Android: insets, teclado, ciclo de vida, retorno e acessibilidade.
+   - **Sincronização no meio da Parte A.** Assim que a usabilidade básica estiver pronta
+     (etapas A1–A4 do plano de execução), a sincronização desktop ↔ celular (seção 11) vem antes
+     do restante da paridade, para testar com dados reais. Decisão do usuário em 2026-11-07
+     ([ADR 0009](adr/0009-sincronizacao-por-servidor-proprio.md)).
 2. **Parte B — ideias novas só do mobile (depois da Parte A).** Recursos que o desktop não tem
    e que tornam o celular melhor que um port (seção 9.1 e 9.2). Não comece nenhum item da Parte
    B antes do critério de passagem da seção 4.3, salvo pedido explícito do usuário.
 3. **Parte C — ideias novas para as duas plataformas (depois da Parte B).** Recursos que mudam
-   desktop e celular juntos: sincronização, IA, hub de projetos, listas de tarefas com
+   desktop e celular juntos: outros provedores de sincronização, IA, hub de projetos, listas de tarefas com
    recorrência e lembretes, ponte por QR (seção 9.3). Elas só começam quando a Parte B estiver
    concluída ou quando o usuário decidir encerrá-la, salvo pedido explícito.
 
@@ -162,11 +166,11 @@ validação no aparelho fica na lista própria do plano de execução e não mud
 | P17 | Recriar página de ajuda                                                                                    | Configurações → Recriar página de ajuda                                               | falta                                                                      | A1    |
 | P18 | Toasts e alerta persistente de falha de gravação com backup                                                | Faixa de erro com Tentar de novo                                                      | parcial: sem ações de backup na falha                                      | A3    |
 | P19 | Dados corrompidos: bloquear, baixar originais, substituir explicitamente                                   | Tela de bloqueio com Tentar de novo                                                   | parcial                                                                    | A3    |
-| P20 | Modos Padrão, Código e Leitura                                                                             | Ler e Editar (Padrão)                                                                 | parcial: falta Código                                                      | A4    |
-| P21 | Barra de seleção: negrito, itálico, código, link, H2, citação, lista, copiar/recortar/colar                | Grupo contextual da barra de formatação + menu nativo de seleção                      | falta (a barra flutuante é ocultada no mobile)                             | A5    |
-| P22 | Comando `/` e menu de inserir blocos                                                                       | Botão **Inserir** com miniaturas; `/` continua ao digitar                             | parcial: `/` vem do editor compartilhado, não conferido no toque           | A5    |
-| P23 | Atalhos de formatação (títulos, listas, tabela, imagem, código)                                            | Barra de formatação; atalhos com teclado físico                                       | falta                                                                      | A5    |
-| P24 | Tab/Shift+Tab em listas, mover itens                                                                       | Recuar/Desrecuar/Mover ↑↓ no grupo de lista                                           | falta                                                                      | A5    |
+| P20 | Modos Padrão, Código e Leitura                                                                             | Ler e Editar (Padrão)                                                                 | parcial: falta Código                                                      | A5    |
+| P21 | Barra de seleção: negrito, itálico, código, link, H2, citação, lista, copiar/recortar/colar                | Grupo contextual da barra de formatação + menu nativo de seleção                      | falta (a barra flutuante é ocultada no mobile)                             | A4    |
+| P22 | Comando `/` e menu de inserir blocos                                                                       | Botão **Inserir** com miniaturas; `/` continua ao digitar                             | parcial: `/` vem do editor compartilhado, não conferido no toque           | A4    |
+| P23 | Atalhos de formatação (títulos, listas, tabela, imagem, código)                                            | Barra de formatação; atalhos com teclado físico                                       | falta                                                                      | A4    |
+| P24 | Tab/Shift+Tab em listas, mover itens                                                                       | Recuar/Desrecuar/Mover ↑↓ no grupo de lista                                           | falta                                                                      | A4    |
 | P25 | Pares ao redor da seleção, colar inteligente, continuar listas com Enter                                   | Editor compartilhado                                                                  | parcial: não conferido com IME                                             | A3    |
 | P26 | Buscar na nota (Ctrl+F)                                                                                    | Folha da nota → Buscar na nota                                                        | parcial: só em Leitura                                                     | A9    |
 | P27 | Substituir na nota (Ctrl+H)                                                                                | Buscar na nota em edição, com Substituir                                              | falta                                                                      | A9    |
@@ -303,16 +307,16 @@ Altura mínima de 52 dp sobre o teclado. Cinco ações no grupo é um teto, não
    Colunas. Insere na linha do cursor. Usa as mesmas ações do menu `/` (`insert-block.js`).
 2. **Grupo do contexto** (até 5 ícones lucide):
 
-   | Cursor em       | Grupo                                                                 |
-   | --------------- | --------------------------------------------------------------------- |
-   | Texto comum     | Aa (estilos) · Lista · Tarefa · Link                                  |
-   | Texto + "Aa"    | Negrito · Itálico · Tachado · Código em linha · Link                  |
-   | Seleção ativa   | Estilos + Copiar · Recortar · Colar (paridade da 0.5.0)               |
-   | Título          | H1 · H2 · H3 · H4 · ¶                                                 |
-   | Item de lista   | Desrecuar · Recuar · Mover ↑ · Mover ↓ · Alternar tarefa              |
-   | Tabela          | Célula ← · Célula → · + Linha · + Coluna · ⋯                          |
-   | Bloco de código | Tab · Linguagem · Copiar bloco · Quebrar linhas                       |
-   | Modo Código     | Até 5 símbolos (Tab, `#`, `-`, `[ ]`, `\|`); demais na folha Símbolos |
+   | Cursor em       | Grupo                                                                                          |
+   | --------------- | ---------------------------------------------------------------------------------------------- |
+   | Texto comum     | Aa (estilos) · Lista · Tarefa · Link                                                           |
+   | Texto + "Aa"    | Negrito · Itálico · Tachado · Código em linha · Link                                           |
+   | Seleção ativa   | Estilos + Copiar · Recortar · Colar (paridade da 0.5.0)                                        |
+   | Título          | H1 · H2 · H3 · H4 · ¶                                                                          |
+   | Item de lista   | Desrecuar · Recuar · Mover ↑ · Mover ↓ · Alternar tarefa                                       |
+   | Tabela          | Célula ← · Célula → · + Linha · + Coluna · ⋯                                                   |
+   | Bloco de código | Tab · Linguagem · Copiar bloco · Quebrar linhas                                                |
+   | Modo Código     | Até 5 símbolos (Tab, `#`, `-`, `[ ]`, `\|`); demais na folha Símbolos; entra com o modo Código |
 
 3. **Desfazer** e **esconder teclado** ficam sempre na barra. **Refazer** fica na folha de
    edição; toque longo no Desfazer é atalho adicional.
@@ -519,7 +523,7 @@ aprovada só por estar nesta lista.
 | #   | Ideia                                                              | Onde está a proposta                                                          | Observação                                                                                                                                    |
 | --- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | C1  | Ponte por QR, sem conta                                            | Este documento                                                                | O desktop mostra um QR com uma nota curta; a câmera do celular cria a nota. Sem rede nem servidor. Definir limite, formato e imagens. **ADR** |
-| C2  | Sincronização e backup remoto opcionais                            | [IA e sync](IA-E-SYNC.md#6-sincronização-opcional-e-provedor-github), ROADMAP | Backup e sincronização são entregas distintas. O histórico de versões continua fora da rede (ADR 0002). **ADR**                               |
+| C2  | Outros provedores de sincronização e backup remoto                 | [IA e sync](IA-E-SYNC.md#6-sincronização-opcional-e-provedor-github), ROADMAP | O servidor próprio (seção 11) vem antes, na Parte A. Aqui ficam GitHub, nuvem do usuário, rede local e a oferta a outras pessoas. **ADR**     |
 | C3  | IA local e assistente                                              | [IA e sync](IA-E-SYNC.md)                                                     | O ROADMAP coloca tarefas e sincronização antes da IA local                                                                                    |
 | C4  | Listas de tarefas, histórico de conclusão, recorrência e lembretes | [ROADMAP](ROADMAP.md), itens 1–3 de "Tarefas, sincronização e mobile"         | Exigem IDs estáveis e formato portável antes de implementar                                                                                   |
 | C5  | Hub de projetos                                                    | [Hub de projetos](HUB-DE-PROJETOS.md)                                         | Proposta sem prioridade                                                                                                                       |
@@ -536,8 +540,10 @@ Tomadas:
 3. Modo Código faz parte do escopo mobile.
 4. Sem `setPadding` nativo geral; contrato da seção 3.2.
 5. Tema fora do cabeçalho; no celular, em Mais opções (0.5.5).
-6. Ordem (2026-11-07): paridade com o desktop (Parte A) → ideias novas só do mobile (Parte B) →
-   ideias novas para as duas plataformas (Parte C).
+6. Ordem (2026-11-07): usabilidade básica (A1–A4) → sincronização por servidor próprio (seção 11)
+   → restante da paridade (A5–A19) → ideias novas só do mobile (Parte B) → ideias novas para as
+   duas plataformas (Parte C).
+7. Sincronização por servidor próprio no Cloudflare, migrável para uma VPS (ADR 0009).
 
 Em aberto (decidir antes da etapa indicada):
 
@@ -545,7 +551,7 @@ Em aberto (decidir antes da etapa indicada):
    tabela. B13 pode tornar a escolha desnecessária.
 2. **Receber arquivos** (A19): cópia interna (recomendado) ou editar o original. Editar no local
    exige ADR próprio, sem alterar o ADR 0001.
-3. **Editor do modo Código** (A4): `textarea` como no desktop ou CodeMirror sem decorações.
+3. **Editor do modo Código** (A5): `textarea` como no desktop ou CodeMirror sem decorações.
 4. **Referência de bloco de tabela** (A11): como identificar a tabela e quando a referência perde
    a validade.
 5. **Colunas em largura compacta** (A12): pilha vertical (recomendado) ou rolagem horizontal.
@@ -553,3 +559,115 @@ Em aberto (decidir antes da etapa indicada):
 
 Os ADRs 0001 e 0002 continuam aceitos e inalterados. O ADR 0003 é um relatório parcial com
 matriz pendente, não uma aprovação de compatibilidade.
+
+## 11. Sincronização
+
+Decisão: [ADR 0009](adr/0009-sincronizacao-por-servidor-proprio.md). Ordem: logo depois da
+usabilidade básica (A1–A4), antes do restante da paridade. As etapas S1–S4 estão no plano de
+execução.
+
+### 11.1 Objetivo
+
+Manter as notas do desktop e do celular da mesma pessoa iguais, para testar o Android com dados
+reais, sem pagar servidor. O servidor de referência roda no plano grátis do Cloudflare (Workers +
+D1 + R2). Uma VPS barata pode substituí-lo sem mudar o app.
+
+### 11.2 Escopo
+
+- **Um servidor por pessoa.** O app não traz servidor embutido. Em Configurações →
+  Sincronização, a pessoa informa o endereço do servidor e a chave de acesso. A sincronização
+  começa desligada. Motivo: os limites grátis valem por conta do Cloudflare, e o projeto não
+  guarda notas de outras pessoas.
+- **Local primeiro.** Sem servidor, sem rede ou com o servidor fora do ar, o app funciona igual.
+  A falha de sincronização nunca bloqueia nem atrasa a gravação local.
+- **Sincroniza:** texto e nome das notas, exclusões e lixeira, imagens locais (`assets/…`),
+  fixadas e grupos.
+- **Não sincroniza:** preferências do aparelho (tema, tamanho do texto, quebra de linha), notas
+  abertas, recentes e buscas recentes, e o histórico de versões, que continua local (ADR 0002).
+- **Não é backup.** O backup JSON continua como está.
+- **Fora desta entrega:** sincronização em segundo plano no Android, notificações, vários
+  usuários por servidor, compartilhar notas e a versão web.
+
+### 11.3 API do servidor
+
+Pequena, versionada (`/v1`) e sem nada específico do Cloudflare no app, para permitir a troca
+por uma VPS. Os detalhes finais saem do ADR de protocolo (S1); esta é a forma esperada:
+
+| Pedido                           | Para quê                                                                                |
+| -------------------------------- | --------------------------------------------------------------------------------------- |
+| `GET /v1/changes?since=<cursor>` | Mudanças desde o cursor: ID, revisão, hash do conteúdo, exclusão; devolve o novo cursor |
+| `GET /v1/notes/:id`              | Conteúdo e metadados de uma revisão                                                     |
+| `PUT /v1/notes/:id`              | Grava com `If-Match: <revisão>`; responde 409 se outro aparelho gravou antes            |
+| `GET` / `PUT /v1/blobs/:sha256`  | Imagens por hash; o `PUT` é idempotente e só acontece se o servidor não tiver o arquivo |
+
+- Autenticação por `Authorization: Bearer <chave>` sobre HTTPS. A chave não fica em texto puro
+  nas preferências: usar o armazenamento seguro de cada sistema (definir em S1).
+- Respostas de erro com código estável (`unauthorized`, `conflict`, `rate_limited`,
+  `server_error`), traduzido na interface como as mensagens de disco atuais.
+
+### 11.4 Servidor de referência
+
+- Código em `server/` no repositório: Worker, D1 para metadados e cursor, R2 para conteúdo e
+  imagens. Implantação com `wrangler` e testes locais com `wrangler dev`/Miniflare.
+- Guia curto no README: criar a conta, implantar, gerar a chave, colar endereço e chave no app.
+- Exportar e importar todos os dados do servidor, para migrar para uma VPS sem perda.
+- Limites do plano grátis consultados em 2026-11-07: D1 com 5 GB, 5 milhões de linhas lidas e
+  100 mil gravadas por dia; R2 com 10 GB por mês, 1 milhão de gravações e listagens e 10 milhões
+  de leituras por mês, saída grátis. Conferir as páginas oficiais antes de S2. O motor agrupa
+  envios e evita listagens; ao passar do limite, o app mostra que o servidor recusou por limite
+  e quando tentar de novo, sem perder nada.
+
+### 11.5 Motor de sincronização
+
+- Módulo puro `src/sync/`, sem React, com testes unitários. As duas cascas o usam pelo contrato de
+  persistência; componentes não chamam a rede nem APIs nativas diretamente.
+- **ID estável por nota.** As notas já têm `id` (UUID). Renomear pelo H1 não muda o ID. Na pasta
+  de notas do desktop, o ID fica no estado auxiliar ligado ao nome do arquivo; uma renomeação
+  feita fora do app aparece como nota nova. S1 define como evitar duplicar nesse caso.
+- **Base comum.** Guardar, por nota, a última revisão sincronizada. Com edição nos dois lados,
+  mesclar em três vias por linha. Se as duas edições mudarem o mesmo trecho, manter as duas
+  versões ("Nome (conflito de <aparelho>)") e avisar. Nunca perder texto.
+- **Exclusões** como marcas com data. Restaurar da lixeira num aparelho restaura no outro.
+  Excluir de vez também se propaga.
+- **Imagens** por SHA-256. No desktop e no Android as imagens já usam o mesmo formato de
+  referência (`assets/<uuid>-<nome>`); a versão web usa data URLs e fica fora.
+- **Pasta de notas no desktop.** Os `.md` continuam a fonte de verdade. A sincronização lê e grava
+  pela mesma persistência, com as mesmas regras de conflito de alterações externas.
+- **Quando sincroniza:** ao abrir o app, ao voltar ao primeiro plano, alguns segundos depois de
+  gravar e pelo botão "Sincronizar agora".
+- **Primeira sincronização** de um aparelho com notas num servidor com notas: mostrar antes uma
+  prévia ("12 notas serão enviadas, 30 serão recebidas, 1 conflito") e só seguir com
+  confirmação. Notas com o mesmo nome e o mesmo conteúdo (como a página de ajuda) não duplicam.
+
+### 11.6 Interface
+
+- Configurações → Sincronização nas duas cascas: endereço, chave, Testar conexão, Ligar/Desligar,
+  Sincronizar agora, nome deste aparelho e horário da última sincronização confirmada.
+- Estados: "Sincronizado", "Sincronizando…", "Sem conexão: as mudanças ficam neste aparelho",
+  "Não foi possível sincronizar — tentar de novo", "Limite do servidor atingido". Nunca mostrar
+  "Sincronizado" sem a confirmação do servidor.
+- Conflito: aviso com acesso direto às duas versões.
+- Ao ligar, avisar em linguagem simples: as notas ficam guardadas no servidor da pessoa, e quem
+  controla a conta do Cloudflare (a própria pessoa e o Cloudflare) consegue ler o conteúdo, a
+  menos que a criptografia de ponta a ponta seja adotada.
+
+### 11.7 Testes
+
+- Unitários do motor: mesclagem sem conflito, conflito, exclusão contra edição, restauração,
+  renomeação, imagens repetidas, primeira sincronização, cursor perdido.
+- Testes de contrato da API rodando contra o servidor local; o mesmo conjunto vale para a futura
+  VPS.
+- E2E desktop e mobile com servidor local: dois aparelhos simulados, rede caindo no meio do envio,
+  servidor respondendo 401, 409, 429 e 500.
+- Ponta a ponta real: desktop + APK com o servidor implantado; registrar na lista de validação.
+- Dados: 300 notas, nota de 1 MB, imagens de proporções variadas até 20 MB, nomes com acentos e
+  nomes repetidos.
+
+### 11.8 Decisões em aberto (fechar em S1)
+
+1. **Criptografia de ponta a ponta:** cifrar no aparelho antes de enviar (o servidor não lê nada)
+   ou só HTTPS + chave. Recomendação: cifrar, porque o custo é baixo agora e alto depois.
+2. **Armazenamento da chave** no desktop e no Android.
+3. **Renomeação fora do app** na pasta de notas: como reconhecer e evitar duplicar.
+4. **Retenção no servidor:** guardar só a última revisão ou algumas anteriores.
+5. **Granularidade da mesclagem:** por linha (recomendado) ou por bloco Markdown.

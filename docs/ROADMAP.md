@@ -9,7 +9,7 @@
 - Desktop: os `.md` UTF-8 da pasta escolhida são a fonte de verdade. Abas, preferências, revisões, conflitos e lixeira são estado auxiliar versionado, no diretório de dados do app, sem alterar os `.md` silenciosamente.
 - Componentes React não chamam APIs nativas de arquivo: tudo passa pelo contrato de persistência (`src/persistence*.js`), com implementação web e desktop testadas pela mesma suíte.
 - O webview não recebe acesso global ao filesystem; comandos e capabilities são mínimos.
-- Uso local e sem conta continua sendo o padrão. Android está em implementação, sem depender de sincronização; sync opcional e IA permanecem propostas posteriores em [IA e sync](IA-E-SYNC.md).
+- Uso local e sem conta continua sendo o padrão. Android está em implementação e funciona sem sincronização. A sincronização opcional por servidor próprio está decidida no [ADR 0009](adr/0009-sincronizacao-por-servidor-proprio.md); IA permanece proposta em [IA e sync](IA-E-SYNC.md).
 - Fora de escopo: colaboração em tempo real, plugins, grafo, renderizadores pesados e conta obrigatória para usar o app localmente.
 - Orçamento de leveza: nenhuma requisição externa obrigatória. O JavaScript já excede a meta antiga de 80 kB gzip por causa do editor visual (CodeMirror) e do realce de sintaxe; novas dependências precisam resolver um problema demonstrado (o `sonner` entrou porque quatro avisos fixos empilhavam sobre o editor).
 
@@ -66,9 +66,10 @@ offline já está em andamento, independente dessas capacidades futuras. A ordem
 Android é a do plano de execução; esta lista não a substitui. Todas essas entregas têm prioridade
 sobre IA local, sem substituir os complementos de edição e distribuição acima.
 
-**Ordem entre mobile e recursos novos (2026-11-07):** paridade do Android com o desktop → ideias
-novas só do mobile → ideias novas para as duas plataformas (itens 1–4 abaixo, IA local, hub de
-projetos). O trabalho já aprovado em plano próprio, como status e Quadro de tarefas, segue seu
+**Ordem entre mobile e recursos novos (2026-11-07):** usabilidade básica do Android →
+sincronização desktop ↔ celular por servidor próprio no Cloudflare (ADR 0009; parte do item 4) →
+restante da paridade do Android com o desktop → ideias novas só do mobile → ideias novas para as
+duas plataformas (itens 1–3 e o restante do item 4 abaixo, IA local, hub de projetos). O trabalho já aprovado em plano próprio, como status e Quadro de tarefas, segue seu
 plano. Detalhes na seção 1 dos [requisitos mobile](plano-mobile.md).
 
 Status de tarefas, arquivo de concluídas na própria nota e modo Quadro estão em

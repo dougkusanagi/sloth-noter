@@ -4,8 +4,16 @@ Tipo: tarefa
 
 ## Objetivo
 
-Ordem fixa: (A) paridade da versão Android com o desktop → (B) ideias novas só do mobile →
-(C) ideias novas para as duas plataformas. O **que** fazer está em [requisitos mobile](../plano-mobile.md); este arquivo é a única
+Ordem fixa:
+
+1. **Usabilidade básica no Android** (A1–A4).
+2. **Sincronização** desktop ↔ celular por servidor próprio no Cloudflare (S1–S4), para começar a
+   testar com dados reais ([ADR 0009](../adr/0009-sincronizacao-por-servidor-proprio.md)).
+3. **Restante da paridade** com o desktop (A5–A19).
+4. **Ideias novas só do mobile** (Parte B).
+5. **Ideias novas para as duas plataformas** (Parte C).
+
+O **que** fazer está em [requisitos mobile](../plano-mobile.md); este arquivo é a única
 fonte de **ordem, estado e próximo passo**. Se os dois divergirem, os requisitos valem para o
 escopo e este plano vale para o andamento; corrija a divergência no mesmo commit.
 
@@ -13,8 +21,9 @@ escopo e este plano vale para o andamento; corrija a divergência no mesmo commi
 
 1. Leia `AGENTS.md`, `MEMORY.md`, os [requisitos](../plano-mobile.md) e este plano.
 2. Pegue a **primeira etapa não marcada** da fila cujas dependências estão feitas. Não pule etapas
-   nem adiante itens de outra etapa, salvo pedido explícito do usuário. Não comece a Parte B antes
-   do critério da seção 4.3 dos requisitos, nem a Parte C antes de concluir a Parte B.
+   nem adiante itens de outra etapa, salvo pedido explícito do usuário. A fila abaixo já está na
+   ordem do objetivo. Não comece a Parte B antes do critério da seção 4.3 dos requisitos, nem a
+   Parte C antes de concluir a Parte B.
 3. Faça uma etapa por pedido. Se a etapa for grande, divida em incrementos com commit próprio e
    registre a divisão aqui antes de começar.
 4. Em cada commit, siga o `AGENTS.md`: incremente a versão (`package.json`, `src-tauri/Cargo.toml`,
@@ -69,9 +78,10 @@ Códigos antigos entre parênteses, para ligar com commits e changelogs.
 - [x] Localizar tarefa e desfazer conclusão (3.6).
 - [x] Lixeira e Configurações (5.5).
 
-## Fila — Parte A: paridade e base Android
+## Fila — 1. Usabilidade básica no Android
 
-Os códigos `P#` são linhas da matriz de paridade (requisitos, seção 4).
+Os códigos `P#` são linhas da matriz de paridade (requisitos, seção 4). Usabilidade básica é
+criar, achar, ler, editar com formatação e não perder dados.
 
 - [ ] **A1 — Sobre, Configurações e Lixeira completas.** P10, P12, P14, P17.
       Faz: seção Sobre compartilhada com o desktop (requisitos 5.12), Idioma, Recriar página de
@@ -91,16 +101,47 @@ Os códigos `P#` são linhas da matriz de paridade (requisitos, seção 4).
       medir viewport e IME sem dupla redução; preservar o editor na composição.
       Pronto: testes de falha independentes (requisitos 3.5); pares, colar inteligente e
       continuação de listas conferidos com o perfil Android.
-- [ ] **A4 — Modo Código** (4.2). P20. Depende de A3.
-      Faz: comparar `textarea` e CodeMirror sem decorações e registrar a escolha (decisão 3);
-      preferência por nota; teclas de símbolos na barra.
-      Pronto: texto, seleção, desfazer/refazer e histórico preservados ao alternar; editor
-      desktop inalterado.
-- [ ] **A5 — Barra de formatação, Inserir e seleção** (4.3). P21–P24; problemas 13, 16, 19, 23.
-      Depende de A3 e A4. Requisitos 5.6.
+- [ ] **A4 — Barra de formatação, Inserir e seleção** (4.3). P21–P24; problemas 13, 16, 19, 23.
+      Depende de A3. Requisitos 5.6, exceto a linha "Modo Código", que entra em A5.
       Pronto: todas as ações do grupo por contexto; Inserir com miniaturas e as mesmas ações do
       `/`; copiar/recortar/colar na seleção; alvos de 48 dp em 320 dp e fonte 2×; teclado físico
       sem barra; composição preservada.
+
+**Marco — usabilidade básica:** A1–A4 concluídas no navegador e suíte local completa passando.
+Ao chegar aqui, comece a sincronização.
+
+## Fila — 2. Sincronização
+
+Requisitos na seção 11 dos [requisitos](../plano-mobile.md#11-sincronização); decisão no
+[ADR 0009](../adr/0009-sincronizacao-por-servidor-proprio.md). Depende do marco (A3 é obrigatória:
+a gravação local precisa ser confiável antes de sincronizar).
+
+- [ ] **S1 — Protocolo e decisões.** Fechar as decisões em aberto da seção 11.8 e registrar o
+      protocolo num ADR próprio: formato no servidor, base comum por nota, conflitos, exclusões,
+      imagens entre plataformas, armazenamento da chave e criptografia.
+      Pronto: ADR aceito pelo usuário; testes de contrato da API (casos de sucesso, 409, 401, 429)
+      escritos antes da implementação.
+- [ ] **S2 — Servidor de referência.** `server/` com Worker + D1 + R2, testes locais
+      (`wrangler dev`/Miniflare), script de implantação e guia de instalação no README.
+      Pronto: testes de contrato passam no servidor local; implantação no plano grátis conferida;
+      `docs/architecture.md` atualizado com o novo componente.
+- [ ] **S3 — Motor e desktop.** `src/sync/` puro e testado; Configurações → Sincronização no
+      desktop; estados visíveis; primeira sincronização com prévia; pasta de notas respeitada.
+      Pronto: unitários do motor (mesclagem, conflito, exclusão, imagens, primeira sincronização);
+      E2E desktop com servidor local; texto local nunca perdido em falha de rede ou de servidor.
+- [ ] **S4 — Android e teste ponta a ponta.** Mesma tela no celular; sincronizar ao abrir, ao
+      voltar ao primeiro plano, após gravar e por botão.
+      Pronto: editar a mesma nota no desktop e no celular e ver a mudança chegar nos dois
+      sentidos; conflito gera as duas versões; exclusão e restauração chegam ao outro lado;
+      imagem inserida no celular aparece no desktop. Casos de aparelho na lista de validação.
+
+## Fila — 3. Restante da paridade
+
+- [ ] **A5 — Modo Código** (4.2). P20. Depende de A3 e A4.
+      Faz: comparar `textarea` e CodeMirror sem decorações e registrar a escolha (decisão 3);
+      preferência por nota; teclas de símbolos na barra (linha "Modo Código" de 5.6).
+      Pronto: texto, seleção, desfazer/refazer e histórico preservados ao alternar; editor
+      desktop inalterado.
 - [ ] **A6 — Buscar e comandos.** P2, P3. Requisitos 5.9.
       Pronto: notas por nome e texto com contagem e abertura na 1ª ocorrência; `>` com as ações
       da tela; `#` com títulos; Ctrl+P e Ctrl+Shift+P com teclado físico; foco e voltar corretos.
@@ -125,10 +166,10 @@ Os códigos `P#` são linhas da matriz de paridade (requisitos, seção 4).
       Já feito em 3.3: rolagem local, 1ª coluna fixa, contagem no rótulo, foco por teclado.
       Pronto por parte: cabeçalho fixo e tabelas iguais; cartões; tela cheia com retorno ao
       ponto; edição por célula preservando Markdown e histórico.
-- [ ] **A12 — Colunas e blocos recolhíveis.** P35. Requisitos 5.5. Decisão 5 antes. Depende de A5.
+- [ ] **A12 — Colunas e blocos recolhíveis.** P35. Requisitos 5.5. Decisão 5 antes. Depende de A4.
       Pronto: leitura e edição em 320 dp e 840 dp; "Mover para a coluna…" com desfazer; Markdown
       igual ao do desktop.
-- [ ] **A13 — Imagens** (4.5 e 5.4). P36, P37. Requisitos 5.8. Depende de A5.
+- [ ] **A13 — Imagens** (4.5 e 5.4). P36, P37. Requisitos 5.8. Depende de A4.
       Pronto: câmera e arquivo inserem na nota certa; detalhe com todas as ações do desktop;
       excluir remove referências; permissão, cancelamento e falha testados.
 - [ ] **A14 — Arquivos** (5.1 restante e 5.2). P38, P39.
@@ -161,6 +202,7 @@ Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e deta
 
 Começa só depois da Parte B. As propostas C1–C5 (seção 9.3 dos requisitos) mudam desktop e
 celular e têm documentos próprios; cada uma recebe plano de tarefa próprio quando for aprovada.
+A sincronização pelo servidor próprio não espera a Parte C: ela está na fila 2, acima.
 
 ## Validação no aparelho (pendente)
 
