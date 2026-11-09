@@ -2,6 +2,8 @@
 
 Comportamento atual do editor. O resumo do produto está no [README](../README.md).
 
+No celular, as Configurações oferecem idioma, tamanho do texto, backup, Novidades e Sobre. A Lixeira permite esvaziar após confirmação.
+
 **Ctrl+Shift+P** abre a paleta de comandos: todas as ações do app em uma lista pesquisável (as indisponíveis ficam ocultas), com os atalhos ao lado. **Ctrl+P** continua sendo a busca de notas. **Ctrl+,** abre as Configurações (tema, idioma, tamanho do texto, abas, biblioteca, pasta de notas, backup e atalhos); as mudanças valem na hora. Alertas aparecem como toasts empilhados no canto superior direito; o de falha de gravação continua visível até o problema sumir e traz as ações de backup.
 
 A biblioteca mostra o título e uma prévia de uma linha de cada nota, e a busca procura no nome e no texto. Nomes que começam com sintaxe Markdown (`- [ ]`, `![[`) aparecem sem ela; o arquivo não muda. Na aba de imagens, as miniaturas aparecem em grade com a situação de uso.
