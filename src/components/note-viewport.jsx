@@ -20,6 +20,10 @@ export function NoteViewport({ noteId, mode, positions, visualRef, editorRef, ch
         left: saved?.windowLeft ?? 0,
         behavior: 'instant',
       })
+      if (view && saved?.anchor) {
+        const block = view.lineBlockAt(Math.min(saved.anchor.from, view.state.doc.length))
+        window.scrollBy(0, view.documentTop + block.top - saved.anchor.top)
+      }
     }
     if (view && saved?.selection) {
       const clamp = (position) => Math.min(view.state.doc.length, Math.max(2, position))
@@ -34,11 +38,24 @@ export function NoteViewport({ noteId, mode, positions, visualRef, editorRef, ch
     restoreScroll()
     // Let the editor's initial measurement and the restored selection statistics
     // settle before applying the saved scroll again. Keep this outside CM's measure loop.
-    const frame = saved ? requestAnimationFrame(restoreScroll) : null
-    return () => {
-      disposed = true
-      cancelAnimationFrame(frame)
+    let frame = saved
+      ? requestAnimationFrame(() => {
+          restoreScroll()
+          frame = requestAnimationFrame(restoreScroll)
+        })
+      : null
+    const capture = () => {
+      const block = view?.state.selection.main.empty
+        ? view.lineBlockAtHeight(
+            Math.max(
+              0,
+              (document.querySelector('.app-header')?.getBoundingClientRect().bottom ?? 0) -
+                view.documentTop,
+            ),
+          )
+        : null
       const position = {
+        anchor: block ? { from: block.from, top: view.documentTop + block.top } : null,
         windowTop: window.scrollY,
         windowLeft: window.scrollX,
         top: scroller?.scrollTop ?? 0,
@@ -53,7 +70,18 @@ export function NoteViewport({ noteId, mode, positions, visualRef, editorRef, ch
               }
             : null,
       }
-      positions.set(key, position)
+      return position
+    }
+    let beforeTabClick = null
+    const rememberBeforeBlur = (event) => {
+      if (event.target.closest?.('.tab, .tab-close, .tab-new')) beforeTabClick = capture()
+    }
+    window.addEventListener('pointerdown', rememberBeforeBlur, true)
+    return () => {
+      disposed = true
+      cancelAnimationFrame(frame)
+      window.removeEventListener('pointerdown', rememberBeforeBlur, true)
+      positions.set(key, beforeTabClick ?? capture())
     }
   }, [noteId, mode, positions, visualRef, editorRef])
   return children

@@ -84,3 +84,20 @@ test('detects a selection inside a fenced code block', async () => {
   assert.equal(selectionInCode(tree, 0, 5), false)
   assert.equal(selectionInCode(tree, 0, inside + 4), false)
 })
+
+test('combined emphasis activates both controls and preserves the other format when toggled', () => {
+  for (const [from, to] of [
+    [3, 8],
+    [4, 7],
+    [0, 11],
+  ])
+    assert.deepEqual(activeFormats('***teste***', from, to), ['bold', 'italic'])
+  for (const [action, expected] of [
+    ['bold', '*teste*'],
+    ['italic', '**teste**'],
+  ]) {
+    const text = '***teste***'
+    const edit = formatSelection(text, 3, 8, action)
+    assert.equal(text.slice(0, edit.from) + edit.insert + text.slice(edit.to), expected)
+  }
+})

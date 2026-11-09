@@ -232,3 +232,51 @@ test('wiki headings count tasks that reference their own document', () => {
     total: 1,
   })
 })
+
+test('section totals include every task in linked notes, including nested links', () => {
+  const child = {
+    name: 'Sistema de Estoque.md',
+    body:
+      '# Sistema de Estoque\n' +
+      Array.from(
+        { length: 10 },
+        (_, i) => `- [${i < 4 ? 'x' : i === 4 ? '-' : ' '}] Tarefa ${i}`,
+      ).join('\n'),
+  }
+  const body = '# À Fazer\n\n## Sistemas\n\n- [ ] [[Sistema de Estoque]]'
+  assert.deepEqual(sectionProgress(body, resolvedTasks(body, [child])).get(3), {
+    done: 4,
+    total: 10,
+  })
+  const middle = { name: 'Projetos.md', body: '- [ ] [[Sistema de Estoque]]\n- [x] Outra' }
+  const [task] = resolvedTasks('- [ ] [[Projetos]]', [child, middle])
+  assert.deepEqual(task.progress, { done: 5, total: 11 })
+})
+
+test('a heading linking to a note shows that note task totals without needing a task link below', () => {
+  const notes = [
+    {
+      name: 'Sistema de Estoque.md',
+      body: '# Sistema de Estoque\n- [x] A\n- [x] B\n- [-] C\n- [ ] D',
+    },
+  ]
+  for (const tail of ['', '\n\n- [ ] Uma tarefa local']) {
+    const body = '# À Fazer\n\n## [[Sistema de Estoque]]' + tail
+    assert.deepEqual(sectionProgress(body, undefined, undefined, notes).get(3), {
+      done: 2,
+      total: 4,
+    })
+  }
+  const body = '# À Fazer\n\n## [[Sistema de Estoque#Agora|Estoque]]\n'
+  const scoped = [
+    {
+      name: 'Sistema de Estoque.md',
+      body: '# Estoque\n## Agora\n- [x] A\n- [ ] B\n## Depois\n- [ ] C',
+    },
+  ]
+  assert.deepEqual(sectionProgress(body, undefined, undefined, scoped).get(3), {
+    done: 1,
+    total: 2,
+  })
+  assert.equal(sectionProgress('# T\n## [[Inexistente]]', undefined, undefined, notes).size, 0)
+})

@@ -41,3 +41,10 @@ test('the native shell takes over: the browser fallback no longer changes insets
   await page.evaluate(() => window.__insetsFallback({ ime: 250, keyboard: 'open' }))
   await expect(page.locator(shell)).toHaveCSS('padding-bottom', '0px')
 })
+
+test('navigation and new note remain available in a short landscape viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 740, height: 360 })
+  await page.goto('/?platform=mobile')
+  await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Nova nota', exact: true }).first()).toBeVisible()
+})

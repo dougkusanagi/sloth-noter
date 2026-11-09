@@ -1,7 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { version } from '../../package.json'
 import {
   ArrowLeft,
   Check,
+  Code2,
+  FileText,
+  Menu,
+  Pencil,
   Image as ImageIcon,
   ListChecks,
   Monitor,
@@ -9,15 +14,11 @@ import {
   MoreHorizontal,
   NotebookText,
   Pin,
-  Pencil,
   Plus,
   Search,
   Share2,
   Sun,
   Trash2,
-  Settings,
-  FileText,
-  Copy,
   X,
 } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
@@ -27,28 +28,39 @@ import { useNotesStore } from '../hooks/use-notes-store.js'
 import { usePrefs } from '../hooks/use-prefs.js'
 import { friendlyError } from '../errors.js'
 import { protectPendingSaves } from '../save-lifecycle.js'
+import { ReadingFind } from './reading-find.jsx'
 import { Markdown } from '../markdown.jsx'
 import { VisualEditor } from '../visual-editor.jsx'
 import { displayName, notePreview } from '../note-title.js'
 import { noteSearchResult } from '../note-search.js'
 import { findNote } from '../markdown-model.js'
-import { BackupPanel } from './backup-panel.jsx'
-import { ReadingFind } from './reading-find.jsx'
-import { FONT_SIZE } from '../storage.js'
-import { moveToTrash, purgeFromTrash, restoreFromTrash } from '../notes.js'
-import { importImage, libraryImages, markdownImage } from '../images.js'
+import {
+  moveToTrash,
+  nameFromHeading,
+  purgeFromTrash,
+  reconcileHeadingNames,
+  restoreFromTrash,
+} from '../notes.js'
+import { clearImageCache, importImage, libraryImages, markdownImage } from '../images.js'
+import { createFullBackup, readBackupBundle, restoreBackupImages } from '../backup.js'
 import { ImageThumbnail } from '../components/image-library.jsx'
 import { TasksLibrary } from '../components/tasks-library.jsx'
 import { ChangelogPanel } from '../components/changelog-panel.jsx'
-import { toggleTask } from '../tasks.js'
-import { t } from '../i18n.js'
+import { TrashLibrary } from '../components/trash-library.jsx'
+import { noteTasks, syncLinkedTasks, toggleTask } from '../tasks.js'
+import { ensureDocumentTitles } from '../title.js'
+import { LANGUAGES, t } from '../i18n.js'
+import { FONT_SIZE } from '../storage.js'
 import { useInsets } from './use-insets.js'
 import { useSystemBars } from './use-system-bars.js'
 import { useNativeActions } from './use-native-actions.js'
-import { canShare, canShareFile, shareFile, shareText } from './share.js'
+import { canShareFile, shareFile } from './share.js'
 import { useNavigation } from './use-navigation.js'
 import { newMobileNote, renameMobileNote, updateMobileNote } from './note-actions.js'
 import { SwipeNoteRow } from './swipe-note-row.jsx'
+import { shareAndroidText } from './share.js'
+import { createMobileBack } from './back.js'
+import { saveTextFile } from './file-save.js'
 import './mobile.css'
 
 const destinations = [
@@ -137,6 +149,22 @@ export function MobileShell() {
 function MobileWorkspace({ persistence, loaded, onReload }) {
   const [rename, setRename] = useState(null)
   const [renameError, setRenameError] = useState('')
+  const [purgeId, setPurgeId] = useState(null)
+  const [backupCandidate, setBackupCandidate] = useState(null)
+  const [transferBusy, setTransferBusy] = useState('')
+  const transferPending = useRef(false)
+  const backupInput = useRef(null)
+  const noteInput = useRef(null)
+  function beginTransfer(label) {
+    if (transferPending.current) return false
+    transferPending.current = true
+    setTransferBusy(label)
+    return true
+  }
+  function endTransfer() {
+    transferPending.current = false
+    setTransferBusy('')
+  }
   const press = useRef(null)
   const suppressClick = useRef(false)
   function cancelPress() {
@@ -152,6 +180,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     savePrefs('wrapLines' in change ? { ...change, wrapLinesByNote: {} } : change)
   }
   const { state, dispatch } = useNavigation(current)
+  const navigationState = useRef(state)
+  navigationState.current = state
   const route = state.screens.at(-1)
   const layer = state.layers.at(-1)
   const active = route.name === 'note' ? data.notes.find((note) => note.id === route.id) : null
@@ -159,10 +189,36 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     active && Object.hasOwn(prefs.wrapLinesByNote ?? {}, active.id)
       ? prefs.wrapLinesByNote[active.id]
       : prefs.wrapLines !== false
+  const sheetDrag = useRef(null)
+  // Dragging the sheet heading down closes it; the close button and Back keep working.
+  function endSheetDrag(allowClose) {
+    const drag = sheetDrag.current
+    sheetDrag.current = null
+    if (dialog.current) dialog.current.style.transform = ''
+    if (allowClose && drag && drag.dy > 80) back()
+  }
+  const [findOpen, setFindOpen] = useState(false)
+  const [fold, setFold] = useState({ id: null, body: null, lines: new Set() })
   const [editingId, setEditingId] = useState(null)
   const editing = active && editingId === active.id
+  const codeNotes = Array.isArray(prefs.mobileCodeNotes) ? prefs.mobileCodeNotes : []
+  const sourceMode = Boolean(active && codeNotes.includes(active.id))
+  function setNoteMode(id, source) {
+    const saved = Array.isArray(current.current.preferences.mobileCodeNotes)
+      ? current.current.preferences.mobileCodeNotes.filter((value) => value !== id)
+      : []
+    updatePrefs({ mobileCodeNotes: source ? [...saved, id] : saved })
+  }
+  function insertSymbol(text) {
+    const view = editor.current
+    if (!view || view.composing || view.compositionStarted) return
+    view.dispatch(view.state.replaceSelection(text))
+    view.focus()
+  }
   const [showDone, setShowDone] = useState(false)
   const [imageBusy, setImageBusy] = useState(false)
+  const [shareBusy, setShareBusy] = useState(false)
+  const sharePending = useRef(false)
   const [searchFocused, setSearchFocused] = useState(false)
   const content = useRef(null)
   const editor = useRef(null)
@@ -172,10 +228,34 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const heading = useRef(null)
   const previousRoute = useRef(null)
   const restoreFocus = useRef(null)
+  const taskJump = useRef(null)
   const back = () => {
+    if (transferPending.current) return
     document.activeElement?.blur?.()
     dispatch({ type: 'back' })
   }
+  useEffect(() => {
+    if (!window.SlothShare?.finishActivity) return
+    const handleBack = createMobileBack({
+      getState: () => navigationState.current,
+      keyboardOpen: () => ['open', 'opening'].includes(document.documentElement.dataset.keyboard),
+      back: () => dispatch({ type: 'back' }),
+      hideKeyboard: () => window.SlothShare.hideKeyboard(),
+      flush: async () => {
+        const failure = await writer.current.whenIdle()
+        await store.noteHistory.flush()
+        return failure
+      },
+      finish: () => window.SlothShare.finishActivity(),
+    })
+    const guardedBack = () => (transferPending.current ? true : handleBack())
+    window.__slothMobileBack = guardedBack
+    return () => {
+      if (window.__slothMobileBack === guardedBack) delete window.__slothMobileBack
+    }
+    // dispatch is backed by the stable navigation controller.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [writer, store.noteHistory])
   const query = route.query ?? ''
   const recentSearches = Array.isArray(prefs.mobileRecentSearches)
     ? prefs.mobileRecentSearches.filter((term) => typeof term === 'string').slice(0, 5)
@@ -215,6 +295,27 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   }, [writer, store.noteHistory])
   useLayoutEffect(() => {
     if (content.current) content.current.scrollTop = route.scroll ?? 0
+    if (route.name === 'note' && taskJump.current?.id === route.id) {
+      const target = taskJump.current
+      taskJump.current = null
+      const note = current.current.notes.find((item) => item.id === route.id)
+      const task = note && noteTasks(note.body).find((item) => item.offset === target.offset)
+      const element =
+        task &&
+        note.body.slice(
+          task.offset,
+          note.body.indexOf('\n', task.offset) < 0
+            ? undefined
+            : note.body.indexOf('\n', task.offset),
+        ) === target.line
+          ? content.current?.querySelector(`li[data-source-line="${task.line}"]`)
+          : null
+      if (element) {
+        element.scrollIntoView({ block: 'center' })
+        element.classList.add('mobile-task-highlight')
+        setTimeout(() => element.classList.remove('mobile-task-highlight'), 3000)
+      } else toast.info(t('mobile.taskMissing'))
+    }
     if (previousRoute.current?.name === 'note' && route.name !== 'note')
       restoreFocus.current = previousRoute.current.id
     previousRoute.current = route
@@ -239,7 +340,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     const previous = document.activeElement
     if (!hadLayer.current) focusAfterClose.current = previous
     hadLayer.current = true
-    if (layer.name === 'dialog') dialog.current?.querySelector('input')?.focus()
+    if (layer.name === 'dialog')
+      (dialog.current?.querySelector('input') ?? dialog.current?.querySelector('button'))?.focus()
     else if (
       hadLayer.current &&
       dialog.current?.querySelector('[data-rename-trigger]:not(:disabled)')
@@ -388,7 +490,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     const wasPinned = before.pinnedIds?.includes(id)
     const next = moveToTrash(before, id, Date.now())
     commit(next)
-    if (closeSheet) back()
+    if (closeSheet && route.name === 'note' && route.id === id) window.history.go(-2)
+    else if (closeSheet) back()
     else {
       const focusId = next.notes[Math.min(index, next.notes.length - 1)]?.id
       requestAnimationFrame(() => {
@@ -443,65 +546,138 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             notes: 'menu.notes',
             tasks: 'tasks.title',
             images: 'images.title',
-            settings: 'settings.changelog',
+            settings: 'menu.settings',
+            changelog: 'settings.changelog',
             trash: 'trash.title',
-            prefs: 'menu.settings',
           }[route.name] ?? 'menu.notes',
         )
+  async function importNote(file) {
+    if (!file || !beginTransfer(t('mobile.noteImportWorking'))) return
+    try {
+      if (!/\.(md|markdown|txt)$/i.test(file.name) || file.size > 10 * 1024 * 1024)
+        throw new Error('invalid file')
+      const text = new TextDecoder('utf-8', { fatal: true })
+        .decode(await file.arrayBuffer())
+        .replace(/\r\n/g, '\n')
+      const stem =
+        file.name
+          .replace(/\.(md|markdown|txt)$/i, '')
+          .replace(/[\r\n]/g, ' ')
+          .trim() || 'Nota'
+      const body = /^#\s+\S/.test(text) ? text : `# ${stem}\n\n${text}`
+      const id = crypto.randomUUID()
+      const old = current.current
+      const note = {
+        id,
+        name: nameFromHeading(body, old.notes, id) ?? 'new note.md',
+        body,
+        revision: 0,
+      }
+      commit({ ...old, notes: [note, ...old.notes], openIds: [...old.openIds, id], activeId: id })
+      const failure = await writer.current.whenIdle()
+      dispatch({ type: 'tab', name: 'notes' })
+      if (!failure) toast.success(t('mobile.noteImported'))
+    } catch {
+      toast.error(t('mobile.noteImportFailed'))
+    } finally {
+      endTransfer()
+      if (noteInput.current) noteInput.current.value = ''
+    }
+  }
+  async function exportNote(note) {
+    if (!beginTransfer(t('mobile.noteExportWorking'))) return
+    try {
+      const status = await saveTextFile(note.name, 'text/markdown', note.body)
+      if (status === 'saved') toast.success(t('mobile.noteExportSaved'))
+      else if (status === 'download') toast.success(t('mobile.noteExportStarted'))
+    } catch {
+      toast.error(t('mobile.noteExportFailed'))
+    } finally {
+      endTransfer()
+    }
+  }
+  async function exportBackup() {
+    if (!beginTransfer(t('mobile.backupWorking'))) return
+    try {
+      const body = await createFullBackup(current.current, persistence.invoke)
+      if (new Blob([body]).size > 100 * 1024 * 1024) throw new Error(t('mobile.backupTooLarge'))
+      const status = await saveTextFile('sloth-note-backup.json', 'application/json', body)
+      if (status === 'saved') toast.success(t('mobile.backupSaved'))
+      else if (status === 'download') toast.success(t('backup.downloadStarted'))
+    } catch (cause) {
+      toast.error(t('backup.failed', { error: friendlyError(cause) }))
+    } finally {
+      endTransfer()
+    }
+  }
+  async function chooseBackup(file) {
+    if (!file || !beginTransfer(t('mobile.backupWorking'))) return
+    try {
+      if (file.size > 100 * 1024 * 1024) throw new Error(t('mobile.backupTooLarge'))
+      const candidate = readBackupBundle(await file.text())
+      if (
+        [...candidate.document.notes, ...candidate.document.trash.map((entry) => entry.note)].some(
+          (note) => note.external,
+        )
+      )
+        throw new Error(t('mobile.backupExternal'))
+      setBackupCandidate(candidate)
+      dispatch({ type: 'layer', route: { name: 'dialog' } })
+    } catch (cause) {
+      const known = [t('mobile.backupTooLarge'), t('mobile.backupExternal')]
+      toast.error(known.includes(cause?.message) ? cause.message : t('mobile.backupInvalid'))
+    } finally {
+      endTransfer()
+      if (backupInput.current) backupInput.current.value = ''
+    }
+  }
+  async function restoreBackup() {
+    if (!backupCandidate || !beginTransfer(t('mobile.restoreWorking'))) return
+    try {
+      const failure = await writer.current.whenIdle()
+      if (failure) throw new Error(failure)
+      let restored = ensureDocumentTitles(
+        await restoreBackupImages(backupCandidate, persistence.invoke),
+      )
+      restored = reconcileHeadingNames({ ...restored, notes: syncLinkedTasks(restored.notes) })
+      const saveError = await persistence.save(restored)
+      if (saveError) throw new Error(saveError)
+      clearImageCache()
+      store.replaceSavedDocument(restored)
+      setBackupCandidate(null)
+      setEditingId(null)
+      dispatch({ type: 'tab', name: 'notes' })
+      toast.success(t('mobile.backupRestored'))
+    } catch (cause) {
+      toast.error(t('mobile.restoreFailed', { error: friendlyError(cause) }))
+    } finally {
+      endTransfer()
+    }
+  }
   const copy = (text) =>
     navigator.clipboard
       .writeText(text)
       .then(() => toast(t('mobile.copied')))
       .catch(() => toast.error(t('mobile.copyFailed')))
-  const [purgeId, setPurgeId] = useState(null)
-  const sheetDrag = useRef(null)
-  // Dragging the sheet heading down closes it; the close button and Back keep working.
-  function endSheetDrag(allowClose) {
-    const drag = sheetDrag.current
-    sheetDrag.current = null
-    if (dialog.current) dialog.current.style.transform = ''
-    if (allowClose && drag && drag.dy > 80) back()
-  }
-  const [findOpen, setFindOpen] = useState(false)
-  const [locate, setLocate] = useState(null)
-  useEffect(() => {
-    if (!locate || !active || active.id !== locate.id || editing) return
-    const target = content.current?.querySelector(`[data-source-line="${locate.line}"]`)
-    if (!target || active.body !== locate.body) {
-      toast.info(t('mobile.taskMoved'))
-    } else {
-      target.scrollIntoView({ block: 'center' })
-      target.classList.add('mobile-located')
-      setTimeout(() => target.classList.remove('mobile-located'), 2500)
-    }
-    setLocate(null)
-  }, [locate, active, editing])
-  // Folded section lines belong to one version of one note; any edit can move the lines.
-  const [fold, setFold] = useState({ id: null, body: null, lines: new Set() })
-  const sharing = useRef(false)
-  async function shareAsFile(note) {
-    if (sharing.current) return
-    sharing.current = true
-    window.__shareFailed = () => toast.error(t('mobile.shareFailed'))
+  const shareNote = async (note) => {
+    if (sharePending.current) return
+    sharePending.current = true
+    setShareBusy(true)
     try {
-      await shareFile({ name: note.name, text: note.body })
-    } catch {
-      toast.error(t('mobile.shareFailed'))
+      if (window.SlothShare) {
+        await shareAndroidText(note.body)
+      } else if (navigator.share) {
+        await navigator.share({ title: displayName(note.name), text: note.body })
+      } else {
+        await navigator.clipboard.writeText(note.body)
+        toast(t('mobile.copied'))
+      }
+      back()
+    } catch (error) {
+      if (error?.name !== 'AbortError') toast.error(t('mobile.shareFailed'))
     } finally {
-      sharing.current = false
-    }
-  }
-  async function share(note) {
-    if (sharing.current) return
-    sharing.current = true
-    window.__shareFailed = () => toast.error(t('mobile.shareFailed'))
-    try {
-      const result = await shareText({ title: displayName(note.name), text: note.body })
-      if (result === 'unavailable') copy(note.body)
-    } catch {
-      toast.error(t('mobile.shareFailed'))
-    } finally {
-      sharing.current = false
+      sharePending.current = false
+      setShareBusy(false)
     }
   }
   if (blocked)
@@ -521,6 +697,12 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     <main
       className="mobile-shell"
       data-platform="mobile"
+      onKeyDownCapture={(event) => {
+        if (transferPending.current) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
+      }}
       style={{ '--editor-size': `${prefs.fontSize}px` }}
     >
       <header className="mobile-header">
@@ -536,22 +718,14 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             <ArrowLeft size={22} />
           </button>
         )}
-        {root && (
-          <button
-            className="mobile-icon"
-            aria-label={t('mobile.more')}
-            onClick={() => dispatch({ type: 'layer', route: { name: 'sheet' } })}
-          >
-            <MoreHorizontal size={22} />
-          </button>
-        )}
         <h1 ref={heading} tabIndex={-1} title={title}>
           {root && route.name === 'notes' ? 'Sloth Note' : title}
         </h1>
         {active && (
           <button
-            className={editing ? 'mobile-edit' : 'mobile-icon'}
-            aria-label={editing ? t('mobile.done') : t('mobile.edit')}
+            className="mobile-icon mobile-edit"
+            aria-label={t(editing ? 'mobile.done' : 'mobile.edit')}
+            title={t(editing ? 'mobile.done' : 'mobile.edit')}
             disabled={blocked}
             onClick={() => {
               if (editing) {
@@ -560,20 +734,23 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               } else setEditingId(active.id)
             }}
           >
-            {editing ? (
-              <>
-                <Check size={18} />
-                {t('mobile.done')}
-              </>
-            ) : (
-              <Pencil size={22} aria-hidden="true" />
-            )}
+            {editing ? <Check size={22} /> : <Pencil size={22} />}
           </button>
         )}
-        {active && (
+        {active && editing && (
           <button
             className="mobile-icon"
-            data-note-actions
+            aria-label={t(sourceMode ? 'mobile.visualMode' : 'mobile.codeMode')}
+            title={t(sourceMode ? 'mobile.visualMode' : 'mobile.codeMode')}
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => setNoteMode(active.id, !sourceMode)}
+          >
+            {sourceMode ? <FileText size={22} /> : <Code2 size={22} />}
+          </button>
+        )}
+        {active && !editing && (
+          <button
+            className="mobile-icon"
             aria-label={t('mobile.noteActions', { name: displayName(active.name) })}
             onClick={() => dispatch({ type: 'layer', route: { name: 'sheet', id: active.id } })}
           >
@@ -581,14 +758,19 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           </button>
         )}
       </header>
-      {(error || blocked || warning) && (
+      {(error || blocked) && (
         <div className="mobile-error" role="alert">
           <p>
-            {blocked ? t('mobile.readFailed') : t('mobile.saveFailed')} {error || warning}
+            {blocked ? t('mobile.readFailed') : t('mobile.saveFailed')} {error}
           </p>
           <button onClick={() => (blocked ? onReload() : writer.current.write(current.current))}>
             {t('mobile.retry')}
           </button>
+        </div>
+      )}
+      {warning && (
+        <div className="mobile-error" role="alert">
+          <p>{warning}</p>
         </div>
       )}
       {root && route.name === 'notes' && (
@@ -731,6 +913,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 wrapPage={pageWrap}
                 key={active.id}
                 noteId={active.id}
+                sourceMode={sourceMode}
                 notes={data.notes}
                 body={active.body}
                 onChange={updateBody}
@@ -786,30 +969,36 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             onShowDone={setShowDone}
             onJump={(id, offset) => {
               const note = current.current.notes.find((item) => item.id === id)
-              setLocate(
-                offset == null || !note
-                  ? null
-                  : { id, line: note.body.slice(0, offset).split('\n').length, body: note.body },
-              )
+              if (note && Number.isInteger(offset)) {
+                const end = note.body.indexOf('\n', offset)
+                taskJump.current = {
+                  id,
+                  offset,
+                  line: note.body.slice(offset, end < 0 ? undefined : end),
+                }
+              }
               openNote(id)
             }}
             onToggle={(id, mark) => {
               if (!blocked) {
                 const note = current.current.notes.find((item) => item.id === id)
                 if (note) {
-                  const before = note.body
-                  const next = updateMobileNote(current.current, id, toggleTask(before, mark))
-                  const after = next.notes.find((item) => item.id === id)?.body
-                  commit(next, 'tarefa')
-                  toast(t('mobile.taskUpdated'), {
+                  const updated = toggleTask(note.body, mark)
+                  if (updated === note.body) return
+                  commit(updateMobileNote(current.current, id, updated), 'tarefa')
+                  toast(t('mobile.taskChanged'), {
                     action: {
                       label: t('mobile.undo'),
                       onClick: () => {
-                        // Only undo while the note is exactly as this change left it.
-                        const now = current.current.notes.find((item) => item.id === id)
-                        if (now?.body === after)
-                          commit(updateMobileNote(current.current, id, before), 'tarefa')
-                        else toast.info(t('mobile.taskUndoChanged'))
+                        const latest = current.current.notes.find((item) => item.id === id)
+                        if (!latest || latest.body !== updated) {
+                          toast.info(t('mobile.taskChangedSince'))
+                          return
+                        }
+                        commit(
+                          updateMobileNote(current.current, id, toggleTask(latest.body, mark)),
+                          'tarefa',
+                        )
                       },
                     },
                   })
@@ -846,88 +1035,80 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             )}
           </section>
         )}
-        {route.name === 'settings' && <ChangelogPanel />}
-        {route.name === 'prefs' && (
-          <section className="mobile-prefs" aria-label={t('menu.settings')}>
-            <label htmlFor="mobile-font">{t('settings.fontSize')}</label>
-            <p>{t('settings.fontHint')}</p>
-            <div>
-              <input
-                id="mobile-font"
-                type="range"
-                min={FONT_SIZE.min}
-                max={FONT_SIZE.max}
-                step={1}
-                value={prefs.fontSize}
-                disabled={blocked}
-                onChange={(event) => updatePrefs({ fontSize: Number(event.target.value) })}
-              />
-              <output htmlFor="mobile-font">{prefs.fontSize}px</output>
-            </div>
-            <button
-              disabled={blocked || prefs.fontSize === FONT_SIZE.default}
-              onClick={() => updatePrefs({ fontSize: FONT_SIZE.default })}
+        {route.name === 'trash' && (
+          <TrashLibrary
+            trash={data.trash}
+            query=""
+            onRestore={(id) => commit(restoreFromTrash(current.current, id))}
+            onPurge={(id) => {
+              setPurgeId(id)
+              dispatch({ type: 'layer', route: { name: 'dialog', id } })
+            }}
+          />
+        )}
+        {route.name === 'settings' && (
+          <section className="mobile-settings" aria-label={t('menu.settings')}>
+            <label htmlFor="mobile-language">{t('settings.language')}</label>
+            <select
+              id="mobile-language"
+              value={prefs.language}
+              onChange={(event) => updatePrefs({ language: event.target.value })}
             >
-              {t('settings.fontReset')}
-            </button>
-            <BackupPanel
-              current={current}
-              persistence={persistence}
-              commit={commit}
-              blocked={blocked}
+              {Object.entries(LANGUAGES).map(([id, label]) => (
+                <option key={id} value={id}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <label htmlFor="mobile-font-size">
+              {t('settings.fontSize')}: {prefs.fontSize}px
+            </label>
+            <input
+              id="mobile-font-size"
+              type="range"
+              min={FONT_SIZE.min}
+              max={FONT_SIZE.max}
+              value={prefs.fontSize}
+              onChange={(event) => updatePrefs({ fontSize: Number(event.target.value) })}
             />
-            <button onClick={() => dispatch({ type: 'push', route: { name: 'settings' } })}>
-              <NotebookText size={20} />
+            <p>{t('mobile.backupDetails')}</p>
+            <button disabled={Boolean(transferBusy)} onClick={exportBackup}>
+              {t('mobile.backupSave')}
+            </button>
+            <button disabled={Boolean(transferBusy)} onClick={() => backupInput.current?.click()}>
+              {t('mobile.backupRestore')}
+            </button>
+            <input
+              ref={backupInput}
+              type="file"
+              accept="application/json,.json"
+              hidden
+              onChange={(event) => chooseBackup(event.target.files?.[0])}
+            />
+            <button onClick={() => dispatch({ type: 'push', route: { name: 'changelog' } })}>
               {t('settings.changelog')}
             </button>
+            <h2>{t('mobile.about')}</h2>
+            <p>Sloth Note · {t('mobile.version', { version })}</p>
           </section>
         )}
-        {route.name === 'trash' && (
-          <section className="mobile-trash" aria-label={t('trash.title')}>
-            {data.trash.length === 0 && <p className="mobile-empty">{t('trash.empty')}</p>}
-            {[...data.trash].reverse().map(({ note }) => (
-              <article key={note.id} className="mobile-trash-row">
-                <h2>{displayName(note.name)}</h2>
-                <p>{notePreview(note.body)}</p>
-                <div>
-                  <button
-                    disabled={blocked}
-                    onClick={() => {
-                      commit(restoreFromTrash(current.current, note.id))
-                      toast(t('mobile.restored'))
-                    }}
-                  >
-                    {t('trash.restore')}
-                  </button>
-                  {purgeId === note.id ? (
-                    <>
-                      <button
-                        className="danger"
-                        disabled={blocked}
-                        onClick={() => {
-                          commit(purgeFromTrash(current.current, note.id))
-                          setPurgeId(null)
-                        }}
-                      >
-                        {t('mobile.confirmPurge')}
-                      </button>
-                      <button onClick={() => setPurgeId(null)}>{t('dialog.cancel')}</button>
-                    </>
-                  ) : (
-                    <button
-                      className="danger"
-                      disabled={blocked}
-                      onClick={() => setPurgeId(note.id)}
-                    >
-                      {t('trash.purge')}
-                    </button>
-                  )}
-                </div>
-              </article>
-            ))}
-          </section>
-        )}
+        {route.name === 'changelog' && <ChangelogPanel />}
       </div>
+      {editing && sourceMode && (
+        <div className="mobile-symbols" role="toolbar" aria-label={t('mobile.symbols')}>
+          {['\t', '#', '-', '[ ]', '|', '`', '*'].map((symbol) => (
+            <button
+              key={symbol}
+              type="button"
+              onPointerDown={(event) => event.preventDefault()}
+              onClick={() => insertSymbol(symbol)}
+              aria-label={symbol === '\t' ? 'Tab' : symbol}
+            >
+              {symbol === '\t' ? 'Tab' : symbol}
+            </button>
+          ))}
+        </div>
+      )}
       {root && route.name === 'notes' && (
         <div className="mobile-create">
           <button
@@ -941,38 +1122,46 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           </button>
         </div>
       )}
-      {root && (
-        <nav className="mobile-bottom" aria-label={t('mobile.navigation')}>
-          {destinations.map(([name, Icon, label]) => (
-            <button
-              key={name}
-              aria-current={route.name === name ? 'page' : undefined}
-              onClick={() => {
-                document.activeElement?.blur?.()
-                dispatch({ type: 'tab', name })
-              }}
-            >
-              <Icon size={22} aria-hidden="true" />
-              <span>{t(label)}</span>
-            </button>
-          ))}
-        </nav>
-      )}
       {active && (
         <footer className="mobile-save" role="status">
           {error || blocked ? t('mobile.notSaved') : saving ? t('save.saving') : t('mobile.saved')}
         </footer>
       )}
+      <nav className="mobile-bottom" aria-label={t('mobile.navigation')}>
+        {destinations.map(([name, Icon, label]) => (
+          <button
+            key={name}
+            aria-current={route.name === name ? 'page' : undefined}
+            onClick={() => {
+              document.activeElement?.blur?.()
+              dispatch({ type: 'tab', name })
+            }}
+          >
+            <Icon size={22} aria-hidden="true" />
+            <span>{t(label)}</span>
+          </button>
+        ))}
+        <button
+          aria-label={t('mobile.more')}
+          aria-haspopup="dialog"
+          aria-expanded={Boolean(layer?.name === 'sheet' && !layer.id)}
+          onClick={() => dispatch({ type: 'layer', route: { name: 'sheet' } })}
+        >
+          <Menu size={22} aria-hidden="true" />
+          <span>Menu</span>
+        </button>
+      </nav>
+
       {layer && (
         <div
-          className="mobile-scrim"
+          className={`mobile-scrim${layer.name === 'sheet' && !layer.id ? ' mobile-drawer-scrim' : ''}`}
           onClick={(event) => {
             if (event.target === event.currentTarget) back()
           }}
         >
           <section
             ref={dialog}
-            className="mobile-sheet"
+            className={`mobile-sheet${layer.name === 'sheet' && !layer.id ? ' mobile-drawer' : ''}`}
             role="dialog"
             aria-modal="true"
             aria-label={
@@ -1009,7 +1198,47 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 <X size={22} />
               </button>
             </div>
-            {layer.name === 'dialog' ? (
+            {layer.name === 'dialog' && route.name === 'settings' && backupCandidate ? (
+              <>
+                <p>
+                  {t('dialog.backupReplace', {
+                    notes: backupCandidate.document.notes.length,
+                    trash: backupCandidate.document.trash.length,
+                  })}
+                </p>
+                <button
+                  disabled={Boolean(transferBusy)}
+                  onClick={() => {
+                    setBackupCandidate(null)
+                    back()
+                  }}
+                >
+                  {t('dialog.cancel')}
+                </button>
+                <button disabled={Boolean(transferBusy)} className="danger" onClick={restoreBackup}>
+                  {t('dialog.backupReplaceConfirm')}
+                </button>
+              </>
+            ) : layer.name === 'dialog' && route.name === 'trash' ? (
+              <>
+                <p>
+                  {t('dialog.purge', {
+                    name: data.trash.find((entry) => entry.note.id === purgeId)?.note.name ?? '',
+                  })}
+                </p>
+                <button onClick={back}>{t('dialog.cancel')}</button>
+                <button
+                  className="danger"
+                  onClick={() => {
+                    commit(purgeFromTrash(current.current, purgeId))
+                    setPurgeId(null)
+                    back()
+                  }}
+                >
+                  {t('dialog.purgeConfirm')}
+                </button>
+              </>
+            ) : layer.name === 'dialog' ? (
               <form
                 onSubmit={(event) => {
                   event.preventDefault()
@@ -1074,27 +1303,33 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 >
                   {t('menu.rename')}
                 </button>
-                {route.name === 'note' && active?.id === actionsNote.id && !editing && (
-                  <button
-                    onClick={() => {
-                      setFindOpen(true)
-                      back()
-                    }}
-                  >
-                    <Search size={20} />
-                    {t('find.label')}
-                  </button>
-                )}
-                <button onClick={() => share(actionsNote)}>
-                  {canShare() ? <Share2 size={20} /> : <Copy size={20} />}
-                  {t(canShare() ? 'mobile.share' : 'mobile.copyText')}
+                <button
+                  onClick={() => {
+                    setFindOpen(true)
+                    back()
+                  }}
+                >
+                  {t('mobile.readingFind')}
                 </button>
                 {canShareFile() && (
-                  <button onClick={() => shareAsFile(actionsNote)}>
-                    <FileText size={20} />
+                  <button
+                    onClick={() =>
+                      shareFile({ name: actionsNote.name, text: actionsNote.body }).catch(() =>
+                        toast.error(t('mobile.shareFailed')),
+                      )
+                    }
+                  >
                     {t('mobile.shareFile')}
                   </button>
                 )}
+                <button disabled={shareBusy} onClick={() => shareNote(actionsNote)}>
+                  <Share2 size={20} />
+                  {t(window.SlothShare || navigator.share ? 'mobile.share' : 'mobile.copyText')}
+                </button>
+                <button disabled={Boolean(transferBusy)} onClick={() => exportNote(actionsNote)}>
+                  {t('menu.export')}
+                </button>
+                <p className="mobile-export-hint">{t('mobile.noteExportHint')}</p>
                 <button disabled={blocked} onClick={() => pinNote(actionsNote.id)}>
                   <Pin size={20} />
                   {t(data.pinnedIds?.includes(actionsNote.id) ? 'mobile.unpin' : 'mobile.pin')}
@@ -1111,23 +1346,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             ) : (
               <>
                 <ThemeControl theme={prefs.theme} onChange={updatePrefs} />
-                <button
-                  onClick={() => {
-                    dispatch({ type: 'push', route: { name: 'trash' } })
-                  }}
-                >
-                  <Trash2 size={20} />
-                  {t('trash.title')}
-                  {data.trash.length ? ` (${data.trash.length})` : ''}
-                </button>
-                <button
-                  onClick={() => {
-                    dispatch({ type: 'push', route: { name: 'prefs' } })
-                  }}
-                >
-                  <Settings size={20} />
-                  {t('menu.settings')}
-                </button>
+                <button onClick={() => noteInput.current?.click()}>{t('menu.import')}</button>
                 <button
                   onClick={() => {
                     updatePrefs({ wrapLines: prefs.wrapLines === false })
@@ -1136,17 +1355,37 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 >
                   {t('menu.wrapAll')}
                 </button>
+                <button onClick={() => dispatch({ type: 'push', route: { name: 'trash' } })}>
+                  <Trash2 size={20} />
+                  {t('trash.title')}
+                </button>
                 <button
                   onClick={() => {
                     dispatch({ type: 'push', route: { name: 'settings' } })
                   }}
                 >
                   <NotebookText size={20} />
+                  {t('menu.settings')}
+                </button>
+                <button onClick={() => dispatch({ type: 'push', route: { name: 'changelog' } })}>
+                  <NotebookText size={20} />
                   {t('settings.changelog')}
                 </button>
               </>
             )}
           </section>
+        </div>
+      )}
+      <input
+        ref={noteInput}
+        type="file"
+        accept="text/markdown,text/plain,.md,.markdown,.txt"
+        hidden
+        onChange={(event) => importNote(event.target.files?.[0])}
+      />
+      {transferBusy && (
+        <div className="mobile-transfer" role="status">
+          {transferBusy}
         </div>
       )}
       <Toaster

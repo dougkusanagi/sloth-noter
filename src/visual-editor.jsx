@@ -158,6 +158,7 @@ function insideCodeBlock(state, line) {
 
 export function VisualEditor({
   noteId,
+  scrollSnapshot,
   notes = [],
   body,
   onChange,
@@ -173,7 +174,13 @@ export function VisualEditor({
   readOnly = false,
   wrapLines = true,
   wrapPage = wrapLines,
+  sourceMode = false,
 }) {
+  const modeCompartment = useRef(new Compartment())
+  const visualExtensionsRef = useRef(null)
+  const appliedSourceMode = useRef(sourceMode)
+  const sourceModeRef = useRef(sourceMode)
+  sourceModeRef.current = sourceMode
   const notesCompartment = useRef(new Compartment())
   const wrappingCompartment = useRef(new Compartment())
   const readOnlyCompartment = useRef(new Compartment())
@@ -221,7 +228,7 @@ export function VisualEditor({
 
   function positionToolbar(view) {
     const selection = view.state.selection.main
-    if (selection.empty || !view.hasFocus || view.state.readOnly) {
+    if (sourceModeRef.current || selection.empty || !view.hasFocus || view.state.readOnly) {
       setToolbar(null)
       return
     }
@@ -250,7 +257,7 @@ export function VisualEditor({
   }
 
   function positionInsert(view) {
-    if (blockMenuRef.current) return
+    if (sourceModeRef.current || blockMenuRef.current) return
     view.requestMeasure({
       key: 'insert-trigger',
       read: () => {
@@ -452,7 +459,330 @@ export function VisualEditor({
     }
   }, [tableMenu])
 
+  function sourceExtensions() {
+    return [
+      keymap.of([...defaultKeymap, ...historyKeymap, { key: 'Mod-Shift-z', run: redo }]),
+      EditorView.contentAttributes.of({
+        'aria-label': t('mode.sourceEditor'),
+        spellcheck: 'false',
+        autocapitalize: 'off',
+      }),
+    ]
+  }
+
   useLayoutEffect(() => {
+    const visualExtensions = [
+      keymap.of([
+        {
+          key: 'Shift-Home',
+          run: (view) => {
+            const range = view.state.selection.main
+            if (view.state.selection.ranges.length !== 1 || range.head !== view.state.doc.length)
+              return false
+            view.dispatch({
+              selection: EditorSelection.single(
+                range.anchor,
+                view.state.doc.lineAt(range.head).from,
+              ),
+              scrollIntoView: true,
+            })
+            return true
+          },
+        },
+        {
+          key: 'Mod-d',
+          run: (view) => {
+            const selection = view.state.selection
+            const main = selection.main
+            if (main.empty) {
+              const word = view.state.wordAt(main.head)
+              if (!word) return false
+              view.dispatch({ selection: EditorSelection.single(word.from, word.to) })
+              return true
+            }
+            const text = view.state.sliceDoc(main.from, main.to)
+            const doc = view.state.doc.toString()
+            const occupied = selection.ranges
+            let from = main.to
+            for (let i = 0; i < doc.length; i++) {
+              let found = doc.indexOf(text, from)
+              if (found < 0) found = doc.indexOf(text)
+              if (found < 0) break
+              if (!occupied.some((range) => found < range.to && found + text.length > range.from)) {
+                view.dispatch({
+                  selection: EditorSelection.create(
+                    [...occupied, EditorSelection.range(found, found + text.length)],
+                    occupied.length,
+                  ),
+                })
+                return true
+              }
+              from = found + 1
+              if (from >= doc.length) from = 0
+            }
+            return true
+          },
+        },
+        { key: 'Ctrl-Shift-ArrowUp', run: (view) => moveList(view, -1) },
+        { key: 'Ctrl-Shift-ArrowDown', run: (view) => moveList(view, 1) },
+        { key: 'Enter', run: (view) => moveTable(view, 'enter') },
+        { key: 'Shift-Enter', run: (view) => moveTable(view, 'shift-enter') },
+        { key: 'Tab', run: (view) => indentList(view) },
+        { key: 'Shift-Tab', run: (view) => indentList(view, true) },
+        { key: 'Tab', run: (view) => navigateTitle(view) },
+        { key: 'Shift-Tab', run: (view) => navigateTitle(view, true) },
+        { key: 'Tab', run: (view) => moveTable(view, 'tab') },
+        { key: 'Shift-Tab', run: (view) => moveTable(view, 'shift-tab') },
+        { key: 'ArrowUp', run: (view) => moveTable(view, 'up') },
+        { key: 'ArrowDown', run: (view) => moveTable(view, 'down') },
+        { key: 'ArrowLeft', run: (view) => moveTable(view, 'left') },
+        { key: 'ArrowRight', run: (view) => moveTable(view, 'right') },
+        { key: 'Home', run: (view) => moveTable(view, 'home') },
+        { key: 'End', run: (view) => moveTable(view, 'end') },
+        { key: 'Backspace', run: (view) => moveTable(view, 'backspace') },
+        { key: 'Delete', run: (view) => moveTable(view, 'delete') },
+        { key: 'Enter', run: continueList },
+        { key: 'ArrowDown', run: (view) => navigateToFence(view, 1) },
+        { key: 'ArrowUp', run: (view) => navigateToFence(view, -1) },
+        // Ctrl+I is italic here, not "select parent syntax".
+        ...defaultKeymap.filter((binding) => binding.key !== 'Mod-i'),
+        ...historyKeymap,
+        // CodeMirror binds Ctrl+Shift+Z only on Linux.
+        { key: 'Mod-Shift-z', run: redo, preventDefault: true },
+      ]),
+      EditorView.contentAttributes.of({
+        'aria-label': t('editor.visual'),
+        spellcheck: 'false',
+      }),
+      EditorView.domEventHandlers({
+        keydown: (event, view) => {
+          if (view.state.readOnly && !((event.ctrlKey || event.metaKey) && event.key === 'Enter'))
+            return false
+          if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+            const selection = view.state.selection.main
+            const line = view.state.doc.lineAt(selection.head)
+            if (selection.empty && !line.text.trim() && !insideCodeBlock(view.state, line)) {
+              const coords = view.coordsAtPos(selection.head)
+              if (coords) {
+                event.preventDefault()
+                setInsertAt({
+                  from: line.from,
+                  x: coords.left + 4,
+                  y: coords.top,
+                  hasBodyPlaceholder: line.number === emptyBodyLine(view.state),
+                })
+                setBlockMenu(true)
+                return true
+              }
+            }
+          }
+          const block = blockShortcut(event)
+          if (block) {
+            event.preventDefault()
+            event.stopPropagation()
+            insertBlock(block)
+            return true
+          }
+          if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+            const line = view.state.doc.lineAt(view.state.selection.main.head)
+            const token = inlineSyntax(line.text).find(
+              (token) =>
+                token.kind === 'wiki' &&
+                line.from + token.start <= view.state.selection.main.head &&
+                line.from + token.end >= view.state.selection.main.head,
+            )
+            if (token) {
+              event.preventDefault()
+              callbacks.current.onOpenWiki?.(token.target)
+              return true
+            }
+          }
+          const shortcut = formatShortcut(event)
+          if (shortcut) {
+            const { from, to } = view.state.selection.main
+            const edit = shortcutEdit(view.state.doc.toString(), from, to, shortcut)
+            if (!edit) return false
+            event.preventDefault()
+            event.stopPropagation()
+            view.dispatch({
+              changes: { from: edit.from, to: edit.to, insert: edit.insert },
+              selection: EditorSelection.single(edit.selectionFrom, edit.selectionTo),
+              userEvent: 'formatacao',
+            })
+            return true
+          }
+          return wrapSelectedText(event, view)
+        },
+        paste: (event, view) => {
+          if (view.state.readOnly) {
+            event.preventDefault()
+            return true
+          }
+          const selection = view.state.selection.main
+          const files = clipboardImageFiles(event.clipboardData)
+          if (files.length) {
+            event.preventDefault()
+            event.stopPropagation()
+            callbacks.current.onImageFiles?.(files, { from: selection.from, to: selection.to })
+            return true
+          }
+          const pasted = event.clipboardData?.getData('text/plain')
+          const replacement =
+            pasted && fencedPasteInEmptyBlock(view.state.doc, selection.from, selection.to, pasted)
+          if (!replacement) return false
+          event.preventDefault()
+          view.dispatch({
+            changes: { from: replacement.from, to: replacement.to, insert: replacement.insert },
+            selection: EditorSelection.single(replacement.selection),
+            userEvent: 'input.paste',
+          })
+          return true
+        },
+        mousedown: (event, view) => {
+          const cell = event.target.closest?.('.cm-md-table-cell')
+          if (cell?.dataset.cellEmpty === 'true') {
+            event.preventDefault()
+            event.stopPropagation()
+            const from = Number(cell.dataset.cellFrom)
+            view.focus()
+            view.dispatch({ selection: EditorSelection.single(from), scrollIntoView: true })
+            return true
+          }
+          if (
+            cell &&
+            event.target.closest?.('.cm-md-inline-link') &&
+            !view.state.readOnly &&
+            !event.ctrlKey &&
+            !event.metaKey
+          ) {
+            const from = Number(cell.dataset.cellFrom)
+            const to = Number(cell.dataset.cellTo)
+            if (Number.isSafeInteger(from) && Number.isSafeInteger(to)) {
+              event.preventDefault()
+              view.focus()
+              view.dispatch({ selection: EditorSelection.single(to) })
+              return true
+            }
+          }
+          const wiki = event.target.closest?.('[data-wiki]')
+          if (wiki) {
+            event.preventDefault()
+            event.stopPropagation()
+            callbacks.current.onOpenWiki?.(wiki.dataset.wiki)
+            return true
+          }
+          const link = event.target.closest?.('.cm-md-inline-link')
+          if (
+            link &&
+            (view.state.readOnly || event.ctrlKey || event.metaKey) &&
+            link.dataset.href
+          ) {
+            event.preventDefault()
+            event.stopPropagation()
+            openExternalLink(link.dataset.href).catch((error) => toast.error(String(error)))
+            return true
+          }
+          if (link && !view.state.readOnly && !event.ctrlKey && !event.metaKey) {
+            const position = view.posAtCoords({ x: event.clientX, y: event.clientY }, false)
+            if (position != null) {
+              const from = view.posAtDOM(link, 0)
+              const to = from + link.textContent.length
+              event.preventDefault()
+              view.focus()
+              view.dispatch({
+                selection: EditorSelection.single(Math.max(from, Math.min(to, position))),
+              })
+              return true
+            }
+          }
+          if (cell || event.target.closest?.('button')) return false
+          const line = event.target.closest?.('.cm-line')
+          if (line === event.target && line.querySelector('[data-wiki]') && !view.state.readOnly) {
+            const position = view.posAtCoords({ x: event.clientX, y: event.clientY }, false)
+            if (position != null) {
+              const bounds = view.state.doc.lineAt(view.posAtDOM(line, 0))
+              event.preventDefault()
+              view.focus()
+              view.dispatch({
+                selection: EditorSelection.single(
+                  Math.max(bounds.from, Math.min(bounds.to, position)),
+                ),
+              })
+              return true
+            }
+          }
+          if (line && !line.classList.contains('cm-md-table-row')) return false
+          const position =
+            view.posAtCoords({ x: event.clientX, y: event.clientY }) ??
+            (event.target.closest?.('.cm-content, .cm-scroller') ? view.state.doc.length : null)
+          if (position === null) return false
+          event.preventDefault()
+          view.focus()
+          view.dispatch({ selection: EditorSelection.single(position) })
+          return true
+        },
+        contextmenu: (event, view) => {
+          if (view.state.readOnly) return false
+          const cell = event.target.closest?.('.cm-md-table-cell')
+          if (!cell) return false
+          const from = Number(cell.dataset.cellFrom)
+          if (!Number.isSafeInteger(from)) return false
+          const line = view.state.doc.lineAt(from)
+          const table = tableAt(view.state.doc, line.number)
+          if (!table || line.number === table.first + 1) return false
+          const column = Number(cell.dataset.column)
+          const row = line.number === table.first ? 0 : line.number - table.first - 1
+          const x = Math.max(
+            8,
+            Math.min(event.clientX || cell.getBoundingClientRect().left, window.innerWidth - 270),
+          )
+          const y = Math.max(
+            8,
+            Math.min(event.clientY || cell.getBoundingClientRect().top, window.innerHeight - 250),
+          )
+          event.preventDefault()
+          event.stopPropagation()
+          setTableMenu({
+            x,
+            y,
+            row,
+            column,
+            tableFirst: table.first,
+            columnCount: table.columnCount,
+            hasBody: table.last > table.first + 1,
+          })
+          return true
+        },
+        focus: (_event, view) => {
+          positionToolbar(view)
+          positionInsert(view)
+          return false
+        },
+        blur: (event) => {
+          if (!event.relatedTarget?.closest?.('.format-toolbar')) setToolbar(null)
+          if (!event.relatedTarget?.closest?.('.insert-trigger, .block-menu, .image-insert')) {
+            setInsertAt(null)
+            setBlockMenu(false)
+          }
+          return false
+        },
+      }),
+      foldField,
+      accordionField,
+      columnsField,
+      columnDrag,
+      columnImageHandler.of((files, point) => callbacks.current.onImageFiles?.(files, point)),
+      columnReadServices.of({
+        onCopy: (text) => callbacks.current.onCopy?.(text),
+        onOpenWiki: (target) => callbacks.current.onOpenWiki?.(target),
+      }),
+      railsLayer,
+      liveMarkdown,
+      stickyCodeCopy,
+      codeCopyHandler.of((source) => callbacks.current.onCopy?.(source)),
+    ]
+    visualExtensionsRef.current = visualExtensions
+    appliedSourceMode.current = sourceModeRef.current
     const view = new EditorView({
       state: EditorState.create({
         doc: ensureTitle(body),
@@ -475,336 +805,10 @@ export function VisualEditor({
           codeWrap,
           codeFold,
           EditorState.allowMultipleSelections.of(true),
-          keymap.of([
-            {
-              key: 'Shift-Home',
-              run: (view) => {
-                const range = view.state.selection.main
-                if (
-                  view.state.selection.ranges.length !== 1 ||
-                  range.head !== view.state.doc.length
-                )
-                  return false
-                view.dispatch({
-                  selection: EditorSelection.single(
-                    range.anchor,
-                    view.state.doc.lineAt(range.head).from,
-                  ),
-                  scrollIntoView: true,
-                })
-                return true
-              },
-            },
-            {
-              key: 'Mod-d',
-              run: (view) => {
-                const selection = view.state.selection
-                const main = selection.main
-                if (main.empty) {
-                  const word = view.state.wordAt(main.head)
-                  if (!word) return false
-                  view.dispatch({ selection: EditorSelection.single(word.from, word.to) })
-                  return true
-                }
-                const text = view.state.sliceDoc(main.from, main.to)
-                const doc = view.state.doc.toString()
-                const occupied = selection.ranges
-                let from = main.to
-                for (let i = 0; i < doc.length; i++) {
-                  let found = doc.indexOf(text, from)
-                  if (found < 0) found = doc.indexOf(text)
-                  if (found < 0) break
-                  if (
-                    !occupied.some((range) => found < range.to && found + text.length > range.from)
-                  ) {
-                    view.dispatch({
-                      selection: EditorSelection.create(
-                        [...occupied, EditorSelection.range(found, found + text.length)],
-                        occupied.length,
-                      ),
-                    })
-                    return true
-                  }
-                  from = found + 1
-                  if (from >= doc.length) from = 0
-                }
-                return true
-              },
-            },
-            { key: 'Ctrl-Shift-ArrowUp', run: (view) => moveList(view, -1) },
-            { key: 'Ctrl-Shift-ArrowDown', run: (view) => moveList(view, 1) },
-            { key: 'Enter', run: (view) => moveTable(view, 'enter') },
-            { key: 'Shift-Enter', run: (view) => moveTable(view, 'shift-enter') },
-            { key: 'Tab', run: (view) => indentList(view) },
-            { key: 'Shift-Tab', run: (view) => indentList(view, true) },
-            { key: 'Tab', run: (view) => navigateTitle(view) },
-            { key: 'Shift-Tab', run: (view) => navigateTitle(view, true) },
-            { key: 'Tab', run: (view) => moveTable(view, 'tab') },
-            { key: 'Shift-Tab', run: (view) => moveTable(view, 'shift-tab') },
-            { key: 'ArrowUp', run: (view) => moveTable(view, 'up') },
-            { key: 'ArrowDown', run: (view) => moveTable(view, 'down') },
-            { key: 'ArrowLeft', run: (view) => moveTable(view, 'left') },
-            { key: 'ArrowRight', run: (view) => moveTable(view, 'right') },
-            { key: 'Home', run: (view) => moveTable(view, 'home') },
-            { key: 'End', run: (view) => moveTable(view, 'end') },
-            { key: 'Backspace', run: (view) => moveTable(view, 'backspace') },
-            { key: 'Delete', run: (view) => moveTable(view, 'delete') },
-            { key: 'Enter', run: continueList },
-            { key: 'ArrowDown', run: (view) => navigateToFence(view, 1) },
-            { key: 'ArrowUp', run: (view) => navigateToFence(view, -1) },
-            // Ctrl+I is italic here, not "select parent syntax".
-            ...defaultKeymap.filter((binding) => binding.key !== 'Mod-i'),
-            ...historyKeymap,
-            // CodeMirror binds Ctrl+Shift+Z only on Linux.
-            { key: 'Mod-Shift-z', run: redo, preventDefault: true },
-          ]),
           wrappingCompartment.current.of(wrapPage ? EditorView.lineWrapping : []),
-          EditorView.contentAttributes.of({
-            'aria-label': t('editor.visual'),
-            spellcheck: 'false',
-          }),
-          EditorView.domEventHandlers({
-            keydown: (event, view) => {
-              if (
-                view.state.readOnly &&
-                !((event.ctrlKey || event.metaKey) && event.key === 'Enter')
-              )
-                return false
-              if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
-                const selection = view.state.selection.main
-                const line = view.state.doc.lineAt(selection.head)
-                if (selection.empty && !line.text.trim() && !insideCodeBlock(view.state, line)) {
-                  const coords = view.coordsAtPos(selection.head)
-                  if (coords) {
-                    event.preventDefault()
-                    setInsertAt({
-                      from: line.from,
-                      x: coords.left + 4,
-                      y: coords.top,
-                      hasBodyPlaceholder: line.number === emptyBodyLine(view.state),
-                    })
-                    setBlockMenu(true)
-                    return true
-                  }
-                }
-              }
-              const block = blockShortcut(event)
-              if (block) {
-                event.preventDefault()
-                event.stopPropagation()
-                insertBlock(block)
-                return true
-              }
-              if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-                const line = view.state.doc.lineAt(view.state.selection.main.head)
-                const token = inlineSyntax(line.text).find(
-                  (token) =>
-                    token.kind === 'wiki' &&
-                    line.from + token.start <= view.state.selection.main.head &&
-                    line.from + token.end >= view.state.selection.main.head,
-                )
-                if (token) {
-                  event.preventDefault()
-                  callbacks.current.onOpenWiki?.(token.target)
-                  return true
-                }
-              }
-              const shortcut = formatShortcut(event)
-              if (shortcut) {
-                const { from, to } = view.state.selection.main
-                const edit = shortcutEdit(view.state.doc.toString(), from, to, shortcut)
-                if (!edit) return false
-                event.preventDefault()
-                event.stopPropagation()
-                view.dispatch({
-                  changes: { from: edit.from, to: edit.to, insert: edit.insert },
-                  selection: EditorSelection.single(edit.selectionFrom, edit.selectionTo),
-                  userEvent: 'formatacao',
-                })
-                return true
-              }
-              return wrapSelectedText(event, view)
-            },
-            paste: (event, view) => {
-              if (view.state.readOnly) {
-                event.preventDefault()
-                return true
-              }
-              const selection = view.state.selection.main
-              const files = clipboardImageFiles(event.clipboardData)
-              if (files.length) {
-                event.preventDefault()
-                event.stopPropagation()
-                callbacks.current.onImageFiles?.(files, { from: selection.from, to: selection.to })
-                return true
-              }
-              const pasted = event.clipboardData?.getData('text/plain')
-              const replacement =
-                pasted &&
-                fencedPasteInEmptyBlock(view.state.doc, selection.from, selection.to, pasted)
-              if (!replacement) return false
-              event.preventDefault()
-              view.dispatch({
-                changes: { from: replacement.from, to: replacement.to, insert: replacement.insert },
-                selection: EditorSelection.single(replacement.selection),
-                userEvent: 'input.paste',
-              })
-              return true
-            },
-            mousedown: (event, view) => {
-              const cell = event.target.closest?.('.cm-md-table-cell')
-              if (cell?.dataset.cellEmpty === 'true') {
-                event.preventDefault()
-                event.stopPropagation()
-                const from = Number(cell.dataset.cellFrom)
-                view.focus()
-                view.dispatch({ selection: EditorSelection.single(from), scrollIntoView: true })
-                return true
-              }
-              if (
-                cell &&
-                event.target.closest?.('.cm-md-inline-link') &&
-                !view.state.readOnly &&
-                !event.ctrlKey &&
-                !event.metaKey
-              ) {
-                const from = Number(cell.dataset.cellFrom)
-                const to = Number(cell.dataset.cellTo)
-                if (Number.isSafeInteger(from) && Number.isSafeInteger(to)) {
-                  event.preventDefault()
-                  view.focus()
-                  view.dispatch({ selection: EditorSelection.single(to) })
-                  return true
-                }
-              }
-              const wiki = event.target.closest?.('[data-wiki]')
-              if (wiki) {
-                event.preventDefault()
-                event.stopPropagation()
-                callbacks.current.onOpenWiki?.(wiki.dataset.wiki)
-                return true
-              }
-              const link = event.target.closest?.('.cm-md-inline-link')
-              if (
-                link &&
-                (view.state.readOnly || event.ctrlKey || event.metaKey) &&
-                link.dataset.href
-              ) {
-                event.preventDefault()
-                event.stopPropagation()
-                openExternalLink(link.dataset.href).catch((error) => toast.error(String(error)))
-                return true
-              }
-              if (link && !view.state.readOnly && !event.ctrlKey && !event.metaKey) {
-                const position = view.posAtCoords({ x: event.clientX, y: event.clientY }, false)
-                if (position != null) {
-                  const from = view.posAtDOM(link, 0)
-                  const to = from + link.textContent.length
-                  event.preventDefault()
-                  view.focus()
-                  view.dispatch({
-                    selection: EditorSelection.single(Math.max(from, Math.min(to, position))),
-                  })
-                  return true
-                }
-              }
-              if (cell || event.target.closest?.('button')) return false
-              const line = event.target.closest?.('.cm-line')
-              if (
-                line === event.target &&
-                line.querySelector('[data-wiki]') &&
-                !view.state.readOnly
-              ) {
-                const position = view.posAtCoords({ x: event.clientX, y: event.clientY }, false)
-                if (position != null) {
-                  const bounds = view.state.doc.lineAt(view.posAtDOM(line, 0))
-                  event.preventDefault()
-                  view.focus()
-                  view.dispatch({
-                    selection: EditorSelection.single(
-                      Math.max(bounds.from, Math.min(bounds.to, position)),
-                    ),
-                  })
-                  return true
-                }
-              }
-              if (line && !line.classList.contains('cm-md-table-row')) return false
-              const position =
-                view.posAtCoords({ x: event.clientX, y: event.clientY }) ??
-                (event.target.closest?.('.cm-content, .cm-scroller') ? view.state.doc.length : null)
-              if (position === null) return false
-              event.preventDefault()
-              view.focus()
-              view.dispatch({ selection: EditorSelection.single(position) })
-              return true
-            },
-            contextmenu: (event, view) => {
-              if (view.state.readOnly) return false
-              const cell = event.target.closest?.('.cm-md-table-cell')
-              if (!cell) return false
-              const from = Number(cell.dataset.cellFrom)
-              if (!Number.isSafeInteger(from)) return false
-              const line = view.state.doc.lineAt(from)
-              const table = tableAt(view.state.doc, line.number)
-              if (!table || line.number === table.first + 1) return false
-              const column = Number(cell.dataset.column)
-              const row = line.number === table.first ? 0 : line.number - table.first - 1
-              const x = Math.max(
-                8,
-                Math.min(
-                  event.clientX || cell.getBoundingClientRect().left,
-                  window.innerWidth - 270,
-                ),
-              )
-              const y = Math.max(
-                8,
-                Math.min(
-                  event.clientY || cell.getBoundingClientRect().top,
-                  window.innerHeight - 250,
-                ),
-              )
-              event.preventDefault()
-              event.stopPropagation()
-              setTableMenu({
-                x,
-                y,
-                row,
-                column,
-                tableFirst: table.first,
-                columnCount: table.columnCount,
-                hasBody: table.last > table.first + 1,
-              })
-              return true
-            },
-            focus: (_event, view) => {
-              positionToolbar(view)
-              positionInsert(view)
-              return false
-            },
-            blur: (event) => {
-              if (!event.relatedTarget?.closest?.('.format-toolbar')) setToolbar(null)
-              if (!event.relatedTarget?.closest?.('.insert-trigger, .block-menu, .image-insert')) {
-                setInsertAt(null)
-                setBlockMenu(false)
-              }
-              return false
-            },
-          }),
-          foldField,
-          accordionField,
-          columnsField,
-          columnDrag,
-          columnImageHandler.of((files, point) => callbacks.current.onImageFiles?.(files, point)),
-          columnReadServices.of({
-            onCopy: (text) => callbacks.current.onCopy?.(text),
-            onOpenWiki: (target) => callbacks.current.onOpenWiki?.(target),
-          }),
-          railsLayer,
           notesCompartment.current.of(taskNotes.of(notes)),
-          liveMarkdown,
           searchHighlights,
-          stickyCodeCopy,
-          codeCopyHandler.of((source) => callbacks.current.onCopy?.(source)),
+          modeCompartment.current.of(sourceModeRef.current ? sourceExtensions() : visualExtensions),
           EditorView.updateListener.of((update) => {
             if (update.selectionSet || update.docChanged) {
               callbacks.current.onStatisticsSelection?.(
@@ -842,6 +846,7 @@ export function VisualEditor({
         ],
       }),
       parent: host.current,
+      scrollTo: scrollSnapshot,
     })
     viewRef.current = view
     const capturePointerSelection = (event) => {
@@ -896,7 +901,11 @@ export function VisualEditor({
     }
     // Both the document and editor can scroll; the trigger uses viewport coordinates.
     window.addEventListener('scroll', reposition, true)
-    window.addEventListener('resize', reposition)
+    const resize = () => {
+      setBlockMenu(false)
+      reposition()
+    }
+    window.addEventListener('resize', resize)
     const layoutObserver = new ResizeObserver(() => {
       view.dispatch({})
       view.requestMeasure()
@@ -911,7 +920,7 @@ export function VisualEditor({
       callbacks.current.onReady(null)
       viewRef.current = null
       window.removeEventListener('scroll', reposition, true)
-      window.removeEventListener('resize', reposition)
+      window.removeEventListener('resize', resize)
       layoutObserver.disconnect()
       view.scrollDOM.removeEventListener('mousedown', focusBlankArea)
       view.destroy()
@@ -919,6 +928,35 @@ export function VisualEditor({
     // The view is recreated per note; later body changes are synced by the effect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId])
+
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+    let cancelled = false
+    const apply = () => {
+      if (cancelled || viewRef.current !== view) return
+      if (view.composing || view.compositionStarted || appliedSourceMode.current === sourceMode)
+        return
+      appliedSourceMode.current = sourceMode
+      view.dispatch({
+        effects: modeCompartment.current.reconfigure(
+          sourceMode ? sourceExtensions() : visualExtensionsRef.current,
+        ),
+      })
+      setToolbar(null)
+      setInsertAt(null)
+      setBlockMenu(false)
+      setTableMenu(null)
+      setImagePanel(null)
+    }
+    const onCompositionEnd = () => setTimeout(apply, 0)
+    view.contentDOM.addEventListener('compositionend', onCompositionEnd)
+    apply()
+    return () => {
+      cancelled = true
+      view.contentDOM.removeEventListener('compositionend', onCompositionEnd)
+    }
+  }, [sourceMode, noteId])
 
   // Synchronize controlled text before the next browser input; a passive effect can
   // replay an older body over rapid EditContext updates on Android.
@@ -990,7 +1028,7 @@ export function VisualEditor({
   )
   return (
     <div
-      className={`visual-editor${readOnly ? ' read-only' : ''}${blockMenu ? ' block-menu-open' : ''}`}
+      className={`visual-editor${sourceMode ? ' source-mode' : ''}${readOnly ? ' read-only' : ''}${blockMenu ? ' block-menu-open' : ''}`}
       data-wrap-page={wrapPage}
       ref={host}
     >

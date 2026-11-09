@@ -11,6 +11,8 @@ export function useInsets() {
       window.__insetsFallback?.({ ime, keyboard: keyboardState(ime) })
     }
     sync()
+    // Native insets may have arrived before the boot script was ready.
+    window.SlothShare?.requestInsets?.()
     viewport.addEventListener('resize', sync)
     viewport.addEventListener('scroll', sync)
     return () => {

@@ -1,1 +1,0 @@
-Corrigido: No Android, o menu inferior e o botão Nova nota voltam a aparecer após fechar o teclado, concluir a edição e voltar à lista. O botão Editar agora mostra apenas um lápis, mantendo o nome acessível.

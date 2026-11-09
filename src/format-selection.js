@@ -18,6 +18,22 @@ function selectedLines(text, from, to) {
 }
 
 function containingToken(text, from, to, action) {
+  if (action === 'bold' || action === 'italic') {
+    for (const match of text.matchAll(/(?<!\*)\*{3}([^*\n]+)\*{3}(?!\*)/g)) {
+      const start = match.index,
+        end = start + match[0].length
+      if ((from >= start + 3 && to <= end - 3) || (from === start && to === end)) {
+        const remove = action === 'bold' ? 2 : 1
+        return {
+          start: start + 3 - remove,
+          end: end - 3 + remove,
+          contentStart: start + 3,
+          contentEnd: end - 3,
+          content: match[1],
+        }
+      }
+    }
+  }
   const pattern = inlinePatterns[action]
   if (!pattern || text.slice(from, to).includes('\n')) return null
   const lineStart = text.lastIndexOf('\n', from - 1) + 1

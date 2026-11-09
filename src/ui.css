@@ -807,7 +807,7 @@ html:has(
 .block-menu {
   position: fixed;
   z-index: 7;
-  width: 210px;
+  width: 290px;
   max-width: calc(100vw - 16px);
   max-height: min(350px, 60vh);
   overflow: auto;
@@ -3075,9 +3075,6 @@ html:has(
   to {
     opacity: 1;
   }
-}
-.block-menu {
-  width: 290px;
 }
 .block-menu button {
   min-height: 36px;

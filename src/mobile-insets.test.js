@@ -17,3 +17,16 @@ test('keyboard state is open only when the keyboard takes space', () => {
   assert.equal(keyboardState(300), 'open')
   assert.equal(keyboardState(0), 'closed')
 })
+
+test('browser chrome, rounding and pinch zoom do not hide navigation', () => {
+  for (const height of [799.5, 799, 776, 720]) {
+    assert.equal(
+      imeFromViewport({ innerHeight: 800, viewport: { height, offsetTop: 0, scale: 1 } }),
+      0,
+    )
+  }
+  assert.equal(
+    imeFromViewport({ innerHeight: 800, viewport: { height: 400, offsetTop: 0, scale: 2 } }),
+    0,
+  )
+})

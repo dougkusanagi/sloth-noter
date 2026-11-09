@@ -3,17 +3,20 @@ package dev.slothnote.app
 import android.content.ClipData
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
 import android.webkit.JavascriptInterface
+import android.view.View
 import android.webkit.WebView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.core.content.FileProvider
+import androidx.activity.OnBackPressedCallback
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.WindowInsetsCompat
 import java.io.File
+import androidx.core.view.WindowInsetsControllerCompat
 
 class MainActivity : TauriActivity() {
   // One-shot action from a launcher shortcut. The web layer takes it once, so a repeated
@@ -24,6 +27,33 @@ class MainActivity : TauriActivity() {
   private var imeHeight = 0
   private var keyboard = "closed"
   private var animating = false
+  private var lastInsets: WindowInsetsCompat? = null
+  private var pendingFile: Pair<Int, String>? = null
+  private val createFile = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    val pending = pendingFile
+    pendingFile = null
+    if (pending != null) {
+      val uri = result.data?.data
+      if (result.resultCode != RESULT_OK || uri == null) {
+        reportFileResult(pending.first, "cancelled")
+      } else {
+        Thread {
+          val status = try {
+            val stream = contentResolver.openOutputStream(uri, "wt") ?: error("No output stream")
+            stream.bufferedWriter(Charsets.UTF_8).use { it.write(pending.second) }
+            "saved"
+          } catch (_: Exception) {
+            "error"
+          }
+          runOnUiThread { reportFileResult(pending.first, status) }
+        }.start()
+      }
+    }
+  }
+
+  private fun reportFileResult(id: Int, status: String) {
+    webView?.evaluateJavascript("window.__slothFileResult?.($id,'$status')", null)
+  }
 
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
@@ -37,12 +67,30 @@ class MainActivity : TauriActivity() {
     super.onCreate(savedInstanceState)
     if (savedInstanceState == null) readAction(intent)
     File(cacheDir, "shared").listFiles()?.forEach { it.delete() }
+    onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+      override fun handleOnBackPressed() {
+        val view = webView
+        if (view == null) {
+          isEnabled = false
+          onBackPressedDispatcher.onBackPressed()
+          return
+        }
+        view.evaluateJavascript("Boolean(window.__slothMobileBack?.())") { handled ->
+          if (handled != "true") {
+            isEnabled = false
+            onBackPressedDispatcher.onBackPressed()
+            isEnabled = true
+          }
+        }
+      }
+    })
     val content = findViewById<View>(android.R.id.content)
     // The WebView is not padded: its background stays the app's. CSS reads these values
     // (public/insets-boot.js) and pads only the mobile shell.
     ViewCompat.setOnApplyWindowInsetsListener(content) { _, insets ->
+      lastInsets = insets
       imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-      if (!animating) keyboard = if (imeHeight > 0) "open" else "closed"
+      if (!animating) keyboard = if (insets.isVisible(WindowInsetsCompat.Type.ime())) "open" else "closed"
       publish(insets, 1f)
       insets
     }
@@ -95,6 +143,46 @@ class MainActivity : TauriActivity() {
   }
 
   // Opens the system share sheet with plain text. Returns false when it cannot be opened.
+  // Sends the keyboard's animation to the web layer, so the bottom bar moves with the keyboard.
+  private val imeAnimation =
+    object : WindowInsetsAnimationCompat.Callback(WindowInsetsAnimationCompat.Callback.DISPATCH_MODE_STOP) {
+      override fun onStart(
+        animation: WindowInsetsAnimationCompat,
+        bounds: WindowInsetsAnimationCompat.BoundsCompat,
+      ): WindowInsetsAnimationCompat.BoundsCompat {
+        if ((animation.typeMask and WindowInsetsCompat.Type.ime()) != 0) {
+          animating = true
+          keyboard = if (imeHeight == 0) "opening" else "closing"
+        }
+        return bounds
+      }
+
+      override fun onProgress(
+        insets: WindowInsetsCompat,
+        runningAnimations: List<WindowInsetsAnimationCompat>,
+      ): WindowInsetsCompat {
+        val ime = runningAnimations.firstOrNull {
+          (it.typeMask and WindowInsetsCompat.Type.ime()) != 0
+        } ?: return insets
+        lastInsets = insets
+        imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+        publish(insets, ime.interpolatedFraction)
+        return insets
+      }
+
+      override fun onEnd(animation: WindowInsetsAnimationCompat) {
+        if ((animation.typeMask and WindowInsetsCompat.Type.ime()) != 0) {
+          animating = false
+          lastInsets?.let { insets ->
+            imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            keyboard = if (insets.isVisible(WindowInsetsCompat.Type.ime())) "open" else "closed"
+            publish(insets, 1f)
+          }
+        }
+      }
+    }
+
+  // Only sends text selected by the user to Android's chooser. No files or permissions are exposed.
   inner class ShareBridge {
     // Shares a UTF-8 .md file through a content URI (read-only grant). The shared folder
     // holds one file at a time and is emptied on every share and on startup.
@@ -130,63 +218,67 @@ class MainActivity : TauriActivity() {
       }
     }
 
+
     @JavascriptInterface
-    fun shareText(title: String?, text: String?): Boolean {
-      val body = text ?: return false
+    fun requestInsets() {
       runOnUiThread {
-        try {
-          val send = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, title)
-            putExtra(Intent.EXTRA_TEXT, body)
+        val content = findViewById<View>(android.R.id.content)
+        ViewCompat.requestApplyInsets(content)
+      }
+    }
+
+    @JavascriptInterface
+    fun hideKeyboard() {
+      runOnUiThread {
+        val content = findViewById<View>(android.R.id.content)
+        WindowInsetsControllerCompat(window, content).hide(WindowInsetsCompat.Type.ime())
+      }
+    }
+
+    @JavascriptInterface
+    fun finishActivity() {
+      runOnUiThread { finish() }
+    }
+
+    @JavascriptInterface
+    fun saveText(name: String, mime: String, text: String, requestId: Int) {
+      runOnUiThread {
+        if (pendingFile != null) {
+          reportFileResult(requestId, "error")
+        } else {
+          try {
+            pendingFile = Pair(requestId, text)
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+              addCategory(Intent.CATEGORY_OPENABLE)
+              type = mime
+              putExtra(Intent.EXTRA_TITLE, name)
+            }
+            createFile.launch(intent)
+          } catch (_: Exception) {
+            pendingFile = null
+            reportFileResult(requestId, "error")
           }
-          startActivity(Intent.createChooser(send, title))
-        } catch (_: Exception) {
-          webView?.evaluateJavascript("window.__shareFailed?.()", null)
         }
       }
-      return true
+    }
+
+    @JavascriptInterface
+    fun shareText(text: String, requestId: Int) {
+      runOnUiThread {
+        val success = try {
+          val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+          }
+          startActivity(Intent.createChooser(intent, null))
+          true
+        } catch (_: Exception) {
+          false
+        }
+        webView?.evaluateJavascript("window.__slothShareResult?.($requestId,$success)", null)
+      }
     }
   }
-
-  // Sends the keyboard's animation to the web layer, so the bottom bar moves with the keyboard.
-  private val imeAnimation =
-    object : WindowInsetsAnimationCompat.Callback(WindowInsetsAnimationCompat.Callback.DISPATCH_MODE_STOP) {
-      override fun onStart(
-        animation: WindowInsetsAnimationCompat,
-        bounds: WindowInsetsAnimationCompat.BoundsCompat,
-      ): WindowInsetsAnimationCompat.BoundsCompat {
-        if ((animation.typeMask and WindowInsetsCompat.Type.ime()) != 0) {
-          animating = true
-          keyboard = if (imeHeight == 0) "opening" else "closing"
-        }
-        return bounds
-      }
-
-      override fun onProgress(
-        insets: WindowInsetsCompat,
-        runningAnimations: List<WindowInsetsAnimationCompat>,
-      ): WindowInsetsCompat {
-        val ime = runningAnimations.firstOrNull {
-          (it.typeMask and WindowInsetsCompat.Type.ime()) != 0
-        } ?: return insets
-        imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-        publish(insets, ime.interpolatedFraction)
-        return insets
-      }
-
-      override fun onEnd(animation: WindowInsetsAnimationCompat) {
-        if ((animation.typeMask and WindowInsetsCompat.Type.ime()) != 0) {
-          animating = false
-          val insets = ViewCompat.getRootWindowInsets(window.decorView)
-          if (insets != null) {
-            imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-            keyboard = if (imeHeight > 0) "open" else "closed"
-            publish(insets, 1f)
-          }
-        }
-      }
-    }
 
   private fun publish(insets: WindowInsetsCompat, progress: Float) {
     val bars: Insets = insets.getInsets(

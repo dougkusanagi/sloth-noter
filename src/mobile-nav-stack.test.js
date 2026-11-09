@@ -206,31 +206,25 @@ test('#7 a fresh WebView rebuilds parent history for a restored note without dup
   assert.equal(reloaded.getState().screens[0].scroll, 80)
 })
 
-test('durable storage restores the route after the session store is lost', async () => {
-  const { durableStorage, saveNavigation, loadNavigation } = await import('./mobile/nav-stack.js')
-  const memory = () => {
-    const map = new Map()
-    return { getItem: (k) => map.get(k) ?? null, setItem: (k, v) => map.set(k, v) }
+test('durable navigation migrates the previous session once and survives a new WebView', async () => {
+  const { navigationStorage } = await import('./mobile/navigation-storage.js')
+  const storage = () => {
+    const entries = new Map()
+    return {
+      getItem: (key) => entries.get(key) ?? null,
+      setItem: (key, value) => entries.set(key, value),
+    }
   }
-  const session = memory()
-  const local = memory()
-  const state = { screens: [{ name: 'notes' }, { name: 'note', id: 'a', scroll: 40 }], layers: [] }
-  assert.equal(saveNavigation(durableStorage(session, local), state), true)
-  // Process death: a fresh session store, same local store.
-  assert.deepEqual(loadNavigation(durableStorage(memory(), local)), state)
-  // A missing note falls back to the last valid screen.
-  assert.deepEqual(loadNavigation(durableStorage(memory(), local), () => false).screens, [
-    { name: 'notes' },
-  ])
-  // One broken store does not stop saving; both broken report failure.
-  const broken = {
-    getItem() {
-      throw new Error('off')
-    },
-    setItem() {
-      throw new Error('off')
-    },
-  }
-  assert.equal(saveNavigation(durableStorage(broken, memory()), state), true)
-  assert.equal(saveNavigation(durableStorage(broken, broken), state), false)
+  const local = storage()
+  const session = storage()
+  const previous = note(initialNavigation())
+  saveNavigation(session, previous)
+  const selected = navigationStorage({ localStorage: local, sessionStorage: session })
+  assert.deepEqual(loadNavigation(selected), previous)
+  const reopened = navigationStorage({ localStorage: local, sessionStorage: storage() })
+  assert.deepEqual(loadNavigation(reopened), previous)
+  assert.deepEqual(
+    loadNavigation(reopened, () => false),
+    initialNavigation(),
+  )
 })

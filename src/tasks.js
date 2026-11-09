@@ -44,6 +44,17 @@ export function toggleTask(body, mark) {
   return body.slice(0, mark) + (/[xX]/.test(box) ? ' ' : 'x') + body.slice(mark + 1)
 }
 
+/** Linked checklists contribute their underlying tasks, not one summary checkbox. */
+function taskTotals(tasks) {
+  return tasks.reduce(
+    (sum, task) => ({
+      done: sum.done + (task.progress?.done ?? Number(task.done)),
+      total: sum.total + (task.progress?.total ?? 1),
+    }),
+    { done: 0, total: 0 },
+  )
+}
+
 /**
  * Done/total tasks under H2–H6, keyed by heading line. Expanded ancestors omit
  * totals carried entirely by a single subsection; collapsed sections keep their summary.
@@ -74,8 +85,8 @@ export function sectionProgress(body, tasks = noteTasks(body), collapsed = new S
     const linkedDone = referenced.reduce((sum, item) => sum + item.done, 0)
     if (inside.length || linkedTotal)
       progress.set(heading.line, {
-        done: inside.filter((task) => task.done).length + linkedDone,
-        total: inside.length + linkedTotal,
+        done: taskTotals(inside).done + linkedDone,
+        total: taskTotals(inside).total + linkedTotal,
       })
   }
   const redundant = headings.filter((heading) => {
@@ -198,12 +209,12 @@ export function resolvedTasks(body, notes = [], ancestors = new Set(), allowCycl
       children.push(...tasks)
     }
     if (!children.length) return task
-    const done = children.filter((item) => item.done).length
+    const progress = taskTotals(children)
     return {
       ...task,
-      done: done === children.length,
-      partial: done < children.length && children.some((item) => item.done || item.partial),
-      progress: { done, total: children.length },
+      done: progress.done === progress.total,
+      partial: progress.done < progress.total && children.some((item) => item.done || item.partial),
+      progress,
     }
   })
 }

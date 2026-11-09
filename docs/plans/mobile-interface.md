@@ -263,3 +263,122 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 **A1 — Sobre, Configurações e Lixeira completas.** Comece por um componente Sobre compartilhado
 que lê a versão por `getVersion()` no Tauri e por `package.json` no build web.
+
+Validar a lixeira e configurações no APK; continuar retorno e recuperação, leitura e edição,
+seguindo as dependências e preservando os dados. A matriz nativa permanece aberta.
+
+## Retomada em 2026-11-03
+
+- Corrigida a detecção de teclado no fallback web: diferenças menores que 100 px e zoom
+  não ocultam a navegação nem Nova nota. Relato no Android ainda requer reprodução nativa;
+  não considerar esta correção como confirmação da causa no APK.
+- Validação: 336 testes JS, quatro E2E de insets e build web passaram.
+- Próximo passo: reproduzir o desaparecimento no APK e validar a ponte nativa antes de
+  retomar 2.3. Inspeção visual e implementação das demais funções básicas continuam pendentes.
+
+## Continuação: compartilhamento e lixeira
+
+- Compartilhamento de texto implementado pela folha de ações, com seletor Android e alternativa
+  de cópia na prévia. O seletor abriu no emulador API 36 x86_64 com o texto da nota; os testes
+  E2E cobrem abertura e falha simuladas. Cancelar e outros aplicativos ainda exigem verificação.
+- Lixeira acessível pelo menu: restauração e exclusão definitiva com confirmação, cobertas por E2E.
+  Falta inspeção visual e validação nativa da tela antes de concluir 5.5a.
+- A ponte de insets reenvia os limites após a inicialização da interface e publica o estado final
+  da animação. No emulador API 36, a barra do sistema não cobre mais a navegação e o menu e Nova
+  nota voltam após fechar Gboard. Outros teclados e dispositivos continuam pendentes.
+- Próximo passo: validar a lixeira no APK e implementar configurações, recuperação nativa e os
+  demais fluxos básicos ainda abertos neste plano.
+
+- Configurações mobile agora têm idioma, tamanho de texto, Novidades e Sobre com versão do
+  pacote. A navegação tem regressão para paisagem baixa; o CSS não oculta mais o menu nessa condição.
+- Em 2026-11-03, 40 testes E2E mobile passaram; mais cinco testes de insets passaram após
+  remover a regra de paisagem. Configurações foram inspecionadas em 390 e 1280 px.
+- O pedido atual amplia a execução para além de um único incremento; o plano anterior de
+  parar após 2.3 deixa de orientar a sequência. Não houve autorização de push ou publicação.
+- A folha de ações também está disponível no cabeçalho de leitura; mover a nota aberta para a
+  lixeira retorna à lista e mantém Desfazer. Caminho coberto por E2E e cabeçalho inspecionado a 320 px.
+
+## Continuação: edição e tarefas
+
+- Modo Código usa a mesma instância CodeMirror da edição visual, reconfigurada sem decorações;
+  a alternativa textarea desktop exigiria transferir a seleção e substituir o histórico de desfazer.
+  A escolha é local à interface mobile e não muda o formato Markdown. A preferência por nota é
+  guardada nas preferências existentes. A troca espera o fim da composição. Testes de navegador
+  cobrem troca, símbolos, desfazer e recarga; validação de IME e composição no APK ainda falta.
+- A lista de tarefas abre o trecho pela posição e pelo conteúdo da linha, realça-o sem teclado e
+  permite desfazer se a nota não tiver mudado desde a ação. Tarefas idênticas foram testadas.
+- Histórico é enviado ao ocultar a janela; falhas de histórico agora aparecem separadas das falhas
+  de gravação da nota. A interrupção de processo durante escrita ainda requer validação nativa.
+- Ao testar o editor desktop, 28 dos 31 testes passaram na primeira rodada; duas falhas de links
+  também ocorreram com o arquivo original, e a falha do campo vazio passou ao repetir isoladamente.
+  Não considerar a suíte desktop aprovada até investigar essas falhas.
+- A navegação migra a sessão anterior para armazenamento local da WebView, sem gravar texto da
+  nota; referências inválidas são descartadas. Novo contexto de navegador recupera a nota em leitura
+  sem teclado. Ainda falta testar encerramento do processo no APK e gravação pendente.
+- No emulador API 36, a troca visual/código preservou foco e teclado após ajuste de toque. Não há
+  evidência ainda para composição ativa nem Gboard em português.
+- O botão Voltar nativo prioriza camada, teclado e tela. Na raiz, espera a fila de gravação e
+  permanece aberto se ela falhar; testes unitários cobrem fila, falha e toques repetidos. No emulador
+  API 36, Voltar retornou da nota à lista e saiu na raiz. Após `adb force-stop`, a nota aberta foi
+  restaurada em leitura e Voltar retornou à lista. Falta testar falha de gravação no APK e IMEs reais.
+- Próxima implementação: backup e importação/exportação com o seletor Android, tratando falhas e
+  sem sobrescrita silenciosa; depois concluir ferramentas de edição e galeria. O APK ARM64 inclui
+  o estado atual, mas não representa a conclusão das etapas pendentes.
+
+## Continuação: transferência de arquivos
+
+- Backup no Android usa o seletor do sistema e inclui notas e imagens locais; o histórico e imagens
+  externas não são incluídos. A restauração valida o arquivo, exige confirmação e salva antes de
+  substituir a memória, mantendo a cópia anterior. O limite é 100 MB. Backups com notas vinculadas
+  a arquivos externos são recusados para não modificar arquivos fora do app.
+- No emulador API 36, o backup foi salvo em Downloads e selecionado e restaurado pelo seletor.
+  E2E cobre cancelamento, arquivo inválido, falha de gravação, nova tentativa e imagem local no
+  navegador; falta repetir com imagens locais reais no APK e falha de espaço nativa.
+- A importação de Markdown/texto cria cópia com nome único e limite de 10 MB. A exportação usa
+  o seletor Android e informa que imagens separadas não acompanham o texto. Testes de navegador
+  cobrem nome repetido e cancelamento; validação nativa dos arquivos Markdown ainda falta.
+- Próximo passo: testar transferência Markdown e backup com imagens no APK; continuar galeria,
+  inserção e as demais interações de edição e leitura pendentes.
+
+## Ajuste solicitado em 2026-11-06 — cabeçalho e menu
+
+No checkout `t3-ca486162`, que preserva as correções Android anteriores, o cabeçalho agora usa
+uma linha sem quebra, com título truncado e ações de 48 px. Editar/Pronto e alternância do modo
+usam ícones com rótulos acessíveis. O menu principal está no canto inferior direito da navegação,
+também nas notas e telas secundárias, e abre um drawer lateral com o tema. A barra recolhe com
+o teclado, conforme o comportamento existente. O status de gravação fica acima da navegação.
+Teste de regressão cobre 320 px, título longo, leitura/edição, fonte ampliada, posição do menu,
+drawer e devolução do foco. Capturas mobile/desktop inspecionadas. Passaram 53 E2E mobile, 339 testes JS, lint e formatação; a entrada e a captura de Novidades foram verificadas. APK compilado e instalado;
+a conferência física foi concluída no Samsung SM-S921B: leitura e edição mantêm o cabeçalho em uma linha, lápis/check alternam corretamente, a barra recolhe com o teclado e retorna ao tocar Pronto, e Menu abre o drawer lateral com o tema. Nenhum texto foi alterado na nota usada para conferir. Não usar o checkout raiz antigo para gerar
+APKs Android: ele não contém os avanços ainda não commitados deste checkout.
+
+## Planejado — Novidades por versão e índice Markdown
+
+Solicitado em 2026-11-06. Ainda não implementado.
+
+- [ ] Manter um arquivo Markdown por versão em `changelog/X.Y.Z.md`, consolidando os fragmentos
+      de `changelog/unreleased/` no lançamento, sem duplicar os textos na interface.
+- [ ] Usar `CHANGELOG.md` como índice Markdown: cada versão terá número, data, resumo curto e
+      link relativo para seu arquivo completo. Preservar os registros existentes.
+- [ ] Adaptar Novidades para listar as versões pelo índice e abrir o registro selecionado,
+      com retorno ao índice e links/imagens locais funcionando offline.
+- [ ] Identificar mudanças gerais, desktop e Android nos registros, permitindo mostrar as
+      novidades da plataforma ativa sem manter cópias divergentes do mesmo histórico.
+- [ ] Validar leitura do índice, ordenação, navegação, ausência de registros, links e imagens
+      no desktop e no Android. Atualizar a documentação do processo ao entregar a mudança.
+
+Próximo passo deste item: conferir o carregamento atual de `CHANGELOG.md` e `changelog/*.md`,
+definir o formato do resumo no índice e implementar a navegação preservando a fonte única.
+
+## APK de teste compacto — 2026-11-06
+
+Build ARM64 após `gradlew clean`, com `CARGO_PROFILE_DEV_DEBUG=0`,
+`CARGO_PROFILE_DEV_STRIP=debuginfo` e
+`CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS='-C link-arg=-Wl,-z,max-page-size=16384'`.
+O pacote passou de 307.127.011 para 38.555.465 bytes. Conferidas a integridade ZIP, a assinatura
+de teste, o alinhamento ZIP de 16 KB e os segmentos ELF de 16 KB. Esta compilação mantém
+os recursos da versão de teste; continua sendo um APK de depuração, sem publicação.
+
+## Consolidação em 2026-11-09
+
+Os avanços locais dos dois worktrees foram incorporados à main na versão 0.6.0. A raiz passa a ser a origem dos APKs. As notas históricas acima descrevem o estado na data indicada; Novidades por versão já está implementado.

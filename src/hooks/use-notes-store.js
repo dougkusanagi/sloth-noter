@@ -29,10 +29,15 @@ export function useNotesStore({ persistence, loaded, mode, onHistoryWarning }) {
     noteHistory.observe(loaded.document, loaded.document)
     const timer = setInterval(() => void noteHistory.flushIfDue(), 1000)
     const flush = () => void noteHistory.flush()
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
     window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onVisibility)
     return () => {
       clearInterval(timer)
       window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', onVisibility)
       flush()
     }
   }, [noteHistory, loaded.document])
@@ -58,8 +63,17 @@ export function useNotesStore({ persistence, loaded, mode, onHistoryWarning }) {
     if (!blocked) writer.current.write(next)
   }
 
+  // The caller has already persisted this exact document after validating it.
+  function replaceSavedDocument(next) {
+    const previous = current.current
+    current.current = next
+    setData(next)
+    noteHistory.observe(previous, next, 'restauracao')
+  }
+
   return {
     data,
+    replaceSavedDocument,
     setData,
     current,
     commit,

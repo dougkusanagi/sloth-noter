@@ -79,6 +79,8 @@ Para desenvolver o desktop, instale também Rust e os pré-requisitos do Tauri e
 
 ## Android (experimental)
 
+O botão **Menu**, no canto inferior direito, abre o menu lateral nas telas do app. No cabeçalho da nota, o lápis inicia a edição e o check encerra a edição.
+
 Com o SDK Android, NDK e Rust configurados conforme os [pré-requisitos do Tauri](https://v2.tauri.app/start/prerequisites/), execute `bun run android:build` para gerar um APK de depuração ARM64 instalável (Android 7 ou superior). O APK fica em `src-tauri/gen/android/app/build/outputs/apk/`, com o nome `sloth-note-<versão>-android-arm64-debug.apk`.
 
 No Windows, use JDK 21 para o Gradle 8 (por exemplo, `winget install Microsoft.OpenJDK.21`). O comando detecta o SDK no local padrão e o JDK 21 da Microsoft, e usa uma cópia da biblioteca compilada quando o Windows não permite links simbólicos.
@@ -86,9 +88,13 @@ No Windows, use JDK 21 para o Gradle 8 (por exemplo, `winget install Microsoft.O
 As notas ficam no armazenamento interno do aplicativo. A seleção de pastas externas ainda não está disponível no Android; use a colagem nativa do teclado para a área de transferência. Esta compilação não é um pacote de publicação na Play Store.
 
 Para conferir a interface mobile no navegador, rode `bun run dev` e abra
-`http://localhost:5173/?platform=mobile`. A lista permite buscar, criar e abrir notas por toque. No Android, use as ações de uma nota para compartilhar seu texto; na prévia web, a ação copia o texto.
-Notas existentes abrem em leitura; use Editar e Pronto para alternar. A interface Android ainda
-está em implementação: veja o [plano em andamento](docs/plans/mobile-interface.md).
+`http://localhost:5173/?platform=mobile`. A lista permite buscar, criar e abrir notas por toque.
+Notas existentes abrem em leitura; use Editar e Pronto para alternar. Durante a edição, Modo
+código mostra o Markdown e as teclas de símbolos. O menu da nota oferece compartilhamento de
+texto, exportação Markdown e lixeira; o menu principal permite importar Markdown e acessar a
+lixeira, configurações e informações do aplicativo. Em Configurações, salve ou restaure um backup
+de notas e imagens locais; o histórico e imagens externas não entram no backup.
+A interface Android ainda está em implementação: veja o [plano em andamento](docs/plans/mobile-interface.md).
 Os testes mobile rodam localmente com `bun run e2e --project=mobile`.
 
 ## Documentação
