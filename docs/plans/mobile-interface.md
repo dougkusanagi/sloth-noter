@@ -213,7 +213,8 @@ a gravação local precisa ser confiável antes de sincronizar).
 ## Fila — Parte B: ideias novas só do mobile
 
 Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e detalhes nas seções 9.1 e
-9.2 dos requisitos: B1, B2 → B8, B9, B10 → B11–B14 → B3 → B15 → B4–B7, B17 (essas exigem ADR).
+9.2 dos requisitos: B1, B2 → B8, B9, B10 → B16 (modelos de nota ao criar, pedido do usuário em
+2026-11-09: Tarefas, Tabelas e outros) → B11–B14 → B3 → B15 → B4–B7, B17 (essas exigem ADR).
 
 ## Depois deste plano — Parte C: ideias para as duas plataformas
 
@@ -263,6 +264,10 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 - A1 (2026-11-09, 0.7.0): Sobre compartilhado no desktop e no Android, Recriar página de ajuda e
   Esvaziar lixeira no celular; E2E mobile cobre as três ações e o desktop cobre a seção Sobre.
   A versão nativa por `getVersion()` e a leitura em Sobre no APK ficam na validação abaixo.
+- A3 (2026-11-09, 0.8.1): 368 testes JS, 43 Rust e 468 E2E, incluindo seis do ciclo de vida mobile
+  com falha de gravação e backup, dados corrompidos baixados e substituídos, redução única do
+  teclado, composição preservada, pares, colar inteligente e continuação de listas. A captura da
+  faixa de erro está em `public/changelog/mobile-falha-gravacao.png`.
 
 ## Tentativas que falharam
 

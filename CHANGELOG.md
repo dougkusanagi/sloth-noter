@@ -6,6 +6,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 Nenhuma mudança pendente.
 
+## [0.8.2] — 2026-11-09
+
+Registro completo em `changelog/0.8.2.md`.
+
 ## [0.8.1] — 2026-11-09
 
 Registro completo em `changelog/0.8.1.md`.
