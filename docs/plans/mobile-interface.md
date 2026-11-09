@@ -57,8 +57,9 @@ escopo e este plano vale para o andamento; corrija a divergência no mesmo commi
 - Tarefas: `TasksLibrary` com localizar o trecho e desfazer a conclusão.
 - Imagens: galeria das imagens referenciadas, com a nota de origem. Inserir imagem por arquivo no
   editor (`addMobileImages`).
-- Configurações: tamanho do texto, backup (exportar e restaurar) e Novidades. Mais opções: tema,
-  Lixeira, Configurações, quebrar linhas, Novidades. Não há Sobre nem idioma.
+- Configurações: idioma, tamanho do texto, backup (exportar e restaurar), Novidades, Recriar
+  página de ajuda e Sobre, com o mesmo componente do desktop. Mais opções: tema, Lixeira,
+  Configurações, quebrar linhas, Novidades. A Lixeira tem Esvaziar com confirmação.
 - Android: insets e estados do teclado publicados pelo Kotlin; ícones das barras pelo tema
   (`SlothSystem.setDarkBars`); atalho "Nova nota" e receber texto (`SlothSystem.takeAction`,
   `takeSharedText`); compartilhar por `SlothShare`. O `WryActivity` gerado mantém o callback de
@@ -83,13 +84,16 @@ Códigos antigos entre parênteses, para ligar com commits e changelogs.
 Os códigos `P#` são linhas da matriz de paridade (requisitos, seção 4). Usabilidade básica é
 criar, achar, ler, editar com formatação e não perder dados.
 
-- [ ] **A1 — Sobre, Configurações e Lixeira completas.** P10, P12, P14, P17.
+- [x] **A1 — Sobre, Configurações e Lixeira completas.** P10, P12, P14, P17.
       Faz: seção Sobre compartilhada com o desktop (requisitos 5.12), Idioma, Recriar página de
       ajuda e Esvaziar lixeira com confirmação. Reutiliza `i18n.js`, `welcome.js`, ações de
       lixeira de `notes.js`. Decidir a decisão em aberto 6 (modo ao abrir) com o usuário ou
       manter Ler.
       Pronto: versão exibida igual à de `package.json` no desktop, na web e no APK; idioma muda na
-      hora sem chaves expostas; E2E das quatro ações; Novidades conferida.
+      hora sem chaves expostas; E2E das quatro ações; Novidades conferida. Feito em 0.7.0: o
+      componente `src/components/about-panel.jsx` lê `getVersion()` no Tauri e o `package.json` no
+      build web; idioma, Sobre, Recriar página de ajuda e Esvaziar lixeira cobertos por E2E. A
+      decisão 6 (modo ao abrir) permanece em aberto e a nota existente continua abrindo em Ler.
 - [ ] **A2 — Retorno, recuperação e voltar preditivo** (2.4, restante). Problemas 5, 7, 25.
       Faz: prioridade camada → teclado → tela → saída; aviso na raiz com gravação pendente ou
       falha; ponte que ativa o callback de voltar só quando há algo para desempilhar (requisitos
@@ -221,6 +225,7 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 - Links externos e destinos de títulos.
 - Rotação em aparelho físico, janela dividida, teclado em paisagem.
 - Backup: download e seletor de restauração no WebView.
+- Sobre: conferir no APK a versão vinda de `getVersion()` e a leitura em 320 dp e fonte 2×.
 
 ## Evidências registradas
 
@@ -239,6 +244,9 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 - Rotação (2026-11-02, emulador, 2400×1080): recuo lateral respeitado; tela e tema mantidos.
 - 7.1 e 7.3: `am start` com app fechado e aberto criou uma nota por ação; girar não duplicou.
 - 5.1 parcial: a lista do sistema mostrou "Sharing 1 file" com o nome correto.
+- A1 (2026-11-09, 0.7.0): Sobre compartilhado no desktop e no Android, Recriar página de ajuda e
+  Esvaziar lixeira no celular; E2E mobile cobre as três ações e o desktop cobre a seção Sobre.
+  A versão nativa por `getVersion()` e a leitura em Sobre no APK ficam na validação abaixo.
 
 ## Tentativas que falharam
 
@@ -261,11 +269,12 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**A1 — Sobre, Configurações e Lixeira completas.** Comece por um componente Sobre compartilhado
-que lê a versão por `getVersion()` no Tauri e por `package.json` no build web.
+**A2 — Retorno, recuperação e voltar preditivo.** Prioridade camada → teclado → tela → saída;
+aviso na raiz com gravação pendente ou falha; ponte que ativa o callback de voltar só quando há
+algo para desempilhar (requisitos 3.4); distinguir recarga, recriação do WebView e reinício.
 
-Validar a lixeira e configurações no APK; continuar retorno e recuperação, leitura e edição,
-seguindo as dependências e preservando os dados. A matriz nativa permanece aberta.
+Validar no APK a lixeira, as configurações e a versão em Sobre; continuar retorno e recuperação,
+leitura e edição, seguindo as dependências e preservando os dados. A matriz nativa permanece aberta.
 
 ## Retomada em 2026-11-03
 

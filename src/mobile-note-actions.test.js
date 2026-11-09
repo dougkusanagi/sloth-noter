@@ -16,6 +16,16 @@ test('mobile creation and title edits keep a valid document and unique filenames
   validateDocument(edited)
 })
 
+test('a help note keeps its full body and gets a unique filename', () => {
+  const original = newDocument()
+  const help = newMobileNote(original, 'Welcome.md', 'help', '# Welcome\n\nAjuda')
+  assert.equal(help.notes[0].body, '# Welcome\n\nAjuda')
+  assert.equal(help.notes[0].name, 'Welcome.md')
+  const duplicate = newMobileNote(help, 'Welcome.md', 'help-2', '# Welcome\n\nOutra')
+  assert.equal(duplicate.notes[0].name, 'Welcome (2).md')
+  validateDocument(duplicate)
+})
+
 test('renaming a title updates wiki references in active and trashed notes', () => {
   let document = newMobileNote(newDocument(), 'Compras', 'shopping')
   document = {

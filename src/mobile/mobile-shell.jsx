@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { version } from '../../package.json'
 import {
   ArrowLeft,
   Check,
@@ -43,12 +42,14 @@ import {
 } from '../notes.js'
 import { clearImageCache, importImage, libraryImages, markdownImage } from '../images.js'
 import { createFullBackup, readBackupBundle, restoreBackupImages } from '../backup.js'
+import { AboutPanel } from '../components/about-panel.jsx'
 import { ImageThumbnail } from '../components/image-library.jsx'
 import { TasksLibrary } from '../components/tasks-library.jsx'
 import { ChangelogPanel } from '../components/changelog-panel.jsx'
 import { TrashLibrary } from '../components/trash-library.jsx'
 import { noteTasks, syncLinkedTasks, toggleTask } from '../tasks.js'
 import { ensureDocumentTitles } from '../title.js'
+import { welcomeNote } from '../welcome.js'
 import { LANGUAGES, t } from '../i18n.js'
 import { FONT_SIZE } from '../storage.js'
 import { useInsets } from './use-insets.js'
@@ -150,6 +151,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const [rename, setRename] = useState(null)
   const [renameError, setRenameError] = useState('')
   const [purgeId, setPurgeId] = useState(null)
+  const [trashEmpty, setTrashEmpty] = useState(false)
   const [backupCandidate, setBackupCandidate] = useState(null)
   const [transferBusy, setTransferBusy] = useState('')
   const transferPending = useRef(false)
@@ -409,6 +411,13 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     commit(next)
     openNote(next.activeId, true)
   }
+  function createHelpNote() {
+    if (blocked) return
+    const help = welcomeNote(prefs.language)
+    const next = newMobileNote(current.current, help.name, undefined, help.body)
+    commit(next)
+    openNote(next.activeId)
+  }
   function receiveSharedText(text) {
     const clean = text.replaceAll('\r\n', '\n').trim()
     if (!clean) return
@@ -513,6 +522,22 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         },
       },
     })
+  }
+  function emptyTrash() {
+    if (!current.current.trash.length) return
+    setTrashEmpty(true)
+    dispatch({ type: 'layer', route: { name: 'dialog' } })
+  }
+  function confirmEmptyTrash() {
+    if (blocked) return
+    commit(
+      current.current.trash.reduce(
+        (document, entry) => purgeFromTrash(document, entry.note.id),
+        current.current,
+      ),
+    )
+    setTrashEmpty(false)
+    back()
   }
   function pinNote(id) {
     const old = current.current
@@ -1036,15 +1061,23 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           </section>
         )}
         {route.name === 'trash' && (
-          <TrashLibrary
-            trash={data.trash}
-            query=""
-            onRestore={(id) => commit(restoreFromTrash(current.current, id))}
-            onPurge={(id) => {
-              setPurgeId(id)
-              dispatch({ type: 'layer', route: { name: 'dialog', id } })
-            }}
-          />
+          <section className="mobile-trash" aria-label={t('trash.title')}>
+            {data.trash.length > 0 && (
+              <button className="mobile-trash-empty" disabled={blocked} onClick={emptyTrash}>
+                {t('trash.emptyAll')}
+              </button>
+            )}
+            <TrashLibrary
+              trash={data.trash}
+              query=""
+              onRestore={(id) => commit(restoreFromTrash(current.current, id))}
+              onPurge={(id) => {
+                setTrashEmpty(false)
+                setPurgeId(id)
+                dispatch({ type: 'layer', route: { name: 'dialog', id } })
+              }}
+            />
+          </section>
         )}
         {route.name === 'settings' && (
           <section className="mobile-settings" aria-label={t('menu.settings')}>
@@ -1088,8 +1121,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             <button onClick={() => dispatch({ type: 'push', route: { name: 'changelog' } })}>
               {t('settings.changelog')}
             </button>
-            <h2>{t('mobile.about')}</h2>
-            <p>Sloth Note · {t('mobile.version', { version })}</p>
+            <button disabled={blocked} onClick={createHelpNote}>
+              {t('menu.welcome')}
+            </button>
+            <h2>{t('settings.about')}</h2>
+            <AboutPanel />
           </section>
         )}
         {route.name === 'changelog' && <ChangelogPanel />}
@@ -1217,6 +1253,21 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 </button>
                 <button disabled={Boolean(transferBusy)} className="danger" onClick={restoreBackup}>
                   {t('dialog.backupReplaceConfirm')}
+                </button>
+              </>
+            ) : layer.name === 'dialog' && route.name === 'trash' && trashEmpty ? (
+              <>
+                <p>{t('trash.emptyConfirm', { count: data.trash.length })}</p>
+                <button
+                  onClick={() => {
+                    setTrashEmpty(false)
+                    back()
+                  }}
+                >
+                  {t('dialog.cancel')}
+                </button>
+                <button className="danger" disabled={blocked} onClick={confirmEmptyTrash}>
+                  {t('trash.emptyAll')}
                 </button>
               </>
             ) : layer.name === 'dialog' && route.name === 'trash' ? (

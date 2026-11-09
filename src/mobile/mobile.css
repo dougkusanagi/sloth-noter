@@ -756,3 +756,17 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-create {
     transition: transform 0.15s;
   }
 }
+
+[data-platform='mobile'] .mobile-trash {
+  display: grid;
+  gap: 8px;
+}
+[data-platform='mobile'] .mobile-trash-empty {
+  min-height: 48px;
+  margin: 12px 16px 0;
+  padding: 0 16px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  color: var(--ink);
+}

@@ -1045,11 +1045,62 @@ test('settings provide language, reading size, about and news', async ({ page })
   await page.getByRole('button', { name: 'Configurações' }).tap()
   await expect(page.getByRole('heading', { name: 'Sobre' })).toBeVisible()
   await expect(page.getByText(/Sloth Note · Versão/)).toBeVisible()
+  if (process.env.CAPTURE_UI)
+    await page.screenshot({ path: '/tmp/sloth-about-mobile.png', fullPage: false })
   await page.getByLabel('Idioma').selectOption('en')
   await expect(page.getByRole('heading', { name: 'About' })).toBeVisible()
   await page.getByLabel('Language').selectOption('pt-BR')
   await page.getByRole('button', { name: 'Novidades' }).tap()
   await expect(page.getByRole('heading', { name: 'Novidades', exact: true }).first()).toBeVisible()
+})
+
+test('trash can be emptied after confirmation', async ({ page }) => {
+  for (const id of ['shopping', 'meeting']) {
+    await page.locator(`[data-note-id="${id}"]`).locator('..').getByRole('button').last().tap()
+    await page.getByRole('button', { name: 'Mover para a lixeira' }).tap()
+  }
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Lixeira', exact: true }).tap()
+  await expect(page.locator('.trash-library-item')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Esvaziar', exact: true }).tap()
+  await expect(page.getByText('Excluir definitivamente as 2 notas da lixeira?')).toBeVisible()
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancelar' }).tap()
+  await expect(page.locator('.trash-library-item')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Esvaziar', exact: true }).tap()
+  await page.getByRole('dialog').getByRole('button', { name: 'Esvaziar', exact: true }).tap()
+  await expect(page.getByText('A lixeira está vazia.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Esvaziar', exact: true })).toHaveCount(0)
+})
+
+test('news open the latest release with its offline image', async ({ page }) => {
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Novidades' }).tap()
+  await page.getByRole('link', { name: 'Ver detalhes →' }).first().tap()
+  const article = page.locator('.changelog-page')
+  await expect(article).toContainText('Sobre nas Configurações')
+  const image = article.locator('img[src="/changelog/sobre-configuracoes-android.png"]')
+  await expect(image).toBeVisible()
+  expect(await image.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true)
+})
+
+test('About fits 320 px without horizontal scrolling', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 })
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Configurações' }).tap()
+  await expect(page.getByText(/Sloth Note · Versão/)).toBeVisible()
+  expect(
+    await page
+      .locator('.mobile-content')
+      .evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
+  ).toBe(true)
+})
+
+test('settings recreate the help page as a new note', async ({ page }) => {
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Configurações' }).tap()
+  await page.getByRole('button', { name: 'Recriar página de ajuda' }).tap()
+  await expect(page.locator('.markdown')).toContainText('página de ajuda e exemplos')
+  await expect(page.getByRole('button', { name: 'Voltar', exact: true })).toBeVisible()
 })
 
 test('note actions are available while reading and deleting returns to the list', async ({

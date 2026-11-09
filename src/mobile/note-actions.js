@@ -2,8 +2,8 @@ import { ensureTitle } from '../title.js'
 import { headingFileName, nameFromHeading, uniqueName } from '../notes.js'
 import { renameWikiReferences } from '../markdown-model.js'
 
-export function newMobileNote(document, title = '', id = crypto.randomUUID()) {
-  const body = title.trim() ? ensureTitle('', title) : '# \n'
+export function newMobileNote(document, title = '', id = crypto.randomUUID(), body = null) {
+  body ??= title.trim() ? ensureTitle('', title) : '# \n'
   const note = {
     id,
     name: uniqueName(document.notes, nameFromHeading(body, [], id) ?? 'new note.md'),
