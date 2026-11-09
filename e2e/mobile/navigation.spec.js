@@ -1072,10 +1072,14 @@ test('trash can be emptied after confirmation', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Esvaziar', exact: true })).toHaveCount(0)
 })
 
-test('news open the latest release with its offline image', async ({ page }) => {
+test('news open a release with its offline image', async ({ page }) => {
   await page.getByRole('button', { name: 'Mais opções' }).tap()
   await page.getByRole('button', { name: 'Novidades' }).tap()
-  await page.getByRole('link', { name: 'Ver detalhes →' }).first().tap()
+  await expect(page.locator('.changelog-page')).toContainText('Um resumo de cada versão')
+  const details = page
+    .locator('.changelog-page h2', { hasText: 'Versão 0.7.0' })
+    .locator('xpath=following-sibling::p[2]')
+  await details.getByRole('link', { name: 'Ver detalhes →' }).tap()
   const article = page.locator('.changelog-page')
   await expect(article).toContainText('Sobre nas Configurações')
   const image = article.locator('img[src="/changelog/sobre-configuracoes-android.png"]')

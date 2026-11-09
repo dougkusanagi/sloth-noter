@@ -321,6 +321,14 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-create {
 [data-platform='mobile'] .mobile-error p {
   margin: 0 0 8px;
 }
+[data-platform='mobile'] .mobile-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+[data-platform='mobile'] .mobile-empty button.danger {
+  color: var(--danger);
+}
 [data-platform='mobile'] .mobile-images {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

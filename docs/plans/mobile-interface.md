@@ -105,12 +105,19 @@ criar, achar, ler, editar com formatação e não perder dados.
       ativa o voltar preditivo. Ao sair, o app avisa que está salvando, mantém-se aberto na falha
       e oferece tentar de novo. Unitários cobrem a ponte, o aviso e a falha; E2E cobre a ponte
       simulada. Recarga, recriação do WebView e reinício seguem cobertos por `nav-stack.js`.
-- [ ] **A3 — Ciclo de vida, IME e gravação** (4.1). P18, P19, P25; problemas 6, 12, 14, 17.
+- [x] **A3 — Ciclo de vida, IME e gravação** (4.1). P18, P19, P25; problemas 6, 12, 14, 17.
       Faz: envio em `hidden` e `pagehide`; mensagens e recuperação separadas para nota e
       histórico; ações de backup na falha de gravação; baixar originais com dados corrompidos;
       medir viewport e IME sem dupla redução; preservar o editor na composição.
       Pronto: testes de falha independentes (requisitos 3.5); pares, colar inteligente e
       continuação de listas conferidos com o perfil Android.
+      Feito em 0.8.1: `src/mobile/lifecycle.js` envia notas e histórico em `hidden` e
+      `pagehide`, com a fila de gravação aguardada; a falha do histórico continua em faixa
+      própria, sem aparecer como falha da nota. A faixa de erro de gravação oferece Tentar de
+      novo e Baixar backup; a tela de dados corrompidos oferece baixar os originais e substituir
+      só após confirmação em dois passos. O E2E Android cobre falha de gravação com backup,
+      download e substituição de dados corrompidos, uma única redução pelo teclado, composição
+      preservada, pares, colar inteligente e continuação de listas com Enter.
 - [ ] **A4 — Barra de formatação, Inserir e seleção** (4.3). P21–P24; problemas 13, 16, 19, 23.
       Depende de A3. Requisitos 5.6, exceto a linha "Modo Código", que entra em A5.
       Pronto: todas as ações do grupo por contexto; Inserir com miniaturas e as mesmas ações do
@@ -232,6 +239,9 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 - Rotação em aparelho físico, janela dividida, teclado em paisagem.
 - Backup: download e seletor de restauração no WebView.
 - Sobre: conferir no APK a versão vinda de `getVersion()` e a leitura em 320 dp e fonte 2×.
+- A3: envio de notas e histórico ao sair com morte real do processo e gravação nativa lenta; falha
+  de gravação e de histórico no WebView com as ações de backup; dados corrompidos baixados e
+  substituídos no aparelho; retomada do editor após composição real do teclado.
 
 ## Evidências registradas
 
@@ -275,13 +285,14 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**A3 — Ciclo de vida, IME e gravação** (4.1). Envio em `hidden` e `pagehide`, recuperação e falha
-separadas para nota e histórico, ações de backup na falha de gravação, originais de dados
-corrompidos, viewport e IME sem dupla redução, e o editor preservado durante a composição.
+**A4 — Barra de formatação, Inserir e seleção** (4.3). Grupo contextual da barra de formatação,
+Inserir com miniaturas, copiar/recortar/colar na seleção, alvos de 48 dp em 320 dp, teclado físico
+sem barra e composição preservada.
 
 Validar no APK a lixeira, as configurações e a versão em Sobre; conferir a prévia do voltar
-preditivo no gesto e nos três botões e o aviso de gravação pendente na raiz. A matriz nativa
-permanece aberta.
+preditivo no gesto e nos três botões e o aviso de gravação pendente na raiz. Da A3, conferir no
+aparelho o envio ao sair com morte real do processo, a falha de gravação e de histórico no WebView
+e a recuperação de dados corrompidos. A matriz nativa permanece aberta.
 
 ## Retomada em 2026-11-03
 

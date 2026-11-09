@@ -61,6 +61,7 @@ import { newMobileNote, renameMobileNote, updateMobileNote } from './note-action
 import { SwipeNoteRow } from './swipe-note-row.jsx'
 import { shareAndroidText } from './share.js'
 import { backEnabled, createMobileBack } from './back.js'
+import { flushOnHide } from './lifecycle.js'
 import { saveTextFile } from './file-save.js'
 import './mobile.css'
 
@@ -155,6 +156,9 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const [backupCandidate, setBackupCandidate] = useState(null)
   const [transferBusy, setTransferBusy] = useState('')
   const transferPending = useRef(false)
+  const [replaceConfirm, setReplaceConfirm] = useState(false)
+  const [replaceBusy, setReplaceBusy] = useState(false)
+  const damaged = loaded.raw ?? null
   const backupInput = useRef(null)
   const noteInput = useRef(null)
   function beginTransfer(label) {
@@ -295,11 +299,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       void writer.current.whenIdle()
       void store.noteHistory.flush()
     }
-    window.addEventListener('pagehide', flush)
+    const removeFlush = flushOnHide(window, flush)
     return () => {
       stopped = true
       cleanup?.()
-      window.removeEventListener('pagehide', flush)
+      removeFlush()
       flush()
     }
   }, [writer, store.noteHistory])
@@ -643,6 +647,32 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       endTransfer()
     }
   }
+  // Blocked storage keeps the unreadable payload so the user can take it away before
+  // replacing it. The action is explicit and never runs on its own.
+  async function downloadDamaged() {
+    try {
+      const status = await saveTextFile('sloth-note-damaged.json', 'application/json', damaged)
+      if (status === 'saved' || status === 'download') toast.success(t('mobile.damagedSaved'))
+    } catch {
+      toast.error(t('mobile.downloadDamagedFailed'))
+    }
+  }
+  async function replaceDamaged() {
+    setReplaceBusy(true)
+    try {
+      const failure = await persistence.save(current.current)
+      store.setError(failure)
+      if (!failure) {
+        store.setBlocked(false)
+        setReplaceConfirm(false)
+        toast.success(t('mobile.storageReplaced'))
+      }
+    } catch (cause) {
+      store.setError(friendlyError(cause))
+    } finally {
+      setReplaceBusy(false)
+    }
+  }
   async function chooseBackup(file) {
     if (!file || !beginTransfer(t('mobile.backupWorking'))) return
     try {
@@ -723,7 +753,34 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           <p>{t('mobile.readFailed')}</p>
           <p>{error}</p>
           <button onClick={onReload}>{t('mobile.retry')}</button>
+          {damaged !== null && (
+            <button onClick={downloadDamaged}>{t('mobile.downloadDamaged')}</button>
+          )}
+          {replaceConfirm ? (
+            <>
+              <p>{t('mobile.replaceStorageConfirm')}</p>
+              <button disabled={replaceBusy} onClick={() => setReplaceConfirm(false)}>
+                {t('dialog.cancel')}
+              </button>
+              <button className="danger" disabled={replaceBusy} onClick={replaceDamaged}>
+                {t('mobile.replaceStorageConfirmAction')}
+              </button>
+            </>
+          ) : (
+            <button disabled={replaceBusy} onClick={() => setReplaceConfirm(true)}>
+              {t('mobile.replaceStorage')}
+            </button>
+          )}
         </div>
+        <Toaster
+          theme={prefs.theme}
+          position="top-center"
+          closeButton
+          toastOptions={{
+            classNames: { toast: 'app-toast' },
+            closeButtonAriaLabel: t('dialog.close'),
+          }}
+        />
       </main>
     )
   return (
@@ -791,14 +848,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           </button>
         )}
       </header>
-      {(error || blocked) && (
+      {error && (
         <div className="mobile-error" role="alert">
           <p>
-            {blocked ? t('mobile.readFailed') : t('mobile.saveFailed')} {error}
+            {t('mobile.saveFailed')} {error}
           </p>
-          <button onClick={() => (blocked ? onReload() : writer.current.write(current.current))}>
-            {t('mobile.retry')}
-          </button>
+          <div className="mobile-error-actions">
+            <button onClick={() => writer.current.write(current.current)}>
+              {t('mobile.retry')}
+            </button>
+            <button onClick={exportBackup}>{t('menu.backupDownload')}</button>
+          </div>
         </div>
       )}
       {warning && (
