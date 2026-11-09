@@ -273,6 +273,11 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-create {
   overflow-x: auto;
   overflow-wrap: normal;
 }
+/* Keep the checkbox's negative margin inside the row's scrollable area. */
+[data-platform='mobile'] .markdown[data-no-wrap] .task-list-item {
+  padding-inline-start: 32px;
+  margin-inline-start: -32px;
+}
 [data-platform='mobile'] .markdown table {
   display: block;
   max-width: 100%;
