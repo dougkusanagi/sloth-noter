@@ -9,6 +9,7 @@ import {
   MoreHorizontal,
   NotebookText,
   Pin,
+  Pencil,
   Plus,
   Search,
   Share2,
@@ -549,7 +550,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         </h1>
         {active && (
           <button
-            className="mobile-edit"
+            className={editing ? 'mobile-edit' : 'mobile-icon'}
+            aria-label={editing ? t('mobile.done') : t('mobile.edit')}
             disabled={blocked}
             onClick={() => {
               if (editing) {
@@ -564,7 +566,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 {t('mobile.done')}
               </>
             ) : (
-              t('mobile.edit')
+              <Pencil size={22} aria-hidden="true" />
             )}
           </button>
         )}
@@ -1000,11 +1002,9 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               onPointerUp={() => endSheetDrag(true)}
               onPointerCancel={() => endSheetDrag(false)}
             >
-              <details className="mobile-sheet-title">
-                <summary>
-                  <h2>{actionsNote ? displayName(actionsNote.name) : 'Sloth Note'}</h2>
-                </summary>
-              </details>
+              <h2 className="mobile-sheet-title">
+                {actionsNote ? displayName(actionsNote.name) : 'Sloth Note'}
+              </h2>
               <button className="mobile-icon" aria-label={t('dialog.close')} onClick={back}>
                 <X size={22} />
               </button>

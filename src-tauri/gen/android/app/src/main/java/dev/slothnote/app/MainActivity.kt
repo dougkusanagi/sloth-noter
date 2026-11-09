@@ -178,7 +178,12 @@ class MainActivity : TauriActivity() {
       override fun onEnd(animation: WindowInsetsAnimationCompat) {
         if ((animation.typeMask and WindowInsetsCompat.Type.ime()) != 0) {
           animating = false
-          keyboard = if (imeHeight > 0) "open" else "closed"
+          val insets = ViewCompat.getRootWindowInsets(window.decorView)
+          if (insets != null) {
+            imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            keyboard = if (imeHeight > 0) "open" else "closed"
+            publish(insets, 1f)
+          }
         }
       }
     }

@@ -832,6 +832,27 @@ test('completing a task offers undo', async ({ page }) => {
   await expect(page.locator('.markdown')).toContainText('Comprar maçãs')
 })
 
+test('sheet headings show no expandable marker and keep long note names readable', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  const sheet = page.getByRole('dialog')
+  await expect(sheet.getByRole('heading', { name: 'Sloth Note' })).toBeVisible()
+  await expect(sheet.locator('summary')).toHaveCount(0)
+  await sheet.getByRole('button', { name: 'Fechar' }).tap()
+  await page.getByRole('searchbox').fill('Planejamento')
+  await page.locator('[data-note-id="long"]').dispatchEvent('pointerdown', {
+    isPrimary: true,
+    button: 0,
+    clientX: 50,
+    clientY: 100,
+  })
+  const title = sheet.locator('.mobile-sheet-title')
+  await expect(title).toContainText('Planejamento')
+  await expect(sheet.locator('summary')).toHaveCount(0)
+  await expect(title).toHaveCSS('overflow-y', 'auto')
+})
+
 test('dragging the sheet heading down closes it; a short drag does not', async ({ page }) => {
   await page.locator('[data-note-id="shopping"]').dispatchEvent('pointerdown', {
     isPrimary: true,
@@ -1099,4 +1120,18 @@ test('the header has no standalone theme buttons', async ({ page }) => {
   await expect(page.locator('.mobile-header .mobile-theme')).toHaveCount(0)
   await page.locator('[data-note-id="shopping"]').tap()
   await expect(page.locator('.mobile-header .mobile-theme')).toHaveCount(0)
+})
+
+test('editing then system back restores bottom navigation and new note', async ({ page }) => {
+  await page.locator('[data-note-id="shopping"]').tap()
+  const edit = page.getByRole('button', { name: 'Editar', exact: true })
+  await expect(edit).toHaveText('')
+  await edit.tap()
+  await page.evaluate(() => window.__insets({ ime: 300, keyboard: 'open' }))
+  await page.getByRole('button', { name: 'Pronto', exact: true }).tap()
+  await page.evaluate(() => window.__insets({ ime: 0, keyboard: 'closed' }))
+  await page.goBack()
+  await expect(page.getByRole('navigation')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Nova nota', exact: true })).toBeVisible()
+  await page.screenshot({ path: '/tmp/sloth-edit-back-mobile.png' })
 })

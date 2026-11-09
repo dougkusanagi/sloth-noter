@@ -1,10 +1,24 @@
 import { spawn } from 'node:child_process'
-import { copyFile, mkdir, readdir } from 'node:fs/promises'
+import { copyFile, mkdir, readdir, readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
+const android = path.join(root, 'src-tauri', 'gen', 'android')
+const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version
+async function exportApk(source) {
+  const destination = path.join(
+    android,
+    'app',
+    'build',
+    'outputs',
+    'apk',
+    `sloth-note-${version}-android-arm64-debug.apk`,
+  )
+  await copyFile(source, destination)
+  console.log(`APK: ${destination}`)
+}
 const env = { ...process.env, VITE_TARGET: 'mobile' }
 // Android devices with 16 KB pages require ELF segments aligned to 16 KB.
 env.CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS = [
@@ -54,7 +68,21 @@ const result = await run('bun', [
   '--apk',
   '--ci',
 ])
-if (result.code === 0) process.exit(0)
+if (result.code === 0) {
+  await exportApk(
+    path.join(
+      android,
+      'app',
+      'build',
+      'outputs',
+      'apk',
+      'universal',
+      'debug',
+      'app-universal-debug.apk',
+    ),
+  )
+  process.exit(0)
+}
 if (
   process.platform !== 'win32' ||
   !result.output.includes('Creation symbolic link is not allowed')
@@ -64,7 +92,6 @@ if (
 
 // Tauri has already compiled the library. Copy it and package it without repeating
 // the Rust task when Windows Developer Mode is unavailable.
-const android = path.join(root, 'src-tauri', 'gen', 'android')
 const jni = path.join(android, 'app', 'src', 'main', 'jniLibs', 'arm64-v8a')
 await mkdir(jni, { recursive: true })
 await copyFile(
@@ -76,4 +103,7 @@ const packaged = await run(
   ['/d', '/c', '.\\gradlew.bat assembleArm64Debug -x rustBuildArm64Debug --console=plain'],
   android,
 )
-process.exit(packaged.code || 0)
+if (packaged.code !== 0) process.exit(packaged.code || 1)
+await exportApk(
+  path.join(android, 'app', 'build', 'outputs', 'apk', 'arm64', 'debug', 'app-arm64-debug.apk'),
+)
