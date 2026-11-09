@@ -1206,6 +1206,57 @@ test('native back closes layers before the note and exits only at the root', asy
   await expect.poll(() => page.evaluate(() => window.backFinishes)).toBe(1)
 })
 
+test('native bridge keeps predictive back active only while a screen is open', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.backStates = []
+    window.SlothSystem = { setBackEnabled: (enabled) => window.backStates.push(enabled) }
+    window.SlothShare = {
+      finishActivity: () => {},
+      hideKeyboard: () => {},
+      requestInsets: () => {},
+    }
+  })
+  await page.reload()
+  await expect.poll(() => page.evaluate(() => window.backStates.at(-1))).toBe(false)
+  await page.locator('[data-note-id="shopping"]').tap()
+  await expect.poll(() => page.evaluate(() => window.backStates.at(-1))).toBe(true)
+  await page.getByRole('button', { name: 'Ações de Compras', exact: true }).tap()
+  await expect.poll(() => page.evaluate(() => window.backStates.at(-1))).toBe(true)
+  await page.evaluate(() => window.__slothMobileBack())
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.evaluate(() => window.__slothMobileBack())
+  await expect(page.getByRole('searchbox')).toBeVisible()
+  await expect.poll(() => page.evaluate(() => window.backStates.at(-1))).toBe(false)
+})
+
+test('back at the root warns and stays open when the last save failed', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.backFinishes = 0
+    window.SlothShare = {
+      finishActivity: () => window.backFinishes++,
+      hideKeyboard: () => {},
+      requestInsets: () => {},
+    }
+  })
+  await page.reload()
+  await page.locator('[data-note-id="shopping"]').tap()
+  await page.getByRole('button', { name: 'Editar', exact: true }).tap()
+  await page.locator('.cm-content').focus()
+  await page.keyboard.press('ControlOrMeta+End')
+  await page.evaluate(() => {
+    Storage.prototype.setItem = () => {
+      throw new Error('disk full')
+    }
+  })
+  await page.keyboard.type(' falha')
+  await expect(page.locator('.mobile-error')).toContainText('Não foi possível salvar')
+  await page.evaluate(() => window.__slothMobileBack())
+  await expect(page.getByRole('searchbox')).toBeVisible()
+  await page.evaluate(() => window.__slothMobileBack())
+  await expect(page.locator('[data-sonner-toast]').last()).toContainText('continua aberto')
+  expect(await page.evaluate(() => window.backFinishes)).toBe(0)
+})
+
 test('backup export sends a complete snapshot to the Android document picker', async ({ page }) => {
   await page.addInitScript(() => {
     window.savedFile = null

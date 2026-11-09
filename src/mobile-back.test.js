@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { createMobileBack } from './mobile/back.js'
+import { createMobileBack, backEnabled } from './mobile/back.js'
 import { initialNavigation, navigate } from './mobile/nav-stack.js'
 
 test('Android back closes layers, then keyboard, then screens and waits for a successful save before exit', async () => {
@@ -54,4 +54,64 @@ test('Android back keeps the app open when saving fails', async () => {
   handle()
   await new Promise((resolve) => setImmediate(resolve))
   assert.equal(finished, false)
+})
+
+test('predictive back is enabled only while a layer, screen or unsaved note needs it', () => {
+  const root = initialNavigation()
+  assert.equal(backEnabled(root), false)
+  assert.equal(backEnabled(root, { saving: true }), true)
+  assert.equal(backEnabled(root, { error: 'disk unavailable' }), true)
+  const detail = navigate(root, { type: 'push', route: { name: 'note', id: 'n1' } })
+  assert.equal(backEnabled(detail), true)
+  assert.equal(backEnabled(navigate(detail, { type: 'layer', route: { name: 'sheet' } })), true)
+  assert.equal(backEnabled(root, { saving: false, error: null }), false)
+})
+
+test('Android back warns once while waiting for a pending save, then exits', async () => {
+  let finished = 0,
+    pending = 0,
+    failed = 0,
+    release
+  const handle = createMobileBack({
+    getState: initialNavigation,
+    keyboardOpen: () => false,
+    pending: () => true,
+    back() {},
+    hideKeyboard() {},
+    flush: () =>
+      new Promise((resolve) => {
+        release = resolve
+      }),
+    finish: () => finished++,
+    onPending: () => pending++,
+    onFailed: () => failed++,
+  })
+  handle()
+  handle()
+  assert.equal(pending, 1)
+  await Promise.resolve()
+  release(null)
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.equal(finished, 1)
+  assert.equal(failed, 0)
+})
+
+test('Android back warns and does not exit when the final save fails', async () => {
+  let finished = 0,
+    failed = 0
+  const handle = createMobileBack({
+    getState: initialNavigation,
+    keyboardOpen: () => false,
+    pending: () => true,
+    back() {},
+    hideKeyboard() {},
+    flush: async () => 'no space',
+    finish: () => finished++,
+    onPending() {},
+    onFailed: () => failed++,
+  })
+  handle()
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.equal(failed, 1)
+  assert.equal(finished, 0)
 })

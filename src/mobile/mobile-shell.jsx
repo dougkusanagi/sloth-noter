@@ -60,7 +60,7 @@ import { useNavigation } from './use-navigation.js'
 import { newMobileNote, renameMobileNote, updateMobileNote } from './note-actions.js'
 import { SwipeNoteRow } from './swipe-note-row.jsx'
 import { shareAndroidText } from './share.js'
-import { createMobileBack } from './back.js'
+import { backEnabled, createMobileBack } from './back.js'
 import { saveTextFile } from './file-save.js'
 import './mobile.css'
 
@@ -236,11 +236,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     document.activeElement?.blur?.()
     dispatch({ type: 'back' })
   }
+  const savingRef = useRef(saving)
+  savingRef.current = saving
+  useEffect(() => {
+    window.SlothSystem?.setBackEnabled?.(backEnabled(state, { saving, error: Boolean(error) }))
+  }, [state, saving, error])
   useEffect(() => {
     if (!window.SlothShare?.finishActivity) return
     const handleBack = createMobileBack({
       getState: () => navigationState.current,
       keyboardOpen: () => ['open', 'opening'].includes(document.documentElement.dataset.keyboard),
+      pending: () => savingRef.current,
       back: () => dispatch({ type: 'back' }),
       hideKeyboard: () => window.SlothShare.hideKeyboard(),
       flush: async () => {
@@ -249,6 +255,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         return failure
       },
       finish: () => window.SlothShare.finishActivity(),
+      onPending: () => toast(t('mobile.exitPending'), { id: 'mobile-exit' }),
+      onFailed: () => toast.error(t('mobile.exitFailed'), { id: 'mobile-exit' }),
     })
     const guardedBack = () => (transferPending.current ? true : handleBack())
     window.__slothMobileBack = guardedBack

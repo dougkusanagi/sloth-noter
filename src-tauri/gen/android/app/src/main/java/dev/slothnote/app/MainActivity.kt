@@ -24,6 +24,8 @@ class MainActivity : TauriActivity() {
   private var pendingAction: String? = null
   private var pendingText: String? = null
   private var webView: WebView? = null
+  private var backEnabled = true
+  private var backCallback: OnBackPressedCallback? = null
   private var imeHeight = 0
   private var keyboard = "closed"
   private var animating = false
@@ -67,7 +69,10 @@ class MainActivity : TauriActivity() {
     super.onCreate(savedInstanceState)
     if (savedInstanceState == null) readAction(intent)
     File(cacheDir, "shared").listFiles()?.forEach { it.delete() }
-    onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+    // Enabled until the web layer reports otherwise, and disabled at the root so Android can
+    // show its predictive-back preview. The web layer enables it again while a sheet, screen
+    // or unsaved note needs to be closed first.
+    val callback = object : OnBackPressedCallback(backEnabled) {
       override fun handleOnBackPressed() {
         val view = webView
         if (view == null) {
@@ -79,11 +84,13 @@ class MainActivity : TauriActivity() {
           if (handled != "true") {
             isEnabled = false
             onBackPressedDispatcher.onBackPressed()
-            isEnabled = true
+            isEnabled = backEnabled
           }
         }
       }
-    })
+    }
+    backCallback = callback
+    onBackPressedDispatcher.addCallback(this, callback)
     val content = findViewById<View>(android.R.id.content)
     // The WebView is not padded: its background stays the app's. CSS reads these values
     // (public/insets-boot.js) and pads only the mobile shell.
@@ -111,6 +118,14 @@ class MainActivity : TauriActivity() {
       val action = pendingAction ?: ""
       pendingAction = null
       return action
+    }
+
+    @JavascriptInterface
+    fun setBackEnabled(enabled: Boolean) {
+      runOnUiThread {
+        backEnabled = enabled
+        backCallback?.isEnabled = enabled
+      }
     }
 
     @JavascriptInterface

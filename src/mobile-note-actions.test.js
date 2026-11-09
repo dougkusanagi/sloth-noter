@@ -17,7 +17,8 @@ test('mobile creation and title edits keep a valid document and unique filenames
 })
 
 test('a help note keeps its full body and gets a unique filename', () => {
-  const original = newDocument()
+  const blank = newDocument()
+  const original = { ...blank, notes: [], openIds: [], activeId: null }
   const help = newMobileNote(original, 'Welcome.md', 'help', '# Welcome\n\nAjuda')
   assert.equal(help.notes[0].body, '# Welcome\n\nAjuda')
   assert.equal(help.notes[0].name, 'Welcome.md')

@@ -27,6 +27,9 @@ const messages = {
     'mobile.saveFailed': 'Não foi possível salvar. Seu texto continua aberto. Tente de novo.',
     'mobile.notSaved': 'Não salvo',
     'mobile.saved': 'Salvo',
+    'mobile.exitPending': 'Salvando suas notas antes de sair…',
+    'mobile.exitFailed':
+      'Não foi possível salvar. O app continua aberto para proteger seu texto. Tente de novo.',
     'mobile.noteGone': 'Esta nota não está mais disponível.',
     'mobile.noImages': 'Nenhuma imagem nas notas ainda.',
     'mobile.shareText': 'Compartilhar texto',
@@ -603,6 +606,8 @@ const messages = {
     'mobile.saveFailed': 'Could not save. Your text is still open. Try again.',
     'mobile.notSaved': 'Not saved',
     'mobile.saved': 'Saved',
+    'mobile.exitPending': 'Saving your notes before closing…',
+    'mobile.exitFailed': 'Could not save. The app stays open to protect your text. Try again.',
     'mobile.noteGone': 'This note is no longer available.',
     'mobile.noImages': 'No images in your notes yet.',
     'mobile.shareText': 'Share text',

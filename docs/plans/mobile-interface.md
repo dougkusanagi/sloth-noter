@@ -62,8 +62,9 @@ escopo e este plano vale para o andamento; corrija a divergência no mesmo commi
   Configurações, quebrar linhas, Novidades. A Lixeira tem Esvaziar com confirmação.
 - Android: insets e estados do teclado publicados pelo Kotlin; ícones das barras pelo tema
   (`SlothSystem.setDarkBars`); atalho "Nova nota" e receber texto (`SlothSystem.takeAction`,
-  `takeSharedText`); compartilhar por `SlothShare`. O `WryActivity` gerado mantém o callback de
-  voltar sempre ativo.
+  `takeSharedText`); compartilhar por `SlothShare`. O callback de voltar da `MainActivity` fica
+  ativo só quando a casca web informa, por `SlothSystem.setBackEnabled`, que há folha, tela ou
+  gravação pendente para resolver.
 
 ## Concluído
 
@@ -94,11 +95,16 @@ criar, achar, ler, editar com formatação e não perder dados.
       componente `src/components/about-panel.jsx` lê `getVersion()` no Tauri e o `package.json` no
       build web; idioma, Sobre, Recriar página de ajuda e Esvaziar lixeira cobertos por E2E. A
       decisão 6 (modo ao abrir) permanece em aberto e a nota existente continua abrindo em Ler.
-- [ ] **A2 — Retorno, recuperação e voltar preditivo** (2.4, restante). Problemas 5, 7, 25.
+- [x] **A2 — Retorno, recuperação e voltar preditivo** (2.4, restante). Problemas 5, 7, 25.
       Faz: prioridade camada → teclado → tela → saída; aviso na raiz com gravação pendente ou
       falha; ponte que ativa o callback de voltar só quando há algo para desempilhar (requisitos
       3.4); distinguir recarga, recriação do WebView e reinício.
       Pronto: unitários e E2E com ponte simulada; casos de aparelho na lista de validação.
+      Feito em 0.8.0: `backEnabled` decide a ponte por folha, tela, gravação pendente ou falha;
+      `SlothSystem.setBackEnabled` só mantém o callback nativo ativo nesses casos, e o manifesto
+      ativa o voltar preditivo. Ao sair, o app avisa que está salvando, mantém-se aberto na falha
+      e oferece tentar de novo. Unitários cobrem a ponte, o aviso e a falha; E2E cobre a ponte
+      simulada. Recarga, recriação do WebView e reinício seguem cobertos por `nav-stack.js`.
 - [ ] **A3 — Ciclo de vida, IME e gravação** (4.1). P18, P19, P25; problemas 6, 12, 14, 17.
       Faz: envio em `hidden` e `pagehide`; mensagens e recuperação separadas para nota e
       histórico; ações de backup na falha de gravação; baixar originais com dados corrompidos;
@@ -269,12 +275,13 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**A2 — Retorno, recuperação e voltar preditivo.** Prioridade camada → teclado → tela → saída;
-aviso na raiz com gravação pendente ou falha; ponte que ativa o callback de voltar só quando há
-algo para desempilhar (requisitos 3.4); distinguir recarga, recriação do WebView e reinício.
+**A3 — Ciclo de vida, IME e gravação** (4.1). Envio em `hidden` e `pagehide`, recuperação e falha
+separadas para nota e histórico, ações de backup na falha de gravação, originais de dados
+corrompidos, viewport e IME sem dupla redução, e o editor preservado durante a composição.
 
-Validar no APK a lixeira, as configurações e a versão em Sobre; continuar retorno e recuperação,
-leitura e edição, seguindo as dependências e preservando os dados. A matriz nativa permanece aberta.
+Validar no APK a lixeira, as configurações e a versão em Sobre; conferir a prévia do voltar
+preditivo no gesto e nos três botões e o aviso de gravação pendente na raiz. A matriz nativa
+permanece aberta.
 
 ## Retomada em 2026-11-03
 
