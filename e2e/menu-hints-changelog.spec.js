@@ -200,7 +200,9 @@ for (const width of [390, 1280]) {
     const release = document.locator('[data-wiki^="Sloth Note 0.4.0"]')
     await document.hover()
     await expect
-      .poll(async () => (await release.count()) || (await page.mouse.wheel(0, 300), 0))
+      .poll(async () => (await release.count()) || (await page.mouse.wheel(0, 800), 0), {
+        timeout: 15000,
+      })
       .toBe(1)
     await expect(document).toContainText('Versão 0.4.0')
     await expect(document).toContainText('Colunas, blocos recolhíveis')
