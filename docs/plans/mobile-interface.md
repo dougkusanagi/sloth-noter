@@ -239,7 +239,6 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 - Links externos e destinos de títulos.
 - Rotação em aparelho físico, janela dividida, teclado em paisagem.
 - Backup: download e seletor de restauração no WebView.
-- Sobre: conferir no APK a versão vinda de `getVersion()` e a leitura em 320 dp e fonte 2×.
 - A3: envio de notas e histórico ao sair com morte real do processo e gravação nativa lenta; falha
   de gravação e de histórico no WebView com as ações de backup; dados corrompidos baixados e
   substituídos no aparelho; retomada do editor após composição real do teclado.
@@ -268,6 +267,14 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
   com falha de gravação e backup, dados corrompidos baixados e substituídos, redução única do
   teclado, composição preservada, pares, colar inteligente e continuação de listas. A captura da
   faixa de erro está em `public/changelog/mobile-falha-gravacao.png`.
+- 0.8.3 (2026-11-10, Samsung SM-S921B, Android 17): APK ARM64 compacto (`gradlew clean`,
+  sem debug de Rust, strip, segmentos congruentes de 16 KB e zipalign `-P 16` OK) instalado por
+  `adb install -r`; o app abriu com as notas existentes no tema escuro, o drawer e Configurações
+  responderam por toque e Sobre mostrou "Sloth Note · Versão 0.8.3", encerrando o item de Sobre
+  da lista de validação. Lixeira e voltar preditivo no aparelho continuam pendentes. Ambiente:
+  a JDK 21 registrada antes não está na máquina; o Studio traz só o JBR 25, que o Kotlin do
+  buildSrc rejeita, e o build passou com o Temurin 21 em `/tmp/opencode/jdk21` (área temporária,
+  não sobrevive à reinicialização).
 
 ## Tentativas que falharam
 
@@ -294,10 +301,10 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 Inserir com miniaturas, copiar/recortar/colar na seleção, alvos de 48 dp em 320 dp, teclado físico
 sem barra e composição preservada.
 
-Validar no APK a lixeira, as configurações e a versão em Sobre; conferir a prévia do voltar
-preditivo no gesto e nos três botões e o aviso de gravação pendente na raiz. Da A3, conferir no
-aparelho o envio ao sair com morte real do processo, a falha de gravação e de histórico no WebView
-e a recuperação de dados corrompidos. A matriz nativa permanece aberta.
+Validar no APK a lixeira e as configurações; conferir a prévia do voltar preditivo no gesto
+e nos três botões e o aviso de gravação pendente na raiz. Da A3, conferir no aparelho o envio
+ao sair com morte real do processo, a falha de gravação e de histórico no WebView e a
+recuperação de dados corrompidos. A matriz nativa permanece aberta.
 
 ## Retomada em 2026-11-03
 
