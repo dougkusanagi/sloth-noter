@@ -61,6 +61,7 @@ import { newMobileNote, renameMobileNote, updateMobileNote } from './note-action
 import { SwipeNoteRow } from './swipe-note-row.jsx'
 import { shareAndroidText } from './share.js'
 import { backEnabled, createMobileBack } from './back.js'
+import { EditingSheet } from './editing-sheet.jsx'
 import { FormattingBar } from './formatting-bar.jsx'
 import { flushOnHide } from './lifecycle.js'
 import { saveTextFile } from './file-save.js'
@@ -161,6 +162,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const [replaceBusy, setReplaceBusy] = useState(false)
   const damaged = loaded.raw ?? null
   const backupInput = useRef(null)
+  const imageInput = useRef(null)
+  const imagePoint = useRef(null)
   const noteInput = useRef(null)
   function beginTransfer(label) {
     if (transferPending.current) return false
@@ -1203,6 +1206,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       {editing && !sourceMode && keyboardOpen && (
         <FormattingBar
           view={editor.current}
+          onInsert={() => dispatch({ type: 'layer', route: { name: 'insert' } })}
           onHideKeyboard={() => {
             document.activeElement?.blur?.()
             window.SlothShare?.hideKeyboard?.()
@@ -1280,9 +1284,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             role="dialog"
             aria-modal="true"
             aria-label={
-              actionsNote
-                ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
-                : t('mobile.more')
+              layer.name === 'insert'
+                ? t('mobile.insert')
+                : actionsNote
+                  ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
+                  : t('mobile.more')
             }
           >
             <div
@@ -1307,13 +1313,28 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               onPointerCancel={() => endSheetDrag(false)}
             >
               <h2 className="mobile-sheet-title">
-                {actionsNote ? displayName(actionsNote.name) : 'Sloth Note'}
+                {layer.name === 'insert'
+                  ? t('mobile.insert')
+                  : actionsNote
+                    ? displayName(actionsNote.name)
+                    : 'Sloth Note'}
               </h2>
               <button className="mobile-icon" aria-label={t('dialog.close')} onClick={back}>
                 <X size={22} />
               </button>
             </div>
-            {layer.name === 'dialog' && route.name === 'settings' && backupCandidate ? (
+            {layer.name === 'insert' ? (
+              <EditingSheet
+                view={editor.current}
+                notes={data.notes}
+                onClose={back}
+                onImage={() => {
+                  imagePoint.current = editor.current.state.selection.main
+                  back()
+                  imageInput.current?.click()
+                }}
+              />
+            ) : layer.name === 'dialog' && route.name === 'settings' && backupCandidate ? (
               <>
                 <p>
                   {t('dialog.backupReplace', {
@@ -1506,6 +1527,18 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           </section>
         </div>
       )}
+      <input
+        ref={imageInput}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={(event) => {
+          if (event.target.files?.length && imagePoint.current)
+            void addMobileImages([...event.target.files], imagePoint.current)
+          event.target.value = ''
+        }}
+      />
       <input
         ref={noteInput}
         type="file"

@@ -94,6 +94,9 @@ código mostra o Markdown e as teclas de símbolos. O menu da nota oferece compa
 texto, exportação Markdown e lixeira; o menu principal permite importar Markdown e acessar a
 lixeira, configurações e informações do aplicativo. Em Configurações, salve ou restaure um backup
 de notas e imagens locais; o histórico e imagens externas não entram no backup.
+Na edição visual com teclado aberto, use **Inserir** na barra para adicionar blocos, imagens,
+data e links para notas. A barra oferece ações para listas, tabelas e código conforme o cursor.
+Em **Inserir**, use **Refazer** para recuperar uma edição desfeita.
 A interface Android ainda está em implementação: veja o [plano em andamento](docs/plans/mobile-interface.md).
 Os testes mobile rodam localmente com `bun run e2e --project=mobile`.
 

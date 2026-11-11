@@ -85,7 +85,8 @@ test('toggling a task in the side note changes that note only', async ({ page })
   await page.locator('.tab').filter({ hasText: 'Alpha' }).click({ button: 'right' })
   await page.getByRole('menuitem', { name: 'Ver ao lado' }).click()
   const side = page.getByRole('complementary', { name: 'Nota ao lado: Alpha' })
-  await side.getByRole('checkbox').check({ force: true })
+  // CodeMirror rebuilds the checkbox after the edit; verify the saved Markdown below.
+  await side.getByRole('checkbox').click()
   await expect
     .poll(() =>
       page.evaluate((key) => {

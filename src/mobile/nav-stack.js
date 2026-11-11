@@ -2,7 +2,7 @@
 export const NAV_SESSION_KEY = 'sloth.mobile.navigation.v1'
 const roots = new Set(['notes', 'tasks', 'images'])
 const details = new Set(['note', 'trash', 'settings', 'changelog', 'history', 'table', 'image'])
-const layers = new Set(['sheet', 'dialog', 'find'])
+const layers = new Set(['sheet', 'dialog', 'find', 'insert'])
 
 export function initialNavigation(tab = 'notes') {
   return { screens: [{ name: roots.has(tab) ? tab : 'notes' }], layers: [] }

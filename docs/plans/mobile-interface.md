@@ -118,26 +118,26 @@ criar, achar, ler, editar com formatação e não perder dados.
       só após confirmação em dois passos. O E2E Android cobre falha de gravação com backup,
       download e substituição de dados corrompidos, uma única redução pelo teclado, composição
       preservada, pares, colar inteligente e continuação de listas com Enter.
-- [ ] **A4 — Barra de formatação, Inserir e seleção** (4.3). P21–P24; problemas 13, 16, 19, 23.
+- [x] **A4 — Barra de formatação, Inserir e seleção** (4.3). P21–P24; problemas 13, 16, 19, 23.
       Depende de A3. Requisitos 5.6, exceto a linha "Modo Código", que entra em A5.
       Pronto: todas as ações do grupo por contexto; Inserir com miniaturas e as mesmas ações do
       `/`; copiar/recortar/colar na seleção; alvos de 48 dp em 320 dp e fonte 2×; teclado físico
       sem barra; composição preservada.
-      Divisão em incrementos (cada um com commit próprio): - [x] **A4.1 — Barra base e grupos de contexto:** componente `src/mobile/formatting-bar.jsx`
+      Divisão em incrementos (A4.2 e A4.3 concluídas juntas no pedido de 2026-11-11): - [x] **A4.1 — Barra base e grupos de contexto:** componente `src/mobile/formatting-bar.jsx`
       sobre o teclado (52 dp), visível só em edição visual com IME aberto; grupos Texto
       (Aa · Lista · Tarefa · Link), Estilos (Aa), Seleção (Aa · Copiar · Recortar · Colar),
       Título (H1–H4 · ¶, com `insert-block.js` ampliado com H1 e ¶) e Lista (Desrecuar ·
       Recuar · Mover ↑ · Mover ↓ · Alternar tarefa); Desfazer e esconder teclado sempre;
       alvos de 48 dp; composição preservada; testes unitários e E2E.
-      Em aberto: Refazer (folha de edição), grupos Tabela e Código (A4.3).
+      Refazer e grupos Tabela e Código concluídos na 0.9.0 (A4.2/A4.3).
       Feito em 0.8.5: lógica de contexto em `src/mobile/formatting-context.js` e clipboard em
       `src/clipboard-actions.js` (compartilhados com o editor); 4 testes unitários de contexto
       e 7 E2E em `e2e/mobile/formatting-bar.spec.js`; suíte mobile completa (93) passando.
       Os testes esperam a linha nova do Enter antes de digitar: no Chromium emulado como
       Android o CodeMirror resolve o Enter de forma assíncrona (padrão já usado em
-      `navigation.spec.js`). Captura em `public/changelog/mobile-barra-formatacao.png`. - [ ] **A4.2 — Folha Inserir:** botão ＋ Inserir abrindo folha com cartões e miniaturas;
+      `navigation.spec.js`). Captura em `public/changelog/mobile-barra-formatacao.png`. - [x] **A4.2 — Folha Inserir:** botão ＋ Inserir abrindo folha com cartões e miniaturas;
       ações do menu `/` (insert-block.js) mais Tarefa, Divisor, Data de hoje e Link para
-      nota; Imagem reaproveita o fluxo de imagens existente; Câmera fica para A13. - [ ] **A4.3 — Grupos Tabela e Código e fechamento:** Célula ←/→, + Linha, + Coluna, ⋯
+      nota; Imagem reaproveita o fluxo de imagens existente; Câmera fica para A13. - [x] **A4.3 — Grupos Tabela e Código e fechamento:** Célula ←/→, + Linha, + Coluna, ⋯
       (remover linha/coluna, alinhar); Tab, Linguagem, Copiar bloco, Quebrar linhas; teclado
       físico sem barra; capturas em 320/390 dp e fonte 2×; suíte completa; fechar A4.
       Decisão registrada em A4.1: o grupo do contexto rola na horizontal quando não cabe, em vez
@@ -265,6 +265,16 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Evidências registradas
 
+- A4.2/A4.3 (0.9.0): Inserir, link para nota, cancelamento, seletor de imagem,
+  adicionar e alinhar coluna, linguagem, recuo, cópia e quebra de linhas de código
+  cobertos em `e2e/mobile/formatting-bar.spec.js`. Inspeção em 320/390 px,
+  fonte 2× e desktop; Novidades e imagem offline conferidas nas duas interfaces.
+  Validação final: 376 testes JS, 43 Rust e 481 E2E passaram; lint,
+  formatação, versão e build web aprovados.
+  Câmera permanece em A13; aparelho não conectado no ADB nesta entrega.
+  O teste da tarefa lateral usa clique com espera de estabilidade e confere o
+  Markdown salvo, pois o CodeMirror recria o checkbox após a edição.
+
 - 2026-10-23, revisão: 300 testes JS, 39 Rust, 307 E2E (26 mobile).
 - 2.1 (2026-10-23): 301 JS, 39 Rust, 310 E2E (29 mobile); capturas em 320 px com fonte 2× e
   desktop; renomeação valida vazio, inválido e repetido e atualiza referências wiki.
@@ -317,10 +327,14 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**A4.2 — Folha Inserir** (segundo incremento de A4). Botão ＋ Inserir abrindo folha com cartões e
-miniaturas; ações do menu `/` mais Tarefa, Divisor, Data de hoje e Link para nota; Imagem
-reaproveita o fluxo existente; Câmera fica para A13. Depois A4.3 fecha a etapa com os grupos
-Tabela e Código, teclado físico sem barra, capturas 320/390 dp e fonte 2× e suíte completa.
+**S1 — Protocolo e decisões de sincronização.** A4.2 e A4.3 entregues juntas na
+0.9.0: folha Inserir com busca de notas e Refazer, grupos Tabela e Código com
+comandos compartilhados. A linguagem é editada selecionando o texto na cerca de
+abertura do bloco. A câmera permanece em A13. Mantida a rolagem horizontal do
+grupo contextual, conforme a decisão de A4.1.
+
+Validação no APK pendente para Inserir, seletor de imagem, clipboard, linguagem,
+composição com IME real e teclado físico. Não há validação nativa desta entrega.
 
 Validar no APK a lixeira e as configurações; conferir a prévia do voltar preditivo no gesto
 e nos três botões e o aviso de gravação pendente na raiz. Da A3, conferir no aparelho o envio

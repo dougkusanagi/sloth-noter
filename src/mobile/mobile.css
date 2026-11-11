@@ -814,3 +814,32 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-create {
   background: var(--paper);
   color: var(--ink);
 }
+
+[data-platform='mobile'] .mobile-insert-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  gap: 8px;
+}
+[data-platform='mobile'] .mobile-insert-grid button {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  min-height: 80px;
+}
+[data-platform='mobile'] .mobile-block-preview {
+  padding: 12px 4px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 8px;
+  font-size: 0.85em;
+}

@@ -17,6 +17,11 @@ import {
   Scissors,
   Strikethrough,
   Undo2,
+  Plus,
+  ArrowLeft,
+  ArrowRight,
+  MoreHorizontal,
+  WrapText,
 } from 'lucide-react'
 import { EditorSelection } from '@codemirror/state'
 import { undo } from '@codemirror/commands'
@@ -26,6 +31,16 @@ import { activeFormats } from '../format-selection.js'
 import { indentList, moveList } from '../editor/keys.js'
 import { clipboardAction } from '../clipboard-actions.js'
 import { formattingContext, taskLineEdit } from './formatting-context.js'
+import { codeAt, alignTableColumn } from './editing-actions.js'
+import { toggleWrap, codeCopyHandler } from '../editor/code-copy.js'
+import {
+  tableContextAt,
+  moveTable,
+  insertTableRowAt,
+  insertTableColumnAt,
+  removeTableRowAt,
+  removeTableColumnAt,
+} from '../editor/table.js'
 import { t } from '../i18n.js'
 
 /* eslint-disable react/jsx-key -- static tuples, rendered with explicit keys below */
@@ -58,11 +73,15 @@ function Button({ label, pressed, onClick, children }) {
  * with an Inserir slot, the contextual group of the cursor and always-visible
  * Undo and hide-keyboard. The floating selection toolbar stays hidden here.
  */
-export function FormattingBar({ view, onHideKeyboard }) {
+export function FormattingBar({ view, onHideKeyboard, onInsert }) {
   const [tick, setTick] = useState(0)
+  const [more, setMore] = useState(false)
   const [styles, setStyles] = useState(false)
   const context = view ? formattingContext(view.state) : null
-  useEffect(() => setStyles(false), [context])
+  useEffect(() => {
+    setStyles(false)
+    setMore(false)
+  }, [context])
   useEffect(() => {
     if (!view) return
     const sync = () => setTick((n) => n + 1)
@@ -104,7 +123,8 @@ export function FormattingBar({ view, onHideKeyboard }) {
   function applyTask() {
     if (composing) return
     const edit = taskLineEdit(view.state.doc, selection.head)
-    dispatch(edit, 'tarefa')
+    if (edit) dispatch(edit, 'tarefa')
+    else applyBlock('task')
   }
 
   function runList(action) {
@@ -202,7 +222,108 @@ export function FormattingBar({ view, onHideKeyboard }) {
       </Button>,
     )
   }
-  // 'code' and 'table' arrive with A4.3; 'selection' with a pressed Aa falls back to styles.
+  if (context === 'table') {
+    const run = (action) => {
+      if (composing) return
+      const c = tableContextAt(view)
+      if (!c) return
+      if (action === 'previous' || action === 'next')
+        moveTable(view, action === 'previous' ? 'shift-tab' : 'tab')
+      if (action === 'row') insertTableRowAt(view, c.table.first, c.row, c.column)
+      if (action === 'column') insertTableColumnAt(view, c.table.first, c.row, c.column)
+      if (action === 'removeRow') removeTableRowAt(view, c.table.first, c.row)
+      if (action === 'removeColumn') removeTableColumnAt(view, c.table.first, c.column)
+      if (['left', 'center', 'right'].includes(action)) alignTableColumn(view, action)
+      view.focus()
+    }
+    for (const [action, label] of more
+      ? [
+          ['removeRow', 'mobile.removeRow'],
+          ['removeColumn', 'mobile.removeColumn'],
+          ['left', 'mobile.alignLeft'],
+          ['center', 'mobile.alignCenter'],
+          ['right', 'mobile.alignRight'],
+        ]
+      : [
+          ['previous', 'mobile.previousCell'],
+          ['next', 'mobile.nextCell'],
+          ['row', 'mobile.addRow'],
+          ['column', 'mobile.addColumn'],
+        ])
+      group.push(
+        <Button key={action} label={label} onClick={() => run(action)}>
+          {action === 'previous' ? (
+            <ArrowLeft size={20} />
+          ) : action === 'next' ? (
+            <ArrowRight size={20} />
+          ) : (
+            t(label)
+          )}
+        </Button>,
+      )
+    group.push(
+      <Button key="more" label="mobile.tableMore" pressed={more} onClick={() => setMore(!more)}>
+        <MoreHorizontal size={20} />
+      </Button>,
+    )
+  }
+  if (context === 'code') {
+    const node = codeAt(view.state)
+    group.push(
+      <Button
+        key="tab"
+        label="mobile.codeTab"
+        onClick={() => {
+          if (!composing) {
+            view.dispatch(view.state.replaceSelection('  '))
+            view.focus()
+          }
+        }}
+      >
+        Tab
+      </Button>,
+      <Button
+        key="language"
+        label="mobile.language"
+        onClick={() => {
+          if (composing || !node) return
+          const line = view.state.doc.line(node.position.start.line)
+          const prefix = line.text.match(/^\s*(?:`{3,}|~{3,})/)?.[0]
+          if (prefix) {
+            view.dispatch({
+              selection: { anchor: line.from + prefix.length, head: line.to },
+              scrollIntoView: true,
+            })
+            view.focus()
+          }
+        }}
+      >
+        <Code size={20} />
+      </Button>,
+      <Button
+        key="copyCode"
+        label="mobile.copyBlock"
+        onClick={() => {
+          if (composing || !node) return
+          view.state.facet(codeCopyHandler)[0]?.(node.value)
+        }}
+      >
+        <Copy size={20} />
+      </Button>,
+      <Button
+        key="wrap"
+        label="code.wrap"
+        onClick={() => {
+          if (!composing && node)
+            view.dispatch({
+              effects: toggleWrap.of(view.state.doc.line(node.position.start.line).from),
+            })
+        }}
+      >
+        <WrapText size={20} />
+      </Button>,
+    )
+  }
 
   return (
     <div
@@ -211,6 +332,14 @@ export function FormattingBar({ view, onHideKeyboard }) {
       aria-label={t('mobile.formatBar')}
       data-tick={tick}
     >
+      <Button
+        label="mobile.insert"
+        onClick={() => {
+          if (!composing) onInsert()
+        }}
+      >
+        <Plus size={20} aria-hidden="true" />
+      </Button>
       <div className="mobile-format-group">{group}</div>
       <span className="mobile-format-spacer" aria-hidden="true" />
       <Button label="mobile.undo" onClick={runUndo}>
