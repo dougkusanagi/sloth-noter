@@ -8,9 +8,11 @@ import {
   Database,
   Keyboard,
   History,
+  Info,
   NotebookPen,
   X,
 } from 'lucide-react'
+import { AboutPanel } from './about-panel.jsx'
 import { HistoryPanel } from './history-panel.jsx'
 import { Modal, ShortcutList } from './dialogs.jsx'
 import { FontSlider, RangeSlider, Segmented, Switch } from './controls.jsx'
@@ -30,6 +32,7 @@ const SECTIONS = [
   ['history', History],
   ['shortcuts', Keyboard],
   ['changelog', NotebookPen],
+  ['about', Info],
 ]
 
 function Row({ id, title, hint, children }) {
@@ -254,6 +257,7 @@ export function SettingsDialog({
               <p className="setting-empty">{t('history.desktopOnly')}</p>
             ))}
           {section === 'shortcuts' && <ShortcutList />}
+          {section === 'about' && <AboutPanel />}
         </div>
       </div>
     </Modal>

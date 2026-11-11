@@ -57,12 +57,14 @@ escopo e este plano vale para o andamento; corrija a divergência no mesmo commi
 - Tarefas: `TasksLibrary` com localizar o trecho e desfazer a conclusão.
 - Imagens: galeria das imagens referenciadas, com a nota de origem. Inserir imagem por arquivo no
   editor (`addMobileImages`).
-- Configurações: tamanho do texto, backup (exportar e restaurar) e Novidades. Mais opções: tema,
-  Lixeira, Configurações, quebrar linhas, Novidades. Não há Sobre nem idioma.
+- Configurações: idioma, tamanho do texto, backup (exportar e restaurar), Novidades, Recriar
+  página de ajuda e Sobre, com o mesmo componente do desktop. Mais opções: tema, Lixeira,
+  Configurações, quebrar linhas, Novidades. A Lixeira tem Esvaziar com confirmação.
 - Android: insets e estados do teclado publicados pelo Kotlin; ícones das barras pelo tema
   (`SlothSystem.setDarkBars`); atalho "Nova nota" e receber texto (`SlothSystem.takeAction`,
-  `takeSharedText`); compartilhar por `SlothShare`. O `WryActivity` gerado mantém o callback de
-  voltar sempre ativo.
+  `takeSharedText`); compartilhar por `SlothShare`. O callback de voltar da `MainActivity` fica
+  ativo só quando a casca web informa, por `SlothSystem.setBackEnabled`, que há folha, tela ou
+  gravação pendente para resolver.
 
 ## Concluído
 
@@ -83,29 +85,64 @@ Códigos antigos entre parênteses, para ligar com commits e changelogs.
 Os códigos `P#` são linhas da matriz de paridade (requisitos, seção 4). Usabilidade básica é
 criar, achar, ler, editar com formatação e não perder dados.
 
-- [ ] **A1 — Sobre, Configurações e Lixeira completas.** P10, P12, P14, P17.
+- [x] **A1 — Sobre, Configurações e Lixeira completas.** P10, P12, P14, P17.
       Faz: seção Sobre compartilhada com o desktop (requisitos 5.12), Idioma, Recriar página de
       ajuda e Esvaziar lixeira com confirmação. Reutiliza `i18n.js`, `welcome.js`, ações de
       lixeira de `notes.js`. Decidir a decisão em aberto 6 (modo ao abrir) com o usuário ou
       manter Ler.
       Pronto: versão exibida igual à de `package.json` no desktop, na web e no APK; idioma muda na
-      hora sem chaves expostas; E2E das quatro ações; Novidades conferida.
-- [ ] **A2 — Retorno, recuperação e voltar preditivo** (2.4, restante). Problemas 5, 7, 25.
+      hora sem chaves expostas; E2E das quatro ações; Novidades conferida. Feito em 0.7.0: o
+      componente `src/components/about-panel.jsx` lê `getVersion()` no Tauri e o `package.json` no
+      build web; idioma, Sobre, Recriar página de ajuda e Esvaziar lixeira cobertos por E2E. A
+      decisão 6 (modo ao abrir) permanece em aberto e a nota existente continua abrindo em Ler.
+- [x] **A2 — Retorno, recuperação e voltar preditivo** (2.4, restante). Problemas 5, 7, 25.
       Faz: prioridade camada → teclado → tela → saída; aviso na raiz com gravação pendente ou
       falha; ponte que ativa o callback de voltar só quando há algo para desempilhar (requisitos
       3.4); distinguir recarga, recriação do WebView e reinício.
       Pronto: unitários e E2E com ponte simulada; casos de aparelho na lista de validação.
-- [ ] **A3 — Ciclo de vida, IME e gravação** (4.1). P18, P19, P25; problemas 6, 12, 14, 17.
+      Feito em 0.8.0: `backEnabled` decide a ponte por folha, tela, gravação pendente ou falha;
+      `SlothSystem.setBackEnabled` só mantém o callback nativo ativo nesses casos, e o manifesto
+      ativa o voltar preditivo. Ao sair, o app avisa que está salvando, mantém-se aberto na falha
+      e oferece tentar de novo. Unitários cobrem a ponte, o aviso e a falha; E2E cobre a ponte
+      simulada. Recarga, recriação do WebView e reinício seguem cobertos por `nav-stack.js`.
+- [x] **A3 — Ciclo de vida, IME e gravação** (4.1). P18, P19, P25; problemas 6, 12, 14, 17.
       Faz: envio em `hidden` e `pagehide`; mensagens e recuperação separadas para nota e
       histórico; ações de backup na falha de gravação; baixar originais com dados corrompidos;
       medir viewport e IME sem dupla redução; preservar o editor na composição.
       Pronto: testes de falha independentes (requisitos 3.5); pares, colar inteligente e
       continuação de listas conferidos com o perfil Android.
+      Feito em 0.8.1: `src/mobile/lifecycle.js` envia notas e histórico em `hidden` e
+      `pagehide`, com a fila de gravação aguardada; a falha do histórico continua em faixa
+      própria, sem aparecer como falha da nota. A faixa de erro de gravação oferece Tentar de
+      novo e Baixar backup; a tela de dados corrompidos oferece baixar os originais e substituir
+      só após confirmação em dois passos. O E2E Android cobre falha de gravação com backup,
+      download e substituição de dados corrompidos, uma única redução pelo teclado, composição
+      preservada, pares, colar inteligente e continuação de listas com Enter.
 - [ ] **A4 — Barra de formatação, Inserir e seleção** (4.3). P21–P24; problemas 13, 16, 19, 23.
       Depende de A3. Requisitos 5.6, exceto a linha "Modo Código", que entra em A5.
       Pronto: todas as ações do grupo por contexto; Inserir com miniaturas e as mesmas ações do
       `/`; copiar/recortar/colar na seleção; alvos de 48 dp em 320 dp e fonte 2×; teclado físico
       sem barra; composição preservada.
+      Divisão em incrementos (cada um com commit próprio): - [x] **A4.1 — Barra base e grupos de contexto:** componente `src/mobile/formatting-bar.jsx`
+      sobre o teclado (52 dp), visível só em edição visual com IME aberto; grupos Texto
+      (Aa · Lista · Tarefa · Link), Estilos (Aa), Seleção (Aa · Copiar · Recortar · Colar),
+      Título (H1–H4 · ¶, com `insert-block.js` ampliado com H1 e ¶) e Lista (Desrecuar ·
+      Recuar · Mover ↑ · Mover ↓ · Alternar tarefa); Desfazer e esconder teclado sempre;
+      alvos de 48 dp; composição preservada; testes unitários e E2E.
+      Em aberto: Refazer (folha de edição), grupos Tabela e Código (A4.3).
+      Feito em 0.8.5: lógica de contexto em `src/mobile/formatting-context.js` e clipboard em
+      `src/clipboard-actions.js` (compartilhados com o editor); 4 testes unitários de contexto
+      e 7 E2E em `e2e/mobile/formatting-bar.spec.js`; suíte mobile completa (93) passando.
+      Os testes esperam a linha nova do Enter antes de digitar: no Chromium emulado como
+      Android o CodeMirror resolve o Enter de forma assíncrona (padrão já usado em
+      `navigation.spec.js`). Captura em `public/changelog/mobile-barra-formatacao.png`. - [ ] **A4.2 — Folha Inserir:** botão ＋ Inserir abrindo folha com cartões e miniaturas;
+      ações do menu `/` (insert-block.js) mais Tarefa, Divisor, Data de hoje e Link para
+      nota; Imagem reaproveita o fluxo de imagens existente; Câmera fica para A13. - [ ] **A4.3 — Grupos Tabela e Código e fechamento:** Célula ←/→, + Linha, + Coluna, ⋯
+      (remover linha/coluna, alinhar); Tab, Linguagem, Copiar bloco, Quebrar linhas; teclado
+      físico sem barra; capturas em 320/390 dp e fonte 2×; suíte completa; fechar A4.
+      Decisão registrada em A4.1: o grupo do contexto rola na horizontal quando não cabe, em vez
+      de mandar ações para uma folha em telas estreitas — mantém todas as ações com alvos de
+      48 dp e sem custo de navegação; o comportamento vale para as três larguras de teste.
 
 **Marco — usabilidade básica:** A1–A4 concluídas no navegador e suíte local completa passando.
 Ao chegar aqui, comece a sincronização.
@@ -196,7 +233,8 @@ a gravação local precisa ser confiável antes de sincronizar).
 ## Fila — Parte B: ideias novas só do mobile
 
 Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e detalhes nas seções 9.1 e
-9.2 dos requisitos: B1, B2 → B8, B9, B10 → B11–B14 → B3 → B15 → B4–B7, B17 (essas exigem ADR).
+9.2 dos requisitos: B1, B2 → B8, B9, B10 → B16 (modelos de nota ao criar, pedido do usuário em
+2026-11-09: Tarefas, Tabelas e outros) → B11–B14 → B3 → B15 → B4–B7, B17 (essas exigem ADR).
 
 ## Depois deste plano — Parte C: ideias para as duas plataformas
 
@@ -221,6 +259,9 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 - Links externos e destinos de títulos.
 - Rotação em aparelho físico, janela dividida, teclado em paisagem.
 - Backup: download e seletor de restauração no WebView.
+- A3: envio de notas e histórico ao sair com morte real do processo e gravação nativa lenta; falha
+  de gravação e de histórico no WebView com as ações de backup; dados corrompidos baixados e
+  substituídos no aparelho; retomada do editor após composição real do teclado.
 
 ## Evidências registradas
 
@@ -239,6 +280,21 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 - Rotação (2026-11-02, emulador, 2400×1080): recuo lateral respeitado; tela e tema mantidos.
 - 7.1 e 7.3: `am start` com app fechado e aberto criou uma nota por ação; girar não duplicou.
 - 5.1 parcial: a lista do sistema mostrou "Sharing 1 file" com o nome correto.
+- A1 (2026-11-09, 0.7.0): Sobre compartilhado no desktop e no Android, Recriar página de ajuda e
+  Esvaziar lixeira no celular; E2E mobile cobre as três ações e o desktop cobre a seção Sobre.
+  A versão nativa por `getVersion()` e a leitura em Sobre no APK ficam na validação abaixo.
+- A3 (2026-11-09, 0.8.1): 368 testes JS, 43 Rust e 468 E2E, incluindo seis do ciclo de vida mobile
+  com falha de gravação e backup, dados corrompidos baixados e substituídos, redução única do
+  teclado, composição preservada, pares, colar inteligente e continuação de listas. A captura da
+  faixa de erro está em `public/changelog/mobile-falha-gravacao.png`.
+- 0.8.3 (2026-11-10, Samsung SM-S921B, Android 17): APK ARM64 compacto (`gradlew clean`,
+  sem debug de Rust, strip, segmentos congruentes de 16 KB e zipalign `-P 16` OK) instalado por
+  `adb install -r`; o app abriu com as notas existentes no tema escuro, o drawer e Configurações
+  responderam por toque e Sobre mostrou "Sloth Note · Versão 0.8.3", encerrando o item de Sobre
+  da lista de validação. Lixeira e voltar preditivo no aparelho continuam pendentes. Ambiente:
+  a JDK 21 registrada antes não está na máquina; o Studio traz só o JBR 25, que o Kotlin do
+  buildSrc rejeita, e o build passou com o Temurin 21 em `/tmp/opencode/jdk21` (área temporária,
+  não sobrevive à reinicialização).
 
 ## Tentativas que falharam
 
@@ -261,11 +317,15 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**A1 — Sobre, Configurações e Lixeira completas.** Comece por um componente Sobre compartilhado
-que lê a versão por `getVersion()` no Tauri e por `package.json` no build web.
+**A4.2 — Folha Inserir** (segundo incremento de A4). Botão ＋ Inserir abrindo folha com cartões e
+miniaturas; ações do menu `/` mais Tarefa, Divisor, Data de hoje e Link para nota; Imagem
+reaproveita o fluxo existente; Câmera fica para A13. Depois A4.3 fecha a etapa com os grupos
+Tabela e Código, teclado físico sem barra, capturas 320/390 dp e fonte 2× e suíte completa.
 
-Validar a lixeira e configurações no APK; continuar retorno e recuperação, leitura e edição,
-seguindo as dependências e preservando os dados. A matriz nativa permanece aberta.
+Validar no APK a lixeira e as configurações; conferir a prévia do voltar preditivo no gesto
+e nos três botões e o aviso de gravação pendente na raiz. Da A3, conferir no aparelho o envio
+ao sair com morte real do processo, a falha de gravação e de histórico no WebView e a
+recuperação de dados corrompidos. A matriz nativa permanece aberta.
 
 ## Retomada em 2026-11-03
 

@@ -2,6 +2,7 @@ import { t } from './i18n.js'
 import { columnsTemplate } from './columns.js'
 
 const blocks = {
+  h1: ['# ', 2, 2],
   h2: ['## ', 3, 3],
   h3: ['### ', 4, 4],
   h4: ['#### ', 5, 5],
@@ -13,6 +14,8 @@ const blocks = {
 }
 
 export function blockTemplate(action) {
+  // An empty paragraph clears the block prefix of the current line.
+  if (action === 'p') return { text: '', selectionFrom: 0, selectionTo: 0 }
   if (action === 'columns') {
     const text = columnsTemplate(['', ''])
     const start = text.indexOf('<!-- sloth:column -->') + '<!-- sloth:column -->\n\n'.length
@@ -46,22 +49,25 @@ export function blockEdit(text, from, to, action) {
     }
   }
   const prefix = {
+    h1: '# ',
     h2: '## ',
     h3: '### ',
     h4: '#### ',
     quote: '> ',
     list: '- ',
     numbered: '1. ',
+    p: '',
   }[action]
-  if (prefix) {
+  if (prefix !== undefined) {
     const start = text.lastIndexOf('\n', from - 1) + 1
     const newline = text.indexOf('\n', Math.max(from, to - 1))
     const end = newline < 0 ? text.length : newline
     const lines = text.slice(start, end).split('\n')
     const active = lines.every((line) => line.startsWith(prefix))
-    const removed = lines.map((line) =>
-      active ? prefix.length : (line.match(/^(?:#{1,6}|[-*+]|\d+[.)]|>)\s+/)?.[0].length ?? 0),
-    )
+    const removed = lines.map((line) => {
+      if (prefix && active) return prefix.length
+      return line.match(/^(?:#{1,6}|[-*+]|\d+[.)]|>)\s+/)?.[0].length ?? 0
+    })
     const next = lines.map((line, index) => (active ? '' : prefix) + line.slice(removed[index]))
     const map = (position) => {
       position = Math.min(position, end)

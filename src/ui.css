@@ -3184,3 +3184,17 @@ html:has(
 .focus-mode[data-native-window] .update-notice {
   top: 40px;
 }
+
+.about-panel {
+  display: grid;
+  gap: 6px;
+}
+.about-panel .about-line {
+  margin: 0;
+  font-weight: 600;
+}
+.about-panel .about-description {
+  margin: 0;
+  font: 13px/1.5 var(--ui);
+  color: var(--muted);
+}

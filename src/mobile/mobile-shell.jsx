@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { version } from '../../package.json'
 import {
   ArrowLeft,
   Check,
@@ -43,15 +42,17 @@ import {
 } from '../notes.js'
 import { clearImageCache, importImage, libraryImages, markdownImage } from '../images.js'
 import { createFullBackup, readBackupBundle, restoreBackupImages } from '../backup.js'
+import { AboutPanel } from '../components/about-panel.jsx'
 import { ImageThumbnail } from '../components/image-library.jsx'
 import { TasksLibrary } from '../components/tasks-library.jsx'
 import { ChangelogPanel } from '../components/changelog-panel.jsx'
 import { TrashLibrary } from '../components/trash-library.jsx'
 import { noteTasks, syncLinkedTasks, toggleTask } from '../tasks.js'
 import { ensureDocumentTitles } from '../title.js'
+import { welcomeNote } from '../welcome.js'
 import { LANGUAGES, t } from '../i18n.js'
 import { FONT_SIZE } from '../storage.js'
-import { useInsets } from './use-insets.js'
+import { useInsets, useKeyboardOpen } from './use-insets.js'
 import { useSystemBars } from './use-system-bars.js'
 import { useNativeActions } from './use-native-actions.js'
 import { canShareFile, shareFile } from './share.js'
@@ -59,7 +60,9 @@ import { useNavigation } from './use-navigation.js'
 import { newMobileNote, renameMobileNote, updateMobileNote } from './note-actions.js'
 import { SwipeNoteRow } from './swipe-note-row.jsx'
 import { shareAndroidText } from './share.js'
-import { createMobileBack } from './back.js'
+import { backEnabled, createMobileBack } from './back.js'
+import { FormattingBar } from './formatting-bar.jsx'
+import { flushOnHide } from './lifecycle.js'
 import { saveTextFile } from './file-save.js'
 import './mobile.css'
 
@@ -150,9 +153,13 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const [rename, setRename] = useState(null)
   const [renameError, setRenameError] = useState('')
   const [purgeId, setPurgeId] = useState(null)
+  const [trashEmpty, setTrashEmpty] = useState(false)
   const [backupCandidate, setBackupCandidate] = useState(null)
   const [transferBusy, setTransferBusy] = useState('')
   const transferPending = useRef(false)
+  const [replaceConfirm, setReplaceConfirm] = useState(false)
+  const [replaceBusy, setReplaceBusy] = useState(false)
+  const damaged = loaded.raw ?? null
   const backupInput = useRef(null)
   const noteInput = useRef(null)
   function beginTransfer(label) {
@@ -180,6 +187,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     savePrefs('wrapLines' in change ? { ...change, wrapLinesByNote: {} } : change)
   }
   const { state, dispatch } = useNavigation(current)
+  const keyboardOpen = useKeyboardOpen()
   const navigationState = useRef(state)
   navigationState.current = state
   const route = state.screens.at(-1)
@@ -234,11 +242,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     document.activeElement?.blur?.()
     dispatch({ type: 'back' })
   }
+  const savingRef = useRef(saving)
+  savingRef.current = saving
+  useEffect(() => {
+    window.SlothSystem?.setBackEnabled?.(backEnabled(state, { saving, error: Boolean(error) }))
+  }, [state, saving, error])
   useEffect(() => {
     if (!window.SlothShare?.finishActivity) return
     const handleBack = createMobileBack({
       getState: () => navigationState.current,
       keyboardOpen: () => ['open', 'opening'].includes(document.documentElement.dataset.keyboard),
+      pending: () => savingRef.current,
       back: () => dispatch({ type: 'back' }),
       hideKeyboard: () => window.SlothShare.hideKeyboard(),
       flush: async () => {
@@ -247,6 +261,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         return failure
       },
       finish: () => window.SlothShare.finishActivity(),
+      onPending: () => toast(t('mobile.exitPending'), { id: 'mobile-exit' }),
+      onFailed: () => toast.error(t('mobile.exitFailed'), { id: 'mobile-exit' }),
     })
     const guardedBack = () => (transferPending.current ? true : handleBack())
     window.__slothMobileBack = guardedBack
@@ -285,11 +301,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       void writer.current.whenIdle()
       void store.noteHistory.flush()
     }
-    window.addEventListener('pagehide', flush)
+    const removeFlush = flushOnHide(window, flush)
     return () => {
       stopped = true
       cleanup?.()
-      window.removeEventListener('pagehide', flush)
+      removeFlush()
       flush()
     }
   }, [writer, store.noteHistory])
@@ -409,6 +425,13 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     commit(next)
     openNote(next.activeId, true)
   }
+  function createHelpNote() {
+    if (blocked) return
+    const help = welcomeNote(prefs.language)
+    const next = newMobileNote(current.current, help.name, undefined, help.body)
+    commit(next)
+    openNote(next.activeId)
+  }
   function receiveSharedText(text) {
     const clean = text.replaceAll('\r\n', '\n').trim()
     if (!clean) return
@@ -514,6 +537,22 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       },
     })
   }
+  function emptyTrash() {
+    if (!current.current.trash.length) return
+    setTrashEmpty(true)
+    dispatch({ type: 'layer', route: { name: 'dialog' } })
+  }
+  function confirmEmptyTrash() {
+    if (blocked) return
+    commit(
+      current.current.trash.reduce(
+        (document, entry) => purgeFromTrash(document, entry.note.id),
+        current.current,
+      ),
+    )
+    setTrashEmpty(false)
+    back()
+  }
   function pinNote(id) {
     const old = current.current
     const pinned = old.pinnedIds ?? []
@@ -610,6 +649,32 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       endTransfer()
     }
   }
+  // Blocked storage keeps the unreadable payload so the user can take it away before
+  // replacing it. The action is explicit and never runs on its own.
+  async function downloadDamaged() {
+    try {
+      const status = await saveTextFile('sloth-note-damaged.json', 'application/json', damaged)
+      if (status === 'saved' || status === 'download') toast.success(t('mobile.damagedSaved'))
+    } catch {
+      toast.error(t('mobile.downloadDamagedFailed'))
+    }
+  }
+  async function replaceDamaged() {
+    setReplaceBusy(true)
+    try {
+      const failure = await persistence.save(current.current)
+      store.setError(failure)
+      if (!failure) {
+        store.setBlocked(false)
+        setReplaceConfirm(false)
+        toast.success(t('mobile.storageReplaced'))
+      }
+    } catch (cause) {
+      store.setError(friendlyError(cause))
+    } finally {
+      setReplaceBusy(false)
+    }
+  }
   async function chooseBackup(file) {
     if (!file || !beginTransfer(t('mobile.backupWorking'))) return
     try {
@@ -690,7 +755,34 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           <p>{t('mobile.readFailed')}</p>
           <p>{error}</p>
           <button onClick={onReload}>{t('mobile.retry')}</button>
+          {damaged !== null && (
+            <button onClick={downloadDamaged}>{t('mobile.downloadDamaged')}</button>
+          )}
+          {replaceConfirm ? (
+            <>
+              <p>{t('mobile.replaceStorageConfirm')}</p>
+              <button disabled={replaceBusy} onClick={() => setReplaceConfirm(false)}>
+                {t('dialog.cancel')}
+              </button>
+              <button className="danger" disabled={replaceBusy} onClick={replaceDamaged}>
+                {t('mobile.replaceStorageConfirmAction')}
+              </button>
+            </>
+          ) : (
+            <button disabled={replaceBusy} onClick={() => setReplaceConfirm(true)}>
+              {t('mobile.replaceStorage')}
+            </button>
+          )}
         </div>
+        <Toaster
+          theme={prefs.theme}
+          position="top-center"
+          closeButton
+          toastOptions={{
+            classNames: { toast: 'app-toast' },
+            closeButtonAriaLabel: t('dialog.close'),
+          }}
+        />
       </main>
     )
   return (
@@ -758,14 +850,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           </button>
         )}
       </header>
-      {(error || blocked) && (
+      {error && (
         <div className="mobile-error" role="alert">
           <p>
-            {blocked ? t('mobile.readFailed') : t('mobile.saveFailed')} {error}
+            {t('mobile.saveFailed')} {error}
           </p>
-          <button onClick={() => (blocked ? onReload() : writer.current.write(current.current))}>
-            {t('mobile.retry')}
-          </button>
+          <div className="mobile-error-actions">
+            <button onClick={() => writer.current.write(current.current)}>
+              {t('mobile.retry')}
+            </button>
+            <button onClick={exportBackup}>{t('menu.backupDownload')}</button>
+          </div>
         </div>
       )}
       {warning && (
@@ -1036,15 +1131,23 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           </section>
         )}
         {route.name === 'trash' && (
-          <TrashLibrary
-            trash={data.trash}
-            query=""
-            onRestore={(id) => commit(restoreFromTrash(current.current, id))}
-            onPurge={(id) => {
-              setPurgeId(id)
-              dispatch({ type: 'layer', route: { name: 'dialog', id } })
-            }}
-          />
+          <section className="mobile-trash" aria-label={t('trash.title')}>
+            {data.trash.length > 0 && (
+              <button className="mobile-trash-empty" disabled={blocked} onClick={emptyTrash}>
+                {t('trash.emptyAll')}
+              </button>
+            )}
+            <TrashLibrary
+              trash={data.trash}
+              query=""
+              onRestore={(id) => commit(restoreFromTrash(current.current, id))}
+              onPurge={(id) => {
+                setTrashEmpty(false)
+                setPurgeId(id)
+                dispatch({ type: 'layer', route: { name: 'dialog', id } })
+              }}
+            />
+          </section>
         )}
         {route.name === 'settings' && (
           <section className="mobile-settings" aria-label={t('menu.settings')}>
@@ -1088,12 +1191,24 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             <button onClick={() => dispatch({ type: 'push', route: { name: 'changelog' } })}>
               {t('settings.changelog')}
             </button>
-            <h2>{t('mobile.about')}</h2>
-            <p>Sloth Note · {t('mobile.version', { version })}</p>
+            <button disabled={blocked} onClick={createHelpNote}>
+              {t('menu.welcome')}
+            </button>
+            <h2>{t('settings.about')}</h2>
+            <AboutPanel />
           </section>
         )}
         {route.name === 'changelog' && <ChangelogPanel />}
       </div>
+      {editing && !sourceMode && keyboardOpen && (
+        <FormattingBar
+          view={editor.current}
+          onHideKeyboard={() => {
+            document.activeElement?.blur?.()
+            window.SlothShare?.hideKeyboard?.()
+          }}
+        />
+      )}
       {editing && sourceMode && (
         <div className="mobile-symbols" role="toolbar" aria-label={t('mobile.symbols')}>
           {['\t', '#', '-', '[ ]', '|', '`', '*'].map((symbol) => (
@@ -1217,6 +1332,21 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 </button>
                 <button disabled={Boolean(transferBusy)} className="danger" onClick={restoreBackup}>
                   {t('dialog.backupReplaceConfirm')}
+                </button>
+              </>
+            ) : layer.name === 'dialog' && route.name === 'trash' && trashEmpty ? (
+              <>
+                <p>{t('trash.emptyConfirm', { count: data.trash.length })}</p>
+                <button
+                  onClick={() => {
+                    setTrashEmpty(false)
+                    back()
+                  }}
+                >
+                  {t('dialog.cancel')}
+                </button>
+                <button className="danger" disabled={blocked} onClick={confirmEmptyTrash}>
+                  {t('trash.emptyAll')}
                 </button>
               </>
             ) : layer.name === 'dialog' && route.name === 'trash' ? (

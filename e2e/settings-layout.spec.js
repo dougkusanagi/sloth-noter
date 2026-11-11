@@ -1,5 +1,16 @@
 import { expect, test } from '@playwright/test'
 
+test('settings show the app name and version in About', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('.cm-content')).toBeVisible()
+  await page.keyboard.press('Control+,')
+  const settings = page.getByRole('dialog', { name: 'Configurações', exact: true })
+  await settings.getByRole('button', { name: 'Sobre', exact: true }).click()
+  await expect(settings.getByText(/^Sloth Note · Versão \d+\.\d+\.\d+$/)).toBeVisible()
+  if (process.env.CAPTURE_UI)
+    await page.screenshot({ path: '/tmp/sloth-about-desktop.png', fullPage: false })
+})
+
 for (const theme of ['light', 'dark']) {
   for (const width of [320, 390, 846, 1280]) {
     test(`settings options contain their full labels at ${width}px in ${theme}`, async ({

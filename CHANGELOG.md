@@ -10,6 +10,38 @@ Registro completo em `changelog/0.6.2.md`.
 
 Nenhuma mudança pendente.
 
+## [0.8.5] — 2026-11-11
+
+Registro completo em `changelog/0.8.5.md`.
+
+## [0.8.4] — 2026-11-10
+
+Registro completo em `changelog/0.8.4.md`.
+
+## [0.8.3] — 2026-11-09
+
+Registro completo em `changelog/0.8.3.md`.
+
+## [0.8.2] — 2026-11-09
+
+Registro completo em `changelog/0.8.2.md`.
+
+## [0.8.1] — 2026-11-09
+
+Registro completo em `changelog/0.8.1.md`.
+
+## [0.8.0] — 2026-11-09
+
+Registro completo em `changelog/0.8.0.md`.
+
+## [0.7.0] — 2026-11-09
+
+Registro completo em `changelog/0.7.0.md`.
+
+## [0.6.1] — 2026-11-09
+
+Registro completo em `changelog/0.6.1.md`.
+
 ## [0.6.0] — 2026-11-09
 
 Registro completo em `changelog/0.6.0.md`.

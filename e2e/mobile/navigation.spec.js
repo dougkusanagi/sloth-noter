@@ -1045,11 +1045,66 @@ test('settings provide language, reading size, about and news', async ({ page })
   await page.getByRole('button', { name: 'Configurações' }).tap()
   await expect(page.getByRole('heading', { name: 'Sobre' })).toBeVisible()
   await expect(page.getByText(/Sloth Note · Versão/)).toBeVisible()
+  if (process.env.CAPTURE_UI)
+    await page.screenshot({ path: '/tmp/sloth-about-mobile.png', fullPage: false })
   await page.getByLabel('Idioma').selectOption('en')
   await expect(page.getByRole('heading', { name: 'About' })).toBeVisible()
   await page.getByLabel('Language').selectOption('pt-BR')
   await page.getByRole('button', { name: 'Novidades' }).tap()
   await expect(page.getByRole('heading', { name: 'Novidades', exact: true }).first()).toBeVisible()
+})
+
+test('trash can be emptied after confirmation', async ({ page }) => {
+  for (const id of ['shopping', 'meeting']) {
+    await page.locator(`[data-note-id="${id}"]`).locator('..').getByRole('button').last().tap()
+    await page.getByRole('button', { name: 'Mover para a lixeira' }).tap()
+  }
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Lixeira', exact: true }).tap()
+  await expect(page.locator('.trash-library-item')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Esvaziar', exact: true }).tap()
+  await expect(page.getByText('Excluir definitivamente as 2 notas da lixeira?')).toBeVisible()
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancelar' }).tap()
+  await expect(page.locator('.trash-library-item')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Esvaziar', exact: true }).tap()
+  await page.getByRole('dialog').getByRole('button', { name: 'Esvaziar', exact: true }).tap()
+  await expect(page.getByText('A lixeira está vazia.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Esvaziar', exact: true })).toHaveCount(0)
+})
+
+test('news open a release with its offline image', async ({ page }) => {
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Novidades' }).tap()
+  await expect(page.locator('.changelog-page')).toContainText('Um resumo de cada versão')
+  const details = page
+    .locator('.changelog-page h2', { hasText: 'Versão 0.7.0' })
+    .locator('xpath=following-sibling::p[2]')
+  await details.getByRole('link', { name: 'Ver detalhes →' }).tap()
+  const article = page.locator('.changelog-page')
+  await expect(article).toContainText('Sobre nas Configurações')
+  const image = article.locator('img[src="/changelog/sobre-configuracoes-android.png"]')
+  await expect(image).toBeVisible()
+  expect(await image.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true)
+})
+
+test('About fits 320 px without horizontal scrolling', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 })
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Configurações' }).tap()
+  await expect(page.getByText(/Sloth Note · Versão/)).toBeVisible()
+  expect(
+    await page
+      .locator('.mobile-content')
+      .evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
+  ).toBe(true)
+})
+
+test('settings recreate the help page as a new note', async ({ page }) => {
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Configurações' }).tap()
+  await page.getByRole('button', { name: 'Recriar página de ajuda' }).tap()
+  await expect(page.locator('.markdown')).toContainText('página de ajuda e exemplos')
+  await expect(page.getByRole('button', { name: 'Voltar', exact: true })).toBeVisible()
 })
 
 test('note actions are available while reading and deleting returns to the list', async ({
@@ -1153,6 +1208,57 @@ test('native back closes layers before the note and exits only at the root', asy
   expect(await page.evaluate(() => window.backFinishes)).toBe(0)
   await page.evaluate(() => window.__slothMobileBack())
   await expect.poll(() => page.evaluate(() => window.backFinishes)).toBe(1)
+})
+
+test('native bridge keeps predictive back active only while a screen is open', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.backStates = []
+    window.SlothSystem = { setBackEnabled: (enabled) => window.backStates.push(enabled) }
+    window.SlothShare = {
+      finishActivity: () => {},
+      hideKeyboard: () => {},
+      requestInsets: () => {},
+    }
+  })
+  await page.reload()
+  await expect.poll(() => page.evaluate(() => window.backStates.at(-1))).toBe(false)
+  await page.locator('[data-note-id="shopping"]').tap()
+  await expect.poll(() => page.evaluate(() => window.backStates.at(-1))).toBe(true)
+  await page.getByRole('button', { name: 'Ações de Compras', exact: true }).tap()
+  await expect.poll(() => page.evaluate(() => window.backStates.at(-1))).toBe(true)
+  await page.evaluate(() => window.__slothMobileBack())
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.evaluate(() => window.__slothMobileBack())
+  await expect(page.getByRole('searchbox')).toBeVisible()
+  await expect.poll(() => page.evaluate(() => window.backStates.at(-1))).toBe(false)
+})
+
+test('back at the root warns and stays open when the last save failed', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.backFinishes = 0
+    window.SlothShare = {
+      finishActivity: () => window.backFinishes++,
+      hideKeyboard: () => {},
+      requestInsets: () => {},
+    }
+  })
+  await page.reload()
+  await page.locator('[data-note-id="shopping"]').tap()
+  await page.getByRole('button', { name: 'Editar', exact: true }).tap()
+  await page.locator('.cm-content').focus()
+  await page.keyboard.press('ControlOrMeta+End')
+  await page.evaluate(() => {
+    Storage.prototype.setItem = () => {
+      throw new Error('disk full')
+    }
+  })
+  await page.keyboard.type(' falha')
+  await expect(page.locator('.mobile-error')).toContainText('Não foi possível salvar')
+  await page.evaluate(() => window.__slothMobileBack())
+  await expect(page.getByRole('searchbox')).toBeVisible()
+  await page.evaluate(() => window.__slothMobileBack())
+  await expect(page.locator('[data-sonner-toast]').last()).toContainText('continua aberto')
+  expect(await page.evaluate(() => window.backFinishes)).toBe(0)
 })
 
 test('backup export sends a complete snapshot to the Android document picker', async ({ page }) => {
