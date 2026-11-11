@@ -15,3 +15,7 @@
 
 - O app deve sempre oferecer uma seção **Sobre**, acessível pela interface, com o nome **Sloth Note** e a versão atual.
 - Obtenha a versão dos metadados nativos ou da mesma fonte usada no build; nunca mantenha uma versão literal separada na interface. A seção deve acompanhar cada atualização automaticamente.
+
+## Compilação Android
+
+- Ao gerar um APK, produza a menor versão instalável possível. Compile a versão de depuração (debug) somente quando o usuário pedir explicitamente ou quando o agente precisar dela por um motivo concreto.
