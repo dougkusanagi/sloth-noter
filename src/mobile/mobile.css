@@ -643,6 +643,42 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-create {
   color: var(--ink);
 }
 
+[data-platform='mobile'] .mobile-format-bar {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  min-height: 52px;
+  padding: 0 4px;
+  gap: 2px;
+  border-top: 1px solid var(--line);
+  background: var(--paper);
+}
+[data-platform='mobile'] .mobile-format-group {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+[data-platform='mobile'] .mobile-format-group::-webkit-scrollbar {
+  display: none;
+}
+[data-platform='mobile'] .mobile-format-bar button {
+  flex: 0 0 auto;
+  min-width: 48px;
+  min-height: 48px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+}
+[data-platform='mobile'] .mobile-format-bar button[aria-pressed='true'] {
+  color: var(--accent-ink);
+}
+
 [data-platform='mobile'] .mobile-task-highlight {
   background: var(--active);
   outline: 4px solid var(--active);

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { imeFromViewport, keyboardState } from './insets.js'
 
 // Keeps --ime-bottom and data-keyboard current when the native shell does not report insets.
@@ -20,4 +20,19 @@ export function useInsets() {
       viewport.removeEventListener('scroll', sync)
     }
   }, [])
+}
+
+// Reactive view of data-keyboard, kept current by native insets and the web fallback.
+export function useKeyboardOpen() {
+  const read = () => ['open', 'opening'].includes(document.documentElement.dataset.keyboard ?? '')
+  const [open, setOpen] = useState(read)
+  useEffect(() => {
+    const observer = new MutationObserver(() => setOpen(read()))
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-keyboard'],
+    })
+    return () => observer.disconnect()
+  }, [])
+  return open
 }

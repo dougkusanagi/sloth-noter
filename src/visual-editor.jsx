@@ -12,6 +12,7 @@ import {
 import { transactionHistory } from './editor/history-log.js'
 import { searchHighlights } from './editor/search.js'
 import { clipboardImageFiles } from './clipboard.js'
+import { clipboardAction } from './clipboard-actions.js'
 import { ImageInsert } from './components/image-insert.jsx'
 import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
@@ -371,30 +372,7 @@ export function VisualEditor({
   async function runClipboard(action) {
     const view = viewRef.current
     if (!view) return
-    const { from, to } = view.state.selection.main
-    if (action === 'paste') {
-      view.focus()
-      if (callbacks.current.onPaste) return callbacks.current.onPaste()
-      try {
-        const clipboardData = new DataTransfer()
-        clipboardData.setData('text/plain', await navigator.clipboard.readText())
-        view.contentDOM.dispatchEvent(
-          new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }),
-        )
-      } catch {
-        toast.error(t('editor.pasteFailed'), { id: 'clipboard' })
-      }
-      return
-    }
-    try {
-      await navigator.clipboard.writeText(view.state.sliceDoc(from, to))
-    } catch {
-      toast.error(t('code.copyFailed'), { id: 'clipboard' })
-      return
-    }
-    if (action === 'cut') view.dispatch({ changes: { from, to }, userEvent: 'delete.cut' })
-    else toast.success(t('code.copied'), { id: 'clipboard', duration: 1800 })
-    view.focus()
+    await clipboardAction(view, action, { onPaste: callbacks.current.onPaste })
   }
 
   function runTableMenu(action) {

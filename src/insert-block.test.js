@@ -73,7 +73,25 @@ test('offers editable headings, lists, tables and code blocks', () => {
     selectionTo: 10,
   })
   assert.deepEqual(blockTemplate('code'), { text: '```\n\n```', selectionFrom: 4, selectionTo: 4 })
-  assert.equal(blockTemplate('h1'), null)
-  assert.equal(blockEdit('# Título\n\n', 10, 10, 'h1'), null)
   assert.equal(blockTemplate('other'), null)
+})
+
+test('H1 converts the current line like H2', () => {
+  const text = '# Título\n\nParágrafo'
+  const result = apply(text, text.length, text.length, 'h1')
+  assert.equal(result.text, '# Título\n\n# Parágrafo')
+  assert.equal(result.text.slice(result.from, result.to), '')
+})
+
+test('paragraph clears the heading prefix of the current line', () => {
+  const text = '# Título\n\n## Seção'
+  const result = apply(text, text.length, text.length, 'p')
+  assert.equal(result.text, '# Título\n\nSeção')
+  assert.equal(result.text.slice(result.from, result.to), '')
+})
+
+test('paragraph keeps the line when it has no block prefix', () => {
+  const text = '# Título\n\nTexto'
+  const result = apply(text, text.length, text.length, 'p')
+  assert.equal(result.text, text)
 })

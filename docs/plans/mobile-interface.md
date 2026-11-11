@@ -123,6 +123,26 @@ criar, achar, ler, editar com formatação e não perder dados.
       Pronto: todas as ações do grupo por contexto; Inserir com miniaturas e as mesmas ações do
       `/`; copiar/recortar/colar na seleção; alvos de 48 dp em 320 dp e fonte 2×; teclado físico
       sem barra; composição preservada.
+      Divisão em incrementos (cada um com commit próprio): - [x] **A4.1 — Barra base e grupos de contexto:** componente `src/mobile/formatting-bar.jsx`
+      sobre o teclado (52 dp), visível só em edição visual com IME aberto; grupos Texto
+      (Aa · Lista · Tarefa · Link), Estilos (Aa), Seleção (Aa · Copiar · Recortar · Colar),
+      Título (H1–H4 · ¶, com `insert-block.js` ampliado com H1 e ¶) e Lista (Desrecuar ·
+      Recuar · Mover ↑ · Mover ↓ · Alternar tarefa); Desfazer e esconder teclado sempre;
+      alvos de 48 dp; composição preservada; testes unitários e E2E.
+      Em aberto: Refazer (folha de edição), grupos Tabela e Código (A4.3).
+      Feito em 0.8.5: lógica de contexto em `src/mobile/formatting-context.js` e clipboard em
+      `src/clipboard-actions.js` (compartilhados com o editor); 4 testes unitários de contexto
+      e 7 E2E em `e2e/mobile/formatting-bar.spec.js`; suíte mobile completa (93) passando.
+      Os testes esperam a linha nova do Enter antes de digitar: no Chromium emulado como
+      Android o CodeMirror resolve o Enter de forma assíncrona (padrão já usado em
+      `navigation.spec.js`). Captura em `public/changelog/mobile-barra-formatacao.png`. - [ ] **A4.2 — Folha Inserir:** botão ＋ Inserir abrindo folha com cartões e miniaturas;
+      ações do menu `/` (insert-block.js) mais Tarefa, Divisor, Data de hoje e Link para
+      nota; Imagem reaproveita o fluxo de imagens existente; Câmera fica para A13. - [ ] **A4.3 — Grupos Tabela e Código e fechamento:** Célula ←/→, + Linha, + Coluna, ⋯
+      (remover linha/coluna, alinhar); Tab, Linguagem, Copiar bloco, Quebrar linhas; teclado
+      físico sem barra; capturas em 320/390 dp e fonte 2×; suíte completa; fechar A4.
+      Decisão registrada em A4.1: o grupo do contexto rola na horizontal quando não cabe, em vez
+      de mandar ações para uma folha em telas estreitas — mantém todas as ações com alvos de
+      48 dp e sem custo de navegação; o comportamento vale para as três larguras de teste.
 
 **Marco — usabilidade básica:** A1–A4 concluídas no navegador e suíte local completa passando.
 Ao chegar aqui, comece a sincronização.
@@ -297,9 +317,10 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**A4 — Barra de formatação, Inserir e seleção** (4.3). Grupo contextual da barra de formatação,
-Inserir com miniaturas, copiar/recortar/colar na seleção, alvos de 48 dp em 320 dp, teclado físico
-sem barra e composição preservada.
+**A4.2 — Folha Inserir** (segundo incremento de A4). Botão ＋ Inserir abrindo folha com cartões e
+miniaturas; ações do menu `/` mais Tarefa, Divisor, Data de hoje e Link para nota; Imagem
+reaproveita o fluxo existente; Câmera fica para A13. Depois A4.3 fecha a etapa com os grupos
+Tabela e Código, teclado físico sem barra, capturas 320/390 dp e fonte 2× e suíte completa.
 
 Validar no APK a lixeira e as configurações; conferir a prévia do voltar preditivo no gesto
 e nos três botões e o aviso de gravação pendente na raiz. Da A3, conferir no aparelho o envio

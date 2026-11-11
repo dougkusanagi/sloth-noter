@@ -52,7 +52,7 @@ import { ensureDocumentTitles } from '../title.js'
 import { welcomeNote } from '../welcome.js'
 import { LANGUAGES, t } from '../i18n.js'
 import { FONT_SIZE } from '../storage.js'
-import { useInsets } from './use-insets.js'
+import { useInsets, useKeyboardOpen } from './use-insets.js'
 import { useSystemBars } from './use-system-bars.js'
 import { useNativeActions } from './use-native-actions.js'
 import { canShareFile, shareFile } from './share.js'
@@ -61,6 +61,7 @@ import { newMobileNote, renameMobileNote, updateMobileNote } from './note-action
 import { SwipeNoteRow } from './swipe-note-row.jsx'
 import { shareAndroidText } from './share.js'
 import { backEnabled, createMobileBack } from './back.js'
+import { FormattingBar } from './formatting-bar.jsx'
 import { flushOnHide } from './lifecycle.js'
 import { saveTextFile } from './file-save.js'
 import './mobile.css'
@@ -186,6 +187,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     savePrefs('wrapLines' in change ? { ...change, wrapLinesByNote: {} } : change)
   }
   const { state, dispatch } = useNavigation(current)
+  const keyboardOpen = useKeyboardOpen()
   const navigationState = useRef(state)
   navigationState.current = state
   const route = state.screens.at(-1)
@@ -1198,6 +1200,15 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         )}
         {route.name === 'changelog' && <ChangelogPanel />}
       </div>
+      {editing && !sourceMode && keyboardOpen && (
+        <FormattingBar
+          view={editor.current}
+          onHideKeyboard={() => {
+            document.activeElement?.blur?.()
+            window.SlothShare?.hideKeyboard?.()
+          }}
+        />
+      )}
       {editing && sourceMode && (
         <div className="mobile-symbols" role="toolbar" aria-label={t('mobile.symbols')}>
           {['\t', '#', '-', '[ ]', '|', '`', '*'].map((symbol) => (
