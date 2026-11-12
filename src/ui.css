@@ -1164,7 +1164,8 @@ html:has(
   border-bottom-left-radius: 0;
   box-shadow:
     var(--bevel),
-    inset 1px 0 0 var(--line);
+    inset 1px 0 0 var(--line),
+    var(--lift);
 }
 .split-button .split-toggle svg,
 .button.sidebar-add svg {
