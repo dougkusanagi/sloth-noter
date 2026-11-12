@@ -2718,3 +2718,27 @@ body.cm-section-dragging * {
 .visual-editor .cm-sheet-editing .cm-cursor {
   border-left: 2px solid var(--accent);
 }
+
+.sheet-formula-suggestions {
+  text-align: left;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  min-width: 160px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--lift);
+  font: 13px var(--font-ui);
+}
+.sheet-formula-suggestions [role='option'] {
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.sheet-formula-suggestions [aria-selected='true'] {
+  background: var(--hover);
+}

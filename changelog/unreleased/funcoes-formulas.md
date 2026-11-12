@@ -1,0 +1,1 @@
+Adicionado: Ao começar uma fórmula com `=`, escolha uma função na lista ou digite seu nome para filtrá-la. Use as setas e Enter ou clique para inseri-la. A primeira linha da tabela é a linha 1 nas referências.

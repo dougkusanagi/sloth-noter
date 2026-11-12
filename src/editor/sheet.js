@@ -32,7 +32,7 @@ import {
   tableWriteCells,
   toTsv,
 } from '../table-sheet.js'
-import { columnName } from '../formula.js'
+import { columnName, FORMULA_FUNCTIONS } from '../formula.js'
 import { t } from '../i18n.js'
 import { tableAt, tableFlagsLine } from './table.js'
 
@@ -808,6 +808,82 @@ export class SheetEditor extends WidgetType {
       if (!isLast(view, head)) return false
       return finish({ move: direction })()
     }
+    let suggestions = null
+    let matches = []
+    let selected = 0
+    let prefixStart = 0
+    const closeSuggestions = () => {
+      suggestions?.remove()
+      suggestions = null
+      nested.contentDOM.removeAttribute('aria-controls')
+      nested.contentDOM.removeAttribute('aria-activedescendant')
+    }
+    const chooseSuggestion = () => {
+      if (!suggestions || !matches.length) return false
+      const name = matches[selected]
+      const head = nested.state.selection.main.head
+      closeSuggestions()
+      nested.dispatch({
+        changes: { from: prefixStart, to: head, insert: `${name}()` },
+        selection: { anchor: prefixStart + name.length + 1 },
+      })
+      nested.focus()
+      return true
+    }
+    const updateSuggestions = () => {
+      const { state } = nested
+      const head = state.selection.main.head
+      const before = state.doc.sliceString(0, head)
+      const match = /^\s*=\s*([A-Za-zÀ-ÿ.]*)$/.exec(before)
+      if (!match || !state.selection.main.empty) return closeSuggestions()
+      const query = match[1]
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+      matches = FORMULA_FUNCTIONS.filter((name) => name.startsWith(query))
+      if (!matches.length) return closeSuggestions()
+      prefixStart = head - match[1].length
+      selected = Math.min(selected, matches.length - 1)
+      if (!suggestions) {
+        suggestions = document.createElement('div')
+        suggestions.className = 'sheet-formula-suggestions'
+        suggestions.id = `sheet-formula-${Math.random().toString(36).slice(2)}`
+        suggestions.setAttribute('role', 'listbox')
+        suggestions.setAttribute('aria-label', t('table.formulaFunctions'))
+        cell.append(suggestions)
+        nested.contentDOM.setAttribute('aria-controls', suggestions.id)
+      }
+      suggestions.replaceChildren(
+        ...matches.map((name, index) => {
+          const option = document.createElement('div')
+          option.id = `${suggestions.id}-${index}`
+          option.setAttribute('role', 'option')
+          option.setAttribute('aria-selected', String(index === selected))
+          option.textContent = name
+          option.addEventListener('mousedown', (event) => {
+            event.preventDefault()
+            selected = index
+            chooseSuggestion()
+          })
+          return option
+        }),
+      )
+      const option = suggestions.children[selected]
+      if (option.offsetTop < suggestions.scrollTop) suggestions.scrollTop = option.offsetTop
+      else if (
+        option.offsetTop + option.offsetHeight >
+        suggestions.scrollTop + suggestions.clientHeight
+      )
+        suggestions.scrollTop = option.offsetTop + option.offsetHeight - suggestions.clientHeight
+      const bounds = cell.getBoundingClientRect()
+      const above = bounds.top
+      const below = window.innerHeight - bounds.bottom
+      const openAbove = below < 180 && above > below
+      suggestions.style.top = openAbove ? 'auto' : '100%'
+      suggestions.style.bottom = openAbove ? '100%' : 'auto'
+      suggestions.style.maxHeight = `${Math.max(40, Math.min(180, (openAbove ? above : below) - 8))}px`
+      nested.contentDOM.setAttribute('aria-activedescendant', `${suggestions.id}-${selected}`)
+    }
     const nested = new EditorView({
       parent: cell,
       state: EditorState.create({
@@ -825,22 +901,43 @@ export class SheetEditor extends WidgetType {
           }),
           Prec.highest(
             keymap.of([
-              { key: 'Enter', run: finish({ move: 'down' }) },
+              { key: 'Enter', run: () => chooseSuggestion() || finish({ move: 'down' })() },
               { key: 'Shift-Enter', run: newLine },
               { key: 'Mod-Enter', run: newLine },
-              { key: 'Tab', run: finish({ move: 'right' }) },
+              { key: 'Tab', run: () => chooseSuggestion() || finish({ move: 'right' })() },
               { key: 'Shift-Tab', run: finish({ move: 'left' }) },
-              { key: 'Escape', run: finish({ save: false }) },
+              {
+                key: 'Escape',
+                run: () => {
+                  if (!suggestions) return finish({ save: false })()
+                  closeSuggestions()
+                  return true
+                },
+              },
               {
                 key: 'ArrowUp',
-                run: arrow('up', (view, head) => view.state.doc.lineAt(head).number === 1),
+                run: (view) => {
+                  if (suggestions) {
+                    selected = (selected + matches.length - 1) % matches.length
+                    updateSuggestions()
+                    return true
+                  }
+                  return arrow('up', (view, head) => view.state.doc.lineAt(head).number === 1)(view)
+                },
               },
               {
                 key: 'ArrowDown',
-                run: arrow(
-                  'down',
-                  (view, head) => view.state.doc.lineAt(head).number === view.state.doc.lines,
-                ),
+                run: (view) => {
+                  if (suggestions) {
+                    selected = (selected + 1) % matches.length
+                    updateSuggestions()
+                    return true
+                  }
+                  return arrow(
+                    'down',
+                    (view, head) => view.state.doc.lineAt(head).number === view.state.doc.lines,
+                  )(view)
+                },
               },
               { key: 'ArrowLeft', run: arrow('left', (_view, head) => head === 0) },
               {
@@ -853,6 +950,7 @@ export class SheetEditor extends WidgetType {
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !nested.sheetClosed)
               syncCell(parent, update.state.doc.toString())
+            if (update.docChanged || (suggestions && update.selectionSet)) updateSuggestions()
           }),
           EditorView.domEventHandlers({
             // Leaving the editor saves the cell, as clicking elsewhere does in a spreadsheet.
@@ -869,6 +967,7 @@ export class SheetEditor extends WidgetType {
       }),
     })
     cell.sheetEditor = nested
+    if (editing.text === '=') updateSuggestions()
     return cell
   }
   destroy(dom) {

@@ -115,3 +115,13 @@ test('English results use English booleans and number format', () => {
   assert.equal(formatResult({ value: 1234.5 }, 'en'), '1,234.5')
   assert.equal(formatResult({ value: true }, 'en'), 'TRUE')
 })
+
+test('lowercase references and parentheses follow spreadsheet row numbering', () => {
+  const rows = [
+    ['a', 'b', 'c', 'd'],
+    ['1', '- [x] tarefa', '', ''],
+    ['2', '2', '3', '=(b3+c3)'],
+  ]
+  assert.equal(shown(rows)[2][3], '5')
+  assert.equal(one('=(b2+c2)', rows), '#VALOR!')
+})

@@ -292,6 +292,8 @@ const FUNCTIONS = {
     return list.find(isError) ?? list.map(toText).join('')
   },
 }
+export const FORMULA_FUNCTIONS = Object.keys(FUNCTIONS)
+
 // English names and accent-free spellings of the same functions.
 Object.assign(FUNCTIONS, {
   SUM: FUNCTIONS.SOMA,

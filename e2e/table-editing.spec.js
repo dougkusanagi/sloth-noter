@@ -118,7 +118,11 @@ test('right click on a cell opens the table menu with cell actions', async ({ pa
   const menu = page.getByRole('menu', { name: 'Ações da tabela' })
   await expect(menu.getByRole('menuitem', { name: 'Cores', exact: true })).toBeVisible()
   await expect(menu.getByRole('menuitem', { name: 'Alinhamento' })).toBeVisible()
-  await menu.getByRole('menuitem', { name: 'Inserir linha abaixo' }).click()
+  await menu.getByRole('menuitem', { name: 'Inserir', exact: true }).click()
+  await page
+    .getByRole('menu', { name: 'Inserir', exact: true })
+    .getByRole('menuitem', { name: 'Inserir linha abaixo' })
+    .click()
   expect((await markdown(page)).match(/^\|[ |]+\|$/gm)).toHaveLength(3)
 })
 
@@ -241,4 +245,20 @@ test('the menu aligns selected cells horizontally and vertically', async ({ page
   await panel.getByRole('menuitemradio', { name: 'Meio' }).click()
   await expect(cell).toHaveAttribute('data-valign', 'middle')
   expect(await markdown(page)).toContain('halign=1:1:right valign=1:1:middle')
+})
+
+test('formula suggestions can be filtered and inserted with the keyboard', async ({ page }) => {
+  await setup(page)
+  const cell = rows(page).nth(1).locator('.cm-md-table-cell').first()
+  await cell.click()
+  await page.keyboard.type('=')
+  await page.keyboard.type('so')
+  const list = page.getByRole('listbox', { name: 'Funções disponíveis' })
+  await expect(list.getByRole('option', { name: 'SOMA' })).toBeVisible()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.cm-sheet-editing')).toContainText('=SOMA()')
+  await expect(list).toHaveCount(0)
+  await page.keyboard.type('1;2')
+  await page.keyboard.press('Enter')
+  await expect(cell).toHaveText('3')
 })
