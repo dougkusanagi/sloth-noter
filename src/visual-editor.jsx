@@ -40,7 +40,10 @@ import {
   removeTableColumnAt,
   removeTableRowAt,
   tableAt,
+  tableUi,
 } from './editor/table.js'
+import { blockHandle } from './editor/block-handle.js'
+import { OPEN_INSERT_EVENT } from './editor/block-actions.js'
 import {
   continueList,
   indentList,
@@ -77,18 +80,25 @@ import {
   Copy,
   ClipboardPaste,
   Scissors,
+  Bold,
+  Italic,
+  Strikethrough,
+  ChevronDown,
+  Ellipsis,
+  Check,
 } from 'lucide-react'
+import { documentBlocks } from './block-move.js'
+import { blockIconMarkup } from './editor/block-icons.js'
+import { TURN_INTO, turnBlocksInto } from './editor/block-actions.js'
 
 /* eslint-disable react/jsx-key -- static tuples, rendered with explicit keys below */
 
 const formatButtons = [
-  ['bold', 'format.bold', <strong>B</strong>],
-  ['italic', 'format.italic', <em>I</em>],
-  ['code', 'format.code', <span className="format-code">&lt;/&gt;</span>],
+  ['bold', 'format.bold', <Bold size={16} aria-hidden="true" />],
+  ['strike', 'format.strike', <Strikethrough size={16} aria-hidden="true" />],
+  ['italic', 'format.italic', <Italic size={16} aria-hidden="true" />],
   ['link', 'format.link', <Link size={16} aria-hidden="true" />],
-  ['heading', 'format.heading', <span>H₂</span>],
-  ['quote', 'format.quote', <span>❝</span>],
-  ['list', 'format.list', <span>☷</span>],
+  ['code', 'format.code', <CodeXml size={16} aria-hidden="true" />],
 ]
 const clipboardButtons = [
   ['copy', 'editor.copy', <Copy size={16} aria-hidden="true" />, 'C'],
@@ -191,6 +201,8 @@ export function VisualEditor({
     viewRef = useRef(null),
     syncing = useRef(false)
   const [toolbar, setToolbar] = useState(null)
+  const [toolbarMenu, setToolbarMenu] = useState(null)
+  const toolbarKey = useRef('')
   const [insertAt, setInsertAt] = useState(null)
   const [blockMenu, setBlockMenu] = useState(false)
   const [blockQuery, setBlockQuery] = useState('')
@@ -245,7 +257,13 @@ export function VisualEditor({
     }
     const text = view.state.doc.toString()
     const inCode = selectionInCode(markdownTree(text), selection.from, selection.to)
-    const margin = Math.min(inCode ? 60 : 176, window.innerWidth / 2)
+    const blocks = selectedBlocks(view)
+    const kind =
+      blocks.length &&
+      blocks.every((block) => TURN_INTO.includes(block.kind) || block.kind === 'h6')
+        ? blocks[0].kind
+        : null
+    const margin = Math.min(inCode ? 60 : 150, window.innerWidth / 2)
     const x = Math.max(margin, Math.min(window.innerWidth - margin, (start.left + end.right) / 2))
     const y = start.top > 55 ? start.top - 8 : end.bottom + 8
     setToolbar({
@@ -253,8 +271,31 @@ export function VisualEditor({
       y,
       below: start.top <= 55,
       inCode,
+      kind,
       active: inCode ? [] : activeFormats(text, selection.from, selection.to),
     })
+    // A dropdown stays open while the toolbar only moves; another selection closes it.
+    const key = `${selection.from}:${selection.to}`
+    if (toolbarKey.current !== key) setToolbarMenu(null)
+    toolbarKey.current = key
+  }
+
+  // The blocks the selection touches, for "Turn into".
+  function selectedBlocks(view) {
+    const { from, to } = view.state.selection.main
+    const doc = view.state.doc
+    const first = doc.lineAt(from).number,
+      last = doc.lineAt(to).number
+    return documentBlocks(doc.toString()).filter(
+      (block) => block.last >= first && block.first <= last,
+    )
+  }
+
+  function turnSelectionInto(kind) {
+    const view = viewRef.current
+    if (!view) return
+    setToolbarMenu(null)
+    turnBlocksInto(view, selectedBlocks(view), kind)
   }
 
   function positionInsert(view) {
@@ -276,6 +317,23 @@ export function VisualEditor({
         setInsertAt(position)
       },
     })
+  }
+
+  // Opens the block menu ("/") on the cursor line when that line is empty.
+  function openInsertMenu(view) {
+    const selection = view.state.selection.main
+    const line = view.state.doc.lineAt(selection.head)
+    if (!selection.empty || line.text.trim() || insideCodeBlock(view.state, line)) return false
+    const coords = view.coordsAtPos(selection.head)
+    if (!coords) return false
+    setInsertAt({
+      from: line.from,
+      x: coords.left + 4,
+      y: coords.top,
+      hasBodyPlaceholder: line.number === emptyBodyLine(view.state),
+    })
+    setBlockMenu(true)
+    return true
   }
 
   function blockMenuLeft() {
@@ -537,21 +595,9 @@ export function VisualEditor({
           if (view.state.readOnly && !((event.ctrlKey || event.metaKey) && event.key === 'Enter'))
             return false
           if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
-            const selection = view.state.selection.main
-            const line = view.state.doc.lineAt(selection.head)
-            if (selection.empty && !line.text.trim() && !insideCodeBlock(view.state, line)) {
-              const coords = view.coordsAtPos(selection.head)
-              if (coords) {
-                event.preventDefault()
-                setInsertAt({
-                  from: line.from,
-                  x: coords.left + 4,
-                  y: coords.top,
-                  hasBodyPlaceholder: line.number === emptyBodyLine(view.state),
-                })
-                setBlockMenu(true)
-                return true
-              }
+            if (openInsertMenu(view)) {
+              event.preventDefault()
+              return true
             }
           }
           const block = blockShortcut(event)
@@ -755,6 +801,8 @@ export function VisualEditor({
         onOpenWiki: (target) => callbacks.current.onOpenWiki?.(target),
       }),
       railsLayer,
+      tableUi,
+      blockHandle,
       liveMarkdown,
       stickyCodeCopy,
       codeCopyHandler.of((source) => callbacks.current.onCopy?.(source)),
@@ -892,6 +940,8 @@ export function VisualEditor({
     layoutObserver.observe(view.dom)
     layoutObserver.observe(view.contentDOM)
     view.scrollDOM.addEventListener('mousedown', focusBlankArea)
+    const openInsert = () => openInsertMenu(view)
+    view.dom.addEventListener(OPEN_INSERT_EVENT, openInsert)
     callbacks.current.onReady(view)
     return () => {
       view.dom.removeEventListener('pointerup', capturePointerSelection)
@@ -901,6 +951,7 @@ export function VisualEditor({
       window.removeEventListener('resize', resize)
       layoutObserver.disconnect()
       view.scrollDOM.removeEventListener('mousedown', focusBlankArea)
+      view.dom.removeEventListener(OPEN_INSERT_EVENT, openInsert)
       view.destroy()
     }
     // The view is recreated per note; later body changes are synced by the effect below.
@@ -1051,18 +1102,38 @@ export function VisualEditor({
             </form>
           ) : (
             <>
-              {clipboardButtons.map(([action, label, icon, keys]) => (
-                <ShortcutButton
-                  key={action}
-                  type="button"
-                  label={t(label)}
-                  keys={keys}
-                  onClick={() => runClipboard(action)}
-                >
-                  {icon}
-                </ShortcutButton>
-              ))}
-              {!toolbar.inCode && <span className="format-separator" aria-hidden="true" />}
+              {toolbar.inCode &&
+                clipboardButtons.map(([action, label, icon, keys]) => (
+                  <ShortcutButton
+                    key={action}
+                    type="button"
+                    label={t(label)}
+                    keys={keys}
+                    onClick={() => runClipboard(action)}
+                  >
+                    {icon}
+                  </ShortcutButton>
+                ))}
+              {!toolbar.inCode && toolbar.kind && (
+                <>
+                  <button
+                    type="button"
+                    className={`format-menu-trigger${toolbarMenu === 'type' ? ' open' : ''}`}
+                    aria-label={t('format.turnInto', { block: t(`block.${toolbar.kind}`) })}
+                    title={t('format.turnInto', { block: t(`block.${toolbar.kind}`) })}
+                    aria-haspopup="menu"
+                    aria-expanded={toolbarMenu === 'type'}
+                    onClick={() => setToolbarMenu(toolbarMenu === 'type' ? null : 'type')}
+                  >
+                    <span
+                      className="format-menu-icon"
+                      dangerouslySetInnerHTML={{ __html: blockIconMarkup[toolbar.kind] }}
+                    />
+                    <ChevronDown size={12} aria-hidden="true" />
+                  </button>
+                  <span className="format-separator" aria-hidden="true" />
+                </>
+              )}
               {!toolbar.inCode &&
                 formatButtons.map(([action, label, icon]) => (
                   <ShortcutButton
@@ -1081,6 +1152,76 @@ export function VisualEditor({
                     {icon}
                   </ShortcutButton>
                 ))}
+              {!toolbar.inCode && (
+                <>
+                  <span className="format-separator" aria-hidden="true" />
+                  <button
+                    type="button"
+                    className={`format-menu-trigger${toolbarMenu === 'more' ? ' open' : ''}`}
+                    aria-label={t('format.more')}
+                    title={t('format.more')}
+                    aria-haspopup="menu"
+                    aria-expanded={toolbarMenu === 'more'}
+                    onClick={() => setToolbarMenu(toolbarMenu === 'more' ? null : 'more')}
+                  >
+                    <Ellipsis size={16} aria-hidden="true" />
+                  </button>
+                </>
+              )}
+              {toolbarMenu && (
+                <div
+                  className={`format-dropdown format-dropdown-${toolbarMenu}`}
+                  role="menu"
+                  aria-label={t(toolbarMenu === 'type' ? 'block.turnInto' : 'format.more')}
+                  onKeyDown={(event) => {
+                    const buttons = [...event.currentTarget.querySelectorAll('button')]
+                    const index = buttons.indexOf(document.activeElement)
+                    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                      event.preventDefault()
+                      const step = event.key === 'ArrowDown' ? 1 : buttons.length - 1
+                      buttons[(index + step) % buttons.length]?.focus()
+                    }
+                    if (event.key === 'Escape') {
+                      event.preventDefault()
+                      setToolbarMenu(null)
+                      viewRef.current?.focus()
+                    }
+                  }}
+                >
+                  {toolbarMenu === 'type'
+                    ? TURN_INTO.map((kind) => (
+                        <button
+                          key={kind}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={kind === toolbar.kind}
+                          onClick={() => turnSelectionInto(kind)}
+                        >
+                          <span
+                            className="format-menu-icon"
+                            dangerouslySetInnerHTML={{ __html: blockIconMarkup[kind] }}
+                          />
+                          <span className="menu-item-label">{t(`block.${kind}`)}</span>
+                          {kind === toolbar.kind && <Check size={14} aria-hidden="true" />}
+                        </button>
+                      ))
+                    : clipboardButtons.map(([action, label, icon, keys]) => (
+                        <button
+                          key={action}
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setToolbarMenu(null)
+                            runClipboard(action)
+                          }}
+                        >
+                          <span className="format-menu-icon">{icon}</span>
+                          <span className="menu-item-label">{t(label)}</span>
+                          <Shortcut keys={keys} />
+                        </button>
+                      ))}
+                </div>
+              )}
             </>
           )}
         </div>

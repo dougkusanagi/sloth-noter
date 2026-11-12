@@ -101,3 +101,13 @@ test('combined emphasis activates both controls and preserves the other format w
     assert.equal(text.slice(0, edit.from) + edit.insert + text.slice(edit.to), expected)
   }
 })
+
+test('strikethrough wraps and unwraps a selection', async () => {
+  const { formatSelection, activeFormats } = await import('./format-selection.js')
+  const text = 'um dois tres'
+  const added = formatSelection(text, 3, 7, 'strike')
+  assert.equal(added.insert, '~~dois~~')
+  const next = 'um ~~dois~~ tres'
+  assert.deepEqual(activeFormats(next, 5, 9), ['strike'])
+  assert.equal(formatSelection(next, 5, 9, 'strike').insert, 'dois')
+})

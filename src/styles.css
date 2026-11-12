@@ -343,6 +343,69 @@ textarea:focus-visible {
   margin: 0 3px;
   background: var(--edge);
 }
+.format-toolbar {
+  overflow: visible;
+}
+.format-toolbar .format-menu-trigger {
+  display: flex;
+  gap: 2px;
+  width: auto;
+  padding: 0 5px;
+  color: var(--ink);
+}
+.format-toolbar .format-menu-trigger.open {
+  background: var(--hover);
+}
+.format-menu-icon {
+  display: grid;
+  place-items: center;
+}
+.format-menu-icon svg {
+  width: 17px;
+  height: 17px;
+}
+.format-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 2;
+  display: grid;
+  min-width: 210px;
+  max-height: min(360px, 60vh);
+  overflow-y: auto;
+  padding: 5px;
+  border-radius: 12px;
+  background: var(--popover);
+  box-shadow: var(--bevel), var(--shadow-pop);
+  font: 13px var(--ui);
+}
+.format-toolbar.below .format-dropdown,
+.format-toolbar .format-dropdown {
+  animation: pop-in 0.14s var(--ease) both;
+}
+.format-dropdown-more {
+  right: 0;
+  left: auto;
+}
+.format-toolbar .format-dropdown button {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  font: 13px var(--ui);
+  text-align: left;
+}
+.format-toolbar .format-dropdown button:active {
+  transform: none;
+}
+.format-dropdown [aria-checked='true'] {
+  color: var(--accent);
+}
+.format-dropdown .menu-item-label {
+  flex: 1;
+}
 .format-toolbar .format-code {
   font: 12px var(--ui);
 }
@@ -454,6 +517,13 @@ textarea:focus-visible {
   overflow: auto;
   font-family: var(--serif);
   padding: 28px max(44px, calc((100% - var(--content-width, 760px)) / 2)) 70px;
+}
+/* With a mouse, the left margin holds the block handle and the fold arrow.
+   Reading uses the same margin, so switching modes keeps the layout. */
+@media (hover: hover) and (pointer: fine) and (min-width: 601px) {
+  .visual-editor .cm-scroller {
+    padding-left: max(88px, calc((100% - var(--content-width, 760px)) / 2));
+  }
 }
 .visual-editor .cm-content {
   min-height: 100%;
@@ -723,91 +793,24 @@ textarea:focus-visible {
 }
 .visual-editor .cm-md-table-row.cm-md-table-head {
   border-radius: var(--radius) var(--radius) 0 0;
+}
+/* Header row and header column: the settings come from the comment above the table. */
+.visual-editor .cm-md-table-headrow > .cm-md-table-cell,
+.visual-editor .cm-md-table-cell.cm-md-table-headcell {
+  background: color-mix(in srgb, var(--soft) 55%, var(--paper));
   font-weight: 600;
+}
+.visual-editor .cm-md-table-headrow {
+  z-index: 2;
+}
+.visual-editor .cm-md-table-meta {
+  display: none;
 }
 .visual-editor .cm-md-table-row.cm-md-table-last {
   border-radius: 0 0 var(--radius) var(--radius);
 }
 .visual-editor .cm-md-table-row.cm-md-table-head.cm-md-table-last {
   border-radius: var(--radius);
-}
-.visual-editor .cm-md-table-column-controls {
-  position: absolute;
-  top: -24px;
-  left: 0;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(var(--table-columns), minmax(0, 1fr));
-  width: 100%;
-  min-height: 24px;
-  font: 12px var(--ui);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.12s;
-}
-.visual-editor .cm-md-table-row.cm-md-table-head:hover .cm-md-table-column-controls,
-.visual-editor .cm-md-table-row.cm-md-table-head:focus-within .cm-md-table-column-controls,
-.visual-editor .cm-md-table-column-controls:hover {
-  opacity: 1;
-  pointer-events: auto;
-}
-.visual-editor .cm-md-table-control-spacer {
-  display: none;
-}
-.visual-editor .cm-md-table-remove-row,
-.visual-editor .cm-md-table-remove-column {
-  display: grid;
-  place-items: center;
-  justify-self: center;
-  align-self: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: #b45c55;
-  cursor: pointer;
-  opacity: 0.35;
-}
-.visual-editor .cm-md-table-remove-row {
-  position: absolute;
-  left: -28px;
-  top: 50%;
-  transform: translateY(-50%);
-  opacity: 0;
-  pointer-events: none;
-}
-.visual-editor .cm-md-table-remove-row::after {
-  content: '';
-  position: absolute;
-  left: 100%;
-  top: -8px;
-  width: 10px;
-  height: 38px;
-}
-.visual-editor .cm-md-table-row:hover .cm-md-table-remove-row,
-.visual-editor .cm-md-table-row:focus-within .cm-md-table-remove-row {
-  opacity: 0.8;
-  pointer-events: auto;
-}
-.visual-editor .cm-md-table-remove-row:hover,
-.visual-editor .cm-md-table-remove-row:focus-visible,
-.visual-editor .cm-md-table-remove-column:hover,
-.visual-editor .cm-md-table-remove-column:focus-visible {
-  opacity: 1;
-  background: color-mix(in srgb, #b45c55 12%, transparent);
-  color: #a64d47;
-}
-.visual-editor .cm-md-table-remove-row:disabled,
-.visual-editor .cm-md-table-remove-column:disabled {
-  opacity: 0.15;
-  cursor: not-allowed;
-}
-.visual-editor .cm-md-table-remove-row svg,
-.visual-editor .cm-md-table-remove-column svg {
-  width: 14px;
-  height: 14px;
 }
 .visual-editor .cm-md-table-cell {
   display: block;
@@ -843,7 +846,7 @@ textarea:focus-visible {
 }
 .visual-editor .cm-md-table-row > .cm-widgetBuffer,
 .visual-editor .cm-md-table-row > br,
-.visual-editor .cm-md-table-row > span[contenteditable='false']:empty {
+.visual-editor .cm-md-table-row > span[contenteditable='false']:empty:not(.cm-md-table-cell) {
   display: none;
 }
 .visual-editor .cm-md-table-divider {
@@ -1522,88 +1525,6 @@ textarea:focus-visible {
   }
 }
 
-/* Ordering grip in the left gutter, right before the heading level pill (36px wide with
-   its fold chevron, 26px as a plain level badge). */
-.cm-drag-handle {
-  position: absolute;
-  right: calc(100% + 0.45rem + 41px);
-  top: 50%;
-  translate: 0 -50%;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 20px;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: color-mix(in srgb, var(--muted) 65%, transparent);
-  cursor: grab;
-  touch-action: none;
-  user-select: none;
-  transition: color 0.12s;
-}
-/* It needs a wide gutter, which only opens beyond the content column. */
-@media (min-width: 925px) {
-  .visual-editor .cm-md-h2 .cm-drag-handle,
-  .visual-editor .cm-md-h3 .cm-drag-handle,
-  .visual-editor .cm-md-h4 .cm-drag-handle,
-  .visual-editor .cm-md-h5 .cm-drag-handle,
-  .visual-editor .cm-md-h6 .cm-drag-handle {
-    display: inline-flex;
-    opacity: 0;
-    transition:
-      opacity 0.12s,
-      color 0.12s;
-  }
-  .visual-editor .cm-md-h2:hover .cm-drag-handle,
-  .visual-editor .cm-md-h3:hover .cm-drag-handle,
-  .visual-editor .cm-md-h4:hover .cm-drag-handle,
-  .visual-editor .cm-md-h5:hover .cm-drag-handle,
-  .visual-editor .cm-md-h6:hover .cm-drag-handle,
-  .visual-editor .cm-md-h2:focus-within .cm-drag-handle,
-  .visual-editor .cm-md-h3:focus-within .cm-drag-handle,
-  .visual-editor .cm-md-h4:focus-within .cm-drag-handle,
-  .visual-editor .cm-md-h5:focus-within .cm-drag-handle,
-  .visual-editor .cm-md-h6:focus-within .cm-drag-handle {
-    opacity: 1;
-  }
-  /* Hover band over the gutter, so the grip shows from anywhere on the heading row; the
-     pill and grip come later in the line and stay on top of it. */
-  .visual-editor :is(.cm-md-h2, .cm-md-h3, .cm-md-h4, .cm-md-h5, .cm-md-h6)::before {
-    content: '';
-    position: absolute;
-    right: 100%;
-    top: 0;
-    bottom: 0;
-    width: calc(0.45rem + 41px + 22px);
-  }
-  .cm-drag-handle:hover,
-  .cm-drag-handle:focus-visible {
-    opacity: 1;
-    color: var(--accent);
-  }
-  .cm-drag-handle:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
-    outline-offset: 1px;
-  }
-}
-.cm-line:has(.cm-level-badge) .cm-drag-handle {
-  right: calc(100% + 0.45rem + 31px);
-}
-.cm-drag-handle svg {
-  width: 16px;
-}
-.cm-drag-handle:active {
-  cursor: grabbing;
-}
-body.cm-section-dragging {
-  cursor: grabbing;
-  user-select: none;
-}
-.cm-dragging-line {
-  opacity: 0.45;
-}
 .cm-section-drop {
   position: fixed;
   z-index: 60;
@@ -1715,4 +1636,491 @@ body.cm-section-dragging {
 /* Preview reuses the visual editor; only the caret hints at editing. */
 .visual-editor.read-only .cm-cursorLayer {
   display: none;
+}
+
+/* Table controls: a bar segment per row and column, insert dots on their
+   boundaries and a toolbar for the selected row or column. */
+.visual-editor .cm-md-table-column-controls {
+  position: absolute;
+  top: -14px;
+  left: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(var(--table-columns), minmax(0, 1fr));
+  width: 100%;
+  height: 10px;
+  font: 12px var(--ui);
+}
+.cm-table-row-tools {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  font: 12px var(--ui);
+}
+.cm-table-row-tools > *,
+.cm-table-column-tool > * {
+  pointer-events: auto;
+}
+.cm-table-column-tool {
+  position: relative;
+  display: block;
+}
+.cm-table-bar-segment {
+  position: absolute;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: var(--soft);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.12s,
+    background 0.12s;
+}
+.cm-table-row-segment {
+  left: -14px;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  border-bottom: 1px solid var(--paper);
+}
+.cm-table-column-segment {
+  inset: 0;
+  border-right: 1px solid var(--paper);
+}
+/* A wider invisible target makes the thin bars easy to hit. */
+.cm-table-bar-segment::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+.cm-md-table-head .cm-table-row-segment {
+  border-top-left-radius: 4px;
+}
+.cm-md-table-last .cm-table-row-segment {
+  border-bottom-left-radius: 4px;
+  border-bottom: 0;
+}
+.cm-table-column-tool:first-child .cm-table-column-segment {
+  border-top-left-radius: 4px;
+}
+.cm-table-column-tool:last-child .cm-table-column-segment {
+  border-top-right-radius: 4px;
+  border-right: 0;
+}
+.cm-md-table-focus .cm-table-bar-segment,
+.cm-table-bar-segment:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.cm-table-bar-segment:hover {
+  background: color-mix(in srgb, var(--accent) 45%, var(--soft));
+}
+.cm-table-bar-segment.is-selected {
+  background: var(--accent);
+}
+.cm-table-danger .cm-table-bar-segment.is-selected {
+  background: #e34c4c;
+}
+.cm-table-bar-segment:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cm-table-pin {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--paper);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+}
+.cm-md-table-focus .cm-table-pin,
+.cm-table-pin:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.cm-table-pin-row {
+  left: -32px;
+  width: 18px;
+  height: 16px;
+}
+.cm-table-pin-row.is-before {
+  top: -8px;
+}
+.cm-table-pin-row.is-after {
+  bottom: -8px;
+}
+.cm-table-pin-column {
+  top: -14px;
+  width: 16px;
+  height: 18px;
+}
+.cm-table-pin-column.is-before {
+  left: -8px;
+}
+.cm-table-pin-column.is-after {
+  right: -8px;
+}
+.cm-table-pin-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--muted, var(--soft));
+  transition:
+    width 0.15s,
+    height 0.15s,
+    background 0.15s;
+}
+.cm-table-pin:hover .cm-table-pin-dot,
+.cm-table-pin:focus-visible .cm-table-pin-dot {
+  width: 20px;
+  height: 20px;
+  background: var(--accent);
+  box-shadow: 0 1px 4px #0003;
+}
+.cm-table-pin:hover .cm-table-pin-dot::before,
+.cm-table-pin:focus-visible .cm-table-pin-dot::before {
+  content: '+';
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--paper);
+  font: 600 16px/1 var(--ui);
+}
+.cm-table-pin:focus-visible {
+  outline: none;
+}
+.cm-table-guide {
+  position: absolute;
+  z-index: 4;
+  display: none;
+  background: var(--accent);
+  pointer-events: none;
+}
+.cm-table-pin:is(:hover, :focus-visible) + .cm-table-guide {
+  display: block;
+}
+.cm-table-guide-row {
+  left: 0;
+  right: 0;
+  height: 2px;
+}
+.cm-table-guide-row.is-before {
+  top: -1px;
+}
+.cm-table-guide-row.is-after {
+  bottom: -1px;
+}
+.cm-table-guide-column {
+  top: 14px;
+  width: 2px;
+  height: var(--table-guide-height, 0);
+}
+.cm-table-guide-column.is-before {
+  left: -1px;
+}
+.cm-table-guide-column.is-after {
+  right: -1px;
+}
+
+.visual-editor .cm-table-axis-selected,
+.visual-editor .cm-table-row-selected > .cm-md-table-cell {
+  background: color-mix(in srgb, var(--accent) 14%, var(--paper));
+}
+.visual-editor .cm-table-danger .cm-table-axis-selected,
+.visual-editor .cm-table-danger .cm-table-row-selected > .cm-md-table-cell {
+  background: color-mix(in srgb, #e34c4c 16%, var(--paper));
+}
+
+.cm-table-toolbar {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px;
+  border: 1px solid var(--soft);
+  border-radius: var(--radius-md, 8px);
+  background: var(--paper);
+  box-shadow: 0 6px 20px #0003;
+  white-space: nowrap;
+  transform: translateX(var(--toolbar-shift, 0px));
+  cursor: default;
+}
+.cm-table-column-tool .cm-table-toolbar {
+  left: 50%;
+  transform: translateX(calc(-50% + var(--toolbar-shift, 0px)));
+}
+.cm-md-table-head .cm-table-row-tools .cm-table-toolbar {
+  bottom: calc(100% + 26px);
+}
+.cm-table-toolbar-button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.cm-table-toolbar-button svg {
+  width: 18px;
+  height: 18px;
+}
+.cm-table-toolbar-button:hover,
+.cm-table-toolbar-button:focus-visible {
+  background: var(--soft);
+}
+.cm-table-toolbar-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.cm-table-toolbar-button[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+}
+.cm-table-toolbar-remove:hover:not(:disabled),
+.cm-table-toolbar-remove:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, #e34c4c 15%, transparent);
+  color: #e34c4c;
+}
+.cm-table-toolbar-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.cm-table-toolbar-separator {
+  width: 1px;
+  height: 20px;
+  margin: 0 3px;
+  background: var(--soft);
+}
+@media (pointer: coarse) {
+  .cm-table-toolbar-button {
+    width: 38px;
+    height: 38px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-table-bar-segment,
+  .cm-table-pin-dot {
+    transition: none;
+  }
+}
+
+.cm-table-handle {
+  position: absolute;
+  top: -21px;
+  left: -64px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 44px;
+  height: 28px;
+  padding: 0 4px 0 6px;
+  border: 1px solid var(--soft);
+  border-radius: 7px;
+  background: var(--paper);
+  color: var(--accent);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+}
+/* An invisible bridge keeps the pointer "inside" the table on the way to the handle. */
+.cm-table-handle::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 100%;
+  width: 26px;
+  height: 46px;
+}
+.cm-table-handle .cm-handle-grip {
+  color: var(--muted);
+}
+.cm-md-table-focus .cm-table-handle,
+.cm-table-handle:focus-visible,
+.cm-table-handle[aria-expanded='true'] {
+  opacity: 1;
+  pointer-events: auto;
+}
+.cm-table-handle:hover,
+.cm-table-handle[aria-expanded='true'] {
+  background: var(--soft);
+}
+.cm-table-handle:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.cm-table-handle svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.table-handle-menu .table-context-menu-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.table-menu-switch {
+  position: relative;
+  flex: none;
+  width: 28px;
+  height: 16px;
+  margin-left: auto;
+  border-radius: 8px;
+  background: var(--soft);
+  transition: background 0.12s;
+}
+.table-menu-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--paper);
+  transition: transform 0.12s;
+}
+[aria-checked='true'] > .table-menu-switch {
+  background: var(--accent);
+}
+[aria-checked='true'] > .table-menu-switch::after {
+  transform: translateX(12px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .table-menu-switch,
+  .table-menu-switch::after {
+    transition: none;
+  }
+}
+
+/* Block handle: block type and grip, left of the block under the pointer. */
+.cm-block-handle {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  width: 44px;
+  height: 26px;
+  padding: 0 3px 0 5px;
+  border: 1px solid var(--soft);
+  border-radius: 7px;
+  background: var(--paper);
+  color: var(--accent);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.cm-block-handle[hidden] {
+  display: none;
+}
+.cm-block-handle:hover,
+.cm-block-handle.is-active {
+  background: var(--soft);
+}
+.cm-block-handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.cm-block-handle-type {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+}
+.cm-block-handle svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.cm-block-handle .cm-handle-grip {
+  width: 14px;
+  color: var(--muted);
+}
+body.cm-section-dragging,
+body.cm-section-dragging * {
+  cursor: grabbing !important;
+}
+@media (hover: none), (pointer: coarse) {
+  .cm-block-handle {
+    display: none;
+  }
+}
+
+/* The fold arrow is its own button, between the block handle and the heading. */
+.visual-editor:not(.read-only) .cm-fold-toggle {
+  right: calc(100% + 6px);
+  min-width: 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  opacity: 0;
+}
+.visual-editor:not(.read-only) .cm-fold-toggle::before {
+  content: none;
+}
+.visual-editor:not(.read-only) .cm-fold-toggle svg {
+  width: 14px;
+  height: 14px;
+  opacity: 1;
+}
+.visual-editor:not(.read-only) .cm-level-badge {
+  display: none;
+}
+.visual-editor:not(.read-only)
+  :is(.cm-md-h2, .cm-md-h3, .cm-md-h4, .cm-md-h5, .cm-md-h6):hover
+  .cm-fold-toggle,
+.visual-editor:not(.read-only) .cm-fold-toggle:focus-visible,
+.visual-editor:not(.read-only) .cm-fold-toggle.folded {
+  opacity: 1;
+}
+.visual-editor:not(.read-only) .cm-fold-toggle.folded {
+  padding: 0;
+}
+@media (hover: none) {
+  .visual-editor:not(.read-only) .cm-fold-toggle {
+    opacity: 0.7;
+  }
+}
+
+.editor-popup-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 32px);
+  gap: 2px;
+  padding: 2px 4px 4px;
+}
+.table-context-menu .editor-popup-grid .editor-popup-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  min-height: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--ink);
+}
+.editor-popup-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.table-context-menu .editor-popup-icon[aria-checked='true'] {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.editor-popup-menu .table-context-menu-icon svg {
+  width: 16px;
+  height: 16px;
 }

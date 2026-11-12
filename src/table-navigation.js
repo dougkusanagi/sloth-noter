@@ -93,3 +93,67 @@ export function tableCellRange(lines, row, column, lineBreak, from = 0) {
   const cell = tableCellAtColumn(parsed, column)
   return { from: position + cell.from, to: position + cell.to }
 }
+
+const wrapped = (value, marker) =>
+  value.length >= marker.length * 2 && value.startsWith(marker) && value.endsWith(marker)
+
+function axisCells(lines, row, column) {
+  return lines.flatMap((line, index) => {
+    if (index === 1 || (row != null && row !== index)) return []
+    return (parseTableLine(line)?.cells ?? []).filter(
+      (cell) => (column == null || cell.index === column) && cell.value.trim(),
+    )
+  })
+}
+
+// True when every filled cell of a row (line index) or column already uses the marker.
+export function tableAxisWrapped(lines, row, column, marker) {
+  const cells = axisCells(lines, row, column)
+  return cells.length > 0 && cells.every((cell) => wrapped(cell.value, marker))
+}
+
+// Formatting a row or column stays ordinary Markdown, including after export.
+// Empty cells stay empty, and the divider line is never changed.
+export function tableToggleWrap(lines, row, column, marker) {
+  const remove = tableAxisWrapped(lines, row, column, marker)
+  return lines.map((line, index) => {
+    if (index === 1 || (row != null && row !== index)) return line
+    let result = line
+    for (const cell of [...(parseTableLine(line)?.cells ?? [])].reverse()) {
+      if ((column != null && cell.index !== column) || !cell.value.trim()) continue
+      const has = wrapped(cell.value, marker)
+      const value = remove
+        ? cell.value.slice(marker.length, -marker.length)
+        : has
+          ? cell.value
+          : marker + cell.value + marker
+      result = result.slice(0, cell.from) + value + result.slice(cell.to)
+    }
+    return result
+  })
+}
+
+// The header emphasis is bold text, because Markdown has no header column.
+export function tableToggleHeader(lines, row, column) {
+  return tableToggleWrap(lines, row, column, '**')
+}
+
+// Sets a column alignment in the divider line; the same alignment again removes it.
+export function tableSetAlignment(lines, column, align) {
+  const divider = parseTableLine(lines[1] ?? '')
+  const cell = divider?.cells.find((item) => item.index === column)
+  if (!cell) return lines
+  const value = cell.value.trim()
+  const current =
+    value.startsWith(':') && value.endsWith(':')
+      ? 'center'
+      : value.endsWith(':')
+        ? 'right'
+        : value.startsWith(':')
+          ? 'left'
+          : null
+  const next =
+    current === align ? '---' : ({ left: ':---', center: ':---:', right: '---:' }[align] ?? '---')
+  const line = lines[1]
+  return [lines[0], line.slice(0, cell.from) + next + line.slice(cell.to), ...lines.slice(2)]
+}
