@@ -471,9 +471,9 @@ textarea:focus-visible {
   /* Long hidden link targets must not squeeze the visible text into a thin column. */
   padding-right: min(calc(var(--md-prefix-width, 0px) + var(--md-syntax-reserve, 0ch)), 12%);
 }
-/* Keep code selections above the opaque code background. */
+/* Keep selections above opaque code and table backgrounds. */
 .visual-editor
-  .cm-editor:has(> .cm-scroller > .cm-content > .cm-md-code)
+  .cm-editor:has(> .cm-scroller > .cm-content > :is(.cm-md-code, .cm-md-table-row))
   > .cm-scroller
   > .cm-selectionLayer {
   z-index: 2 !important;

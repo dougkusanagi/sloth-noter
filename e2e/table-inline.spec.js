@@ -25,6 +25,11 @@ for (const width of [390, 1280]) {
     await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
     const rows = page.locator('.cm-md-table-row:not(.cm-md-table-divider)')
     await expect(rows).toHaveCount(6)
+    await expect(page.locator('.visual-editor .cm-selectionLayer')).toHaveCSS('z-index', '2')
+    await expect(page.locator('.visual-editor .cm-selectionLayer')).toHaveCSS(
+      'pointer-events',
+      'none',
+    )
     const first = rows.nth(1).locator(':scope > .cm-md-table-cell')
     await expect(first).toHaveCount(5)
     await expect(first.nth(0)).toContainText('LFM3-VL-2B')
