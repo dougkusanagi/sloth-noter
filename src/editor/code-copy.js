@@ -6,7 +6,7 @@ import { t } from '../i18n.js'
 import { foldField } from './folding.js'
 
 export const codeCopyHandler = Facet.define()
-const toggleWrap = StateEffect.define({ map: (pos, changes) => changes.mapPos(pos) })
+export const toggleWrap = StateEffect.define({ map: (pos, changes) => changes.mapPos(pos) })
 export const setCodeWrapping = StateEffect.define()
 const toggleCodeFold = StateEffect.define({ map: (pos, changes) => changes.mapPos(pos) })
 class CodeEllipsis extends WidgetType {

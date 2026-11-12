@@ -11,6 +11,8 @@ Um bloco de notas com Markdown para escrever, organizar ideias e fechar a janela
 - **Busca onde precisar:** encontre notas pelo nome, pesquise no conteúdo de todas elas com trechos destacados ou busque e substitua dentro de uma nota.
 - **Listas e tarefas:** sublistas, reordenação pelo teclado, visão de tarefas na biblioteca e controles para concluir as tarefas de uma seção.
 - **Markdown além do básico:** digite `/` numa linha vazia para buscar blocos; copie ou recolha blocos de código e escolha entre quebrar linhas e rolar horizontalmente. A configuração global de quebra fica em Configurações → Editor.
+- **Tabelas:** clique nas barras acima das colunas ou à esquerda das linhas para alinhar, formatar ou remover; aponte para os pontos nas bordas para inserir linhas e colunas. O ícone no canto da tabela recorta, copia, exclui e liga a linha ou a coluna de cabeçalho, que fica visível ao rolar. O cabeçalho é guardado num comentário `<!-- sloth:table … -->` acima da tabela.
+- **Alça de blocos:** com o mouse, cada bloco mostra uma alça à esquerda para transformar, recortar, copiar, excluir, adicionar abaixo ou arrastar. Um título recolhido leva a seção ao ser arrastado. Ao selecionar texto, a barra mostra o tipo do bloco, negrito, tachado, itálico, link, código e mais ações.
 - **Duas notas:** use o menu de uma aba ou arraste-a para o editor para consultá-la ao lado. A nota lateral abre em leitura; clique no nome para editá-la.
 - **Blocos recolhíveis:** digite `/` e escolha Bloco recolhível para guardar conteúdo sob um título. O arquivo usa `<details>` e `<summary>`; blocos aninhados não são organizados como um bloco externo.
 - **Colunas:** digite `/` e escolha Colunas; use + para acrescentar colunas e arraste uma seleção com o mouse ou use recortar e colar para mover texto. A edição mostra Markdown; na leitura ele aparece formatado. Remover o layout mantém o conteúdo. As notas usam comentários HTML para delimitar as colunas e permanecem legíveis em sequência em outros leitores Markdown.
@@ -94,6 +96,9 @@ código mostra o Markdown e as teclas de símbolos. O menu da nota oferece compa
 texto, exportação Markdown e lixeira; o menu principal permite importar Markdown e acessar a
 lixeira, configurações e informações do aplicativo. Em Configurações, salve ou restaure um backup
 de notas e imagens locais; o histórico e imagens externas não entram no backup.
+Na edição visual com teclado aberto, use **Inserir** na barra para adicionar blocos, imagens,
+data e links para notas. A barra oferece ações para listas, tabelas e código conforme o cursor.
+Em **Inserir**, use **Refazer** para recuperar uma edição desfeita.
 A interface Android ainda está em implementação: veja o [plano em andamento](docs/plans/mobile-interface.md).
 Os testes mobile rodam localmente com `bun run e2e --project=mobile`.
 

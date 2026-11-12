@@ -60,3 +60,30 @@ test('maps a table cell range to document offsets', () => {
   assert.equal(tableLineIndex(1), 2)
   assert.deepEqual(tableCellRange(lines, 2, 1, '\n', 100), { from: 130, to: 131 })
 })
+
+test('header emphasis toggles a column without changing the divider or empty cells', async () => {
+  const { tableToggleHeader } = await import('./table-navigation.js')
+  const lines = ['| Nome | Valor |', '| --- | ---: |', '| Ana | 2 |', '|  | 3 |']
+  const bold = tableToggleHeader(lines, null, 0)
+  assert.deepEqual(bold, ['| **Nome** | Valor |', '| --- | ---: |', '| **Ana** | 2 |', '|  | 3 |'])
+  assert.deepEqual(tableToggleHeader(bold, null, 0), lines)
+})
+
+test('row and column formatting wraps only filled cells and toggles back', async () => {
+  const { tableToggleWrap, tableAxisWrapped } = await import('./table-navigation.js')
+  const lines = ['| Nome | Valor |', '| --- | --- |', '| Ana |  |']
+  const italic = tableToggleWrap(lines, 2, null, '_')
+  assert.deepEqual(italic, ['| Nome | Valor |', '| --- | --- |', '| _Ana_ |  |'])
+  assert.equal(tableAxisWrapped(italic, 2, null, '_'), true)
+  assert.deepEqual(tableToggleWrap(italic, 2, null, '_'), lines)
+  assert.equal(tableAxisWrapped(lines, null, 1, '`'), false)
+})
+
+test('column alignment changes only the divider and toggles off', async () => {
+  const { tableSetAlignment } = await import('./table-navigation.js')
+  const lines = ['| A | B |', '| --- | ---: |', '| 1 | 2 |']
+  const center = tableSetAlignment(lines, 0, 'center')
+  assert.deepEqual(center, ['| A | B |', '| :---: | ---: |', '| 1 | 2 |'])
+  assert.deepEqual(tableSetAlignment(lines, 1, 'right')[1], '| --- | --- |')
+  assert.deepEqual(tableSetAlignment(center, 0, 'left')[1], '| :--- | ---: |')
+})

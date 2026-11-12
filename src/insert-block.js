@@ -2,6 +2,8 @@ import { t } from './i18n.js'
 import { columnsTemplate } from './columns.js'
 
 const blocks = {
+  task: ['- [ ] ', 6, 6],
+  divider: ['---', 3, 3],
   h1: ['# ', 2, 2],
   h2: ['## ', 3, 3],
   h3: ['### ', 4, 4],
@@ -14,6 +16,12 @@ const blocks = {
 }
 
 export function blockTemplate(action) {
+  if (action === 'date') {
+    const text = new Intl.DateTimeFormat(
+      globalThis.document?.documentElement.lang || 'pt-BR',
+    ).format(new Date())
+    return { text, selectionFrom: text.length, selectionTo: text.length }
+  }
   // An empty paragraph clears the block prefix of the current line.
   if (action === 'p') return { text: '', selectionFrom: 0, selectionTo: 0 }
   if (action === 'columns') {
@@ -49,6 +57,7 @@ export function blockEdit(text, from, to, action) {
     }
   }
   const prefix = {
+    task: '- [ ] ',
     h1: '# ',
     h2: '## ',
     h3: '### ',

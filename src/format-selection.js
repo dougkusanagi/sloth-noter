@@ -2,11 +2,13 @@ const inline = {
   bold: ['**', '**'],
   italic: ['*', '*'],
   code: ['`', '`'],
+  strike: ['~~', '~~'],
 }
 const inlinePatterns = {
   bold: /\*\*(.+?)\*\*/g,
   italic: /(?<!\*)\*([^*\n]+)\*(?!\*)/g,
   code: /`([^`\n]+)`/g,
+  strike: /~~([^~\n]+)~~/g,
   link: /\[([^\]\n]+)\]\(([^)\n]+)\)/g,
 }
 
@@ -43,7 +45,7 @@ function containingToken(text, from, to, action) {
     if (action === 'link' && !/^(https?:|mailto:|#|\/|\.\/|\.\.\/)/i.test(match[2].trim())) continue
     const start = lineStart + match.index,
       end = start + match[0].length
-    const prefix = action === 'bold' ? 2 : 1
+    const prefix = action === 'bold' || action === 'strike' ? 2 : 1
     const contentStart = start + prefix
     const contentEnd = action === 'link' ? contentStart + match[1].length : end - prefix
     if ((from >= contentStart && to <= contentEnd) || (from === start && to === end))

@@ -95,3 +95,12 @@ test('paragraph keeps the line when it has no block prefix', () => {
   const result = apply(text, text.length, text.length, 'p')
   assert.equal(result.text, text)
 })
+
+test('task insertion preserves the selected line text and supports undo edits', () => {
+  const text = '# Nota\n\nPlanejar viagem'
+  const edit = blockEdit(text, 8, text.length, 'task')
+  assert.equal(
+    text.slice(0, edit.from) + edit.insert + text.slice(edit.to),
+    '# Nota\n\n- [ ] Planejar viagem',
+  )
+})

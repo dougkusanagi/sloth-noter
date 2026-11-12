@@ -31,21 +31,6 @@ const UP = [
   '',
   'tarefa c',
 ].join('\n')
-const DOWN = [
-  '# Notas',
-  '',
-  '## Primeira',
-  '',
-  'tarefa a',
-  '',
-  '## Terceira',
-  '',
-  'tarefa c',
-  '',
-  '## Segunda',
-  '',
-  'tarefa b',
-].join('\n')
 const END = [
   '# Notas',
   '',
@@ -151,77 +136,33 @@ test('a heading with an empty body moves without losing the section', async ({ p
   )
 })
 
-test('dragging the grip reorders sections with a drop line', async ({ page }) => {
-  const heading = page.locator('.cm-line', { hasText: 'Primeira' })
-  await heading.hover()
-  const grip = heading.locator('.cm-drag-handle')
-  const from = await grip.boundingBox()
-  const target = await page.locator('.cm-line', { hasText: 'tarefa c' }).evaluate((element) => {
-    const box = element.getBoundingClientRect()
-    return { x: box.left + box.width / 2, y: box.top + box.height / 2 }
-  })
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+const center = (box) => ({ x: box.x + box.width / 2, y: box.y + box.height / 2 })
+const handleOf = async (page, text) => {
+  await page.locator('.cm-line', { hasText: text }).hover()
+  const handle = page.locator('.cm-block-handle')
+  await expect(handle).toBeVisible()
+  return handle
+}
+// Drags a block's handle to a point; `below` drops after the target block.
+const drag = async (page, text, target, below = false) => {
+  const from = center(await (await handleOf(page, text)).boundingBox())
+  const box = await page.locator('.cm-line', { hasText: target }).boundingBox()
+  await page.mouse.move(from.x, from.y)
   await page.mouse.down()
-  await page.mouse.move(target.x, target.y, { steps: 8 })
+  await page.mouse.move(box.x + 20, below ? box.y + box.height - 2 : box.y + 2, { steps: 8 })
   await expect(page.locator('.cm-section-drop')).toBeVisible()
   await page.mouse.up()
   await expect(page.locator('.cm-section-drop')).toBeHidden()
-  await source(page, END)
-})
+}
 
-test('releasing the grip without moving leaves the note alone', async ({ page }) => {
-  const heading = page.locator('.cm-line', { hasText: 'Primeira' })
-  await heading.hover()
-  const grip = heading.locator('.cm-drag-handle')
-  const from = await grip.boundingBox()
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(from.x + from.width / 2 + 10, from.y + from.height / 2, { steps: 2 })
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2, { steps: 2 })
-  await page.mouse.up()
-  await source(page, NOTE)
-})
-
-test('dragging a section down one slot', async ({ page }) => {
-  const heading = page.locator('.cm-line', { hasText: 'Segunda' })
-  await heading.hover()
-  const grip = heading.locator('.cm-drag-handle')
-  const from = await grip.boundingBox()
-  // A slot is crossed at the target block's midpoint, so dropping below the
-  // midpoint of Terceira's block (its tail line) moves past Terceira.
-  const target = await page.locator('.cm-line', { hasText: 'tarefa c' }).evaluate((element) => {
-    const box = element.getBoundingClientRect()
-    return { x: box.left + box.width / 2, y: box.top + box.height / 2 }
-  })
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(target.x, target.y, { steps: 8 })
-  await page.mouse.up()
-  await source(page, DOWN)
-})
-
-test('folding follows a dragged section and others keep their folds', async ({ page }) => {
-  const heading = page.locator('.cm-line', { hasText: 'Segunda' })
-  await heading.hover()
-  await heading.getByRole('button', { name: 'Recolher seção' }).click()
-  await expect(page.locator('.cm-line', { hasText: 'tarefa b' })).toHaveCount(0)
-  // Moving a different section keeps Segunda folded, mapped across the change.
-  const first = page.locator('.cm-line', { hasText: 'Primeira' })
-  await first.hover()
-  const grip = first.locator('.cm-drag-handle')
-  const from = await grip.boundingBox()
-  const target = await page.locator('.cm-line', { hasText: 'tarefa c' }).evaluate((element) => {
-    const box = element.getBoundingClientRect()
-    return { x: box.left + box.width / 2, y: box.top + box.height / 2 }
-  })
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(target.x, target.y, { steps: 8 })
-  await page.mouse.up()
+test('dragging an open heading moves only the heading line', async ({ page }) => {
+  await drag(page, 'Primeira', 'tarefa c', true)
   await source(
     page,
     [
       '# Notas',
+      '',
+      'tarefa a',
       '',
       '## Segunda',
       '',
@@ -232,61 +173,84 @@ test('folding follows a dragged section and others keep their folds', async ({ p
       'tarefa c',
       '',
       '## Primeira',
-      '',
-      'tarefa a',
     ].join('\n'),
   )
 })
 
-test('the grip only shows where a heading has siblings', async ({ page }) => {
-  await expect(page.locator('.cm-drag-handle')).toHaveCount(3)
-  // The gutter only fits the grip past the content column.
-  await page.setViewportSize({ width: 800, height: 1400 })
-  await expect(page.locator('.cm-drag-handle').first()).toBeHidden()
-})
-
-test('the grip sits right next to the heading level pill', async ({ page }) => {
+test('dragging a folded heading moves its whole section', async ({ page }) => {
   const heading = page.locator('.cm-line', { hasText: 'Primeira' })
   await heading.hover()
-  // The pill widens with its fold chevron on hover; measure after the transition.
-  const gap = async () => {
-    const grip = await heading.locator('.cm-drag-handle').boundingBox()
-    const pill = await heading.locator('.cm-fold-toggle').boundingBox()
-    return pill.x - (grip.x + grip.width)
-  }
-  await expect(heading.locator('.cm-fold-toggle svg')).toHaveCSS('width', '10px')
-  const value = await gap()
-  // Close to the pill, but clear of its touch target (4px past each side).
-  expect(value).toBeGreaterThanOrEqual(4)
-  expect(value).toBeLessThanOrEqual(8)
+  await heading.getByRole('button', { name: 'Recolher seção' }).click()
+  await drag(page, 'Primeira', 'tarefa c', true)
+  await expect(page.locator('.cm-line', { hasText: 'tarefa a' })).toHaveCount(0)
+  await source(page, END)
 })
 
-test('hovering anywhere on the heading row shows the grip', async ({ page }) => {
-  await page.evaluate(async () => {
-    await document.fonts.ready
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-  })
-  const heading = page.locator('.cm-line', { hasText: 'Primeira' })
-  const grip = heading.locator('.cm-drag-handle')
-  const row = await heading.boundingBox()
-  const pill = await heading.locator('.cm-fold-toggle').boundingBox()
-  // Gap between the pill and the text, left of the grip, and the far end of the row.
-  for (const x of [pill.x + pill.width + 3, row.x - 60, row.x + row.width - 10]) {
-    await page.mouse.move(10, 10)
-    await expect(grip).toHaveCSS('opacity', '0')
-    await page.mouse.move(x, row.y + row.height / 2)
-    await expect(grip).toHaveCSS('opacity', '1')
-  }
-})
-
-test('dragging the first section after the second does not skip to the end', async ({ page }) => {
-  const heading = page.locator('.cm-line', { hasText: 'Primeira' })
+test('a folded section stays folded after moving up', async ({ page }) => {
+  const heading = page.locator('.cm-line', { hasText: 'Segunda' })
   await heading.hover()
-  const from = await heading.locator('.cm-drag-handle').boundingBox()
-  const target = await page.locator('.cm-line', { hasText: 'tarefa b' }).boundingBox()
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 8 })
-  await page.mouse.up()
+  await heading.getByRole('button', { name: 'Recolher seção' }).click()
+  await drag(page, 'Segunda', 'Primeira')
+  await expect(page.locator('.cm-line', { hasText: 'tarefa b' })).toHaveCount(0)
+  await expect(page.locator('.cm-fold-toggle.folded')).toHaveCount(1)
   await source(page, UP)
+})
+
+test('dragging a paragraph moves just that paragraph', async ({ page }) => {
+  await drag(page, 'tarefa c', 'Primeira')
+  await source(
+    page,
+    [
+      '# Notas',
+      '',
+      'tarefa c',
+      '',
+      '## Primeira',
+      '',
+      'tarefa a',
+      '',
+      '## Segunda',
+      '',
+      'tarefa b',
+      '',
+      '## Terceira',
+    ].join('\n'),
+  )
+})
+
+test('a click on the handle opens the block menu without moving anything', async ({ page }) => {
+  const handle = await handleOf(page, 'Segunda')
+  await handle.click()
+  const menu = page.getByRole('menu', { name: 'Ações do bloco' })
+  await expect(menu).toBeVisible()
+  await expect(menu.getByRole('menuitemradio', { name: 'Título 2' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  )
+  await page.keyboard.press('Escape')
+  await expect(menu).toHaveCount(0)
+  await source(page, NOTE)
+})
+
+test('the handle sits next to the fold arrow of a heading', async ({ page }) => {
+  const heading = page.locator('.cm-line', { hasText: 'Primeira' })
+  const handle = await handleOf(page, 'Primeira')
+  const fold = await heading.locator('.cm-fold-toggle').boundingBox()
+  const box = await handle.boundingBox()
+  const gap = fold.x - (box.x + box.width)
+  expect(gap).toBeGreaterThanOrEqual(1)
+  expect(gap).toBeLessThanOrEqual(8)
+  expect(box.height).toBeGreaterThanOrEqual(24)
+})
+
+test('hovering anywhere on a block row shows its handle', async ({ page }) => {
+  const heading = page.locator('.cm-line', { hasText: 'Primeira' })
+  const row = await heading.boundingBox()
+  const handle = page.locator('.cm-block-handle')
+  for (const x of [row.x + 5, row.x + row.width - 10]) {
+    await page.mouse.move(5, 5)
+    await expect(handle).toBeHidden()
+    await page.mouse.move(x, row.y + row.height / 2)
+    await expect(handle).toBeVisible()
+  }
 })

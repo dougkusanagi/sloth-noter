@@ -174,3 +174,101 @@ test('Desfazer reverts the last bar action and hiding the keyboard removes the b
   await bar(page).getByRole('button', { name: 'Esconder teclado' }).tap()
   await expect(bar(page)).toBeHidden()
 })
+
+test('Inserir preserves the cursor, inserts a task and offers redo', async ({ page }) => {
+  await editNote(page)
+  await page.keyboard.press('ControlOrMeta+End')
+  await openKeyboard(page)
+  await bar(page).getByRole('button', { name: 'Inserir', exact: true }).tap()
+  const sheet = page.getByRole('dialog')
+  await expect(sheet.getByRole('button', { name: 'Refazer', exact: true })).toBeVisible()
+  await sheet.getByRole('button', { name: 'Tarefa', exact: true }).tap()
+  await expect.poll(() => savedBody(page)).toContain('- [ ] ')
+  await expect(sheet).toBeHidden()
+})
+
+test('Inserir links an existing note and Escape closes without changing text', async ({ page }) => {
+  await editNote(page)
+  await page.keyboard.press('ControlOrMeta+End')
+  await openKeyboard(page)
+  await bar(page).getByRole('button', { name: 'Inserir', exact: true }).tap()
+  await page.getByRole('dialog').getByRole('button', { name: 'Link para nota', exact: true }).tap()
+  await page.getByRole('dialog').getByRole('button', { name: 'Doc', exact: true }).tap()
+  await expect.poll(() => savedBody(page)).toContain('[[Doc]]')
+  const before = await savedBody(page)
+  await bar(page).getByRole('button', { name: 'Inserir', exact: true }).tap()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toBeHidden()
+  expect(await savedBody(page)).toBe(before)
+})
+
+test('table group adds a column and exposes alignment actions', async ({ page }) => {
+  await editNote(page)
+  await page.keyboard.press('ControlOrMeta+End')
+  await openKeyboard(page)
+  await bar(page).getByRole('button', { name: 'Inserir', exact: true }).tap()
+  await page.getByRole('dialog').getByRole('button', { name: 'Tabela', exact: true }).tap()
+  await expect(
+    bar(page).getByRole('button', { name: 'Adicionar coluna', exact: true }),
+  ).toBeVisible()
+  await bar(page).getByRole('button', { name: 'Adicionar coluna', exact: true }).tap()
+  await expect.poll(() => savedBody(page)).toMatch(/\| --- \| --- \| --- \|/)
+  await bar(page).getByRole('button', { name: 'Mais ações da tabela' }).tap()
+  await bar(page).getByRole('button', { name: 'Centralizar', exact: true }).tap()
+  await expect.poll(() => savedBody(page)).toContain(':---:')
+})
+
+test('code group indents and selects the fence language', async ({ page }) => {
+  await editNote(page)
+  await page.keyboard.press('ControlOrMeta+End')
+  await openKeyboard(page)
+  await bar(page).getByRole('button', { name: 'Inserir', exact: true }).tap()
+  await page.getByRole('dialog').getByRole('button', { name: 'Bloco de código', exact: true }).tap()
+  await bar(page).getByRole('button', { name: 'Recuar código' }).tap()
+  await expect.poll(() => savedBody(page)).toContain('```\n  \n```')
+  await bar(page).getByRole('button', { name: 'Editar linguagem do código' }).tap()
+  await page.keyboard.type('javascript')
+  await expect.poll(() => savedBody(page)).toContain('```javascript')
+})
+
+test('code copy and wrapping preserve Markdown and selection', async ({ page }) => {
+  await editNote(page)
+  await page.keyboard.press('ControlOrMeta+End')
+  await openKeyboard(page)
+  await bar(page).getByRole('button', { name: 'Inserir', exact: true }).tap()
+  await page.getByRole('dialog').getByRole('button', { name: 'Bloco de código', exact: true }).tap()
+  await page.keyboard.type('const viagem = true')
+  await expect.poll(() => savedBody(page)).toContain('const viagem = true')
+  const before = await savedBody(page)
+  await page.evaluate(() => {
+    navigator.clipboard.writeText = async (text) => {
+      window.__copiedCode = text
+    }
+  })
+  await bar(page).getByRole('button', { name: 'Copiar bloco', exact: true }).tap()
+  await expect.poll(() => page.evaluate(() => window.__copiedCode)).toBe('const viagem = true')
+  await bar(page).getByRole('button', { name: 'Quebrar linhas', exact: true }).tap()
+  await expect(page.locator('.cm-code-no-wrap').first()).toBeVisible()
+  expect(await savedBody(page)).toBe(before)
+})
+
+test('Inserir image uses the existing import flow at the saved cursor', async ({ page }) => {
+  await editNote(page)
+  await page.keyboard.press('ControlOrMeta+End')
+  await openKeyboard(page)
+  await bar(page).getByRole('button', { name: 'Inserir', exact: true }).tap()
+  const chooser = page.waitForEvent('filechooser')
+  await page.getByRole('dialog').getByRole('button', { name: 'Imagem', exact: true }).tap()
+  await (
+    await chooser
+  ).setFiles({
+    name: 'viagem.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aE2sAAAAASUVORK5CYII=',
+      'base64',
+    ),
+  })
+  await expect.poll(() => savedBody(page)).toContain('![viagem.png](')
+  await expect(page.locator('.cm-image-preview')).toBeVisible()
+})

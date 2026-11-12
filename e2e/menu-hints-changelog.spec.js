@@ -278,8 +278,9 @@ for (const width of [390, 1280]) {
     await page.locator('.cm-line', { hasText: 'Texto comum' }).click()
     await page.keyboard.press('End')
     await page.keyboard.press('Shift+Home')
-    await expect(toolbar.getByRole('button', { name: 'Copiar', exact: true })).toBeVisible()
     await expect(toolbar.getByRole('button', { name: 'Negrito', exact: true })).toBeVisible()
+    await toolbar.getByRole('button', { name: 'Mais ações', exact: true }).click()
+    await expect(toolbar.getByRole('menuitem', { name: /Copiar/ })).toBeVisible()
     await page.screenshot({ path: test.info().outputPath(`toolbar-text-${width}.png`) })
 
     await page.locator('.cm-line', { hasText: '# **aqui**' }).click()
