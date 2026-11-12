@@ -1,3 +1,4 @@
+import { sheetField } from './sheet.js'
 import { isolateHistory } from '@codemirror/commands'
 import { markdownTree, walk, imageReferences } from '../markdown-model.js'
 import {
@@ -559,6 +560,7 @@ export const liveMarkdown = ViewPlugin.fromClass(
         (update.selectionSet &&
           selectionLineSignature(update.startState) !== selectionLineSignature(update.state)) ||
         update.viewportChanged ||
+        update.startState.field(sheetField, false) !== update.state.field(sheetField, false) ||
         update.startState.field(foldField) !== update.state.field(foldField) ||
         update.startState.field(tableUiField, false) !== update.state.field(tableUiField, false)
       )

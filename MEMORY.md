@@ -5,3 +5,4 @@
 
 - Antes de gerar APK, confirme o checkout e as mudanças locais de outros worktrees; avanços Android já ficaram fora da raiz por estarem sem commit em outro checkout.
 - O CodeMirror reescreve `class` e `style` das linhas ao redesenhar; estilos dinâmicos em linhas (ex.: cabeçalho fixo de tabela) vão numa folha de estilo própria, com `transition: none` para medir posições sem animação.
+- Em tabelas, o cursor do CodeMirror não fica dentro de células desenhadas como widget (o navegador o leva para outro lugar); com célula selecionada, o foco vai para `.cm-sheet-input` e transações `select` puras não mudam a seleção da planilha.

@@ -1,3 +1,4 @@
+import { DocumentWidthPresets } from './document-width-presets.jsx'
 import { useEffect, useRef, useState } from 'react'
 import {
   Minus,
@@ -133,8 +134,15 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
                 <span className="adjustment-label">
                   <Icon size={14} aria-hidden="true" />
                   {label}
-                  <output role="presentation">{value}px</output>
+                  <output role="presentation">
+                    {key === 'contentWidth' && prefs.documentWidth === 'full'
+                      ? t('width.full')
+                      : `${value}px`}
+                  </output>
                 </span>
+                {key === 'contentWidth' && (
+                  <DocumentWidthPresets prefs={prefs} onChange={onChange} inMenu />
+                )}
                 <div className="adjustment-meter" aria-hidden="true">
                   <span
                     style={{
@@ -148,7 +156,12 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
                     label={`${label}: ${t('adjust.decrease')}`}
                     keys={`${modifier}-`}
                     disabled={value <= range.min}
-                    onClick={() => onChange({ [key]: Math.max(range.min, value - step) })}
+                    onClick={() =>
+                      onChange({
+                        [key]: Math.max(range.min, value - step),
+                        ...(key === 'contentWidth' ? { documentWidth: 'custom' } : {}),
+                      })
+                    }
                   >
                     <Minus size={13} />
                     <Shortcut keys={`${modifier}-`} />
@@ -157,8 +170,16 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
                     role="menuitem"
                     label={`${label}: ${t('settings.fontReset')}`}
                     keys={`${modifier}0`}
-                    disabled={value === range.default}
-                    onClick={() => onChange({ [key]: range.default })}
+                    disabled={
+                      value === range.default &&
+                      !(key === 'contentWidth' && prefs.documentWidth === 'full')
+                    }
+                    onClick={() =>
+                      onChange({
+                        [key]: range.default,
+                        ...(key === 'contentWidth' ? { documentWidth: 'custom' } : {}),
+                      })
+                    }
                   >
                     <RotateCcw size={13} />
                     <Shortcut keys={`${modifier}0`} />
@@ -168,7 +189,12 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
                     label={`${label}: ${t('adjust.increase')}`}
                     keys={`${modifier}+`}
                     disabled={value >= range.max}
-                    onClick={() => onChange({ [key]: Math.min(range.max, value + step) })}
+                    onClick={() =>
+                      onChange({
+                        [key]: Math.min(range.max, value + step),
+                        ...(key === 'contentWidth' ? { documentWidth: 'custom' } : {}),
+                      })
+                    }
                   >
                     <Plus size={13} />
                     <Shortcut keys={`${modifier}+`} />

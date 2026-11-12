@@ -1,0 +1,1 @@
+Corrigido: O menu da tabela abre sem deslocar a página ao receber foco. As opções de cabeçalho ficam no topo; inserir e remover linhas ou colunas ficam em submenus. Em Copiar, use “Copiar tabela como CSV” para levar a tabela à área de transferência.

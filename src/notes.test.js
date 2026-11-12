@@ -123,3 +123,7 @@ test('reconciling long duplicate headings preserves names, titles and bodies aft
   const reordered = { ...next, notes: [...next.notes].reverse() }
   assert.strictEqual(reconcileHeadingNames(reordered), reordered)
 })
+
+test('coloring a heading keeps its readable file name', () => {
+  assert.equal(headingFileName('# <span style="color:#e76565">Meu título</span>'), 'Meu título.md')
+})

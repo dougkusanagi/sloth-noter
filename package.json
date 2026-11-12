@@ -32,6 +32,7 @@
     "@tauri-apps/api": "2.11.1",
     "@tauri-apps/plugin-opener": "~2.5.0",
     "@tauri-apps/plugin-updater": "2.12.0",
+    "fflate": "^0.8.3",
     "lucide-react": "^1.48.0",
     "prismjs": "^1.30.0",
     "react": "19.2.8",

@@ -1,0 +1,7 @@
+Alterado: As tabelas funcionam como uma planilha. Um clique seleciona a célula; arraste ou use Shift+clique ou Shift+setas para selecionar várias. Setas, Tab, Enter, Home e End movem a seleção. Para editar, dê dois cliques, aperte F2 ou comece a digitar; Enter ou Tab concluem e Escape desfaz a edição. No celular, toque para selecionar e toque de novo para editar. Links em células abrem com Ctrl+clique.
+
+Adicionado: Com células selecionadas, Ctrl+C e Ctrl+V copiam e colam blocos de células de e para Excel ou Google Sheets (a tabela ganha linhas e colunas quando precisa), Delete apaga o conteúdo e Ctrl+B ou Ctrl+I aplicam negrito ou itálico em todas. As cores do menu da tabela valem para todas as células selecionadas.
+
+Adicionado: Fórmulas em células. Comece o texto com `=`, por exemplo `=B2*C2` ou `=SOMA(D2:D5)`. A coluna A é a primeira e a linha 1 é o cabeçalho. Funções: SOMA, MÉDIA, MÍN, MÁX, PRODUTO, CONT.NÚM, CONT.VALORES, CONT.VAZIO, SE, E, OU, NÃO, ARRED, ABS, RAIZ e CONCAT, também com os nomes em inglês. Separe argumentos com `;`; números aceitam vírgula decimal (`1,5`) e valores como `R$ 10,00` ou `50%`. O resultado se atualiza ao editar as células; um erro aparece na célula, com a explicação ao passar o mouse. O arquivo guarda a fórmula, e outros apps de Markdown mostram a fórmula, não o resultado.
+
+Corrigido: Ao editar uma célula, Shift+Enter quebra a linha e, numa lista ou tarefa, começa o próximo item; as linhas acima mostram a caixa de tarefa, e só a linha do cursor mostra o Markdown.

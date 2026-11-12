@@ -10,7 +10,7 @@ test('the appearance menu adjusts and restores text without closing', async ({ p
   await expect(group.locator('output')).toHaveText('17px')
   await group.getByRole('menuitem', { name: /Restaurar/ }).click()
   await expect(group.locator('output')).toHaveText('16px')
-  const width = page.getByRole('group', { name: 'Largura do texto', exact: true })
+  const width = page.getByRole('group', { name: 'Largura do documento', exact: true })
   await width.getByRole('menuitem', { name: /Diminuir/ }).click()
   await expect(width.locator('output')).toHaveText('740px')
   await width.getByRole('menuitem', { name: /Restaurar/ }).click()
@@ -129,14 +129,16 @@ test('display controls expose working shortcuts and persistent system/light/dark
   await theme.getByRole('menuitemradio', { name: 'Sistema', exact: true }).click()
   await page.emulateMedia({ colorScheme: 'light' })
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
-  for (const label of ['Tamanho do texto', 'Largura do texto']) {
+  for (const label of ['Tamanho do texto', 'Largura do documento']) {
     const group = page.getByRole('group', { name: label, exact: true })
     await expect(group.locator('.menu-shortcut')).toHaveCount(3)
     for (const button of await group.getByRole('menuitem').all()) {
       expect(await button.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
     }
   }
-  await page.getByRole('group', { name: 'Largura do texto', exact: true }).scrollIntoViewIfNeeded()
+  await page
+    .getByRole('group', { name: 'Largura do documento', exact: true })
+    .scrollIntoViewIfNeeded()
   await page.screenshot({ path: 'test-results/display-menu-mobile.png' })
   await page.keyboard.press('Escape')
   await page.keyboard.press('Control+-')

@@ -31,3 +31,12 @@ test('the preview is the first readable line after the title, without Markdown',
   assert.equal(notePreview('sem título\nsegunda'), 'sem título')
   assert.ok(notePreview(`# T\n${'a'.repeat(200)}`).endsWith('…'))
 })
+
+test('table presentation metadata stays out of the library preview', () => {
+  assert.equal(
+    notePreview(
+      '# Projeto\n\n<!-- sloth:table colors=1:1:green widths=200,300 -->\n| Etapa | Entregas |',
+    ),
+    '| Etapa | Entregas |',
+  )
+})

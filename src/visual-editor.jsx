@@ -1,3 +1,7 @@
+import { selectedColors, blockColorMetadata } from './document-colors.js'
+import { ColorPalette } from './components/color-palette.jsx'
+import { documentColors, colorDocument, colorBlock } from './editor/document-colors.js'
+import { DocumentOutline } from './components/document-outline.jsx'
 import { ShortcutButton } from './components/shortcut-button.jsx'
 import { openExternalLink } from './external-links.js'
 import { toast } from 'sonner'
@@ -18,7 +22,6 @@ import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
 import { emptyBodyLine, liveMarkdown, taskNotes } from './editor/live-decorations.js'
 import { foldField } from './editor/folding.js'
-import { accordionField } from './editor/accordion.js'
 import {
   columnDrag,
   columnImageHandler,
@@ -33,15 +36,8 @@ import {
   setCodeWrapping,
   stickyCodeCopy,
 } from './editor/code-copy.js'
-import {
-  insertTableColumnAt,
-  insertTableRowAt,
-  moveTable,
-  removeTableColumnAt,
-  removeTableRowAt,
-  tableAt,
-  tableUi,
-} from './editor/table.js'
+import { moveTable, tableAt, openTableMenu, tableUi } from './editor/table.js'
+import { sheet } from './editor/sheet.js'
 import { blockHandle } from './editor/block-handle.js'
 import { OPEN_INSERT_EVENT } from './editor/block-actions.js'
 import {
@@ -62,8 +58,6 @@ import { blockEdit } from './insert-block.js'
 import { fencedPasteInEmptyBlock } from './fenced-paste.js'
 import { markdownTree, walk } from './markdown-model.js'
 import {
-  ArrowDownToLine,
-  ArrowRightToLine,
   CodeXml,
   ImagePlus,
   Heading2,
@@ -74,8 +68,6 @@ import {
   Link,
   Quote,
   Table as TableIcon,
-  Trash2,
-  ChevronRight,
   Columns2,
   Copy,
   ClipboardPaste,
@@ -120,18 +112,10 @@ const blockButtons = [
   ['numbered', 'block.numbered'],
   ['table', 'block.table'],
   ['code', 'block.code'],
-  ['accordion', 'block.accordion'],
   ['columns', 'block.columns'],
   ['image', 'block.image'],
   ['link', 'format.link'],
 ]
-
-function TableMenuIcon({ kind }) {
-  const props = { size: 16, 'aria-hidden': true }
-  if (kind === 'row') return <ArrowDownToLine {...props} />
-  if (kind === 'column') return <ArrowRightToLine {...props} />
-  return <Trash2 {...props} />
-}
 
 const blockIcons = {
   h2: Heading2,
@@ -142,7 +126,6 @@ const blockIcons = {
   numbered: ListOrdered,
   table: TableIcon,
   code: CodeXml,
-  accordion: ChevronRight,
   columns: Columns2,
   image: ImagePlus,
   link: Link,
@@ -202,12 +185,12 @@ export function VisualEditor({
     syncing = useRef(false)
   const [toolbar, setToolbar] = useState(null)
   const [toolbarMenu, setToolbarMenu] = useState(null)
+  const [colorScope, setColorScope] = useState('text')
   const toolbarKey = useRef('')
   const [insertAt, setInsertAt] = useState(null)
   const [blockMenu, setBlockMenu] = useState(false)
   const [blockQuery, setBlockQuery] = useState('')
   const blockSearch = useRef(null)
-  const [tableMenu, setTableMenu] = useState(null)
   const [imagePanel, setImagePanel] = useState(null)
   const blockMenuRef = useRef(false)
   blockMenuRef.current = blockMenu || Boolean(imagePanel)
@@ -272,6 +255,10 @@ export function VisualEditor({
       below: start.top <= 55,
       inCode,
       kind,
+      colors: selectedColors(text, selection.from, selection.to),
+      blockColors: blocks.length
+        ? blockColorMetadata(view.state.doc.line(blocks[0].first).text) || {}
+        : {},
       active: inCode ? [] : activeFormats(text, selection.from, selection.to),
     })
     // A dropdown stays open while the toolbar only moves; another selection closes it.
@@ -307,6 +294,7 @@ export function VisualEditor({
         const line = view.state.doc.lineAt(view.state.selection.main.head)
         if (line.text.trim()) return null
         if (insideCodeBlock(view.state, line)) return null
+        // The empty-body placeholder already explains the / key.
         if (line.number === emptyBodyLine(view.state)) return null
         const coords = view.coordsAtPos(line.from)
         if (!coords || coords.top < 46 || coords.top > window.innerHeight) return null
@@ -433,17 +421,6 @@ export function VisualEditor({
     await clipboardAction(view, action, { onPaste: callbacks.current.onPaste })
   }
 
-  function runTableMenu(action) {
-    const menu = tableMenu,
-      view = viewRef.current
-    if (!menu || !view) return
-    setTableMenu(null)
-    if (action === 'add-row') insertTableRowAt(view, menu.tableFirst, menu.row, menu.column)
-    if (action === 'add-column') insertTableColumnAt(view, menu.tableFirst, menu.row, menu.column)
-    if (action === 'remove-row') removeTableRowAt(view, menu.tableFirst, menu.row)
-    if (action === 'remove-column') removeTableColumnAt(view, menu.tableFirst, menu.column)
-  }
-
   useEffect(() => {
     if (linkEditing) linkInput.current?.focus()
   }, [linkEditing])
@@ -456,7 +433,7 @@ export function VisualEditor({
   useEffect(() => {
     if (!blockMenu) return
     function closeOnOutsideClick(event) {
-      if (event.target.closest?.('.insert-trigger, .block-menu')) return
+      if (event.target.closest?.('.insert-trigger, .insert-button, .block-menu')) return
       flushSync(() => {
         setBlockMenu(false)
         setInsertAt(null)
@@ -469,31 +446,6 @@ export function VisualEditor({
       document.removeEventListener('click', closeOnOutsideClick, true)
     }
   }, [blockMenu])
-
-  useEffect(() => {
-    if (!tableMenu) return
-    function closeOnOutsideClick(event) {
-      if (!event.target.closest?.('.table-context-menu')) setTableMenu(null)
-    }
-    function closeOnEscape(event) {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      setTableMenu(null)
-      viewRef.current?.focus()
-    }
-    document.addEventListener('pointerdown', closeOnOutsideClick, true)
-    document.addEventListener('click', closeOnOutsideClick, true)
-    document.addEventListener('keydown', closeOnEscape, true)
-    const frame = requestAnimationFrame(() =>
-      host.current?.querySelector('.table-context-menu button:not(:disabled)')?.focus(),
-    )
-    return () => {
-      cancelAnimationFrame(frame)
-      document.removeEventListener('pointerdown', closeOnOutsideClick, true)
-      document.removeEventListener('click', closeOnOutsideClick, true)
-      document.removeEventListener('keydown', closeOnEscape, true)
-    }
-  }, [tableMenu])
 
   function sourceExtensions() {
     return [
@@ -508,6 +460,7 @@ export function VisualEditor({
 
   useLayoutEffect(() => {
     const visualExtensions = [
+      documentColors,
       keymap.of([
         {
           key: 'Shift-Home',
@@ -736,6 +689,31 @@ export function VisualEditor({
             }
           }
           if (line && !line.classList.contains('cm-md-table-row')) return false
+          // A table at the end of the note leaves no line to click below it:
+          // a click there starts a new paragraph after the table.
+          const end = view.state.doc.lineAt(view.state.doc.length)
+          if (
+            !line &&
+            !view.state.readOnly &&
+            event.target.closest?.('.cm-content, .cm-scroller') &&
+            tableAt(view.state.doc, end.number)
+          ) {
+            const lastLine = view.domAtPos(end.to).node
+            const lastRow = (lastLine.nodeType === 1 ? lastLine : lastLine.parentElement)?.closest(
+              '.cm-line',
+            )
+            if (lastRow && event.clientY > lastRow.getBoundingClientRect().bottom) {
+              event.preventDefault()
+              view.focus()
+              view.dispatch({
+                changes: { from: end.to, insert: view.state.lineBreak.repeat(2) },
+                selection: EditorSelection.single(end.to + view.state.lineBreak.length * 2),
+                userEvent: 'input',
+                scrollIntoView: true,
+              })
+              return true
+            }
+          }
           const position =
             view.posAtCoords({ x: event.clientX, y: event.clientY }) ??
             (event.target.closest?.('.cm-content, .cm-scroller') ? view.state.doc.length : null)
@@ -756,24 +734,12 @@ export function VisualEditor({
           if (!table || line.number === table.first + 1) return false
           const column = Number(cell.dataset.column)
           const row = line.number === table.first ? 0 : line.number - table.first - 1
-          const x = Math.max(
-            8,
-            Math.min(event.clientX || cell.getBoundingClientRect().left, window.innerWidth - 270),
-          )
-          const y = Math.max(
-            8,
-            Math.min(event.clientY || cell.getBoundingClientRect().top, window.innerHeight - 250),
-          )
           event.preventDefault()
           event.stopPropagation()
-          setTableMenu({
-            x,
-            y,
-            row,
-            column,
-            tableFirst: table.first,
-            columnCount: table.columnCount,
-            hasBody: table.last > table.first + 1,
+          openTableMenu(view, table.first, null, {
+            cell: { row, column },
+            x: event.clientX || cell.getBoundingClientRect().left,
+            y: event.clientY || cell.getBoundingClientRect().top,
           })
           return true
         },
@@ -784,7 +750,11 @@ export function VisualEditor({
         },
         blur: (event) => {
           if (!event.relatedTarget?.closest?.('.format-toolbar')) setToolbar(null)
-          if (!event.relatedTarget?.closest?.('.insert-trigger, .block-menu, .image-insert')) {
+          if (
+            !event.relatedTarget?.closest?.(
+              '.insert-trigger, .insert-button, .block-menu, .image-insert',
+            )
+          ) {
             setInsertAt(null)
             setBlockMenu(false)
           }
@@ -792,7 +762,6 @@ export function VisualEditor({
         },
       }),
       foldField,
-      accordionField,
       columnsField,
       columnDrag,
       columnImageHandler.of((files, point) => callbacks.current.onImageFiles?.(files, point)),
@@ -802,6 +771,7 @@ export function VisualEditor({
       }),
       railsLayer,
       tableUi,
+      sheet,
       blockHandle,
       liveMarkdown,
       stickyCodeCopy,
@@ -911,7 +881,7 @@ export function VisualEditor({
       if (event.target.closest?.('.cm-editor') !== view.dom) return
       if (
         event.target.closest?.(
-          '.cm-line, .cm-md-table-cell, button, .format-toolbar, .insert-trigger, .block-menu',
+          '.cm-line, .cm-md-table-cell, button, .format-toolbar, .insert-trigger, .insert-button, .block-menu',
         )
       )
         return
@@ -975,7 +945,6 @@ export function VisualEditor({
       setToolbar(null)
       setInsertAt(null)
       setBlockMenu(false)
-      setTableMenu(null)
       setImagePanel(null)
     }
     const onCompositionEnd = () => setTimeout(apply, 0)
@@ -1033,7 +1002,6 @@ export function VisualEditor({
       setToolbar(null)
       setInsertAt(null)
       setBlockMenu(false)
-      setTableMenu(null)
       setImagePanel(null)
     }
   }, [readOnly])
@@ -1061,6 +1029,20 @@ export function VisualEditor({
       data-wrap-page={wrapPage}
       ref={host}
     >
+      {!sourceMode && (
+        <DocumentOutline
+          body={body}
+          onNavigate={(anchor) => {
+            const view = viewRef.current
+            if (!view) return
+            view.dispatch({
+              selection: { anchor },
+              effects: EditorView.scrollIntoView(anchor, { y: 'start', yMargin: 80 }),
+            })
+            view.focus()
+          }}
+        />
+      )}
       {toolbar && (
         <div
           className={`format-toolbar${toolbar.below ? ' below' : ''}`}
@@ -1114,6 +1096,71 @@ export function VisualEditor({
                     {icon}
                   </ShortcutButton>
                 ))}
+              <details
+                className="document-color-menu"
+                onToggle={(event) => {
+                  if (!event.currentTarget.open) return
+                  const box = event.currentTarget.getBoundingClientRect()
+                  const panel = event.currentTarget.querySelector('.document-color-panel')
+                  panel.style.left = `${Math.max(8, Math.min(box.left, innerWidth - panel.offsetWidth - 8)) - box.left}px`
+                  panel.style.top = `${Math.max(8, Math.min(box.bottom + 8, innerHeight - panel.offsetHeight - 8)) - box.top}px`
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    event.currentTarget.open = false
+                    viewRef.current?.focus()
+                  }
+                }}
+              >
+                <summary
+                  onMouseDown={(event) => event.preventDefault()}
+                  aria-label={t('colors.title')}
+                >
+                  A
+                </summary>
+                <div
+                  className="document-color-panel"
+                  onMouseDown={(event) => event.preventDefault()}
+                >
+                  {!toolbar.inCode && (
+                    <div className="color-scope" role="group" aria-label={t('colors.applyTo')}>
+                      {['text', 'block'].map((scope) => (
+                        <button
+                          type="button"
+                          key={scope}
+                          aria-pressed={colorScope === scope}
+                          onClick={() => setColorScope(scope)}
+                        >
+                          {t(`colors.scope.${scope}`)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <ColorPalette
+                    value={
+                      toolbar.inCode || colorScope === 'block'
+                        ? toolbar.blockColors
+                        : toolbar.colors
+                    }
+                    onChange={(property, color) => {
+                      const view = viewRef.current
+                      if (toolbar.inCode || colorScope === 'block')
+                        for (const block of [...selectedBlocks(view)].reverse())
+                          colorBlock(view, block, property, color)
+                      else colorDocument(view, property, color)
+                    }}
+                    onReset={() => {
+                      const view = viewRef.current
+                      if (toolbar.inCode || colorScope === 'block')
+                        for (const block of [...selectedBlocks(view)].reverse())
+                          colorBlock(view, block, 'reset')
+                      else colorDocument(view, 'reset')
+                    }}
+                  />
+                </div>
+              </details>
               {!toolbar.inCode && toolbar.kind && (
                 <>
                   <button
@@ -1236,6 +1283,27 @@ export function VisualEditor({
           >
             {t('editor.slashHint')}
           </span>
+          <button
+            type="button"
+            className="insert-button"
+            aria-label={t('editor.insertBlock')}
+            title={t('editor.insertBlock')}
+            aria-expanded={blockMenu}
+            style={{ left: Math.max(4, insertAt.x - 38), top: insertAt.y }}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => setBlockMenu(!blockMenu)}
+          >
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M10 4.5v11M4.5 10h11" />
+            </svg>
+          </button>
           {blockMenu && (
             <div
               className="block-menu"
@@ -1352,81 +1420,6 @@ export function VisualEditor({
             })
           }}
         />
-      )}
-      {tableMenu && (
-        <div
-          className="table-context-menu"
-          role="menu"
-          aria-label={t('table.actions')}
-          style={{ left: tableMenu.x, top: tableMenu.y }}
-          onMouseDown={(event) => event.preventDefault()}
-          onKeyDown={(event) => {
-            const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')]
-            const index = buttons.indexOf(document.activeElement)
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-              event.preventDefault()
-              buttons[
-                (index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length
-              ]?.focus()
-            }
-            if (event.key === 'Home') {
-              event.preventDefault()
-              buttons[0]?.focus()
-            }
-            if (event.key === 'End') {
-              event.preventDefault()
-              buttons.at(-1)?.focus()
-            }
-            if (event.key === 'Escape') {
-              event.preventDefault()
-              setTableMenu(null)
-              viewRef.current?.focus()
-            }
-          }}
-        >
-          <div className="table-context-menu-heading">Tabela</div>
-          <button type="button" role="menuitem" onClick={() => runTableMenu('add-row')}>
-            <span className="table-context-menu-icon">
-              <TableMenuIcon kind="row" />
-            </span>
-            <span>{t('table.addRow')}</span>
-            <span className="menu-shortcut">
-              <kbd>Enter</kbd>
-            </span>
-          </button>
-          <button type="button" role="menuitem" onClick={() => runTableMenu('add-column')}>
-            <span className="table-context-menu-icon">
-              <TableMenuIcon kind="column" />
-            </span>
-            <span>{t('table.addColumn')}</span>
-            <span className="menu-shortcut">
-              <kbd>Tab</kbd>
-            </span>
-          </button>
-          <div className="table-context-menu-separator" />
-          <button
-            type="button"
-            role="menuitem"
-            disabled={tableMenu.row === 0 && !tableMenu.hasBody}
-            onClick={() => runTableMenu('remove-row')}
-          >
-            <span className="table-context-menu-icon">
-              <TableMenuIcon kind="trash" />
-            </span>
-            <span>{t('table.removeRow')}</span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            disabled={tableMenu.columnCount <= 1}
-            onClick={() => runTableMenu('remove-column')}
-          >
-            <span className="table-context-menu-icon">
-              <TableMenuIcon kind="trash" />
-            </span>
-            <span>{t('table.removeColumn')}</span>
-          </button>
-        </div>
       )}
     </div>
   )

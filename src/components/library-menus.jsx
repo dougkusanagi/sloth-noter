@@ -1,14 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  ArrowDownAZ,
-  ArrowUpDown,
-  Check,
-  ChevronDown,
-  Clock,
-  FilePlus,
-  FolderPlus,
-  Plus,
-} from 'lucide-react'
+import { ArrowDownAZ, ArrowUpDown, Check, Clock, FilePlus, FolderPlus } from 'lucide-react'
 import { t } from '../i18n.js'
 import { ShortcutButton } from './shortcut-button.jsx'
 
@@ -47,48 +38,25 @@ function useMenu() {
   return { open, setOpen, wrap, onKeyDown }
 }
 
-/** "+" creates a note; the chevron opens a menu with "New note" and "New folder". */
+/** Two icon buttons side by side: a new note and a new folder. */
 export function NewMenu({ onNote, onFolder }) {
-  const { open, setOpen, wrap, onKeyDown } = useMenu()
   return (
-    <div className="split-button" ref={wrap} onKeyDown={onKeyDown}>
+    <div className="split-button">
       <ShortcutButton
         className="button sidebar-add split-main"
         label={t('menu.newNote')}
         keys="T"
         onClick={onNote}
       >
-        <Plus size={15} aria-hidden="true" />
+        <FilePlus size={15} aria-hidden="true" />
       </ShortcutButton>
       <ShortcutButton
         className="button sidebar-add split-toggle"
-        label={t('library.newMore')}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
+        label={t('library.newFolder')}
+        onClick={onFolder}
       >
-        <ChevronDown size={13} aria-hidden="true" />
+        <FolderPlus size={15} aria-hidden="true" />
       </ShortcutButton>
-      {open && (
-        <div className="library-menu" role="menu" aria-label={t('library.newMore')}>
-          {[
-            [FilePlus, t('menu.newNote'), onNote],
-            [FolderPlus, t('library.newFolder'), onFolder],
-          ].map(([Icon, label, action]) => (
-            <button
-              key={label}
-              role="menuitem"
-              onClick={() => {
-                setOpen(false)
-                action()
-              }}
-            >
-              <Icon size={15} aria-hidden="true" />
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

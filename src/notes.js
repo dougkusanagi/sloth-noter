@@ -39,6 +39,7 @@ export function headingFileName(body) {
   const heading = body.match(/^# [ \t]*(.+?)[ \t]*$/m)
   if (!heading) return null
   const title = heading[1]
+    .replace(/<span style="(?:(?:color|background-color):#[0-9a-f]{6};?){1,2}">|<\/span>/g, '')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/`([^`]+)`/g, '$1')
     .replace(/\*\*([^*]+)\*\*/g, '$1')

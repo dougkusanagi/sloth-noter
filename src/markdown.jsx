@@ -1,9 +1,9 @@
+import { remarkDocumentColors } from './document-colors.js'
 import { applyChanges } from './list-indent.js'
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { t } from './i18n.js'
-import { remarkAccordions } from './accordions.js'
 import { remarkColumns } from './columns.js'
 import { codeTokens, codeLanguageName } from './syntax-highlight.js'
 import { ChevronDown, Copy, WrapText } from 'lucide-react'
@@ -167,6 +167,7 @@ function CodeBlock({ children, node }) {
   return (
     <div
       className="code-block"
+      data-colored={child?.props?.style?.color ? 'true' : undefined}
       data-scroll={!wrap || undefined}
       style={child?.props?.style}
       data-source-line={node.position.start.line}
@@ -375,8 +376,8 @@ export function Markdown({
         <ReactMarkdown
           remarkPlugins={[
             remarkColumns,
-            remarkAccordions,
             remarkGfm,
+            remarkDocumentColors,
             remarkWikiLinks,
             remarkPartialTasks,
             remarkTags,

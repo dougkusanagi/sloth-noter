@@ -72,14 +72,20 @@ for (const width of [390, 1280]) {
       .locator('.cm-md-table-row:not(.cm-md-table-divider)')
       .nth(1)
       .locator('.cm-md-table-cell')
+    // A plain click on a link selects the cell; a double click shows the Markdown to edit.
     await cells.nth(0).locator('.cm-md-inline-link').click()
-    await expect(cells.nth(0)).toContainText('[Exemplo](https://example.com)')
+    await expect(cells.nth(0)).toHaveClass(/cm-sheet-cursor/)
     await expect(cells.nth(1)).toHaveText('Interno')
+    await cells.nth(0).dblclick()
+    await expect(page.locator('.cm-sheet-editing')).toContainText('[Exemplo](https://example.com)')
+    await page.keyboard.press('Control+End')
     await page.keyboard.press('ArrowLeft')
     await page.keyboard.type('x')
-    await expect(cells.nth(0)).toContainText('x')
-    await cells.nth(1).locator('.cm-md-inline-link').click()
-    await expect(cells.nth(1)).toContainText('[[Interno]]')
+    await page.keyboard.press('Enter')
+    await expect(cells.nth(0)).toContainText('Exemplo')
+    await cells.nth(1).dblclick()
+    await expect(page.locator('.cm-sheet-editing')).toContainText('[[Interno]]')
+    await page.keyboard.press('Escape')
     await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
     await expect(page.locator('.visual-editor.read-only .cm-md-table-cell').last()).toHaveText(
       'Interno',
@@ -106,44 +112,46 @@ for (const width of [390, 1280]) {
       .fill('# Teste\n\nTexto antes\n\n| Nome | Valor |\n| --- | --- |\n| Ana | 2 |\n|  | 3 |')
     await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
     await page.locator('.cm-md-table-head .cm-md-table-cell').first().click()
-    const toolbar = page.getByRole('toolbar')
+    // A row or column bar selects it and opens the same table menu as the handle.
+    const menu = page.getByRole('menu', { name: 'Ações da tabela' })
     await page.getByRole('button', { name: 'Selecionar coluna 1', exact: true }).click()
-    await expect(toolbar).toHaveAttribute('aria-label', 'Ações da coluna')
+    await expect(menu).toBeVisible()
     await expect(page.locator('.cm-table-axis-selected')).toHaveCount(3)
     await expect
       .poll(async () => {
-        const box = await toolbar.boundingBox()
+        const box = await menu.boundingBox()
         return box.x >= 0 && box.x + box.width <= width
       })
       .toBe(true)
-    if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/table-toolbar-${width}.png` })
-    await toolbar.getByRole('button', { name: 'Negrito' }).click()
-    await expect(toolbar.getByRole('button', { name: 'Negrito' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-    await toolbar.getByRole('button', { name: 'Centralizar' }).click()
+    if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/table-menu-${width}.png` })
+    await menu.getByRole('menuitem', { name: 'Formatar' }).click()
+    await page
+      .getByRole('menu', { name: 'Formatar' })
+      .getByRole('menuitem', { name: 'Negrito' })
+      .click()
+    await expect(menu).toHaveCount(0)
+    await page.getByRole('button', { name: 'Selecionar coluna 1', exact: true }).click()
+    await menu.getByRole('menuitem', { name: 'Alinhamento' }).click()
+    await page
+      .getByRole('menu', { name: 'Alinhamento' })
+      .getByRole('menuitemradio', { name: 'Centralizar' })
+      .click()
     expect(await source(page)).toContain(
       '| **Nome** | Valor |\n| :---: | --- |\n| **Ana** | 2 |\n|  | 3 |',
     )
 
     await page.getByRole('button', { name: 'Selecionar coluna 2', exact: true }).click()
-    await expect(toolbar).toBeVisible()
-    await page.locator('.cm-md-table-cell', { hasText: '3' }).click()
-    await expect(toolbar).toHaveCount(0)
-
-    await page.getByRole('button', { name: 'Selecionar linha 2', exact: true }).click()
-    await expect(toolbar).toHaveAttribute('aria-label', 'Ações da linha')
+    await expect(menu).toBeVisible()
     await page.keyboard.press('Escape')
-    await expect(toolbar).toHaveCount(0)
+    await expect(menu).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Selecionar linha 3', exact: true }).click()
-    const remove = toolbar.getByRole('button', { name: 'Remover linha' })
+    const remove = menu.getByRole('menuitem', { name: 'Remover linha', exact: true })
     await remove.hover()
     await expect(page.locator('.cm-content.cm-table-danger')).toHaveCount(1)
     if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/table-danger-${width}.png` })
     await remove.click()
-    await expect(toolbar).toHaveCount(0)
+    await expect(menu).toHaveCount(0)
     expect(await source(page)).not.toContain('|  | 3 |')
 
     await page.locator('.cm-md-table-head .cm-md-table-cell').first().click()

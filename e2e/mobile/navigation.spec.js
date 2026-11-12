@@ -92,32 +92,6 @@ test('line wrapping can be changed for one note on mobile', async ({ page }) => 
   await expect(page.locator('.markdown')).toHaveAttribute('data-no-wrap', 'true')
 })
 
-test('a collapsible Markdown block opens and closes in mobile reading', async ({ page }) => {
-  await page.locator('[data-note-id="shopping"]').tap()
-  await page.getByRole('button', { name: 'Editar', exact: true }).tap()
-  await page.evaluate(async () => {
-    const { EditorView } = await import('/node_modules/.vite/deps/@codemirror_view.js')
-    const view = EditorView.findFromDOM(document.querySelector('.cm-editor'))
-    view.dispatch({
-      changes: {
-        from: 0,
-        to: view.state.doc.length,
-        insert:
-          '# Compras\n\n<details>\n<summary>Detalhes</summary>\n\nTexto importante\n\n</details>',
-      },
-    })
-  })
-  await page.getByRole('button', { name: 'Pronto', exact: true }).tap()
-  const details = page.locator('.markdown details').filter({ hasText: 'Detalhes' })
-  await expect(details.locator('summary')).toHaveText('Detalhes')
-  await expect(details.getByText('Texto importante')).toBeVisible()
-  await details.locator('summary').tap()
-  await expect(details.getByText('Texto importante')).toBeHidden()
-  await details.locator('summary').tap()
-  await expect(details.getByText('Texto importante')).toBeVisible()
-  if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/sloth-accordion-mobile.png' })
-})
-
 test('columns stay readable and editable on mobile', async ({ page }) => {
   await page.locator('[data-note-id="shopping"]').tap()
   await page.getByRole('button', { name: 'Editar', exact: true }).tap()

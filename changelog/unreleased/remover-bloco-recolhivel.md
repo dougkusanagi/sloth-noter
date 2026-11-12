@@ -1,0 +1,1 @@
+Removido: O Bloco recolhível saiu do menu de inserção, no computador e no celular. Notas que já têm um bloco recolhível não perdem o texto: ele aparece aberto, com as marcas `<details>` e `<summary>` visíveis. Apague essas marcas para deixar só o conteúdo.

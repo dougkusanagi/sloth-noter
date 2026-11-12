@@ -24,7 +24,7 @@ async function setWidth(page, value) {
   await page.keyboard.press('Control+,')
   const settings = page.getByRole('dialog', { name: 'Configurações' })
   await settings.getByRole('button', { name: 'Editor' }).click()
-  await settings.getByLabel('Largura do texto').fill(String(value))
+  await settings.getByLabel('Largura do documento').fill(String(value))
   await page.keyboard.press('Escape')
   await expect(settings).toBeHidden()
 }
@@ -57,7 +57,7 @@ test('Settings widens and narrows the column in all modes, remembers it, and can
   const settings = page.getByRole('dialog', { name: 'Configurações' })
   await settings.getByRole('button', { name: 'Editor' }).click()
   await settings.getByRole('button', { name: 'Restaurar' }).last().click()
-  await expect(settings.getByLabel('Largura do texto')).toHaveValue('760')
+  await expect(settings.getByLabel('Largura do documento')).toHaveValue('760')
   await page.keyboard.press('Escape')
   await expect.poll(() => width(page, '.visual-editor.read-only .cm-scroller')).toBe(760)
 })

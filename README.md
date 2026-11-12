@@ -11,13 +11,14 @@ Um bloco de notas com Markdown para escrever, organizar ideias e fechar a janela
 - **Busca onde precisar:** encontre notas pelo nome, pesquise no conteúdo de todas elas com trechos destacados ou busque e substitua dentro de uma nota.
 - **Listas e tarefas:** sublistas, reordenação pelo teclado, visão de tarefas na biblioteca e controles para concluir as tarefas de uma seção.
 - **Markdown além do básico:** digite `/` numa linha vazia para buscar blocos; copie ou recolha blocos de código e escolha entre quebrar linhas e rolar horizontalmente. A configuração global de quebra fica em Configurações → Editor.
-- **Tabelas:** clique nas barras acima das colunas ou à esquerda das linhas para alinhar, formatar ou remover; aponte para os pontos nas bordas para inserir linhas e colunas. O ícone no canto da tabela recorta, copia, exclui e liga a linha ou a coluna de cabeçalho, que fica visível ao rolar. O cabeçalho é guardado num comentário `<!-- sloth:table … -->` acima da tabela.
+- **Tabelas:** o mesmo menu abre pelas barras acima das colunas e à esquerda das linhas, pelo ícone no canto da tabela e pelo clique com o botão direito numa célula. Ele age nas células selecionadas (ou na tabela inteira): cores, alinhamento horizontal e vertical, formatação, inserir e remover linhas e colunas, copiar, exportar e cabeçalhos. A linha de cabeçalho fica visível ao rolar; aponte para os pontos nas bordas para inserir linhas e colunas. O cabeçalho é guardado num comentário `<!-- sloth:table … -->` acima da tabela.
 - **Alça de blocos:** com o mouse, cada bloco mostra uma alça à esquerda para transformar, recortar, copiar, excluir, adicionar abaixo ou arrastar. Um título recolhido leva a seção ao ser arrastado. Ao selecionar texto, a barra mostra o tipo do bloco, negrito, tachado, itálico, link, código e mais ações.
+- **Tabelas:** arraste a divisão entre colunas para redistribuir sua largura. A tabela sempre preenche o documento e as linhas têm altura automática. As tabelas funcionam como planilha: um clique seleciona, arrastar ou Shift seleciona várias células, e clique duplo, F2 ou digitar edita. Copie e cole blocos de células de e para Excel ou Google Sheets. Células que começam com `=` são fórmulas (`=SOMA(B2:B5)`, `=SE(A2>0;"sim";"não")`); o arquivo guarda a fórmula. Clique com o botão direito numa célula para escolher cores. Ao editar, Shift+Enter quebra a linha e continua listas e tarefas (`- [ ]`). No menu da tabela, exporte os textos como CSV (UTF-8, ponto e vírgula) ou XLSX; as células XLSX são texto, sem fórmulas nem formatação.
+- **Sumário:** no editor padrão, abra o botão à esquerda para navegar pelos títulos e recolher subtítulos. Em linhas vazias, use **+** para inserir um bloco.
 - **Duas notas:** use o menu de uma aba ou arraste-a para o editor para consultá-la ao lado. A nota lateral abre em leitura; clique no nome para editá-la.
-- **Blocos recolhíveis:** digite `/` e escolha Bloco recolhível para guardar conteúdo sob um título. O arquivo usa `<details>` e `<summary>`; blocos aninhados não são organizados como um bloco externo.
 - **Colunas:** digite `/` e escolha Colunas; use + para acrescentar colunas e arraste uma seleção com o mouse ou use recortar e colar para mover texto. A edição mostra Markdown; na leitura ele aparece formatado. Remover o layout mantém o conteúdo. As notas usam comentários HTML para delimitar as colunas e permanecem legíveis em sequência em outros leitores Markdown.
 - **Imagens junto das ideias:** cole ou arraste arquivos, reutilize imagens da biblioteca e encontre as notas que as utilizam.
-- **Um espaço para se concentrar:** modo de foco, temas claro e escuro, fonte, tamanho e largura do texto ajustáveis. Interface em português do Brasil ou inglês.
+- **Um espaço para se concentrar:** modo de foco, temas claro e escuro, fonte, tamanho do texto e largura do documento ajustáveis. Interface em português do Brasil ou inglês.
 
 ## Primeiros passos
 
@@ -114,3 +115,10 @@ A nota usa os modos normais de leitura, edição e código. Abrir novamente reut
 continuar igual ao changelog da versão instalada; uma cópia editada não é sobrescrita.
 
 O empacotamento MSIX para a Microsoft Store está descrito em [Desenvolvimento](docs/DESENVOLVIMENTO.md). Consulte também a [política de privacidade](docs/PRIVACIDADE.md).
+
+As cores de blocos ficam em **menu do bloco → Cores**. A seleção oferece **Cores → Texto
+selecionado / Bloco inteiro**. Para colorir uma célula sem clique direito, posicione o cursor
+nela e abra **Ações da tabela → Cores da célula**. Todas as paletas permitem restaurar o padrão.
+Os metadados ficam no Markdown; leitores externos podem ignorar cores de bloco ou estilos HTML.
+Em **Aparência**, escolha **Padrão**, **Ampla** ou **Toda a largura**, ou ajuste a largura manualmente.
+No Android, as predefinições também ficam em Configurações.

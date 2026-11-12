@@ -1,3 +1,8 @@
+import { ColorPalette } from '../components/color-palette.jsx'
+import { colorDocument, colorBlock } from '../editor/document-colors.js'
+import { documentBlocks } from '../block-move.js'
+import { setTableCellColor, tableFlags } from '../editor/table.js'
+import { blockColorMetadata, selectedColors } from '../document-colors.js'
 import { useEffect, useState } from 'react'
 import {
   ArrowDown,
@@ -22,6 +27,7 @@ import {
   ArrowRight,
   MoreHorizontal,
   WrapText,
+  Palette,
 } from 'lucide-react'
 import { EditorSelection } from '@codemirror/state'
 import { undo } from '@codemirror/commands'
@@ -77,6 +83,8 @@ export function FormattingBar({ view, onHideKeyboard, onInsert }) {
   const [tick, setTick] = useState(0)
   const [more, setMore] = useState(false)
   const [styles, setStyles] = useState(false)
+  const [colors, setColors] = useState(false)
+  const [scope, setScope] = useState('text')
   const context = view ? formattingContext(view.state) : null
   useEffect(() => {
     setStyles(false)
@@ -141,6 +149,33 @@ export function FormattingBar({ view, onHideKeyboard, onInsert }) {
     undo(view)
   }
 
+  const cell = tableContextAt(view)
+  const line = view.state.doc.lineAt(selection.head).number
+  const blocks = documentBlocks(view.state.doc.toString()).filter(
+    (block) => block.first <= line && block.last >= line,
+  )
+  const wholeBlock = scope === 'block' || selection.empty || context === 'code'
+  const colorValue =
+    cell && selection.empty
+      ? { background: tableFlags(view.state.doc, cell.table).colors[`${cell.row}:${cell.column}`] }
+      : wholeBlock
+        ? (blocks[0] && blockColorMetadata(view.state.doc.line(blocks[0].first).text)) || {}
+        : selectedColors(view.state.doc.toString(), selection.from, selection.to)
+  const applyColor = (property, color) => {
+    if (composing) return
+    if (cell && selection.empty)
+      setTableCellColor(
+        view,
+        cell.table.first,
+        cell.row,
+        cell.column,
+        property === 'reset' ? 'none' : color,
+      )
+    else if (wholeBlock)
+      for (const block of [...blocks].reverse()) colorBlock(view, block, property, color)
+    else colorDocument(view, property, color)
+    setTick((value) => value + 1)
+  }
   const group = []
   if (styles) {
     // Aa toggles back to the base group; pressed while the style buttons are showing.
@@ -340,6 +375,33 @@ export function FormattingBar({ view, onHideKeyboard, onInsert }) {
       >
         <Plus size={20} aria-hidden="true" />
       </Button>
+      <Button label="colors.title" pressed={colors} onClick={() => setColors(!colors)}>
+        <Palette size={20} aria-hidden="true" />
+      </Button>
+      {colors && (
+        <div className="mobile-color-panel" onPointerDown={(event) => event.preventDefault()}>
+          {!selection.empty && !cell && (
+            <div className="color-scope">
+              {['text', 'block'].map((value) => (
+                <button
+                  type="button"
+                  key={value}
+                  aria-pressed={scope === value}
+                  onClick={() => setScope(value)}
+                >
+                  {t(`colors.scope.${value}`)}
+                </button>
+              ))}
+            </div>
+          )}
+          <ColorPalette
+            text={!(cell && selection.empty)}
+            value={colorValue}
+            onChange={applyColor}
+            onReset={() => applyColor('reset')}
+          />
+        </div>
+      )}
       <div className="mobile-format-group">{group}</div>
       <span className="mobile-format-spacer" aria-hidden="true" />
       <Button label="mobile.undo" onClick={runUndo}>

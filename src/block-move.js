@@ -1,3 +1,4 @@
+import { blockColorMetadata } from './document-colors.js'
 import { markdownTree } from './markdown-model.js'
 
 const LIST_ITEM = /^\s*(?:[-*+]|\d+[.)])\s/
@@ -37,6 +38,15 @@ export function documentBlocks(text) {
     if (blocks[index].kind === 'table' && block.first === block.last)
       if (block.last === blocks[index].first - 1 && TABLE_FLAGS.test(lineAt(text, block.first)))
         blocks.splice(index - 1, 2, { ...blocks[index], first: block.first })
+  }
+  for (let index = blocks.length - 2; index >= 0; index--) {
+    const block = blocks[index]
+    if (
+      block.first === block.last &&
+      blockColorMetadata(lineAt(text, block.first)) &&
+      blocks[index + 1].first === block.last + 2
+    )
+      blocks.splice(index, 2, { ...blocks[index + 1], first: block.first })
   }
   return blocks
 }

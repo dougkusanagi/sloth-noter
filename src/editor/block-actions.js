@@ -1,3 +1,4 @@
+import { blockColorMetadata } from '../document-colors.js'
 import { EditorSelection } from '@codemirror/state'
 import { codeCopyHandler } from './code-copy.js'
 
@@ -49,14 +50,18 @@ function blockContent(doc, block) {
 /** The edit that turns a block into another kind, or null when it already is one. */
 export function turnIntoChange(doc, block, target) {
   if (block.kind === target) return null
-  const content = blockContent(doc, block)
-  const indent = block.kind === 'code' ? '' : (doc.line(block.first).text.match(/^\s*/)?.[0] ?? '')
+  const metadata = blockColorMetadata(doc.line(block.first).text)
+  const contentBlock = metadata ? { ...block, first: block.first + 2 } : block
+  const content = blockContent(doc, contentBlock)
+  const indent =
+    block.kind === 'code' ? '' : (doc.line(contentBlock.first).text.match(/^\s*/)?.[0] ?? '')
   let insert
   if (target === 'code') insert = ['```', ...content, '```'].join('\n')
   else if (target === 'quote') insert = content.map((line) => PREFIX.quote + line).join('\n')
   // Headings and list items take one line, so the lines of a paragraph join.
   else if (target === 'p') insert = content.join('\n')
   else insert = indent + PREFIX[target] + content.map((line) => line.trim()).join(' ')
+  if (metadata) insert = doc.line(block.first).text + '\n\n' + insert
   return { ...blockRange(doc, block), insert }
 }
 

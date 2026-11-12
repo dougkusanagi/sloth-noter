@@ -46,16 +46,6 @@ test('tables preserve selected paragraph text and code blocks wrap it', () => {
   assert.equal(code.text.slice(code.from, code.to), 'Texto selecionado')
 })
 
-test('collapsible blocks keep selected text as content and select the title', () => {
-  const text = '# Título\n\nTexto selecionado'
-  const result = apply(text, 10, text.length, 'accordion')
-  assert.equal(
-    result.text,
-    '# Título\n\n<details>\n<summary>Título</summary>\n\nTexto selecionado\n\n</details>',
-  )
-  assert.equal(result.text.slice(result.from, result.to), 'Título')
-})
-
 test('columns preserve selected text in the first column', () => {
   const text = '# Título\n\nTexto selecionado'
   const result = apply(text, 10, text.length, 'columns')

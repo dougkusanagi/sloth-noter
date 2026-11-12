@@ -68,3 +68,41 @@ test('the selection toolbar turns blocks and strikes text', async ({ page }) => 
   await toolbar.getByRole('menuitemradio', { name: 'Citação' }).click()
   await source(page, '# Nota\n\n> ~~Texto riscado aqui~~')
 })
+
+test('document outline navigates and collapses nested headings', async ({ page }) => {
+  await fill(page, '# Nota\n\n## Seção\n\nTexto\n\n### Detalhes\n\nMais texto')
+  await page.getByRole('button', { name: 'Expandir sumário', exact: true }).click()
+  const outline = page.getByRole('navigation', { name: 'Sumário do documento' })
+  await expect(outline.getByRole('button', { name: 'Detalhes', exact: true })).toBeVisible()
+  await outline.getByRole('button', { name: 'Recolher subtítulos de Seção', exact: true }).click()
+  await expect(outline.getByRole('button', { name: 'Detalhes', exact: true })).toHaveCount(0)
+  await outline.getByRole('button', { name: 'Seção', exact: true }).click()
+  await expect(page.locator('.cm-focused')).toBeVisible()
+})
+
+test('empty lines offer an insert button and fold arrows reveal on direct hover', async ({
+  page,
+}) => {
+  await fill(page, '# Nota\n\n## Seção\n\nTexto\n\n')
+  const arrow = page.locator('.cm-fold-toggle:not(.cm-level-badge)').first()
+  await arrow.hover()
+  await expect(arrow).toHaveCSS('opacity', '1')
+  await page.locator('.cm-line').last().click()
+  await page.getByRole('button', { name: 'Inserir bloco', exact: true }).click()
+  await expect(page.locator('.block-menu')).toBeVisible()
+})
+
+test('heading fold arrows align with block handles after heading spacing', async ({ page }) => {
+  await fill(page, '# Nota\n\n## Títulos\n\nTexto\n\n### Subtítulo\n\nTexto')
+  for (const title of ['Títulos', 'Subtítulo']) {
+    const heading = page.locator('.cm-line', { hasText: title })
+    await heading.hover()
+    const arrow = await heading.locator('.cm-fold-toggle').boundingBox()
+    const handle = await page.locator('.cm-block-handle').boundingBox()
+    expect(Math.abs(arrow.y + arrow.height / 2 - handle.y - handle.height / 2)).toBeLessThan(2)
+  }
+  await page.screenshot({ path: '/tmp/sloth-heading-controls-desktop.png' })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('button', { name: 'Mostrar/ocultar biblioteca', exact: true }).click()
+  await page.screenshot({ path: '/tmp/sloth-heading-controls-mobile.png' })
+})

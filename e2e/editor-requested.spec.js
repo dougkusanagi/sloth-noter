@@ -135,43 +135,6 @@ test('code blocks can be collapsed and expanded without changing their contents'
   await expect(page.locator('textarea')).toHaveValue(source)
 })
 
-test('a collapsible block can be inserted, edited and folded without losing its contents', async ({
-  page,
-}) => {
-  await page.goto('/')
-  await expect(page.locator('.cm-content')).toBeVisible()
-  await page.keyboard.press('Control+t')
-  await expect(page.locator('.cm-empty-title')).toBeVisible()
-  await expect(page.locator('.cm-content')).toBeFocused()
-  await page.keyboard.type('Projeto')
-  await page.keyboard.press('Tab')
-  await page.keyboard.type('/')
-  await page.getByRole('textbox', { name: 'Buscar blocos' }).fill('recolhível')
-  await page.getByRole('button', { name: 'Bloco recolhível', exact: true }).click()
-  await page.keyboard.type('Detalhes')
-  await expect(page.getByRole('button', { name: 'Recolher bloco' })).toBeVisible()
-  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
-  const source =
-    '# Projeto\n\n<details>\n<summary>Detalhes</summary>\n\nInformações importantes\n\n</details>'
-  await page.locator('textarea').fill(source)
-  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
-  const content = page.locator('.cm-content')
-  await expect(content).toContainText('Informações importantes')
-  await page.getByRole('button', { name: 'Recolher bloco' }).click()
-  await expect(content).not.toContainText('Informações importantes')
-  await page.getByRole('button', { name: 'Expandir bloco' }).click()
-  await expect(content).toContainText('Informações importantes')
-  if (process.env.CAPTURE_UI) {
-    const area = await page.locator('.editor-shell').boundingBox()
-    await page.screenshot({
-      path: '/tmp/sloth-accordion-desktop.png',
-      clip: { x: area.x + 70, y: area.y, width: Math.min(area.width - 70, 340), height: 220 },
-    })
-  }
-  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
-  await expect(page.locator('textarea')).toHaveValue(source)
-})
-
 test('typing a slash in an empty code line inserts it as code', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })

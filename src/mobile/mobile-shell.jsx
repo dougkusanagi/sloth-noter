@@ -1,3 +1,4 @@
+import { DocumentWidthPresets } from '../components/document-width-presets.jsx'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
@@ -798,7 +799,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           event.stopPropagation()
         }
       }}
-      style={{ '--editor-size': `${prefs.fontSize}px` }}
+      style={{
+        '--editor-size': `${prefs.fontSize}px`,
+        '--content-width':
+          prefs.documentWidth === 'full' ? '100%' : `${prefs.contentWidth || 760}px`,
+      }}
     >
       <header className="mobile-header">
         {!root && (
@@ -1177,6 +1182,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               value={prefs.fontSize}
               onChange={(event) => updatePrefs({ fontSize: Number(event.target.value) })}
             />
+            <DocumentWidthPresets prefs={prefs} onChange={updatePrefs} />
             <p>{t('mobile.backupDetails')}</p>
             <button disabled={Boolean(transferBusy)} onClick={exportBackup}>
               {t('mobile.backupSave')}

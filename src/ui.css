@@ -817,6 +817,7 @@ html:has(
   z-index: 8;
   width: 270px;
   max-width: calc(100vw - 16px);
+  overflow-y: auto;
 }
 .tab-context-menu {
   position: fixed;
@@ -1158,17 +1159,12 @@ html:has(
   border-bottom-right-radius: 0;
 }
 .split-button .split-toggle {
-  width: 22px;
   border-left: 0;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
-  color: var(--muted);
   box-shadow:
     var(--bevel),
     inset 1px 0 0 var(--line);
-}
-.split-button .split-toggle[aria-expanded='true'] svg {
-  transform: rotate(180deg);
 }
 .split-button .split-toggle svg,
 .button.sidebar-add svg {
@@ -2761,6 +2757,7 @@ html:has(
 .focus-mode .document-info,
 .focus-mode .format-toolbar,
 .focus-mode .insert-trigger,
+.focus-mode .insert-button,
 .focus-mode .code-copy-layer,
 .focus-mode .code-block-tools,
 .focus-mode .copy-inline-code,

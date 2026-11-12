@@ -623,24 +623,6 @@ textarea:focus-visible {
   /* The sticky copy badge can float over any line, so keep its column clear. */
   padding-right: var(--copy-reserve);
 }
-.cm-accordion-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--ink);
-  cursor: pointer;
-  vertical-align: middle;
-}
-.cm-accordion-toggle:hover,
-.cm-accordion-toggle:focus-visible {
-  background: var(--active);
-}
 .cm-columns {
   margin: 8px 0;
 }
@@ -1491,6 +1473,7 @@ textarea:focus-visible {
 .cm-md-h4:hover .cm-fold-toggle:not(.cm-level-badge),
 .cm-md-h5:hover .cm-fold-toggle:not(.cm-level-badge),
 .cm-md-h6:hover .cm-fold-toggle:not(.cm-level-badge),
+.cm-fold-toggle.is-line-hover,
 .markdown :is(h1, h2, h3, h4, h5, h6):hover .fold-toggle:not(.level-badge),
 .cm-fold-toggle:focus-visible,
 .fold-toggle:focus-visible {
@@ -1503,6 +1486,7 @@ textarea:focus-visible {
 .cm-md-h4:hover .cm-fold-toggle svg,
 .cm-md-h5:hover .cm-fold-toggle svg,
 .cm-md-h6:hover .cm-fold-toggle svg,
+.cm-fold-toggle.is-line-hover svg,
 .markdown :is(h1, h2, h3, h4, h5, h6):hover .fold-toggle svg,
 .cm-fold-toggle:focus-visible svg,
 .fold-toggle:focus-visible svg,
@@ -2084,6 +2068,7 @@ body.cm-section-dragging * {
 .visual-editor:not(.read-only)
   :is(.cm-md-h2, .cm-md-h3, .cm-md-h4, .cm-md-h5, .cm-md-h6):hover
   .cm-fold-toggle,
+.visual-editor:not(.read-only) .cm-fold-toggle.is-line-hover,
 .visual-editor:not(.read-only) .cm-fold-toggle:focus-visible,
 .visual-editor:not(.read-only) .cm-fold-toggle.folded {
   opacity: 1;
@@ -2123,4 +2108,613 @@ body.cm-section-dragging * {
 .editor-popup-menu .table-context-menu-icon svg {
   width: 16px;
   height: 16px;
+}
+
+/* Document navigation stays outside the writing measure. */
+.document-outline {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 5;
+  max-width: min(240px, calc(100vw - 24px));
+  color: var(--muted);
+}
+.document-outline.is-open {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+}
+.document-outline button {
+  background: transparent;
+  color: inherit;
+  border: 0;
+  border-radius: 4px;
+  min-height: 28px;
+  cursor: pointer;
+}
+.document-outline button:hover {
+  color: var(--ink);
+  background: var(--hover);
+}
+.document-outline-list {
+  width: 220px;
+  max-width: 100%;
+  max-height: 60vh;
+  overflow: auto;
+}
+.document-outline-row {
+  display: flex;
+  align-items: start;
+}
+.document-outline .outline-link {
+  text-align: left;
+  overflow-wrap: anywhere;
+  flex: 1;
+  padding: 5px 8px;
+}
+.document-outline .outline-branch {
+  padding: 5px 0;
+  flex: 0 0 16px;
+}
+/* Same box as the block handle, in the same place, for an empty line. */
+.insert-button {
+  position: fixed;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-top: calc((var(--editor-size) * 1.62 - 26px) / 2);
+  padding: 0;
+  border: 1px solid var(--soft);
+  border-radius: 7px;
+  background: var(--paper);
+  color: var(--accent);
+  cursor: pointer;
+}
+.insert-button svg {
+  width: 16px;
+  height: 16px;
+}
+.insert-button:hover,
+.insert-button[aria-expanded='true'] {
+  background: var(--soft);
+}
+.insert-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+@media (hover: none), (pointer: coarse) {
+  .insert-button {
+    display: none;
+  }
+}
+.visual-editor:not(.read-only) .cm-fold-toggle:hover {
+  opacity: 1;
+}
+.visual-editor .cm-line.cm-md-paragraph {
+  padding-bottom: 0.18em;
+}
+.visual-editor .cm-line:is(.cm-md-h2, .cm-md-h3, .cm-md-h4, .cm-md-h5, .cm-md-h6) {
+  padding-top: 0.8em;
+  padding-bottom: 0.35em;
+}
+@media (max-width: 700px) {
+  .document-outline {
+    top: 8px;
+    left: 4px;
+  }
+  .document-outline.is-open {
+    max-width: calc(100vw - 16px);
+  }
+}
+
+.visual-editor {
+  position: relative;
+}
+.visual-editor .document-outline.is-open {
+  background-color: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+/* The heading has more padding above than below; center its arrow on the text. */
+.visual-editor:not(.read-only) .cm-fold-toggle {
+  font-size: inherit;
+  top: calc(50% + 0.225em);
+}
+
+.visual-editor .cm-md-table-row,
+.visual-editor .cm-md-table-column-controls {
+  grid-template-columns: var(--table-tracks, repeat(var(--table-columns), minmax(0, 1fr)));
+}
+.visual-editor .cm-md-table-row {
+  min-width: var(--table-width, 0px);
+}
+
+.cm-table-task {
+  accent-color: var(--accent);
+  vertical-align: middle;
+  margin: 0 0.4em 0 0;
+  cursor: pointer;
+}
+.cm-table-list-marker {
+  color: var(--accent);
+  white-space: pre;
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-green,
+.table-cell-swatch.cm-table-bg-green {
+  background: color-mix(in srgb, #359766 20%, var(--paper));
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-blue,
+.table-cell-swatch.cm-table-bg-blue {
+  background: color-mix(in srgb, #3a81cc 20%, var(--paper));
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-yellow,
+.table-cell-swatch.cm-table-bg-yellow {
+  background: color-mix(in srgb, #d4a21c 20%, var(--paper));
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-red,
+.table-cell-swatch.cm-table-bg-red {
+  background: color-mix(in srgb, #cf5757 20%, var(--paper));
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-purple,
+.table-cell-swatch.cm-table-bg-purple {
+  background: color-mix(in srgb, #9166c5 20%, var(--paper));
+}
+.table-cell-colors {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 4px;
+  gap: 4px;
+}
+.table-context-menu .table-cell-colors button {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  font-size: 11px;
+}
+.table-cell-colors button[aria-checked='true'] {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+.table-cell-swatch {
+  display: block;
+  width: 28px;
+  height: 18px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+
+.cm-table-rich-cell {
+  user-select: text;
+}
+.cm-table-rich-cell > div {
+  min-width: 0;
+  width: 100%;
+}
+.cm-table-rich-cell :is(p, ul, ol, blockquote, pre, h1, h2, h3, h4, h5, h6) {
+  margin: 0;
+}
+.cm-table-rich-cell :is(ul, ol) {
+  padding-left: 1.3em;
+}
+.cm-table-rich-cell li + li {
+  margin-top: 0.25em;
+}
+.cm-table-rich-cell .cm-table-task-item {
+  list-style: none;
+  display: flex;
+  gap: 0.5em;
+  align-items: flex-start;
+  margin-left: -1.3em;
+}
+.cm-table-rich-cell .cm-table-task-item > p {
+  min-width: 0;
+}
+.cm-table-rich-cell .cm-table-task-item.is-done > p {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.cm-table-rich-cell .cm-table-task {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  align-self: center;
+}
+.cm-table-rich-cell .cm-table-task:disabled {
+  cursor: default;
+}
+.cm-table-rich-cell img {
+  max-width: 100%;
+  height: auto;
+}
+.cm-table-rich-cell pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.document-color-menu {
+  position: relative;
+}
+.document-color-menu summary {
+  cursor: pointer;
+  padding: 8px 10px;
+}
+/* The colors item of a popup menu looks like the other items, with its own chevron. */
+.editor-color-submenu summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 7px;
+  color: var(--ink);
+  font: 13px var(--ui);
+  list-style: none;
+  cursor: pointer;
+}
+.editor-color-submenu summary::-webkit-details-marker,
+.editor-color-submenu summary::marker {
+  display: none;
+  content: '';
+}
+.editor-color-submenu summary:hover {
+  background: var(--hover);
+}
+.editor-color-submenu-chevron {
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+  color: var(--muted);
+  transition: transform 0.12s var(--ease);
+}
+.editor-color-submenu-chevron svg {
+  width: 14px;
+  height: 14px;
+}
+.editor-color-submenu[open] .editor-color-submenu-chevron {
+  transform: rotate(90deg);
+}
+.table-context-menu .color-palette .color-reset {
+  justify-content: center;
+  min-height: 30px;
+  border: 1px solid var(--line);
+}
+.cm-table-color-menu .color-palette {
+  padding: 4px 6px 6px;
+}
+.document-color-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 252px;
+  padding: 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  z-index: 50;
+  max-width: calc(100vw - 24px);
+}
+.color-palette-label {
+  font-size: 12px;
+  margin: 8px 0;
+  color: var(--muted);
+}
+.color-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.color-palette .color-palette-grid .color-choice {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  width: 100%;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  font-size: 16px;
+}
+.color-palette .color-choice[aria-pressed='true'] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.color-palette button:focus-visible,
+.editor-color-submenu summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.color-choice-none {
+  background: linear-gradient(
+    135deg,
+    transparent 47%,
+    var(--accent) 48%,
+    var(--accent) 52%,
+    transparent 53%
+  ) !important;
+}
+.color-reset {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.editor-color-submenu .color-palette {
+  padding: 4px 8px 8px;
+}
+.visual-editor .cm-md-table-cell.cm-table-fg-gray {
+  color: #9ca3af;
+}
+.visual-editor .cm-md-table-cell.cm-table-fg-red {
+  color: #e76565;
+}
+.visual-editor .cm-md-table-cell.cm-table-fg-orange {
+  color: #d99238;
+}
+.visual-editor .cm-md-table-cell.cm-table-fg-yellow {
+  color: #c3ae35;
+}
+.visual-editor .cm-md-table-cell.cm-table-fg-green {
+  color: #61a96d;
+}
+.visual-editor .cm-md-table-cell.cm-table-fg-blue {
+  color: #648fda;
+}
+.visual-editor .cm-md-table-cell.cm-table-fg-purple {
+  color: #ac81d4;
+}
+.cm-colored-block {
+  border-radius: 3px;
+}
+@media (pointer: coarse) {
+  .color-palette .color-palette-grid .color-choice {
+    height: 36px;
+  }
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-gray {
+  background-color: color-mix(in srgb, #9ca3af 22%, transparent);
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-gray-strong {
+  background-color: color-mix(in srgb, #9ca3af 65%, transparent);
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-red {
+  background-color: color-mix(in srgb, #e76565 22%, transparent);
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-red-strong {
+  background-color: color-mix(in srgb, #e76565 65%, transparent);
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-orange {
+  background-color: color-mix(in srgb, #d99238 22%, transparent);
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-orange-strong {
+  background-color: color-mix(in srgb, #d99238 65%, transparent);
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-yellow {
+  background-color: color-mix(in srgb, #c3ae35 22%, transparent);
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-yellow-strong {
+  background-color: color-mix(in srgb, #c3ae35 65%, transparent);
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-green {
+  background-color: color-mix(in srgb, #61a96d 22%, transparent);
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-green-strong {
+  background-color: color-mix(in srgb, #61a96d 65%, transparent);
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-blue {
+  background-color: color-mix(in srgb, #648fda 22%, transparent);
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-blue-strong {
+  background-color: color-mix(in srgb, #648fda 65%, transparent);
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-purple {
+  background-color: color-mix(in srgb, #ac81d4 22%, transparent);
+}
+.visual-editor .cm-md-table-cell.cm-table-bg-purple-strong {
+  background-color: color-mix(in srgb, #ac81d4 65%, transparent);
+}
+
+.cm-line.cm-color-metadata {
+  display: none;
+}
+.document-color-panel {
+  left: 0;
+  right: auto;
+}
+.format-toolbar .color-palette .color-reset {
+  display: block;
+  width: 100%;
+  height: auto;
+  font: 12px var(--ui);
+  white-space: nowrap;
+}
+.document-color-menu summary {
+  list-style: none;
+  border-radius: 4px;
+  font: 16px var(--ui);
+}
+.document-color-menu summary::-webkit-details-marker {
+  display: none;
+}
+.document-color-menu[open] summary {
+  background: var(--hover);
+}
+.document-width-presets.menu-theme {
+  margin: 0 0 10px;
+}
+.display-menu .document-width-presets.menu-theme button {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  min-width: 0;
+  font: 500 11px var(--ui);
+}
+.document-width-presets svg {
+  flex-shrink: 0;
+}
+.document-width-presets button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.format-toolbar .color-scope {
+  display: flex;
+  gap: 4px;
+}
+.format-toolbar .color-scope button {
+  width: auto;
+  height: auto;
+  flex: 1;
+  padding: 6px;
+  font: 11px var(--ui);
+  white-space: normal;
+}
+.format-toolbar .color-scope [aria-pressed='true'] {
+  background: var(--active);
+}
+.cm-block-text-color .token,
+.code-block[data-colored='true'] .token {
+  color: inherit;
+}
+.document-color-panel {
+  position: absolute;
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+}
+
+/* Spreadsheet selection: the note's own text cursor stays hidden inside tables. */
+.visual-editor .cm-content.cm-sheet-active {
+  caret-color: transparent;
+}
+.visual-editor .cm-md-table-cell {
+  cursor: cell;
+}
+/* A selected range keeps its own colors and grid: an accent layer over the
+   cell background, accent-tinted dividers and a solid border around the range. */
+.visual-editor .cm-md-table-cell.cm-sheet-selected {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--accent) 16%, transparent),
+    color-mix(in srgb, var(--accent) 16%, transparent)
+  );
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--soft));
+  transition: none;
+  --edge-top: 0 0;
+  --edge-bottom: 0 0;
+  --edge-left: 0 0;
+  --edge-right: 0 0;
+  box-shadow:
+    inset 0 var(--edge-top) var(--accent),
+    inset 0 var(--edge-bottom) var(--accent),
+    inset var(--edge-left) 0 var(--accent),
+    inset var(--edge-right) 0 var(--accent);
+}
+.visual-editor .cm-md-table-cell.cm-sheet-selected[data-range-edge~='top'] {
+  --edge-top: 2px 0;
+}
+.visual-editor .cm-md-table-cell.cm-sheet-selected[data-range-edge~='bottom'] {
+  --edge-bottom: -2px 0;
+}
+.visual-editor .cm-md-table-cell.cm-sheet-selected[data-range-edge~='left'] {
+  --edge-left: 2px;
+}
+.visual-editor .cm-md-table-cell.cm-sheet-selected[data-range-edge~='right'] {
+  --edge-right: -2px;
+}
+.visual-editor .cm-md-table-cell[data-valign] {
+  display: flex;
+  flex-direction: column;
+}
+.visual-editor .cm-md-table-cell[data-valign='middle'] {
+  justify-content: center;
+}
+.visual-editor .cm-md-table-cell[data-valign='bottom'] {
+  justify-content: flex-end;
+}
+.editor-submenu-chevron {
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+  color: var(--muted);
+}
+.editor-submenu-chevron svg {
+  width: 14px;
+  height: 14px;
+}
+.editor-submenu-item[aria-expanded='true'] {
+  background: var(--hover);
+}
+.table-context-menu.editor-popup-submenu {
+  z-index: 9;
+  width: auto;
+  min-width: 200px;
+}
+.editor-popup-submenu .color-palette {
+  width: 252px;
+  padding: 4px 6px 6px;
+}
+.editor-popup-submenu .editor-popup-grid {
+  padding: 0 6px 4px;
+}
+.visual-editor .cm-md-table-cell.cm-sheet-cursor,
+.visual-editor .cm-md-table-cell.cm-sheet-editing {
+  position: relative;
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 1;
+  transition: none;
+}
+.visual-editor .cm-md-table-cell.cm-sheet-editing {
+  cursor: text;
+  background: var(--paper);
+  box-shadow: 0 2px 10px #0002;
+}
+.visual-editor .cm-sheet-editing .cm-editor {
+  font: inherit;
+  outline: none;
+}
+.visual-editor .cm-sheet-editing .cm-scroller {
+  padding: 0;
+  overflow: visible;
+  font: inherit;
+  line-height: inherit;
+}
+.visual-editor .cm-sheet-editing .cm-content {
+  padding: 0;
+  min-height: 1.5em;
+  caret-color: var(--accent);
+  white-space: pre-wrap;
+}
+.visual-editor .cm-sheet-editing .cm-line {
+  padding: 0;
+}
+.visual-editor .cm-sheet-editing .cm-table-task {
+  margin: 0 0.4em 0 0;
+  vertical-align: -3px;
+}
+.visual-editor .cm-md-table-cell[data-numeric='true'] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.visual-editor .cm-md-table-cell.cm-table-formula-error {
+  color: #d14d4d;
+}
+.cm-sheet-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  resize: none;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.visual-editor .cm-sheet-editing .cm-cursor {
+  border-left: 2px solid var(--accent);
 }

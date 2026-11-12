@@ -7,6 +7,9 @@ function makeCell(line, rawFrom, rawTo, index) {
   let to = rawTo
   while (from < to && isSpace(line[from])) from++
   while (to > from && isSpace(line[to - 1])) to--
+  // Text typed in an empty cell goes after its first space, so a space stays
+  // before the next pipe and the cursor never sits on the cell's hidden edge.
+  if (from === to && rawTo - rawFrom >= 2) from = to = rawFrom + 1
   return { index, rawFrom, rawTo, from, to, value: line.slice(from, to) }
 }
 

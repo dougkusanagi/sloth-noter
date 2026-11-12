@@ -19,7 +19,11 @@ flowchart TD
   desktop --> editor[VisualEditor CodeMirror e Markdown]
   desktop --> sideNote[Nota lateral em leitura]
   sideNote --> editor
+  editor --> colors[Cores em comentários de bloco e spans Markdown]
   mobile --> editor
+  editor --> spreadsheets[Exportação local CSV e XLSX com fflate]
+  editor --> tableSizes[Proporções e cores no comentário sloth:table]
+  editor --> richCells[Células ricas e tarefas no Markdown]
   editor --> columns[Editores de colunas e visualização Markdown]
   columns --> store
   store --> runtime[createAppPersistence]

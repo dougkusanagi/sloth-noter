@@ -20,7 +20,6 @@ const blocks = [
   ['wiki', 'mobile.noteLink', '[[Nota]]'],
   ['divider', 'mobile.divider', '───'],
   ['date', 'mobile.today', 'dd/mm/aaaa'],
-  ['accordion', 'block.accordion', '▸ Conteúdo'],
   ['columns', 'block.columns', 'A  |  B'],
 ]
 

@@ -1,3 +1,6 @@
+import { colorPalettePanel } from './color-palette.js'
+import { colorBlock } from './document-colors.js'
+import { blockColorMetadata } from '../document-colors.js'
 import { ViewPlugin } from '@codemirror/view'
 import { t } from '../i18n.js'
 import { documentBlocks, moveBlockChanges } from '../block-move.js'
@@ -52,7 +55,24 @@ function blockMenu(view, block, anchor, onClose) {
     label: t('block.actions'),
     className: 'block-handle-menu',
     onClose,
-    build: (menu, { item, iconButton, grid, separator }) => {
+    build: (menu, { item, iconButton, grid, separator, close, submenu }) => {
+      menu.append(
+        submenu(blockIconMarkup.palette, t('colors.title'), (panel) =>
+          panel.append(
+            colorPalettePanel({
+              value: blockColorMetadata(view.state.doc.line(block.first).text) || {},
+              onChange: (property, color) => {
+                close()
+                colorBlock(view, block, property, color)
+              },
+              onReset: () => {
+                close()
+                colorBlock(view, block, 'reset')
+              },
+            }),
+          ),
+        ),
+      )
       if (TEXT_KINDS.has(block.kind))
         menu.append(
           grid(
@@ -73,7 +93,9 @@ function blockMenu(view, block, anchor, onClose) {
       if (isList) {
         const indent = (outdent) => () => {
           const doc = view.state.doc
-          const from = doc.line(block.first).from
+          const from = doc.line(
+            blockColorMetadata(doc.line(block.first).text) ? block.first + 2 : block.first,
+          ).from
           const changes = listIndentChanges(doc.toString(), from, from, outdent)
           if (changes?.length) view.dispatch({ changes, userEvent: 'formatacao' })
           view.focus()
@@ -165,7 +187,9 @@ export const blockHandle = ViewPlugin.fromClass(
     }
     show(block) {
       const { view } = this
-      const line = view.state.doc.line(block.first)
+      const line = view.state.doc.line(
+        blockColorMetadata(view.state.doc.line(block.first).text) ? block.first + 2 : block.first,
+      )
       const coords = view.coordsAtPos(line.from, 1)
       if (!coords) return this.hide()
       const host = view.dom.getBoundingClientRect()
@@ -185,6 +209,21 @@ export const blockHandle = ViewPlugin.fromClass(
       this.handle.style.left = `${left}px`
       this.handle.style.top = `${coords.top - host.top + (lineHeight - 26) / 2}px`
       this.handle.hidden = false
+      this.revealFold(line.from)
+    }
+    // A heading's fold arrow shows while the pointer is anywhere on its row,
+    // also in the margins outside the text.
+    revealFold(pos) {
+      this.foldToggle?.classList.remove('is-line-hover')
+      this.foldToggle = null
+      if (pos == null) return
+      const { node } = this.view.domAtPos(pos)
+      const toggle = (node.nodeType === 1 ? node : node.parentElement)
+        ?.closest('.cm-line')
+        ?.querySelector('.cm-fold-toggle:not(.cm-level-badge)')
+      if (!toggle) return
+      toggle.classList.add('is-line-hover')
+      this.foldToggle = toggle
     }
     scheduleHide() {
       if (this.menuOpen || this.dragging) return
@@ -195,6 +234,7 @@ export const blockHandle = ViewPlugin.fromClass(
       clearTimeout(this.hideTimer)
       this.handle.hidden = true
       this.block = null
+      this.revealFold(null)
     }
     openMenu() {
       const block = this.block

@@ -203,13 +203,15 @@ export function SettingsDialog({
                   min={CONTENT_WIDTH.min}
                   max={CONTENT_WIDTH.max}
                   step={CONTENT_WIDTH.step}
-                  onChange={(width) => onChange({ contentWidth: width })}
+                  onChange={(width) => onChange({ contentWidth: width, documentWidth: 'custom' })}
                 />
                 <output htmlFor="settings-width">{contentWidth(prefs)}px</output>
                 <button
                   className="button quiet"
                   disabled={contentWidth(prefs) === CONTENT_WIDTH.default}
-                  onClick={() => onChange({ contentWidth: CONTENT_WIDTH.default })}
+                  onClick={() =>
+                    onChange({ contentWidth: CONTENT_WIDTH.default, documentWidth: 'custom' })
+                  }
                 >
                   {t('settings.fontReset')}
                 </button>

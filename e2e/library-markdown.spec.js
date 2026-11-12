@@ -38,9 +38,11 @@ test('visual tables hide trailing delimiters without adding grid rows and remain
     expect(row.rawText).toBe('')
     expect(row.height).toBeCloseTo(row.cellHeight, 1)
   }
+  // A click selects the cell; End goes to the last cell of the row, and typing replaces it.
   await rows.nth(2).locator('.cm-md-table-cell-first').click()
   await page.keyboard.press('End')
   await page.keyboard.type('!')
+  await page.keyboard.press('Enter')
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(page.locator('textarea')).toHaveValue(
     body.replace('Clique em + numa linha vazia', '!'),

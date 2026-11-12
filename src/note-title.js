@@ -37,7 +37,11 @@ export function displayName(name, keepExtension = false) {
 
 /** First readable line after the title, without inline Markdown, for the library list. */
 export function notePreview(body, limit = 96) {
-  const lines = body.slice(0, 1200).split('\n')
+  const lines = body
+    .slice(0, 1200)
+    .replace(/<!--\s*sloth:(?:table|block)\b[^>]*-->[ \t]*/g, '')
+    .replace(/<span style="(?:(?:color|background-color):#[0-9a-f]{6};?){1,2}">|<\/span>/g, '')
+    .split('\n')
   for (const line of lines.slice(/^#\s/.test(lines[0]) ? 1 : 0)) {
     const text = stripLeading(line)
       .replace(/!\[[^\]]*\]\([^)]*\)|!\[\[[^\]]*\]\]/g, '')

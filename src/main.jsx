@@ -1964,6 +1964,8 @@ function Workspace({ persistence, loaded }) {
         return
       }
       const action = appShortcut(event)
+      // In a table, F2 edits the selected cell instead of renaming the note.
+      if (action === 'rename' && event.target.closest?.('.cm-sheet-input')) return
       if (action && menuActions[action]) {
         event.preventDefault()
         event.stopPropagation()
@@ -1979,7 +1981,7 @@ function Workspace({ persistence, loaded }) {
           stepWidth(1)
         } else if (key === '0') {
           event.preventDefault()
-          updatePrefs({ contentWidth: CONTENT_WIDTH.default })
+          updatePrefs({ contentWidth: CONTENT_WIDTH.default, documentWidth: 'custom' })
         }
         return
       }
@@ -2016,6 +2018,7 @@ function Workspace({ persistence, loaded }) {
 
   function stepWidth(steps) {
     updatePrefs({
+      documentWidth: 'custom',
       contentWidth: Math.min(
         CONTENT_WIDTH.max,
         Math.max(CONTENT_WIDTH.min, contentWidth(prefs) + steps * CONTENT_WIDTH.step),
@@ -2159,7 +2162,7 @@ function Workspace({ persistence, loaded }) {
       data-native-window={persistence.invoke ? (mac ? 'mac' : 'other') : undefined}
       style={{
         '--editor-size': `${prefs.fontSize}px`,
-        '--content-width': `${contentWidth(prefs)}px`,
+        '--content-width': prefs.documentWidth === 'full' ? '100%' : `${contentWidth(prefs)}px`,
       }}
       onDragOver={(event) => {
         if (event.dataTransfer.types.includes('Files')) event.preventDefault()
