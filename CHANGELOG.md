@@ -50,6 +50,10 @@ Registro completo em `changelog/0.8.0.md`.
 
 Registro completo em `changelog/0.7.0.md`.
 
+## [0.6.2] — 2026-11-09
+
+Registro completo em `changelog/0.6.2.md`.
+
 ## [0.6.1] — 2026-11-09
 
 Registro completo em `changelog/0.6.1.md`.
