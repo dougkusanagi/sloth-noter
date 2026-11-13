@@ -185,10 +185,15 @@ a gravação local precisa ser confiável antes de sincronizar).
         com a crate `keyring` (só a entrada `sync`; ida e volta no Secret Service do Linux
         conferida com `cargo test -- --ignored`). Android: `SecretsBridge.kt` cifra o valor
         com chave AES do Keystore. Web: sem cofre, sincronização desligada. Feito em 0.10.8.
-        Faltou no aparelho: Keystore e `crypto.subtle` no WebView (celular desconectado).
-  - [ ] **S3.3 — Motor:** `src/sync/engine.js` com cliente HTTP, base comum por nota,
-        exclusões, imagens antes da revisão, primeira sincronização com prévia; testes contra
-        `server/` em memória.
+        No aparelho (SM-S921B, APK debug, 2026-11-13): contexto seguro, AES-GCM, `SlothSecrets`
+        grava/lê/apaga, valor persiste após reiniciar e nome não permitido é recusado.
+  - [x] **S3.3a — Motor de notas:** `src/sync/client.js` (contrato HTTP, sem seguir
+        redirecionamentos, http só para localhost) e `src/sync/engine.js` (`runSync` puro:
+        recebe, mescla e envia; exclusões; editado aqui e excluído lá vira nota nova; falha de
+        rede não toca no texto local; `previewFirstSync`). 9 testes contra `server/api.js` em
+        memória. Feito em 0.10.9.
+  - [ ] **S3.3b — Imagens:** enviar blobs cifrados antes da revisão que os referencia,
+        manifesto cifrado na nota e receber/verificar antes de aplicar.
   - [ ] **S3.4 — Tela no desktop:** Configurações → Sincronização, estados visíveis e E2E com
         o Worker local.
 
@@ -270,9 +275,8 @@ A sincronização pelo servidor próprio não espera a Parte C: ela está na fil
 
 ## Validação no aparelho (pendente)
 
-- S3.2: no APK, `SlothSecrets` grava, lê e apaga; o valor some após restaurar backup em outro
-  aparelho; `crypto.subtle` existe no WebView. No AppImage e no NSIS, `crypto.subtle` existe e o
-  cofre funciona (Windows Credential Manager ainda não conferido).
+- S3.2: o valor some após restaurar backup em outro aparelho. No AppImage e no NSIS,
+  `crypto.subtle` existe e o cofre funciona (Windows Credential Manager ainda não conferido).
 
 Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado ao verificar.
 
@@ -357,10 +361,10 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**S3.3 — Motor.** `src/sync/engine.js` puro: cliente HTTP do contrato, base comum por nota
-guardada fora da nota, envio e recebimento com `crypto.js` e `merge.js`, exclusões, imagens
-antes da revisão e prévia da primeira sincronização. Testar contra `server/api.js` com o
-armazenamento em memória. Texto local nunca perdido em falha de rede ou de servidor.
+**S3.3b — Imagens.** Ver como as imagens são referenciadas e guardadas (`assets`, `images.rs`,
+navegador) e acrescentar ao payload um manifesto `{ referência local → { id, sha256 } }`.
+Enviar o blob cifrado (`encryptBlob`) antes da revisão; ao receber, baixar e verificar todos
+os blobs antes de devolver a nota em `apply`. Testar contra `server/api.js` em memória.
 
 Pendente no aparelho (de entregas anteriores): validar no APK Inserir, seletor de imagem,
 clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,
