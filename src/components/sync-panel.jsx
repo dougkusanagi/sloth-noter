@@ -12,6 +12,7 @@ const ERRORS = new Set([
   'redirect',
   'missing_image',
   'busy',
+  'quota_exceeded',
 ])
 const errorText = (code) => t(ERRORS.has(code) ? `sync.error.${code}` : 'sync.error.failed')
 

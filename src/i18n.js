@@ -199,6 +199,8 @@ const messages = {
       'Outro aparelho está sincronizando ao mesmo tempo. Tente de novo em instantes.',
     'sync.error.failed':
       'Não foi possível sincronizar. As notas continuam salvas aqui; tente de novo.',
+    'sync.error.quota_exceeded':
+      'O servidor chegou ao limite gratuito de imagens deste mês. As notas continuam sincronizando; imagens novas esperam até o próximo mês ou até você apagar imagens antigas do servidor.',
     'about.version': 'Versão {version}',
     'about.description': 'Editor de notas Markdown offline, com arquivos que você controla.',
     'settings.shortcuts': 'Atalhos',
@@ -984,6 +986,8 @@ const messages = {
       'An image has not reached the server yet. Sync will try again later.',
     'sync.error.busy': 'Another device is syncing at the same time. Try again in a moment.',
     'sync.error.failed': 'Could not sync. Your notes are saved here; try again.',
+    'sync.error.quota_exceeded':
+      'The server reached its free image limit for this month. Notes keep syncing; new images wait until next month or until you delete old images from the server.',
     'about.version': 'Version {version}',
     'about.description': 'Offline Markdown note editor with files you control.',
     'settings.shortcuts': 'Shortcuts',

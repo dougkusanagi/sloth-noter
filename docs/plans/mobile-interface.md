@@ -372,11 +372,13 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**Fechar S4.** Com o `wrangler login` do usuário, implantar o Worker (guia no README), configurar
-o desktop e o celular e conferir: edição nos dois sentidos, conflito com as duas versões,
-exclusão e restauração, imagem do celular no desktop. Depois, A5. Fora da fila: 5 E2E desktop
-já falham no `main` (`layout-feedback:50`, `columns:299`, `columns:321`, `find-replace:63`,
-`native-clipboard:534`).
+**Fechar S4.** Implantação em andamento na conta do usuário: D1 `sloth-note-sync` criado com as
+migrações 0001 e 0002; segredo `SYNC_TOKEN` enviado (cópia local em
+`~/.config/sloth-note/sync-token`); configuração local em `server/wrangler.local.toml` (fora do
+git). Falta o usuário concluir a ativação do R2 no painel; depois, `wrangler r2 bucket create
+sloth-note-sync`, `wrangler deploy -c wrangler.local.toml` (a versão no ar ainda aponta para um
+KV já removido) e o teste ponta a ponta desktop ↔ celular. Fora da fila: 5 E2E desktop já
+falham no `main`.
 
 Pendente no aparelho (de entregas anteriores): validar no APK Inserir, seletor de imagem,
 clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,

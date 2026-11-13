@@ -175,13 +175,20 @@ export async function runSync({
         if (!page.hasMore) break
       }
       let stale = false
+      let quota = false
       for (const [id, payload] of working) {
         const base = bases[id]
         if (base && same(payload, base.payload)) continue
-        const sealed = await encryptNote(key, id, {
-          ...payload,
-          images: await upload(payload.body),
-        })
+        let images
+        try {
+          images = await upload(payload.body)
+        } catch (error) {
+          // The server is at its free limit: this note waits, the others still go.
+          if (error?.code !== 'quota_exceeded') throw error
+          quota = true
+          continue
+        }
+        const sealed = await encryptNote(key, id, { ...payload, images })
         const sent = await client.putNote(id, base ? base.revision : null, {
           ...sealed,
           deleted: false,
@@ -205,6 +212,7 @@ export async function runSync({
           await receive(id)
         } else bases[id] = { revision: sent.revision, payload: null }
       }
+      if (quota) return result('quota_exceeded')
       if (!stale) return result()
     }
     return result('busy')

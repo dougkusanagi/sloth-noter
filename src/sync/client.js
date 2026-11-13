@@ -35,6 +35,7 @@ export function createClient({ server, token, fetch = globalThis.fetch }) {
     if (response.status === 429)
       throw new SyncError('rate_limited', Number(response.headers.get('retry-after')) || 60)
     if (response.status === 401) throw new SyncError('unauthorized')
+    if (response.status === 507) throw new SyncError('quota_exceeded')
     return response
   }
 

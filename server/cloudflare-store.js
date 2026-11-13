@@ -5,7 +5,37 @@ const NOTE = 'SELECT id, revision, hash, deleted, envelope FROM notes'
 const row = (note) => note && { ...note, deleted: Boolean(note.deleted) }
 const NEXT_SEQ = '(SELECT COALESCE(MAX(seq), 0) + 1 FROM notes)'
 
-export function cloudflareStore(db, bucket) {
+/** Thrown when an operation would leave the R2 free tier; the API answers 507. */
+export class QuotaExceeded extends Error {
+  constructor() {
+    super('quota_exceeded')
+    this.name = 'QuotaExceeded'
+  }
+}
+
+// Below the free tier (10 GB-month, 1M Class A, 10M Class B per month), with room
+// for operations the Worker does not count, such as the dashboard and exports.
+export const FREE_LIMITS = { bytes: 9e9, writes: 900_000, reads: 9_000_000 }
+
+export function cloudflareStore(db, bucket, { limits = FREE_LIMITS, now = () => new Date() } = {}) {
+  const month = () => now().toISOString().slice(0, 7)
+  // Counts the operation first, so a failed call is counted too (R2 bills it as well).
+  async function meter(kind) {
+    const row = await db
+      .prepare(
+        `INSERT INTO usage (month, ${kind}) VALUES (?1, 1)
+         ON CONFLICT(month) DO UPDATE SET ${kind} = ${kind} + 1
+         WHERE ${kind} < ?2
+         RETURNING ${kind} AS used`,
+      )
+      .bind(month(), limits[kind])
+      .first()
+    if (!row) throw new QuotaExceeded()
+  }
+  async function stored() {
+    const row = await db.prepare('SELECT COALESCE(SUM(size), 0) AS total FROM blob_sizes').first()
+    return row.total
+  }
   return {
     formatCursor: (value) => `c${value}`,
     parseCursor(cursor) {
@@ -56,18 +86,27 @@ export function cloudflareStore(db, bucket) {
       }
     },
     async getBlob(sha) {
+      await meter('reads')
       const object = await bucket.get(sha)
       return object ? new Uint8Array(await object.arrayBuffer()) : null
     },
     // R2 checks the SHA-256 itself, which keeps the Worker within its CPU limit.
     async putBlob(sha, bytes) {
-      if (await bucket.head(sha)) return 'exists'
+      // Already stored: answer from D1 without touching R2.
+      if (await db.prepare('SELECT 1 FROM blob_sizes WHERE sha = ?').bind(sha).first())
+        return 'exists'
+      if ((await stored()) + bytes.length > limits.bytes) throw new QuotaExceeded()
+      await meter('writes')
       try {
         await bucket.put(sha, bytes, { sha256: sha })
       } catch (error) {
         if (/sha-?256|checksum|digest|BadDigest/i.test(String(error?.message))) return 'mismatch'
         throw error
       }
+      await db
+        .prepare('INSERT OR IGNORE INTO blob_sizes (sha, size) VALUES (?, ?)')
+        .bind(sha, bytes.length)
+        .run()
       return 'created'
     },
     async exportAll() {
@@ -93,7 +132,13 @@ export function cloudflareStore(db, bucket) {
           )
           .bind(note.id, note.revision, note.hash, note.deleted ? 1 : 0, note.envelope)
           .run()
-      for (const { sha, bytes } of data.blobs) await bucket.put(sha, bytes, { sha256: sha })
+      for (const { sha, bytes } of data.blobs) {
+        await bucket.put(sha, bytes, { sha256: sha })
+        await db
+          .prepare('INSERT OR IGNORE INTO blob_sizes (sha, size) VALUES (?, ?)')
+          .bind(sha, bytes.length)
+          .run()
+      }
     },
   }
 }

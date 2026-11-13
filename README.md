@@ -138,7 +138,7 @@ cd server
 bunx wrangler login
 bunx wrangler d1 create sloth-note-sync          # copie o database_id para wrangler.toml
 bunx wrangler r2 bucket create sloth-note-sync
-bunx wrangler d1 migrations apply sloth-note-sync --remote
+bunx wrangler d1 migrations apply sloth-note-sync --remote   # repita a cada migração nova
 bunx wrangler secret put SYNC_TOKEN              # cole uma chave aleatória longa
 bun run deploy
 ```
@@ -146,9 +146,13 @@ bun run deploy
 Limites do plano grátis conferidos em 2026-11-13 nas páginas oficiais: Workers com 100 mil
 pedidos por dia e 10 ms de CPU por pedido; D1 com 500 MB por banco, 100 mil linhas gravadas por
 dia e 2 MB por linha; R2 com 10 GB-mês, 1 milhão de operações de escrita e 10 milhões de
-leitura por mês. Por isso, uma nota cifrada aceita até 1,5 MB e cada imagem até 20 MB; o hash das
-imagens é conferido pelo R2. A variável `RATE_LIMIT` (padrão 600 pedidos por minuto) limita cada
-instância do Worker e não é uma cota exata. Confira os valores atuais antes de implantar.
+leitura por mês. O R2 pede cartão mesmo no plano grátis e cobra o excedente; por isso o Worker
+conta o uso no D1 e recusa imagens novas ao chegar a 9 GB, 900 mil escritas ou 9 milhões de
+leituras no mês ([ADR 0021](docs/adr/0021-limite-gratuito-no-servidor.md)). Esse limite não
+cobre o uso feito fora do Worker; crie também um alerta de orçamento baixo na conta. Uma nota
+cifrada aceita até 1,5 MB e cada imagem até 20 MB. A variável `RATE_LIMIT` (padrão 600 pedidos
+por minuto) limita cada instância do Worker e não é uma cota exata. Confira os valores atuais
+antes de implantar.
 
 ## Documentação
 

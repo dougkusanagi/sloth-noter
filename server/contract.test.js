@@ -273,11 +273,17 @@ contract('memory', memoryStore)
 // Same contract against D1 + R2 through Miniflare (local workerd, no network).
 const { Miniflare } = await import('miniflare')
 const { readFile } = await import('node:fs/promises')
-const schema = await readFile(new URL('./migrations/0001_notes.sql', import.meta.url), 'utf8')
+const schema = (
+  await Promise.all(
+    ['0001_notes.sql', '0002_usage.sql'].map((name) =>
+      readFile(new URL(`./migrations/${name}`, import.meta.url), 'utf8'),
+    ),
+  )
+).join('\n')
 const { cloudflareStore } = await import('./cloudflare-store.js')
 const instances = []
 after(() => Promise.all(instances.map((mf) => mf.dispose())))
-contract('cloudflare', async () => {
+async function miniflare() {
   const mf = new Miniflare({
     modules: true,
     script: 'export default { fetch: () => new Response() }',
@@ -286,8 +292,64 @@ contract('cloudflare', async () => {
   })
   instances.push(mf)
   const db = await mf.getD1Database('DB')
-  await db.exec(schema.replace(/--.*\n/g, '').replace(/\s+/g, ' '))
-  return cloudflareStore(db, await mf.getR2Bucket('BLOBS'))
+  // exec runs one statement per line.
+  await db.exec(
+    schema
+      .replace(/--.*\n/g, '')
+      .split(';')
+      .map((statement) => statement.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .join(';\n'),
+  )
+  return { db, bucket: await mf.getR2Bucket('BLOBS') }
+}
+
+contract('cloudflare', async () => {
+  const { db, bucket } = await miniflare()
+  return cloudflareStore(db, bucket)
+})
+
+test('the Worker stops at its R2 limits and answers 507 without writing', async () => {
+  const { db, bucket } = await miniflare()
+  let date = new Date('2026-11-13T12:00:00Z')
+  const store = cloudflareStore(db, bucket, {
+    limits: { bytes: 10, writes: 2, reads: 2 },
+    now: () => date,
+  })
+  const api = createApi({ store, token: TOKEN })
+  const put = async (bytes) =>
+    api(
+      new Request(`https://sync.test/v1/blobs/${await sha256Hex(bytes)}`, {
+        method: 'PUT',
+        headers: { authorization: `Bearer ${TOKEN}` },
+        body: bytes,
+      }),
+    )
+  const get = async (bytes) =>
+    api(
+      new Request(`https://sync.test/v1/blobs/${await sha256Hex(bytes)}`, {
+        headers: { authorization: `Bearer ${TOKEN}` },
+      }),
+    )
+  const a = new Uint8Array([1, 2, 3, 4])
+  const b = new Uint8Array([5, 6, 7, 8])
+  assert.equal((await put(a)).status, 201)
+  assert.equal((await put(a)).status, 204, 'a repeated blob costs no R2 operation')
+  // Storage: 4 + 8 bytes would pass the 10-byte limit.
+  const big = await put(new Uint8Array(8))
+  assert.equal(big.status, 507)
+  assert.deepEqual(await big.json(), { error: 'quota_exceeded' })
+  assert.equal((await put(b)).status, 201)
+  // Writes: the month already used 2.
+  assert.equal((await put(new Uint8Array([9]))).status, 507)
+  assert.equal((await get(a)).status, 200)
+  assert.equal((await get(b)).status, 200)
+  assert.equal((await get(a)).status, 507, 'reads stop at the limit')
+  // A new month starts the operation counts again; storage stays counted.
+  date = new Date('2026-12-01T00:00:00Z')
+  assert.equal((await get(a)).status, 200)
+  assert.equal((await put(new Uint8Array([9]))).status, 201)
+  assert.equal((await put(new Uint8Array([1, 1]))).status, 507)
 })
 
 test('the API refuses short tokens', () => {

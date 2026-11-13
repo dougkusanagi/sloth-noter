@@ -166,7 +166,9 @@ export function createApi({ store, token, limit = () => 0 }) {
     if (wait) return error(429, 'rate_limited', { 'retry-after': String(wait) })
     try {
       return await route(request)
-    } catch {
+    } catch (failure) {
+      // The store stopped before the free tier ran out; nothing was written.
+      if (failure?.name === 'QuotaExceeded') return error(507, 'quota_exceeded')
       // Never echo the key, the content or the internal error.
       return error(500, 'server_error')
     }

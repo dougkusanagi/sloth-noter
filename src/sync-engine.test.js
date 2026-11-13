@@ -294,3 +294,29 @@ test('asset references are found in links and HTML, once each', async () => {
     ['assets/no', 'assets/x.png', 'assets/y z.png'],
   )
 })
+
+test('at the server image limit, notes without new images still sync', async () => {
+  const remote = server()
+  const key = generateKeyBytes()
+  const limited = {
+    ...remote,
+    fetch: async (url, init) =>
+      String(url).includes('/v1/blobs/') && init?.method === 'PUT'
+        ? new Response('{"error":"quota_exceeded"}', { status: 507 })
+        : remote.fetch(url, init),
+  }
+  const phone = device(limited, key, {
+    a: note('só texto', 'A'),
+    b: note('![F](assets/f.png)', 'B'),
+  })
+  const files = imageFolder({ 'assets/f.png': new Uint8Array([1, 2]) })
+  const out = await phone.sync({ images: files })
+  assert.equal(out.error, 'quota_exceeded')
+  assert.deepEqual(Object.keys(out.state.bases), ['a'])
+  // Next month the image goes up and the waiting note follows.
+  const later = device(remote, key)
+  later.notes = phone.notes
+  later.state = phone.state
+  assert.equal((await later.sync({ images: files })).error, undefined)
+  assert.deepEqual(Object.keys(later.state.bases).sort(), ['a', 'b'])
+})
