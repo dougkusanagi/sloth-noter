@@ -280,7 +280,7 @@ Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e deta
 
 ## Depois deste plano — Parte C: ideias para as duas plataformas
 
-Começa só depois da Parte B. As propostas C1–C5 (seção 9.3 dos requisitos) mudam desktop e
+Começa só depois da Parte B. As propostas C1–C6 (seção 9.3 dos requisitos) mudam desktop e
 celular e têm documentos próprios; cada uma recebe plano de tarefa próprio quando for aprovada.
 A sincronização pelo servidor próprio não espera a Parte C: ela está na fila 2, acima.
 
