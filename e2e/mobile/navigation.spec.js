@@ -54,12 +54,13 @@ test.beforeEach(async ({ page }) => {
     { key: STORAGE_KEY, notes, document: newDocument() },
   )
   await page.goto('/?platform=mobile')
-  await expect(page.getByRole('searchbox')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Buscar nas notas', exact: true })).toBeVisible()
 })
 
 test('#22 search prioritizes title matches and survives opening a note and back', async ({
   page,
 }) => {
+  await openSearch(page)
   await page.getByRole('searchbox').fill('compras')
   await expect(page.locator('.mobile-note-open')).toHaveCount(2)
   await expect(page.locator('.mobile-note-open').first()).toContainText('Compras')
@@ -72,6 +73,7 @@ test('#22 search prioritizes title matches and survives opening a note and back'
 })
 
 test('#7 restores the open note after reload and returns to the saved search', async ({ page }) => {
+  await openSearch(page)
   await page.getByRole('searchbox').fill('compras')
   await page.locator('[data-note-id="meeting"]').tap()
   await page.reload()
@@ -130,6 +132,7 @@ test('#22 list scroll survives opening and returning from a note', async ({ page
 })
 
 test('create with no search results, edit and reload preserves the new text', async ({ page }) => {
+  await openSearch(page)
   await page.getByRole('searchbox').fill('Viagem de férias')
   await page.getByRole('button', { name: 'Criar nota “Viagem de férias”' }).tap()
   await expect(page.locator('.cm-content')).toBeFocused()
@@ -207,9 +210,11 @@ test('theme control in the main menu persists and system follows device changes'
 })
 
 test('recent searches are available after opening a result and returning', async ({ page }) => {
+  await openSearch(page)
   await page.getByRole('searchbox').fill('compras')
   await page.locator('[data-note-id="shopping"]').tap()
   await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
+  await openSearch(page)
   await page.getByRole('searchbox').fill('')
   await expect(page.getByRole('button', { name: 'compras', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'compras', exact: true }).tap()
@@ -443,6 +448,7 @@ async function dragNote(
 test('swipe trashes an open, pinned search result once and undo keeps context', async ({
   page,
 }) => {
+  await openSearch(page)
   await page.getByRole('searchbox').fill('compras')
   await page.locator('[data-note-id="shopping"]').tap()
   await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
@@ -632,7 +638,7 @@ test('open note header offers the same actions as the list', async ({ page }) =>
   await expect(page.getByRole('button', { name: 'Ações de Compras', exact: true })).toBeFocused()
   await page.getByRole('button', { name: 'Ações de Compras', exact: true }).tap()
   await page.getByRole('button', { name: 'Mover para a lixeira' }).tap()
-  await expect(page.getByRole('searchbox')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Buscar nas notas', exact: true })).toBeVisible()
   await expect(page.locator('[data-note-id="shopping"]')).toHaveCount(0)
   await expect(page.locator('[data-sonner-toast]')).toContainText('lixeira')
 })
@@ -762,6 +768,7 @@ test('sheet headings show no expandable marker and keep long note names readable
   await expect(sheet.getByRole('heading', { name: 'Sloth Note' })).toBeVisible()
   await expect(sheet.locator('summary')).toHaveCount(0)
   await sheet.getByRole('button', { name: 'Fechar' }).tap()
+  await openSearch(page)
   await page.getByRole('searchbox').fill('Planejamento')
   await page.locator('[data-note-id="long"]').dispatchEvent('pointerdown', {
     isPrimary: true,
@@ -1088,7 +1095,7 @@ test('note actions are available while reading and deleting returns to the list'
   await page.getByRole('button', { name: 'Ações de Compras' }).tap()
   await expect(page.getByRole('button', { name: 'Renomear nota' })).toBeVisible()
   await page.getByRole('button', { name: 'Mover para a lixeira' }).tap()
-  await expect(page.getByRole('searchbox')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Buscar nas notas', exact: true })).toBeVisible()
   await expect(page.locator('[data-note-id="shopping"]')).toHaveCount(0)
   await page.getByRole('button', { name: 'Desfazer' }).tap()
   await expect(page.locator('[data-note-id="shopping"]')).toBeVisible()
@@ -1158,7 +1165,9 @@ test('a fresh WebView restores the note in reading mode without opening the keyb
   await expect(reopened.locator('.markdown')).toContainText('salvo')
   await expect(reopened.locator('.cm-content')).toHaveCount(0)
   await reopened.getByRole('button', { name: 'Voltar', exact: true }).tap()
-  await expect(reopened.getByRole('searchbox')).toBeVisible()
+  await expect(
+    reopened.getByRole('button', { name: 'Buscar nas notas', exact: true }),
+  ).toBeVisible()
   await reopened.close()
 })
 
@@ -1178,7 +1187,7 @@ test('native back closes layers before the note and exits only at the root', asy
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.locator('.markdown')).toBeVisible()
   await page.evaluate(() => window.__slothMobileBack())
-  await expect(page.getByRole('searchbox')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Buscar nas notas', exact: true })).toBeVisible()
   expect(await page.evaluate(() => window.backFinishes)).toBe(0)
   await page.evaluate(() => window.__slothMobileBack())
   await expect.poll(() => page.evaluate(() => window.backFinishes)).toBe(1)
@@ -1203,7 +1212,7 @@ test('native bridge keeps predictive back active only while a screen is open', a
   await page.evaluate(() => window.__slothMobileBack())
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await page.evaluate(() => window.__slothMobileBack())
-  await expect(page.getByRole('searchbox')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Buscar nas notas', exact: true })).toBeVisible()
   await expect.poll(() => page.evaluate(() => window.backStates.at(-1))).toBe(false)
 })
 
@@ -1229,7 +1238,7 @@ test('back at the root warns and stays open when the last save failed', async ({
   await page.keyboard.type(' falha')
   await expect(page.locator('.mobile-error')).toContainText('Não foi possível salvar')
   await page.evaluate(() => window.__slothMobileBack())
-  await expect(page.getByRole('searchbox')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Buscar nas notas', exact: true })).toBeVisible()
   await page.evaluate(() => window.__slothMobileBack())
   await expect(page.locator('[data-sonner-toast]').last()).toContainText('continua aberto')
   expect(await page.evaluate(() => window.backFinishes)).toBe(0)
@@ -1489,3 +1498,9 @@ test('edit, done and system back keep the bottom menu and new note available', a
   await expect(page.getByRole('navigation')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Nova nota', exact: true })).toBeVisible()
 })
+
+async function openSearch(page) {
+  const box = page.getByRole('searchbox')
+  if (!(await box.isVisible()))
+    await page.getByRole('button', { name: 'Buscar nas notas', exact: true }).tap()
+}

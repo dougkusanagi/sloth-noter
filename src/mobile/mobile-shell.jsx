@@ -3,7 +3,11 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
   Check,
+  CheckCheck,
   Code2,
+  Copy,
+  Download,
+  FilePlus,
   FileText,
   Menu,
   Pencil,
@@ -13,12 +17,16 @@ import {
   Moon,
   MoreHorizontal,
   NotebookText,
+  NotebookPen,
   Pin,
-  Plus,
+  ScanSearch,
   Search,
+  Settings,
   Share2,
   Sun,
   Trash2,
+  Upload,
+  WrapText,
   X,
 } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
@@ -232,6 +240,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const [shareBusy, setShareBusy] = useState(false)
   const sharePending = useRef(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const content = useRef(null)
   const editor = useRef(null)
   const focusAfterClose = useRef(null)
@@ -277,6 +286,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [writer, store.noteHistory])
   const query = route.query ?? ''
+  const searchVisible = searchOpen || Boolean(query)
   const recentSearches = Array.isArray(prefs.mobileRecentSearches)
     ? prefs.mobileRecentSearches.filter((term) => typeof term === 'string').slice(0, 5)
     : []
@@ -821,6 +831,45 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         <h1 ref={heading} tabIndex={-1} title={title}>
           {root && route.name === 'notes' ? 'Sloth Note' : title}
         </h1>
+        {root && route.name === 'notes' && (
+          <>
+            <button
+              className="mobile-icon"
+              aria-label={t(searchVisible ? 'mobile.closeSearch' : 'mobile.search')}
+              title={t(searchVisible ? 'mobile.closeSearch' : 'mobile.search')}
+              aria-expanded={searchVisible}
+              onClick={() => {
+                if (searchVisible) {
+                  searchNotes('')
+                  setSearchOpen(false)
+                  setSearchFocused(false)
+                } else setSearchOpen(true)
+              }}
+            >
+              {searchVisible ? <X size={22} /> : <Search size={22} />}
+            </button>
+            <button
+              className="mobile-icon"
+              disabled={blocked}
+              aria-label={t('menu.newNote')}
+              title={t('menu.newNote')}
+              onClick={() => createNote()}
+            >
+              <FilePlus size={22} />
+            </button>
+          </>
+        )}
+        {root && route.name === 'tasks' && (
+          <button
+            className="mobile-icon"
+            aria-label={t(showDone ? 'tasks.hideDone' : 'tasks.showDone')}
+            title={t(showDone ? 'tasks.hideDone' : 'tasks.showDone')}
+            aria-pressed={showDone}
+            onClick={() => setShowDone(!showDone)}
+          >
+            <CheckCheck size={22} />
+          </button>
+        )}
         {active && (
           <button
             className="mobile-icon mobile-edit"
@@ -876,11 +925,12 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           <p>{warning}</p>
         </div>
       )}
-      {root && route.name === 'notes' && (
+      {root && route.name === 'notes' && searchVisible && (
         <label className="mobile-search">
           <Search size={19} aria-hidden="true" />
           <input
             type="search"
+            autoFocus={searchOpen && !query}
             onFocus={() => setSearchFocused(true)}
             value={query}
             aria-label={t('mobile.search')}
@@ -893,16 +943,21 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           />
         </label>
       )}
-      {root && route.name === 'notes' && searchFocused && !query && recentSearches.length > 0 && (
-        <div className="mobile-recent-searches" aria-label={t('mobile.recentSearches')}>
-          {recentSearches.map((term) => (
-            <button key={term} onClick={() => searchNotes(term)}>
-              <Search size={14} aria-hidden="true" />
-              {term}
-            </button>
-          ))}
-        </div>
-      )}
+      {root &&
+        route.name === 'notes' &&
+        searchVisible &&
+        searchFocused &&
+        !query &&
+        recentSearches.length > 0 && (
+          <div className="mobile-recent-searches" aria-label={t('mobile.recentSearches')}>
+            {recentSearches.map((term) => (
+              <button key={term} onClick={() => searchNotes(term)}>
+                <Search size={14} aria-hidden="true" />
+                {term}
+              </button>
+            ))}
+          </div>
+        )}
       {findOpen && active && !editing && (
         <ReadingFind container={content} version={active.body} onClose={() => setFindOpen(false)} />
       )}
@@ -1234,19 +1289,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           ))}
         </div>
       )}
-      {root && route.name === 'notes' && (
-        <div className="mobile-create">
-          <button
-            className="mobile-fab"
-            disabled={blocked}
-            aria-label={t('menu.newNote')}
-            onClick={() => createNote()}
-          >
-            <Plus size={26} />
-            {t('menu.newNote')}
-          </button>
-        </div>
-      )}
       {active && (
         <footer className="mobile-save" role="status">
           {error || blocked ? t('mobile.notSaved') : saving ? t('save.saving') : t('mobile.saved')}
@@ -1256,6 +1298,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         {destinations.map(([name, Icon, label]) => (
           <button
             key={name}
+            aria-label={t(label)}
+            title={t(label)}
             aria-current={route.name === name ? 'page' : undefined}
             onClick={() => {
               document.activeElement?.blur?.()
@@ -1263,7 +1307,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             }}
           >
             <Icon size={22} aria-hidden="true" />
-            <span>{t(label)}</span>
           </button>
         ))}
         <button
@@ -1273,7 +1316,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           onClick={() => dispatch({ type: 'layer', route: { name: 'sheet' } })}
         >
           <Menu size={22} aria-hidden="true" />
-          <span>Menu</span>
         </button>
       </nav>
 
@@ -1447,6 +1489,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                     back()
                   }}
                 >
+                  <WrapText size={20} />
                   {t('menu.wrapPage')}
                 </button>
                 <button
@@ -1458,6 +1501,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                     dispatch({ type: 'layer', route: { name: 'dialog', id: actionsNote.id } })
                   }}
                 >
+                  <Pencil size={20} />
                   {t('menu.rename')}
                 </button>
                 <button
@@ -1466,6 +1510,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                     back()
                   }}
                 >
+                  <ScanSearch size={20} />
                   {t('mobile.readingFind')}
                 </button>
                 {canShareFile() && (
@@ -1476,14 +1521,16 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                       )
                     }
                   >
+                    <FileText size={20} />
                     {t('mobile.shareFile')}
                   </button>
                 )}
                 <button disabled={shareBusy} onClick={() => shareNote(actionsNote)}>
-                  <Share2 size={20} />
+                  {window.SlothShare || navigator.share ? <Share2 size={20} /> : <Copy size={20} />}
                   {t(window.SlothShare || navigator.share ? 'mobile.share' : 'mobile.copyText')}
                 </button>
                 <button disabled={Boolean(transferBusy)} onClick={() => exportNote(actionsNote)}>
+                  <Download size={20} />
                   {t('menu.export')}
                 </button>
                 <p className="mobile-export-hint">{t('mobile.noteExportHint')}</p>
@@ -1503,13 +1550,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             ) : (
               <>
                 <ThemeControl theme={prefs.theme} onChange={updatePrefs} />
-                <button onClick={() => noteInput.current?.click()}>{t('menu.import')}</button>
+                <button onClick={() => noteInput.current?.click()}>
+                  <Upload size={20} />
+                  {t('menu.import')}
+                </button>
                 <button
                   onClick={() => {
                     updatePrefs({ wrapLines: prefs.wrapLines === false })
                     back()
                   }}
                 >
+                  <WrapText size={20} />
                   {t('menu.wrapAll')}
                 </button>
                 <button onClick={() => dispatch({ type: 'push', route: { name: 'trash' } })}>
@@ -1521,11 +1572,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                     dispatch({ type: 'push', route: { name: 'settings' } })
                   }}
                 >
-                  <NotebookText size={20} />
+                  <Settings size={20} />
                   {t('menu.settings')}
                 </button>
                 <button onClick={() => dispatch({ type: 'push', route: { name: 'changelog' } })}>
-                  <NotebookText size={20} />
+                  <NotebookPen size={20} />
                   {t('settings.changelog')}
                 </button>
               </>

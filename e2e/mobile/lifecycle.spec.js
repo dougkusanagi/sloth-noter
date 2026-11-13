@@ -26,7 +26,7 @@ test.beforeEach(async ({ page }) => {
     { key: STORAGE_KEY, notes, document: newDocument() },
   )
   await page.goto('/?platform=mobile')
-  await expect(page.getByRole('searchbox')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Buscar nas notas', exact: true })).toBeVisible()
 })
 
 async function editNote(page, id) {
@@ -85,7 +85,7 @@ test('corrupt storage can be downloaded before an explicit replacement', async (
   await expect(alert).toContainText('substitui os dados que não puderam ser lidos')
   await page.getByRole('button', { name: 'Substituir', exact: true }).tap()
   await expect(page.getByRole('alert')).toHaveCount(0)
-  await expect(page.getByRole('searchbox')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Buscar nas notas', exact: true })).toBeVisible()
   await expect(page.locator('.mobile-note-open')).toHaveCount(1)
 })
 

@@ -212,28 +212,9 @@
   max-width: 100%;
   overflow-wrap: anywhere;
 }
-[data-platform='mobile'] .mobile-create {
-  display: flex;
-  justify-content: flex-end;
-  padding: 8px 16px 12px;
-  flex-shrink: 0;
-}
-[data-platform='mobile'] .mobile-fab {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 52px;
-  padding: 8px 18px;
-  border: 0;
-  border-radius: var(--radius);
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
-  box-shadow: var(--lift);
-}
 [data-platform='mobile'] .mobile-bottom {
   display: flex;
-  min-height: 64px;
+  min-height: 52px;
   border-top: 1px solid var(--line);
   background: var(--paper);
   flex-shrink: 0;
@@ -241,25 +222,32 @@
 [data-platform='mobile'] .mobile-bottom button {
   display: flex;
   flex: 1;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  min-height: 64px;
-  padding: 8px;
+  min-height: 52px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: 0.75rem;
 }
 [data-platform='mobile'] .mobile-bottom button[aria-current] {
   color: var(--accent-ink);
+}
+[data-platform='mobile'] .mobile-bottom button[aria-current] svg {
+  box-sizing: content-box;
+  padding: 4px 18px;
+  border-radius: 999px;
   background: var(--active);
 }
+[data-platform='mobile'] .mobile-icon[aria-pressed='true'] {
+  color: var(--accent-ink);
+  background: var(--active);
+}
+[data-platform='mobile'] .tasks-filter {
+  display: none;
+}
 html[data-keyboard='open'] [data-platform='mobile'] .mobile-bottom,
-html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom,
-html[data-keyboard='open'] [data-platform='mobile'] .mobile-create,
-html[data-keyboard='opening'] [data-platform='mobile'] .mobile-create {
+html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   display: none;
 }
 [data-platform='mobile'] .markdown {
@@ -877,4 +865,14 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-create {
   min-width: 0;
   flex: 1;
   font: 12px var(--ui);
+}
+[data-platform='mobile'] .mobile-sheet button > svg {
+  flex-shrink: 0;
+}
+[data-platform='mobile'] .mobile-search input:focus-visible {
+  outline: none;
+}
+[data-platform='mobile'] .mobile-search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
 }

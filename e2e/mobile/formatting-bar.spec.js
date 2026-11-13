@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => {
     { key: STORAGE_KEY, notes, document: newDocument() },
   )
   await page.goto('/?platform=mobile')
-  await expect(page.getByRole('searchbox')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Buscar nas notas', exact: true })).toBeVisible()
 })
 
 async function editNote(page, id = 'doc') {
