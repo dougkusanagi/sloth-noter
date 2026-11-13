@@ -1,6 +1,7 @@
 import { t } from '../i18n.js'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ListTree, ChevronsLeft, ChevronRight } from 'lucide-react'
+import { ShortcutButton } from './shortcut-button.jsx'
 import { markdownTree } from '../markdown-model.js'
 
 const label = (node) =>
@@ -15,6 +16,11 @@ export function DocumentOutline({
 }) {
   const [open, setOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(new Set())
+  useEffect(() => {
+    const toggle = () => setOpen((value) => !value)
+    window.addEventListener('sloth:toggle-outline', toggle)
+    return () => window.removeEventListener('sloth:toggle-outline', toggle)
+  }, [])
   const headings = markdownTree(body).children.filter((node) => node.type === 'heading')
   const hiddenDepths = []
   return (
@@ -29,15 +35,15 @@ export function DocumentOutline({
         }
       }}
     >
-      <button
+      <ShortcutButton
+        keys="Alt+T"
         type="button"
-        aria-label={t(open ? 'outline.close' : 'outline.open')}
-        title={t(open ? 'outline.close' : 'outline.open')}
+        label={t(open ? 'outline.close' : 'outline.open')}
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
         {open ? <ChevronsLeft size={iconSize} /> : <ListTree size={iconSize} />}
-      </button>
+      </ShortcutButton>
       {open && (
         <div className="document-outline-list">
           {!headings.length && <p>{t('outline.empty')}</p>}

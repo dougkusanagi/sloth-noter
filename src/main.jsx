@@ -2033,6 +2033,15 @@ function Workspace({ persistence, loaded }) {
   }
   const menuActions = {
     mainMenu: toggleMainMenu,
+    outline: () =>
+      active &&
+      mode !== 'source' &&
+      runMenu(() => {
+        window.dispatchEvent(new Event('sloth:toggle-outline'))
+      }, false),
+    resetText: () => runMenu(() => updatePrefs({ fontSize: FONT_SIZE.default })),
+    resetWidth: () =>
+      runMenu(() => updatePrefs({ contentWidth: CONTENT_WIDTH.default, documentWidth: 'custom' })),
     ...Object.fromEntries(
       Array.from({ length: 9 }, (_, index) => [
         `tab${index + 1}`,

@@ -103,6 +103,8 @@ Em **Inserir**, use **Refazer** para recuperar uma edição desfeita.
 A interface Android ainda está em implementação: veja o [plano em andamento](docs/plans/mobile-interface.md).
 Os testes mobile rodam localmente com `bun run e2e --project=mobile`.
 
+A paleta de comandos (`Ctrl+Shift+P`, ou `⌘+Shift+P` no Mac) permite alternar o sumário, navegar entre abas, reabrir a última aba fechada e restaurar o tamanho do texto ou a largura do documento. O sumário também pode ser alternado com `Ctrl+Alt+T` (`⌘+Alt+T` no Mac) nos modos Padrão e Leitura.
+
 ## Sincronização (em testes)
 
 No app desktop e no Android, **Configurações › Sincronização** conecta o Sloth Note a um servidor seu

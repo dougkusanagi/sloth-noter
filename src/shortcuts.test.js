@@ -157,3 +157,12 @@ test('bold and italic combine and unwind without piling up asterisks', () => {
   const edit = shortcutEdit('**texto**', 0, 9, 'italic')
   assert.equal(edit.insert, '***texto***')
 })
+
+test('the outline shortcut uses the shared app action', () => {
+  assert.equal(appShortcut({ key: 't', code: 'KeyT', ctrlKey: true, altKey: true }), 'outline')
+  assert.equal(appShortcut({ key: 't', code: 'KeyT', metaKey: true, altKey: true }), 'outline')
+  assert.equal(
+    appShortcut({ key: 't', code: 'KeyT', ctrlKey: true, altKey: true, shiftKey: true }),
+    null,
+  )
+})

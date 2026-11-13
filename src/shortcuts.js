@@ -25,6 +25,7 @@ export const SHORTCUTS = [
   ['Shift+P', 'menu.commands'],
   [',', 'menu.settings'],
   ['Alt+B', 'sidebar.toggle'],
+  ['Alt+T', 'outline.label'],
   ['Alt+1', 'mode.visual'],
   ['Alt+2', 'mode.source'],
   ['Alt+3', 'mode.reading'],
@@ -53,9 +54,13 @@ export function appShortcut(event) {
   if (!(event.ctrlKey || event.metaKey) || event.isComposing) return null
   const key = event.key.toLowerCase()
   if (event.altKey && !event.shiftKey)
-    return event.code === 'KeyB'
-      ? 'sidebar'
-      : ({ 1: 'visual', 2: 'source', 3: 'reading', f: 'focus', b: 'sidebar' }[key] ?? null)
+    return event.code === 'KeyT'
+      ? 'outline'
+      : event.code === 'KeyB'
+        ? 'sidebar'
+        : ({ 1: 'visual', 2: 'source', 3: 'reading', f: 'focus', b: 'sidebar', t: 'outline' }[
+            key
+          ] ?? null)
   if (event.shiftKey && !event.altKey)
     return (
       {

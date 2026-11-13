@@ -35,6 +35,7 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   WrapText,
+  ListTree,
 } from 'lucide-react'
 import { t, LANGUAGES } from './i18n.js'
 
@@ -58,6 +59,9 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
         ...(desktop ? [['history', 'history.title', History, undefined, !active, true]] : []),
         ['rename', 'menu.rename', Pencil, 'F2', !active || Boolean(active.external), true],
         ['copyToNotes', 'external.copy', Copy, undefined, !active?.external, true],
+        ['reopenTab', 'tabs.reopen', Undo2, 'Shift+T'],
+        ['previousTab', 'tabs.previous', PanelsTopLeft, 'PageUp', !active],
+        ['nextTab', 'tabs.next', PanelsTopLeft, 'PageDown', !active],
         ['closeTab', 'tabs.close', X, 'W', !active || activePinned, true],
         ['trashMove', 'menu.trashMove', Trash2, 'Shift+Delete', !active, true],
         ['undoDelete', 'menu.undoDelete', Undo2, undefined, !trashCount, true],
@@ -87,6 +91,7 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
       'menu.view',
       [
         ['focus', 'focus.toggle', Focus, 'Alt+F', !active, true],
+        ['outline', 'outline.label', ListTree, 'Alt+T', !active || mode === 'source'],
         ['sidebar', 'sidebar.toggle', PanelLeft, 'Alt+B', false, true],
         ['visual', 'mode.visual', Eye, 'Alt+1'],
         ['source', 'mode.source', Code, 'Alt+2'],
@@ -104,8 +109,10 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
         ['theme', t('menu.theme', { theme: t(`theme.${prefs.theme}`) }), SunMoon],
         ['smaller', 'menu.smaller', Minus, '-'],
         ['larger', 'menu.larger', Plus, '+'],
-        ['narrower', 'menu.narrower', MoveHorizontal],
-        ['wider', 'menu.wider', MoveHorizontal],
+        ['resetText', 'menu.resetText', Undo2, '0'],
+        ['resetWidth', 'menu.resetWidth', Undo2, 'Alt+0'],
+        ['narrower', 'menu.narrower', MoveHorizontal, 'Alt+-'],
+        ['wider', 'menu.wider', MoveHorizontal, 'Alt++'],
         ['language', t('menu.language', { language }), Globe],
       ],
     ],
