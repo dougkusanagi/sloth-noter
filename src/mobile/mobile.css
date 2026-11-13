@@ -876,3 +876,21 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }
+[data-platform='mobile'] .mobile-setting-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 48px;
+}
+[data-platform='mobile'] .mobile-setting-switch label {
+  display: grid;
+  gap: 2px;
+}
+[data-platform='mobile'] .mobile-setting-switch small {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+[data-platform='mobile'] .mobile-setting-switch .switch {
+  flex-shrink: 0;
+}

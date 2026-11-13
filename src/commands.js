@@ -93,7 +93,7 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
         ['reading', 'mode.reading', BookOpen, 'Alt+3'],
         ['foldAll', 'menu.foldAll', ChevronsDownUp, undefined, noFold],
         ['unfoldAll', 'menu.unfoldAll', ChevronsUpDown, undefined, noFold],
-        ['wrapLines', 'menu.wrapAll', WrapText, undefined, false, true],
+        ['wrapLines', 'menu.wrapAll', WrapText],
         ['wrapPage', 'menu.wrapPage', WrapText, undefined, !active, true],
         ['tabs', prefs.tabsVisible ? 'menu.tabsHide' : 'menu.tabsShow', PanelsTopLeft],
         [

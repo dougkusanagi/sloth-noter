@@ -1238,6 +1238,20 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               onChange={(event) => updatePrefs({ fontSize: Number(event.target.value) })}
             />
             <DocumentWidthPresets prefs={prefs} onChange={updatePrefs} />
+            <div className="mobile-setting-switch">
+              <label htmlFor="mobile-wrap-lines">
+                {t('settings.wrapLines')}
+                <small>{t('settings.wrapLinesHint')}</small>
+              </label>
+              <input
+                id="mobile-wrap-lines"
+                type="checkbox"
+                role="switch"
+                className="switch"
+                checked={prefs.wrapLines !== false}
+                onChange={(event) => updatePrefs({ wrapLines: event.target.checked })}
+              />
+            </div>
             <p>{t('mobile.backupDetails')}</p>
             <button disabled={Boolean(transferBusy)} onClick={exportBackup}>
               {t('mobile.backupSave')}
@@ -1553,15 +1567,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 <button onClick={() => noteInput.current?.click()}>
                   <FileInput size={20} />
                   {t('menu.import')}
-                </button>
-                <button
-                  onClick={() => {
-                    updatePrefs({ wrapLines: prefs.wrapLines === false })
-                    back()
-                  }}
-                >
-                  <WrapText size={20} />
-                  {t('menu.wrapAll')}
                 </button>
                 <button onClick={() => dispatch({ type: 'push', route: { name: 'trash' } })}>
                   <Trash2 size={20} />
