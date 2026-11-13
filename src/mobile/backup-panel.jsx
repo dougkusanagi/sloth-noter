@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { Download, Upload } from 'lucide-react'
+import { Download, FileInput } from 'lucide-react'
 import { createFullBackup, readBackupBundle, restoreBackupImages } from '../backup.js'
 import { friendlyError } from '../errors.js'
 import { t } from '../i18n.js'
@@ -83,7 +83,7 @@ export function BackupPanel({ current, persistence, commit, blocked }) {
         {t('mobile.backupExport')}
       </button>
       <button disabled={busy || blocked} onClick={() => input.current?.click()}>
-        <Upload size={20} aria-hidden="true" />
+        <FileInput size={20} aria-hidden="true" />
         {t('menu.backupRestore')}
       </button>
       <input

@@ -6,7 +6,8 @@ import {
   CheckCheck,
   Code2,
   Copy,
-  Download,
+  FileInput,
+  FileOutput,
   FilePlus,
   FileText,
   Menu,
@@ -25,7 +26,6 @@ import {
   Share2,
   Sun,
   Trash2,
-  Upload,
   WrapText,
   X,
 } from 'lucide-react'
@@ -1530,7 +1530,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   {t(window.SlothShare || navigator.share ? 'mobile.share' : 'mobile.copyText')}
                 </button>
                 <button disabled={Boolean(transferBusy)} onClick={() => exportNote(actionsNote)}>
-                  <Download size={20} />
+                  <FileOutput size={20} />
                   {t('menu.export')}
                 </button>
                 <p className="mobile-export-hint">{t('mobile.noteExportHint')}</p>
@@ -1551,7 +1551,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               <>
                 <ThemeControl theme={prefs.theme} onChange={updatePrefs} />
                 <button onClick={() => noteInput.current?.click()}>
-                  <Upload size={20} />
+                  <FileInput size={20} />
                   {t('menu.import')}
                 </button>
                 <button
