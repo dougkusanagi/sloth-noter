@@ -175,6 +175,13 @@ a gravação local precisa ser confiável antes de sincronizar).
       desktop; estados visíveis; primeira sincronização com prévia; pasta de notas respeitada.
       Pronto: unitários do motor (mesclagem, conflito, exclusão, imagens, primeira sincronização);
       E2E desktop com servidor local; texto local nunca perdido em falha de rede ou de servidor.
+      Divisão em incrementos (registrada em 2026-11-13): - [x] **S3.1 — Criptografia e mesclagem:** `src/sync/crypto.js` (Web Crypto, ADR 0019) e
+      `src/sync/merge.js` (três vias por linha, conflitos em blocos), com testes. Feito em 0.10.7. - [ ] **S3.2 — Cofre de chaves:** desktop pelo cofre do sistema (crate `keyring` no Rust) e
+      Android pelo Keystore (ponte Kotlin); sem cofre, sincronização desligada. Conferir
+      `crypto.subtle` no WebView do APK e do desktop. - [ ] **S3.3 — Motor:** `src/sync/engine.js` com cliente HTTP, base comum por nota,
+      exclusões, imagens antes da revisão, primeira sincronização com prévia; testes contra
+      `server/` em memória. - [ ] **S3.4 — Tela no desktop:** Configurações → Sincronização, estados visíveis e E2E com
+      o Worker local.
 - [ ] **S4 — Android e teste ponta a ponta.** Mesma tela no celular; sincronizar ao abrir, ao
       voltar ao primeiro plano, após gravar e por botão.
       Pronto: editar a mesma nota no desktop e no celular e ver a mudança chegar nos dois
@@ -336,10 +343,10 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**S3 — Motor e desktop.** Antes do código, escolher e validar a biblioteca de criptografia e os
-adaptadores de cofre (Android Keystore e cofre do sistema no desktop), conforme o ADR 0018. Depois,
-`src/sync/` puro e testado e a tela Configurações → Sincronização no desktop, usando o Worker local
-de `server/` nos testes E2E. Implantar o servidor na conta do usuário só com o login dele.
+**S3.2 — Cofre de chaves.** Desktop: comando Tauri com a crate `keyring` (Secret Service no
+Linux, Credential Manager no Windows). Android: ponte Kotlin com chave do Android Keystore
+cifrando a chave de sincronização. Sem cofre disponível, manter a sincronização desligada e
+explicar o motivo. Conferir que `crypto.subtle` existe no WebView do APK e do desktop.
 
 Pendente no aparelho (de entregas anteriores): validar no APK Inserir, seletor de imagem,
 clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,
