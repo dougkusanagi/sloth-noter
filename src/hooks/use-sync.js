@@ -7,6 +7,7 @@ import { platformVault, probeVault, readSyncSecrets, writeSyncSecrets } from '..
 import { t } from '../i18n.js'
 
 const INTERVAL = 5 * 60 * 1000
+const AFTER_EDIT = 15 * 1000
 const toBase64 = (bytes) => btoa(String.fromCharCode(...bytes))
 const fromBase64 = (text) => Uint8Array.from(atob(text), (char) => char.charCodeAt(0))
 
@@ -36,7 +37,7 @@ export function useSync({ current, commit, invoke, blocked }) {
   const [status, setStatus] = useState({ state: 'checking' })
   // Latest values without re-creating `run` on every render.
   const live = useRef({})
-  live.current = { commit, invoke, blocked }
+  live.current = { ...live.current, commit, invoke, blocked }
 
   const run = useCallback(async () => {
     const saved = secrets.current
@@ -62,10 +63,17 @@ export function useSync({ current, commit, invoke, blocked }) {
         },
       })
       // Apply on the latest document: edits typed meanwhile are kept (applySync).
-      live.current.commit(
-        applySync(current.current, { server: saved.server, snapshot, before, result }),
-        'sistema',
-      )
+      // A run that changed nothing does not save, so it never triggers another run.
+      const changed =
+        result.apply.upsert.length ||
+        result.apply.remove.length ||
+        current.current.sync?.server !== saved.server ||
+        JSON.stringify(result.state) !== JSON.stringify(before)
+      if (changed)
+        live.current.commit(
+          applySync(current.current, { server: saved.server, snapshot, before, result }),
+          'sistema',
+        )
       setStatus({
         state: result.error ? 'error' : 'idle',
         error: result.error,
@@ -103,9 +111,23 @@ export function useSync({ current, commit, invoke, blocked }) {
     return () => clearInterval(timer)
   }, [run, status.state])
 
+  // Back in the foreground, and shortly after the notes change.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void run()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [run])
+
   return {
     status,
     run,
+    /** Call when notes change; syncs once things are quiet for a while. */
+    scheduleAfterEdit: useCallback(() => {
+      clearTimeout(live.current.timer)
+      live.current.timer = setTimeout(() => void run(), AFTER_EDIT)
+    }, [run]),
     newRecoveryKey: async () => recoveryKey(generateKeyBytes()),
     /** Checks the server and the key and returns the first-sync preview; saves nothing. */
     async prepare({ server, token, recovery }) {

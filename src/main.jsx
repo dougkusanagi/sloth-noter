@@ -198,6 +198,10 @@ function Workspace({ persistence, loaded }) {
     setBlocked,
   } = useNotesStore({ persistence, loaded, mode, onHistoryWarning: setImportError })
   const sync = useSync({ current, commit, invoke: persistence.invoke, blocked })
+  const { scheduleAfterEdit } = sync
+  useEffect(() => {
+    scheduleAfterEdit()
+  }, [data.notes, data.trash, scheduleAfterEdit])
   const [sidebarQuery, setSidebarQuery] = useState('')
   const [imageNoteFilter, setImageNoteFilter] = useState(null)
   const [renamingGroup, setRenamingGroup] = useState(null)

@@ -54,6 +54,8 @@ import {
 import { clearImageCache, importImage, libraryImages, markdownImage } from '../images.js'
 import { createFullBackup, readBackupBundle, restoreBackupImages } from '../backup.js'
 import { AboutPanel } from '../components/about-panel.jsx'
+import { SyncPanel } from '../components/sync-panel.jsx'
+import { useSync } from '../hooks/use-sync.js'
 import { ImageThumbnail } from '../components/image-library.jsx'
 import { TasksLibrary } from '../components/tasks-library.jsx'
 import { ChangelogPanel } from '../components/changelog-panel.jsx'
@@ -197,6 +199,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const store = useNotesStore({ persistence, loaded, mode: 'visual', onHistoryWarning: setWarning })
   const { data, current, commit, writer, saving, error, blocked } = store
   const { prefs, updatePrefs: savePrefs } = usePrefs({ data, current, commit })
+  const sync = useSync({ current, commit, invoke: persistence.invoke, blocked })
+  const { scheduleAfterEdit } = sync
+  useEffect(() => {
+    scheduleAfterEdit()
+  }, [data.notes, data.trash, scheduleAfterEdit])
   function updatePrefs(change) {
     savePrefs('wrapLines' in change ? { ...change, wrapLinesByNote: {} } : change)
   }
@@ -1298,6 +1305,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             <button disabled={blocked} onClick={createHelpNote}>
               {t('menu.welcome')}
             </button>
+            <h2>{t('settings.sync')}</h2>
+            <SyncPanel sync={sync} />
             <h2>{t('settings.about')}</h2>
             <AboutPanel />
           </section>

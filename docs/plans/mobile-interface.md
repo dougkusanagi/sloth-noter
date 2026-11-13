@@ -206,6 +206,10 @@ a gravação local precisa ser confiável antes de sincronizar).
 
 - [ ] **S4 — Android e teste ponta a ponta.** Mesma tela no celular; sincronizar ao abrir, ao
       voltar ao primeiro plano, após gravar e por botão.
+      Feito em 0.12.0 (parte de código): `useSync` na casca mobile, painel em Configurações,
+      sincroniza ao voltar ao primeiro plano e 15 s após editar (também no desktop); rodada sem
+      mudanças não grava. E2E `e2e/mobile/sync.spec.js`. Falta: implantar o Worker na conta do
+      usuário e o teste ponta a ponta com desktop e celular reais.
       Pronto: editar a mesma nota no desktop e no celular e ver a mudança chegar nos dois
       sentidos; conflito gera as duas versões; exclusão e restauração chegam ao outro lado;
       imagem inserida no celular aparece no desktop. Casos de aparelho na lista de validação.
@@ -368,11 +372,11 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**S4 — Android e teste ponta a ponta.** Ligar `useSync` na casca mobile (`mobile-shell.jsx`),
-com a mesma tela em Configurações; sincronizar ao abrir, ao voltar ao primeiro plano, após gravar
-e por botão. Implantar o Worker na conta do usuário (exige `wrangler login` dele) e testar desktop
-↔ celular com dados reais. Fora da fila: 5 E2E desktop já falham no `main` antes da S3.4
-(`layout-feedback:50`, `columns:299`, `columns:321`, `find-replace:63`, `native-clipboard:534`).
+**Fechar S4.** Com o `wrangler login` do usuário, implantar o Worker (guia no README), configurar
+o desktop e o celular e conferir: edição nos dois sentidos, conflito com as duas versões,
+exclusão e restauração, imagem do celular no desktop. Depois, A5. Fora da fila: 5 E2E desktop
+já falham no `main` (`layout-feedback:50`, `columns:299`, `columns:321`, `find-replace:63`,
+`native-clipboard:534`).
 
 Pendente no aparelho (de entregas anteriores): validar no APK Inserir, seletor de imagem,
 clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,

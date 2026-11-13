@@ -105,13 +105,13 @@ Os testes mobile rodam localmente com `bun run e2e --project=mobile`.
 
 ## Sincronização (em testes)
 
-No app desktop, **Configurações › Sincronização** conecta o Sloth Note a um servidor seu
+No app desktop e no Android, **Configurações › Sincronização** conecta o Sloth Note a um servidor seu
 ([ADR 0018](docs/adr/0018-protocolo-sincronizacao.md)). No primeiro aparelho, crie a chave e
 guarde a chave de recuperação; nos outros, digite essa chave. Antes da primeira sincronização o
-app mostra quantas notas serão baixadas e enviadas. Depois, sincroniza ao abrir, a cada 5 minutos
-e pelo botão **Sincronizar agora**. As notas e imagens chegam ao servidor já cifradas; ele guarda
+app mostra quantas notas serão baixadas e enviadas. Depois, sincroniza ao abrir, ao voltar ao app,
+15 segundos após uma edição, a cada 5 minutos e pelo botão **Sincronizar agora**. As notas e imagens chegam ao servidor já cifradas; ele guarda
 só a revisão atual de cada nota (Cloudflare D1) e as imagens (Cloudflare R2). A chave fica no
-cofre de senhas do sistema; a versão web não sincroniza. No Android, a tela ainda não existe.
+cofre de senhas do sistema; a versão web não sincroniza.
 
 A pasta `server/` contém o servidor.
 
