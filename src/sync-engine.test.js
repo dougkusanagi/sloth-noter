@@ -211,3 +211,86 @@ test('the client refuses plain http to a remote host and never follows redirects
   })
   await assert.rejects(limited.changes(null), { code: 'rate_limited', retryAfter: 7 })
 })
+
+function imageFolder(files = {}) {
+  const map = new Map(Object.entries(files))
+  return {
+    map,
+    read: async (src) => map.get(src) ?? null,
+    write: async (src, bytes) => map.set(src, bytes),
+  }
+}
+
+test('images go up before the note and arrive verified on the other side', async () => {
+  const remote = server()
+  const key = generateKeyBytes()
+  const photo = new Uint8Array([137, 80, 78, 71, 9, 9])
+  const phoneFiles = imageFolder({ 'assets/abc-foto.png': photo })
+  const desktopFiles = imageFolder()
+  const phone = device(remote, key, {
+    a: note(
+      '![Foto](assets/abc-foto.png)\n<img src="./assets/abc-foto.png">\n![web](https://x/y.png)',
+    ),
+  })
+  const desktop = device(remote, key)
+  await phone.sync({ images: phoneFiles })
+  assert.deepEqual(Object.keys(phone.state.blobs), ['assets/abc-foto.png'])
+  const sha = phone.state.blobs['assets/abc-foto.png']
+  assert.ok(await phone.client.getBlob(sha), 'blob stored before the revision')
+  await desktop.sync({ images: desktopFiles })
+  assert.deepEqual(desktopFiles.map.get('assets/abc-foto.png'), photo)
+  assert.equal(desktop.state.blobs['assets/abc-foto.png'], sha)
+
+  // Editing the note again reuses the same envelope instead of encrypting the image again.
+  phone.notes.set('a', note(`${phone.notes.get('a').body}\nmais texto`))
+  await phone.sync({ images: phoneFiles })
+  assert.equal(phone.state.blobs['assets/abc-foto.png'], sha)
+})
+
+test('a note whose image is missing on the server is not applied', async () => {
+  const remote = server()
+  const key = generateKeyBytes()
+  const phone = device(remote, key, { a: note('![F](assets/f.png)') })
+  await phone.sync({ images: imageFolder({ 'assets/f.png': new Uint8Array([1]) }) })
+  const desktop = device(remote, key)
+  const broken = {
+    ...remote,
+    fetch: async (url, init) =>
+      String(url).includes('/v1/blobs/')
+        ? new Response('{}', { status: 404 })
+        : remote.fetch(url, init),
+  }
+  const lost = device(broken, key)
+  const out = await lost.sync({ images: imageFolder() })
+  assert.equal(out.error, 'missing_image')
+  assert.equal(lost.notes.size, 0)
+  assert.equal(out.state.cursor, null)
+  await desktop.sync({ images: imageFolder() })
+  assert.equal(desktop.notes.size, 1)
+})
+
+test('a manifest path outside assets is refused', async () => {
+  const remote = server()
+  const key = generateKeyBytes()
+  const evil = device(remote, key)
+  const { encryptNote } = await import('./sync/crypto.js')
+  const sealed = await encryptNote(key, 'x', {
+    ...note('oi'),
+    images: { 'assets/../../etc/passwd': 'a'.repeat(64) },
+  })
+  await evil.client.putNote('x', null, { ...sealed, deleted: false })
+  const files = imageFolder()
+  const out = await device(remote, key).sync({ images: files })
+  assert.equal(out.error, 'invalid_image')
+  assert.equal(files.map.size, 0)
+})
+
+test('asset references are found in links and HTML, once each', async () => {
+  const { assetReferences } = await import('./sync/engine.js')
+  assert.deepEqual(
+    assetReferences(
+      '![a](assets/x.png) ![b](./assets/x.png) <img src="assets/y%20z.png"> assets/no',
+    ),
+    ['assets/no', 'assets/x.png', 'assets/y z.png'],
+  )
+})

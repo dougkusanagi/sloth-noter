@@ -3,15 +3,23 @@
 // and `state` together, or a later push could overwrite the remote text.
 //
 // payload: { name, body, group?, trashed } — the encrypted part of a note.
-// state:   { cursor, bases: { [id]: { revision, payload | null } } } — local only.
+// state:   { cursor, bases: { [id]: { revision, payload | null } }, blobs: { [src]: sha256 } }
+//          — local only. `blobs` remembers uploaded envelopes so an image is never re-encrypted.
+// images:  optional { read(src) → bytes | null, write(src, bytes) } for files under assets/.
+//          The encrypted payload then carries `images: { [src]: sha256 }`.
 
-import { decryptNote, encryptNote } from './crypto.js'
+import { decryptBlob, decryptNote, encryptBlob, encryptNote } from './crypto.js'
 import { mergeLines } from './merge.js'
 import { SyncError } from './client.js'
 
 const ATTEMPTS = 3
 
-export const emptyState = () => ({ cursor: null, bases: {} })
+export const emptyState = () => ({ cursor: null, bases: {}, blobs: {} })
+
+// Local image files referenced by a note: `assets/...` in Markdown links or HTML.
+const ASSET = /(?:^|[(\s"'=])(?:\.\/)?(assets\/[A-Za-z0-9._%-]+)/g
+export const assetReferences = (body) =>
+  [...new Set([...body.matchAll(ASSET)].map((match) => decodeURIComponent(match[1])))].sort()
 
 const same = (a, b) =>
   Boolean(a) &&
@@ -70,17 +78,19 @@ export async function runSync({
   local,
   state,
   labels,
+  images = null,
   newId = () => crypto.randomUUID(),
 }) {
   const working = new Map(local.map((note) => [note.id, note.payload]))
   const bases = { ...state.bases }
+  const blobs = { ...state.blobs }
   let cursor = state.cursor
   const upsert = new Map()
   const remove = new Set()
   const conflicts = new Set()
   const result = (error) => ({
     apply: { upsert: [...upsert].map(([id, payload]) => ({ id, payload })), remove: [...remove] },
-    state: { cursor, bases },
+    state: { cursor, bases, blobs },
     conflicts: [...conflicts],
     ...(error ? { error } : {}),
   })
@@ -95,10 +105,47 @@ export async function runSync({
     remove.add(id)
   }
 
+  // Every image of a received note is downloaded and verified before the note is applied.
+  async function download(manifest = {}) {
+    if (!images) return
+    for (const [src, sha] of Object.entries(manifest)) {
+      // The manifest comes from another device: accept only a plain file under assets/.
+      if (!/^assets\/[A-Za-z0-9_%-][A-Za-z0-9._%-]*$/.test(src) || !/^[0-9a-f]{64}$/.test(sha))
+        throw new SyncError('invalid_image')
+      if (blobs[src] === sha) continue
+      const sealed = await client.getBlob(sha)
+      if (!sealed) throw new SyncError('missing_image')
+      await images.write(src, await decryptBlob(key, src, sealed, sha))
+      blobs[src] = sha
+    }
+  }
+
+  // Images go up before the revision that references them; a missing file is left out.
+  async function upload(body) {
+    const manifest = {}
+    if (!images) return manifest
+    for (const src of assetReferences(body)) {
+      if (!blobs[src]) {
+        const bytes = await images.read(src)
+        if (!bytes) continue
+        const sealed = await encryptBlob(key, src, bytes)
+        await client.putBlob(sealed.sha256, sealed.bytes)
+        blobs[src] = sealed.sha256
+      }
+      manifest[src] = blobs[src]
+    }
+    return manifest
+  }
+
   async function receive(id) {
     const remote = await client.getNote(id)
     if (!remote) return
-    const theirs = remote.deleted ? null : await decryptNote(key, id, remote.envelope)
+    let theirs = null
+    if (!remote.deleted) {
+      const { images: manifest, ...payload } = await decryptNote(key, id, remote.envelope)
+      await download(manifest)
+      theirs = payload
+    }
     const ours = working.get(id)
     const base = bases[id]?.payload ?? null
     if (!theirs) {
@@ -131,7 +178,10 @@ export async function runSync({
       for (const [id, payload] of working) {
         const base = bases[id]
         if (base && same(payload, base.payload)) continue
-        const sealed = await encryptNote(key, id, payload)
+        const sealed = await encryptNote(key, id, {
+          ...payload,
+          images: await upload(payload.body),
+        })
         const sent = await client.putNote(id, base ? base.revision : null, {
           ...sealed,
           deleted: false,

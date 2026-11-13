@@ -192,8 +192,11 @@ a gravação local precisa ser confiável antes de sincronizar).
         recebe, mescla e envia; exclusões; editado aqui e excluído lá vira nota nova; falha de
         rede não toca no texto local; `previewFirstSync`). 9 testes contra `server/api.js` em
         memória. Feito em 0.10.9.
-  - [ ] **S3.3b — Imagens:** enviar blobs cifrados antes da revisão que os referencia,
-        manifesto cifrado na nota e receber/verificar antes de aplicar.
+  - [x] **S3.3b — Imagens:** adaptador `images` (`read`/`write` de `assets/...`) no
+        `runSync`; blob cifrado sobe antes da revisão e o manifesto vai cifrado no payload;
+        ao receber, todos os blobs são baixados e verificados antes de aplicar a nota; caminho
+        fora de `assets/` é recusado; `state.blobs` evita cifrar de novo. Imagens `data:` seguem
+        no texto. 4 testes. Feito em 0.10.10.
   - [ ] **S3.4 — Tela no desktop:** Configurações → Sincronização, estados visíveis e E2E com
         o Worker local.
 
@@ -361,10 +364,12 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**S3.3b — Imagens.** Ver como as imagens são referenciadas e guardadas (`assets`, `images.rs`,
-navegador) e acrescentar ao payload um manifesto `{ referência local → { id, sha256 } }`.
-Enviar o blob cifrado (`encryptBlob`) antes da revisão; ao receber, baixar e verificar todos
-os blobs antes de devolver a nota em `apply`. Testar contra `server/api.js` em memória.
+**S3.4 — Tela no desktop.** Configurações → Sincronização: endereço do servidor, chave de acesso,
+gerar ou digitar a chave de recuperação, prévia da primeira sincronização, estados visíveis
+(desligada, sincronizando, em dia, offline, erro com próximo passo) e botão Sincronizar agora.
+Guardar segredos com `src/sync/vault.js` e o estado (`cursor`, `bases`, `blobs`) junto do
+documento, aplicando `apply` e `state` na mesma gravação. Adaptador `images` com
+`image_read`/`image_write`. E2E com o Worker local de `server/`.
 
 Pendente no aparelho (de entregas anteriores): validar no APK Inserir, seletor de imagem,
 clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,
