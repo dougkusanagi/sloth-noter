@@ -372,13 +372,13 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**Fechar S4.** Implantação em andamento na conta do usuário: D1 `sloth-note-sync` criado com as
-migrações 0001 e 0002; segredo `SYNC_TOKEN` enviado (cópia local em
-`~/.config/sloth-note/sync-token`); configuração local em `server/wrangler.local.toml` (fora do
-git). Falta o usuário concluir a ativação do R2 no painel; depois, `wrangler r2 bucket create
-sloth-note-sync`, `wrangler deploy -c wrangler.local.toml` (a versão no ar ainda aponta para um
-KV já removido) e o teste ponta a ponta desktop ↔ celular. Fora da fila: 5 E2E desktop já
-falham no `main`.
+**Fechar S4 com os aparelhos reais.** Servidor no ar em 2026-11-13
+(`https://sloth-note-sync.dl-aguiar.workers.dev`, D1 + R2, migrações 0001–0002, limite do ADR
+0021). Teste ponta a ponta com o motor contra o servidor real passou: nota e imagem nos dois
+sentidos, mesclagem, conflito, lixeira, restauração, exclusão e 401; o contador de uso registrou
+as operações; os dados de teste foram apagados. Falta configurar o desktop e o celular pela tela
+(a pessoa digita a chave de acesso de `~/.config/sloth-note/sync-token` e a chave de
+recuperação) e conferir com notas reais. Fora da fila: 5 E2E desktop já falham no `main`.
 
 Pendente no aparelho (de entregas anteriores): validar no APK Inserir, seletor de imagem,
 clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,
