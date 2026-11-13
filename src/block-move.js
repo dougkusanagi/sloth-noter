@@ -74,6 +74,13 @@ export function moveBlockChanges(text, first, last, before) {
   const blank = (number) => number >= 1 && number <= count && !lines[number - 1].trim()
   const listItem = (number) => number >= 1 && number <= count && LIST_ITEM.test(lines[number - 1])
   const chunkIsList = listItem(first)
+  const chunkIsRule =
+    markdownTree(lines.slice(first - 1, last).join('\n')).children[0]?.type === 'thematicBreak'
+  const compactRule = chunkIsRule && !blank(first - 1)
+  // A rule is already a block boundary. After a list or heading it needs no
+  // empty line; after prose, keep one so "---" cannot become a setext heading.
+  const tightRuleBefore = (number) =>
+    compactRule && (listItem(number) || /^ {0,3}#{1,6}(?:\s|$)/.test(lines[number - 1] ?? ''))
   // Dropping onto itself, or into the blank line right after it, changes nothing.
   const end = blank(last + 1) ? last + 1 : last
   if (before >= first && before <= end + 1 && before <= count) return null
@@ -83,7 +90,9 @@ export function moveBlockChanges(text, first, last, before) {
   let from = offset(first)
   let to = offset(last) + lines[last - 1].length
   const blankAbove = first === 1 || blank(first - 1)
-  if (blank(last + 1) && blankAbove)
+  const onlyBlanksAfter = lines.slice(last).every((line) => !line.trim())
+  if (onlyBlanksAfter && first > 2 && blank(first - 1)) from = offset(first - 1) - 1
+  else if (blank(last + 1) && blankAbove)
     to = offset(last + 1) + lines[last].length + (last + 1 < count ? 1 : 0)
   else if (last < count) to += 1
   // The last block also takes the blank line above it, so no blank line trails.
@@ -99,14 +108,14 @@ export function moveBlockChanges(text, first, last, before) {
     let previous = count
     while (previous > last && blank(previous)) previous--
     if (previous <= last) return null
-    const tight = chunkIsList && listItem(previous)
+    const tight = (chunkIsList && listItem(previous)) || tightRuleBefore(previous)
     insertAt = offset(previous) + lines[previous - 1].length
     insert = (tight ? '\n' : '\n\n') + chunk
     lead = tight ? 1 : 2
   } else {
     const previous = before - 1
-    const tightBefore = chunkIsList && listItem(previous)
-    const tightAfter = chunkIsList && listItem(before)
+    const tightBefore = (chunkIsList && listItem(previous)) || tightRuleBefore(previous)
+    const tightAfter = compactRule || (chunkIsList && listItem(before))
     insertAt = offset(before)
     const head = previous >= 1 && !blank(previous) && !tightBefore ? '\n' : ''
     // A blank line already at the drop point keeps the next block apart.

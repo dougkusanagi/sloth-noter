@@ -1,6 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { evaluateTable, formatResult, parseNumber, columnName, isFormula } from './formula.js'
+import {
+  evaluateTable,
+  formatResult,
+  parseNumber,
+  columnName,
+  isFormula,
+  translateFormula,
+} from './formula.js'
 
 const shown = (rows) => evaluateTable(rows).map((row) => row.map((cell) => formatResult(cell)))
 const one = (formula, rows = [['A', 'B', 'C']]) =>
@@ -26,6 +33,19 @@ test('column names follow spreadsheet letters', () => {
   assert.equal(columnName(26), 'AA')
   assert.ok(isFormula(' =1'))
   assert.ok(!isFormula('1=1'))
+})
+
+test('copying a formula moves its relative references', () => {
+  assert.equal(translateFormula('=B2*C2', 1, 0), '=B3*C3')
+  assert.equal(translateFormula('=B2*C2', 0, 1), '=C2*D2')
+  assert.equal(translateFormula('=SOMA(B2:B4)', 1, 0), '=SOMA(B3:B5)')
+  assert.equal(translateFormula('=$B$2+B2', 1, 1), '=$B$2+C3')
+  assert.equal(translateFormula('=B$2+$B2', 1, 1), '=C$2+$B3')
+  assert.equal(translateFormula('="A1"&B2', 1, 0), '="A1"&B3')
+  assert.equal(translateFormula('=A1', -1, 0), '=#REF!')
+  assert.equal(translateFormula('=1+2', 3, 3), '=1+2')
+  assert.equal(translateFormula('texto', 1, 0), 'texto')
+  assert.equal(formatResult(evaluateTable([['A'], ['=#REF!']])[1][0]), '#REF!')
 })
 
 test('arithmetic follows the usual precedence', () => {

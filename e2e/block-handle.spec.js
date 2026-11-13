@@ -106,3 +106,26 @@ test('heading fold arrows align with block handles after heading spacing', async
   await page.getByRole('button', { name: 'Mostrar/ocultar biblioteca', exact: true }).click()
   await page.screenshot({ path: '/tmp/sloth-heading-controls-mobile.png' })
 })
+
+for (const width of [768, 1280]) {
+  test(
+    'dragging a compact rule below tasks preserves empty lines at ' + width,
+    async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 })
+      await fill(page, '# Nota\n\n## H2\n---\n- [x] Teste 1\n- [ ] Teste 2\n')
+      await page.locator('.cm-md-rule').hover()
+      const handle = page.locator('.cm-block-handle')
+      await expect(handle).toBeVisible()
+      const box = await handle.boundingBox()
+      const last = await page.locator('.cm-line').last().boundingBox()
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(last.x + 20, last.y + last.height / 2, { steps: 10 })
+      await page.mouse.up()
+      await page.locator('.cm-md-h2').click()
+      if (process.env.CAPTURE_UI)
+        await page.screenshot({ path: '/tmp/sloth-rule-' + width + '.png' })
+      await source(page, '# Nota\n\n## H2\n- [x] Teste 1\n- [ ] Teste 2\n---\n')
+    },
+  )
+}

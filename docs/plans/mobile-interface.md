@@ -456,3 +456,17 @@ os recursos da versão de teste; continua sendo um APK de depuração, sem publi
 ## Consolidação em 2026-11-09
 
 Os avanços locais dos dois worktrees foram incorporados à main na versão 0.6.0. A raiz passa a ser a origem dos APKs. As notas históricas acima descrevem o estado na data indicada; Novidades por versão já está implementado.
+
+## Retomada em 2026-11-12 — S1
+
+- A1–A4 estão marcadas como concluídas; a próxima etapa da fila é S1, antes de A5.
+- O checkout raiz contém funcionalidades mobile posteriores ao antigo checkout
+  t3-ca486162. As alterações não commitadas desse checkout antigo foram preservadas;
+  não copiar a casca antiga sobre a atual nem gerar APK a partir dela.
+- Proposta para as decisões da seção 11.8 e contrato HTTP em
+  [ADR 0018](../adr/0018-protocolo-sincronizacao.md), com status Proposto.
+- S1 continua aberta: depende da aprovação do usuário, exigida no critério da etapa.
+  Nenhum servidor foi implantado e nenhuma nota foi enviada.
+- Próximo passo: revisar a proposta com o usuário; com aprovação, escrever os testes
+  executáveis de contrato antes do servidor S2. Validar os adaptadores de cofre e
+  criptografia antes de S3.

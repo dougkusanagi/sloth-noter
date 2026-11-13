@@ -89,3 +89,30 @@ test('moving the last block up leaves no trailing blank line', () => {
     ['# Nota', '', 'texto b', '', '## A', '', 'texto a', '', '## B'].join('\n'),
   )
 })
+
+test('moving a separator to the trailing empty line and back preserves spacing', () => {
+  for (const ending of ['\n', '\n\n', '\n\n\n']) {
+    const original = '# Nota\n\n## H2\n\n---\n\n- [x] Teste 1\n- [ ] Teste 2' + ending
+    let text = original
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const separator = documentBlocks(text).find(
+        (block) => text.split('\n')[block.first - 1] === '---',
+      )
+      text = move(text, separator.first, separator.last, text.split('\n').length + 1)
+      const moved = documentBlocks(text).find(
+        (block) => text.split('\n')[block.first - 1] === '---',
+      )
+      const task = documentBlocks(text).find((block) => block.kind === 'task')
+      text = move(text, moved.first, moved.last, task.first)
+      assert.equal(text, original)
+    }
+  }
+})
+
+test('moving a rule below tasks does not insert an empty line', () => {
+  const original = '# Nota\n\n## H2\n---\n- [x] Teste 1\n- [ ] Teste 2\n'
+  const down = move(original, 4, 4, 99)
+  assert.equal(down, '# Nota\n\n## H2\n- [x] Teste 1\n- [ ] Teste 2\n---\n')
+  assert.equal(move(down, 6, 6, 4), original)
+  assert.equal(documentBlocks(down).filter((block) => block.kind === 'task').length, 2)
+})

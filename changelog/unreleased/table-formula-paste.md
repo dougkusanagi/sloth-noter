@@ -1,0 +1,1 @@
+Corrigido: Colar uma fórmula em uma célula selecionada agora funciona também no aplicativo desktop. Ao copiar células dentro do app e colar em outra posição, as referências relativas acompanham a nova posição; fórmulas vindas de outros aplicativos são coladas como estão.

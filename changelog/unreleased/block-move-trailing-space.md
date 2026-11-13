@@ -1,0 +1,1 @@
+Corrigido: Mover um separador ou outro bloco para o fim da nota e depois trazê-lo de volta não acumula mais linhas vazias. Separadores que estavam junto de títulos ou listas também mantêm esse espaçamento ao serem movidos, sem ganhar uma linha vazia antes. As linhas vazias que já existiam no fim da nota são preservadas.

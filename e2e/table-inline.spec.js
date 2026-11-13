@@ -103,6 +103,46 @@ const source = async (page) => {
 }
 
 for (const width of [390, 1280]) {
+  test(`the row and column bars label their axis at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto('/')
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    await page
+      .locator('textarea')
+      .fill('# Teste\n\n| Nome | Valor |\n| --- | --- |\n| Ana | 2 |\n| Bia | 3 |')
+    await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+    await page.locator('.cm-md-table-head .cm-md-table-cell').first().click()
+    const columns = page.locator('.cm-table-column-segment')
+    const rowBars = page.locator('.cm-table-row-segment')
+    await expect(columns).toHaveText(['A', 'B'])
+    await expect(rowBars).toHaveText(['1', '2', '3'])
+    // Each bar is thick enough to hold its label, and the label keeps a margin
+    // from the bar's corners instead of sitting glued to them.
+    await expect(columns.first()).toBeVisible()
+    expect((await columns.first().boundingBox()).height).toBeGreaterThanOrEqual(18)
+    expect((await rowBars.first().boundingBox()).width).toBeGreaterThanOrEqual(22)
+    for (const bar of [columns.first(), rowBars.first()]) {
+      const gaps = await bar.evaluate((node) => {
+        const range = document.createRange()
+        range.selectNodeContents(node)
+        const text = range.getBoundingClientRect()
+        const box = node.getBoundingClientRect()
+        return {
+          left: text.left - box.left,
+          right: box.right - text.right,
+          top: text.top - box.top,
+          bottom: box.bottom - text.bottom,
+        }
+      })
+      expect(gaps.left).toBeGreaterThanOrEqual(2)
+      expect(gaps.right).toBeGreaterThanOrEqual(2)
+      expect(gaps.top).toBeGreaterThanOrEqual(1)
+      expect(gaps.bottom).toBeGreaterThanOrEqual(1)
+    }
+  })
+}
+
+for (const width of [390, 1280]) {
   test(`table bars select, format, remove and insert at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 })
     await page.goto('/')
@@ -146,7 +186,10 @@ for (const width of [390, 1280]) {
     await expect(menu).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Selecionar linha 3', exact: true }).click()
-    const remove = menu.getByRole('menuitem', { name: 'Remover linha', exact: true })
+    await menu.getByRole('menuitem', { name: 'Remover', exact: true }).click()
+    const remove = page
+      .getByRole('menu', { name: 'Remover', exact: true })
+      .getByRole('menuitem', { name: 'Remover linha', exact: true })
     await remove.hover()
     await expect(page.locator('.cm-content.cm-table-danger')).toHaveCount(1)
     if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/table-danger-${width}.png` })
@@ -207,7 +250,11 @@ test('table handle menu toggles headers, adds a paragraph and deletes the table'
   expect(await source(page)).toContain('| 1 | 2 |\n\nNovo\n\nFim')
   await page.locator('.cm-md-table-cell', { hasText: '2' }).click()
   await handle.click()
-  await menu.getByRole('menuitem', { name: 'Excluir tabela' }).click()
+  await menu.getByRole('menuitem', { name: 'Remover', exact: true }).click()
+  await page
+    .getByRole('menu', { name: 'Remover', exact: true })
+    .getByRole('menuitem', { name: 'Excluir tabela' })
+    .click()
   expect(await source(page)).toBe('# Teste\n\nNovo\n\nFim')
 })
 

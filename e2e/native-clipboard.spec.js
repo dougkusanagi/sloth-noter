@@ -117,6 +117,27 @@ test('native text and image pastes stay inside the focused column', async ({ pag
   await expect(page.getByRole('textbox', { name: 'Coluna 1' })).toHaveText('Primeira')
 })
 
+test('native text paste lands in the selected table cell', async ({ page }) => {
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page
+    .locator('textarea')
+    .fill(
+      '# Conta\n\n| Item | Qtd | Preço | Total |\n| --- | --- | --- | --- |\n| Caneta | 2 | 1,50 | =B2*C2 |\n| Caderno | 3 | 10 |  |',
+    )
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  const rows = page.locator('.cm-md-table-row:not(.cm-md-table-divider)')
+  const total = (row) => rows.nth(row).locator('.cm-md-table-cell').nth(3)
+  await total(2).click()
+  await page.evaluate(() => {
+    window.nativeClipboard = { kind: 'text', text: '=B3*C3' }
+  })
+  await page.keyboard.press('Control+v')
+  await expect(total(2)).toHaveText('30')
+  await expect
+    .poll(() => page.evaluate(() => window.nativeDocument.notes[0].body))
+    .toContain('| Caderno | 3 | 10 | =B3*C3 |')
+})
+
 test('pasting into the side reading pane does not modify the active note', async ({ page }) => {
   await page.keyboard.press('Control+t')
   await expect(page.locator('.cm-empty-title')).toBeVisible()

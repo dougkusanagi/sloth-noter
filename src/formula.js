@@ -89,8 +89,17 @@ function tokenize(source) {
     let match
     if ((match = /^"((?:[^"]|"")*)"/.exec(rest)))
       tokens.push({ type: 'string', value: match[1].replace(/""/g, '"') })
-    else if ((match = /^\$?([A-Za-z]{1,3})\$?(\d{1,6})(?![\w.(])/.exec(rest)))
-      tokens.push({ type: 'ref', column: columnIndex(match[1]), row: Number(match[2]) - 1 })
+    else if ((match = /^#REF!/i.exec(rest))) tokens.push({ type: 'error' })
+    else if ((match = /^(\$?)([A-Za-z]{1,3})(\$?)(\d{1,6})(?![\w.(])/.exec(rest)))
+      tokens.push({
+        type: 'ref',
+        column: columnIndex(match[2]),
+        row: Number(match[4]) - 1,
+        absoluteColumn: match[1] === '$',
+        absoluteRow: match[3] === '$',
+        start: index,
+        end: index + match[0].length,
+      })
     else if ((match = /^(\d+(?:[.,]\d+)?|[.,]\d+)/.exec(rest)))
       tokens.push({ type: 'number', value: Number(match[1].replace(',', '.')) })
     else if ((match = /^[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_.]*/.exec(rest)))
@@ -101,6 +110,33 @@ function tokenize(source) {
     index += match[0].length
   }
   return tokens
+}
+
+// Moves the relative references of a formula by a number of rows and columns,
+// as copying or filling a cell does in a spreadsheet. `$` marks the parts that
+// stay put. References pushed off the first row or column become #REF!.
+export function translateFormula(text, dRow, dColumn) {
+  if ((!dRow && !dColumn) || !isFormula(text)) return text
+  const source = String(text)
+  const body = source.slice(source.indexOf('=') + 1)
+  let tokens
+  try {
+    tokens = tokenize(body)
+  } catch {
+    return source
+  }
+  let result = body
+  for (const token of [...tokens].reverse()) {
+    if (token.type !== 'ref') continue
+    const row = token.absoluteRow ? token.row : token.row + dRow
+    const column = token.absoluteColumn ? token.column : token.column + dColumn
+    const ref =
+      row < 0 || column < 0
+        ? ERRORS.ref
+        : `${token.absoluteColumn ? '$' : ''}${columnName(column)}${token.absoluteRow ? '$' : ''}${row + 1}`
+    result = result.slice(0, token.start) + ref + result.slice(token.end)
+  }
+  return `${source.slice(0, source.indexOf('=') + 1)}${result}`
 }
 
 // Precedence, lowest first: comparison, &, + -, * /, ^, unary minus, %.
@@ -126,6 +162,7 @@ function parse(source) {
     if (!token) throw fail(ERRORS.syntax)
     if (token.type === 'number' || token.type === 'string')
       return { type: 'value', value: token.value }
+    if (token.type === 'error') return { type: 'error' }
     if (token.type === 'ref') {
       if (isOp(':')) {
         position++
@@ -374,6 +411,8 @@ export function evaluateTable(rows) {
     switch (node.type) {
       case 'value':
         return node.value
+      case 'error':
+        return fail(ERRORS.ref)
       case 'ref':
         return cellValue(node.row, node.column)
       case 'range': {

@@ -22,17 +22,19 @@ import { defaultKeymap, history, historyKeymap, redo, undo } from '@codemirror/c
 import { parseTableLine, tableCellAtColumn, tableCellAtOffset } from '../markdown-table.js'
 import { tableAddRow, tableCellRange, tableLineIndex } from '../table-navigation.js'
 import {
+  copiedCellsOffset,
   decodeCell,
   encodeCell,
   normalizeRange,
   parseTsv,
+  rememberCopiedCells,
   tableClearCells,
   tableToggleCellsWrap,
   tableValues,
   tableWriteCells,
   toTsv,
 } from '../table-sheet.js'
-import { columnName, FORMULA_FUNCTIONS } from '../formula.js'
+import { columnName, FORMULA_FUNCTIONS, translateFormula } from '../formula.js'
 import { t } from '../i18n.js'
 import { tableAt, tableFlagsLine } from './table.js'
 
@@ -408,8 +410,13 @@ function pasteText(view, text) {
   const active = activeSheet(view)
   if (!active) return false
   const { sheet, table } = active
-  const values = parseTsv(text).map((row) => row.map(encodeCell))
   const { top, left } = normalizeRange(sheet)
+  const offset = copiedCellsOffset(text, top, left)
+  const values = parseTsv(text).map((row) =>
+    row.map((value) =>
+      encodeCell(offset ? translateFormula(value, offset.row, offset.column) : value),
+    ),
+  )
   const height = values.length
   const width = Math.max(...values.map((row) => row.length))
   const lines = tableWriteCells(tableLines(view.state, table), top, left, values)
@@ -519,10 +526,10 @@ const sheetInput = ViewPlugin.fromClass(
       const active = activeSheet(this.view)
       if (!active) return
       event.preventDefault()
-      event.clipboardData?.setData(
-        'text/plain',
-        toTsv(selectedValues(this.view.state, active.sheet, active.table)),
-      )
+      const text = toTsv(selectedValues(this.view.state, active.sheet, active.table))
+      const { top, left } = normalizeRange(active.sheet)
+      rememberCopiedCells(text, top, left)
+      event.clipboardData?.setData('text/plain', text)
       if (cut) clearRange(this.view)
     }
     keydown(event) {
@@ -580,6 +587,17 @@ const sheetInput = ViewPlugin.fromClass(
 // edits. On touch screens a tap on the selected cell edits it.
 const sheetMouse = Prec.highest(
   EditorView.domEventHandlers({
+    // The desktop app reads the system clipboard itself and sends the text to
+    // the note, not to the hidden field; while a cell is selected it belongs
+    // to the table, so a copied formula lands in the cell.
+    paste(event, view) {
+      const current = view.state.field(sheetField, false)
+      if (!current || current.editing || view.state.readOnly) return false
+      const text = event.clipboardData?.getData('text/plain')
+      if (!text) return false
+      event.preventDefault()
+      return pasteText(view, text)
+    },
     mousedown(event, view) {
       if (view.state.readOnly || event.button === 1) return false
       const hit = cellOf(view, event.target)
@@ -1001,4 +1019,206 @@ const keepCursorOnCell = EditorState.transactionFilter.of((tr) => {
   return current ? [] : tr
 })
 
-export const sheet = [sheetField, keepCursorOnCell, sheetInput, sheetMouse, sheetAttributes]
+const sameBox = (a, b) =>
+  a.top === b.top && a.bottom === b.bottom && a.left === b.left && a.right === b.right
+
+// Copies the selected cells into the cells the fill handle was dragged over.
+// The block repeats, and each formula moves its relative references by the
+// distance from the cell it came from, as a spreadsheet does.
+function fillCells(view, tableKey, source, target) {
+  const table = sheetTable(view.state, tableKey)
+  if (!table) return false
+  const values = tableValues(tableLines(view.state, table))
+  const height = source.bottom - source.top + 1
+  const width = source.right - source.left + 1
+  const block = []
+  for (let row = target.top; row <= target.bottom; row++) {
+    const items = []
+    for (let column = target.left; column <= target.right; column++) {
+      const fromRow = source.top + ((((row - source.top) % height) + height) % height)
+      const fromColumn = source.left + ((((column - source.left) % width) + width) % width)
+      const value = values[fromRow]?.[fromColumn] ?? ''
+      items.push(encodeCell(translateFormula(value, row - fromRow, column - fromColumn)))
+    }
+    block.push(items)
+  }
+  rewrite(
+    view,
+    table,
+    tableWriteCells(tableLines(view.state, table), target.top, target.left, block),
+    { row: target.top, column: target.left },
+    { row: target.bottom, column: target.right },
+    'input.fill',
+  )
+  return true
+}
+
+// A small square on the bottom-right corner of the selected cells. Dragging it
+// over the cells beside the selection copies them there.
+const sheetFillHandle = ViewPlugin.fromClass(
+  class {
+    constructor(view) {
+      this.view = view
+      this.dragging = false
+      this.handle = document.createElement('button')
+      this.handle.type = 'button'
+      this.handle.className = 'cm-sheet-fill'
+      this.handle.hidden = true
+      this.handle.setAttribute('aria-label', t('table.fillHandle'))
+      this.handle.title = t('table.fillHandle')
+      this.handle.addEventListener('pointerdown', (event) => this.start(event))
+      view.dom.append(this.handle)
+      this.schedule = () =>
+        view.requestMeasure({
+          key: this,
+          read: () => (this.dragging ? null : this.anchor()),
+          write: (rect) => this.place(rect),
+        })
+      window.addEventListener('scroll', this.schedule, true)
+      window.addEventListener('resize', this.schedule)
+      // The library sidebar, the split view and the page width change the
+      // table without a window resize; follow the editor's own box too.
+      this.resize = new ResizeObserver(() => this.schedule())
+      this.resize.observe(view.contentDOM)
+      this.resize.observe(view.scrollDOM)
+      this.schedule()
+    }
+    anchor() {
+      const active = activeSheet(this.view)
+      if (!active) return null
+      const { bottom, right } = normalizeRange(active.sheet)
+      const cell = this.view.contentDOM.querySelector(
+        `.cm-md-table-row[data-table="${active.sheet.table}"] .cm-md-table-cell[data-row="${bottom}"][data-column="${right}"]`,
+      )
+      const rect = cell?.getBoundingClientRect()
+      if (!rect?.width || !rect?.height) return null
+      const viewport = this.view.scrollDOM.getBoundingClientRect()
+      if (
+        rect.bottom < viewport.top ||
+        rect.top > viewport.bottom ||
+        rect.right < viewport.left ||
+        rect.left > viewport.right
+      )
+        return null
+      return rect
+    }
+    place(rect) {
+      if (!rect) {
+        this.handle.hidden = true
+        return
+      }
+      this.handle.hidden = false
+      this.handle.style.left = `${rect.right - 4}px`
+      this.handle.style.top = `${rect.bottom - 4}px`
+    }
+    start(event) {
+      if (event.button !== 0) return
+      const active = activeSheet(this.view)
+      if (!active) return
+      event.preventDefault()
+      event.stopPropagation()
+      this.source = normalizeRange(active.sheet)
+      this.target = { ...this.source }
+      this.tableKey = active.sheet.table
+      this.dragging = true
+      this.handle.hidden = true
+      this.view.dom.classList.add('cm-sheet-filling')
+      this.move = (next) => this.drag(next)
+      this.finish = (next) => this.end(next, true)
+      this.cancel = (next) => this.end(next, false)
+      window.addEventListener('pointermove', this.move)
+      window.addEventListener('pointerup', this.finish)
+      window.addEventListener('pointercancel', this.cancel)
+      window.addEventListener('blur', this.cancel)
+      window.addEventListener('keydown', this.key, true)
+      this.view.dom.sheetFocus?.()
+    }
+    drag(event) {
+      if (!this.dragging) return
+      // The handle straddles the selection border. A straight drag can stay
+      // just outside the last column (or below the last row), so project the
+      // pointer onto the table before looking up the destination cell.
+      const cells = this.view.contentDOM.querySelectorAll(
+        `.cm-md-table-row[data-table="${this.tableKey}"] .cm-md-table-cell[data-row]`,
+      )
+      const first = cells[0]?.getBoundingClientRect()
+      const last = cells[cells.length - 1]?.getBoundingClientRect()
+      if (!first || !last) return
+      const x = Math.max(first.left + 1, Math.min(last.right - 1, event.clientX))
+      const y = Math.max(first.top + 1, Math.min(last.bottom - 1, event.clientY))
+      const over = cellOf(this.view, document.elementFromPoint(x, y))
+      if (!over || over.table !== this.tableKey) return
+      const target = {
+        top: Math.min(this.source.top, over.row),
+        bottom: Math.max(this.source.bottom, over.row),
+        left: Math.min(this.source.left, over.column),
+        right: Math.max(this.source.right, over.column),
+      }
+      if (sameBox(target, this.target)) return
+      this.target = target
+      selectCells(
+        this.view,
+        this.tableKey,
+        { row: target.top, column: target.left },
+        { row: target.bottom, column: target.right },
+      )
+    }
+    key = (event) => {
+      if (event.key !== 'Escape' || !this.dragging) return
+      event.preventDefault()
+      event.stopPropagation()
+      this.end(event, false)
+    }
+    end(_event, apply) {
+      if (!this.dragging) return
+      this.dragging = false
+      window.removeEventListener('pointermove', this.move)
+      window.removeEventListener('pointerup', this.finish)
+      window.removeEventListener('pointercancel', this.cancel)
+      window.removeEventListener('blur', this.cancel)
+      window.removeEventListener('keydown', this.key, true)
+      this.view.dom.classList.remove('cm-sheet-filling')
+      const { source, target, tableKey } = this
+      if (apply && !sameBox(source, target)) fillCells(this.view, tableKey, source, target)
+      else
+        selectCells(
+          this.view,
+          tableKey,
+          { row: source.top, column: source.left },
+          { row: source.bottom, column: source.right },
+        )
+      this.view.dom.sheetFocus?.()
+      this.schedule()
+    }
+    update(update) {
+      const before = update.startState.field(sheetField, false)
+      const after = update.state.field(sheetField, false)
+      if (update.docChanged || update.selectionSet || update.viewportChanged || before !== after)
+        this.schedule()
+    }
+    destroy() {
+      window.removeEventListener('scroll', this.schedule, true)
+      window.removeEventListener('resize', this.schedule)
+      this.resize.disconnect()
+      if (this.dragging) {
+        this.dragging = false
+        window.removeEventListener('pointermove', this.move)
+        window.removeEventListener('pointerup', this.finish)
+        window.removeEventListener('pointercancel', this.cancel)
+        window.removeEventListener('blur', this.cancel)
+        window.removeEventListener('keydown', this.key, true)
+        this.view.dom.classList.remove('cm-sheet-filling')
+      }
+      this.handle.remove()
+    }
+  },
+)
+
+export const sheet = [
+  sheetField,
+  keepCursorOnCell,
+  sheetInput,
+  sheetMouse,
+  sheetFillHandle,
+  sheetAttributes,
+]

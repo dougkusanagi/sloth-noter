@@ -192,6 +192,107 @@ test('pasting spreadsheet text fills cells and grows the table', async ({ page }
   expect(text).toMatch(/\| +\| +\| 3 \| 4 \|$/)
 })
 
+test('copying a formula to another cell moves its references', async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 760 })
+  await page.goto('/')
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page
+    .locator('textarea')
+    .fill(
+      '# Conta\n\n| Item | Qtd | Preço | Total |\n| --- | --- | --- | --- |\n| Caneta | 2 | 1,50 | =B2*C2 |\n| Caderno | 3 | 10 |  |',
+    )
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  const total = (row) => rows(page).nth(row).locator('.cm-md-table-cell').nth(3)
+  await total(1).click()
+  await page.keyboard.press('Control+c')
+  await total(2).click()
+  await page.keyboard.press('Control+v')
+  await expect(total(2)).toHaveText('30')
+  expect(await markdown(page)).toContain('| Caderno | 3 | 10 | =B3*C3 |')
+})
+
+test('the fill handle copies a formula down the column', async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 760 })
+  await page.goto('/')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page
+    .locator('textarea')
+    .fill(
+      '# Conta\n\n| Item | Qtd | Preço | Total |\n| --- | --- | --- | --- |\n| Caneta | 2 | 1,50 | =B2*C2 |\n| Caderno | 3 | 10 |  |\n| Lápis | 4 | 2 |  |',
+    )
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  const total = (row) => rows(page).nth(row).locator('.cm-md-table-cell').nth(3)
+  await total(1).click()
+  const handle = page.getByRole('button', { name: 'Arrastar para copiar as células selecionadas' })
+  await expect(handle).toBeVisible()
+  const box = await handle.boundingBox()
+  const last = await total(3).boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(last.x + last.width / 2, last.y + last.height / 2, { steps: 8 })
+  await page.mouse.up()
+  await expect(total(2)).toHaveText('30')
+  await expect(total(3)).toHaveText('8')
+  expect(await markdown(page)).toContain(
+    '| Caderno | 3 | 10 | =B3*C3 |\n| Lápis | 4 | 2 | =B4*C4 |',
+  )
+})
+
+test('the fill handle copies formulas when dragged straight down outside the table edge', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1100, height: 760 })
+  await page.goto('/')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page
+    .locator('textarea')
+    .fill(
+      '# Conta\n\n| Item | Qtd | Preço | Total |\n| --- | --- | --- | --- |\n| Caneta | 2 | 1,50 | =B2*C2 |\n| Caderno | 3 | 10 |  |\n| Lápis | 4 | 2 |  |',
+    )
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  const total = (row) => rows(page).nth(row).locator('.cm-md-table-cell').nth(3)
+  await total(1).click()
+  const handle = page.getByRole('button', { name: 'Arrastar para copiar as células selecionadas' })
+  await expect(handle).toBeVisible()
+  const box = await handle.boundingBox()
+  const last = await total(3).boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2, last.y + last.height / 2, { steps: 8 })
+  await page.mouse.up()
+  await expect(total(2)).toHaveText('30')
+  await expect(total(3)).toHaveText('8')
+  expect(await markdown(page)).toContain(
+    '| Caderno | 3 | 10 | =B3*C3 |\n| Lápis | 4 | 2 | =B4*C4 |',
+  )
+})
+
+test('Escape cancels a fill drag and keeps the original cells', async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 760 })
+  await page.goto('/')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page
+    .locator('textarea')
+    .fill(
+      '# Conta\n\n| Item | Qtd | Preço | Total |\n| --- | --- | --- | --- |\n| Caneta | 2 | 1,50 | =B2*C2 |\n| Caderno | 3 | 10 |  |',
+    )
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  const total = (row) => rows(page).nth(row).locator('.cm-md-table-cell').nth(3)
+  await total(1).click()
+  const handle = page.getByRole('button', { name: 'Arrastar para copiar as células selecionadas' })
+  const box = await handle.boundingBox()
+  const below = await total(2).boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(below.x + below.width / 2, below.y + below.height / 2, { steps: 8 })
+  await page.keyboard.press('Escape')
+  await page.mouse.up()
+  await expect(total(2)).toHaveText('')
+  await expect(total(1)).toHaveClass(/cm-sheet-cursor/)
+  await expect(handle).toBeVisible()
+})
+
 test('formulas show results, keep their source and explain errors', async ({ page }) => {
   await page.setViewportSize({ width: 1100, height: 760 })
   await page.goto('/')

@@ -1,0 +1,1 @@
+Corrigido: Arrastar a alça de preenchimento reto para baixo na borda direita da tabela agora copia as fórmulas para as linhas de destino, mesmo com o ponteiro ligeiramente fora das células. O mesmo vale para arrastar pela borda inferior.

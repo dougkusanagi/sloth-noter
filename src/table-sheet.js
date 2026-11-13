@@ -199,3 +199,17 @@ export function parseTsv(text) {
   if (rows.length > 1 && rows.at(-1).length === 1 && rows.at(-1)[0] === '') rows.pop()
   return rows
 }
+
+// The cells the app itself copied, so a formula pasted into another cell can
+// move its references as in a spreadsheet. Text from another app has no origin
+// and pastes as it is.
+let copiedCells = null
+
+export function rememberCopiedCells(text, top, left) {
+  copiedCells = { text, top, left }
+}
+
+export function copiedCellsOffset(text, top, left) {
+  if (!copiedCells || copiedCells.text !== text) return null
+  return { row: top - copiedCells.top, column: left - copiedCells.left }
+}

@@ -1,0 +1,1 @@
+Adicionado: As tabelas mostram letras nas colunas (A, B, C… AA, AB…) e números nas linhas, nos botões externos de seleção. Esses botões têm mais espaço para facilitar a leitura, sem precisar preencher os nomes nas células.

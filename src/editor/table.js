@@ -13,13 +13,14 @@ import { SheetEditor, sheetField } from './sheet.js'
 import {
   decodeCell,
   normalizeRange,
+  rememberCopiedCells,
   tableCellsWrapped,
   tableClearCells,
   tableToggleCellsWrap,
   tableValues,
   toTsv,
 } from '../table-sheet.js'
-import { evaluateTable, formatResult, parseNumber } from '../formula.js'
+import { columnName, evaluateTable, formatResult, parseNumber } from '../formula.js'
 import { EditorSelection, StateEffect, StateField } from '@codemirror/state'
 import { Decoration, ViewPlugin, WidgetType } from '@codemirror/view'
 import {
@@ -516,7 +517,9 @@ export function openTableMenu(view, tableFirst, anchor, options = {}) {
                 block.push(
                   values[row].slice(box.left, box.right + 1).map((value) => decodeCell(value)),
                 )
-              copyText(toTsv(block))
+              const text = toTsv(block)
+              rememberCopiedCells(text, box.top, box.left)
+              copyText(text)
             }),
             item(menuIcons.copy, t('table.menu.copyTable'), () =>
               copyText(tableSource(view, table)),
@@ -588,7 +591,7 @@ export class TableRowControlWidget extends WidgetType {
       t('table.selectRow', { n: this.row + 1 }),
       `cm-table-bar-segment cm-table-row-segment${this.selected ? ' is-selected' : ''}`,
       (event) => openAxisMenu(view, this.tableKey, this.tableFirst, 'row', this.row, event),
-      '',
+      String(this.row + 1),
     )
     Object.assign(segment.dataset, {
       axisKind: 'row',
@@ -654,7 +657,7 @@ export class TableColumnControlsWidget extends WidgetType {
         t('table.selectColumn', { n: column + 1 }),
         `cm-table-bar-segment cm-table-column-segment${selected ? ' is-selected' : ''}`,
         (event) => openAxisMenu(view, this.tableKey, this.tableFirst, 'column', column, event),
-        '',
+        columnName(column),
       )
       Object.assign(segment.dataset, {
         axisKind: 'column',
