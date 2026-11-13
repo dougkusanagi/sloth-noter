@@ -5,7 +5,7 @@ export function NoteViewport({ noteId, mode, positions, visualRef, editorRef, ch
   useLayoutEffect(() => {
     const key = `${noteId}:${mode}`
     const saved = positions.get(key)
-    const view = mode === 'visual' ? visualRef.current : null
+    const view = mode !== 'source' ? visualRef.current : null
     const field = mode === 'source' ? editorRef.current : null
     const scroller = view?.scrollDOM ?? field
     let disposed = false
