@@ -36,19 +36,23 @@ export function revealSearchMatch(view, match) {
     selection: { anchor: match.start, head: match.end },
     effects: EditorView.scrollIntoView(match.start, { y: 'center' }),
   })
-  // The outer page scrolls too. Measure after Markdown and folds have reflowed.
+  // CodeMirror scrolls its own viewport first. Then reveal the rendered mark
+  // through every ancestor, including the outer page, after that layout pass.
   view.requestMeasure({
-    read: () => view.coordsAtPos(match.start),
-    write: (coords) => {
-      if (!coords) return
-      const top =
-        Math.max(
-          document.querySelector('.app-header')?.getBoundingClientRect().bottom ?? 0,
-          document.querySelector('.find-dialog')?.getBoundingClientRect().bottom ?? 0,
-        ) + 24
-      const bottom = window.innerHeight - 70
-      if (coords.top < top || coords.bottom > bottom)
-        window.scrollBy({ top: coords.top - (top + bottom) / 2, behavior: 'instant' })
+    read: () => view.dom.querySelector('.search-match-current'),
+    write: (mark) => {
+      if (!mark) return
+      requestAnimationFrame(() => {
+        if (!mark.isConnected) return
+        mark.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' })
+        const top =
+          Math.max(
+            document.querySelector('.app-header')?.getBoundingClientRect().bottom ?? 0,
+            document.querySelector('.find-dialog')?.getBoundingClientRect().bottom ?? 0,
+          ) + 24
+        const rect = mark.getBoundingClientRect()
+        if (rect.top < top) window.scrollBy({ top: rect.top - top, behavior: 'instant' })
+      })
     },
   })
 }
