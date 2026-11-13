@@ -6,20 +6,37 @@ import { markdownTree } from '../markdown-model.js'
 const label = (node) =>
   node.type === 'html' ? '' : (node.value ?? (node.children ?? []).map(label).join(''))
 
-export function DocumentOutline({ body, onNavigate }) {
+export function DocumentOutline({
+  body,
+  onNavigate,
+  className = '',
+  closeOnNavigate = false,
+  iconSize = 18,
+}) {
   const [open, setOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(new Set())
   const headings = markdownTree(body).children.filter((node) => node.type === 'heading')
   const hiddenDepths = []
   return (
-    <nav className={`document-outline${open ? ' is-open' : ''}`} aria-label={t('outline.label')}>
+    <nav
+      className={`document-outline${className ? ` ${className}` : ''}${open ? ' is-open' : ''}`}
+      aria-label={t('outline.label')}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && open) {
+          event.stopPropagation()
+          setOpen(false)
+          event.currentTarget.querySelector('button')?.focus()
+        }
+      }}
+    >
       <button
         type="button"
         aria-label={t(open ? 'outline.close' : 'outline.open')}
+        title={t(open ? 'outline.close' : 'outline.open')}
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        {open ? <ChevronsLeft size={18} /> : <ListTree size={18} />}
+        {open ? <ChevronsLeft size={iconSize} /> : <ListTree size={iconSize} />}
       </button>
       {open && (
         <div className="document-outline-list">
@@ -64,7 +81,10 @@ export function DocumentOutline({ body, onNavigate }) {
                   type="button"
                   className="outline-link"
                   title={label(heading)}
-                  onClick={() => onNavigate(heading.position.start.offset)}
+                  onClick={() => {
+                    if (closeOnNavigate) setOpen(false)
+                    onNavigate(heading.position.start.offset, heading.position.start.line)
+                  }}
                 >
                   {label(heading)}
                 </button>

@@ -39,6 +39,8 @@ import { protectPendingSaves } from '../save-lifecycle.js'
 import { ReadingFind } from './reading-find.jsx'
 import { Markdown } from '../markdown.jsx'
 import { VisualEditor } from '../visual-editor.jsx'
+import { DocumentOutline } from '../components/document-outline.jsx'
+import { EditorView } from '@codemirror/view'
 import { displayName, notePreview } from '../note-title.js'
 import { noteSearchResult } from '../note-search.js'
 import { findNote } from '../markdown-model.js'
@@ -870,6 +872,29 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             <CheckCheck size={22} />
           </button>
         )}
+        {active && !(editing && sourceMode) && (
+          <DocumentOutline
+            key={active.id}
+            className="mobile-outline"
+            iconSize={22}
+            closeOnNavigate
+            body={active.body}
+            onNavigate={(anchor, line) => {
+              const view = editor.current
+              if (editing && view) {
+                view.dispatch({
+                  selection: { anchor },
+                  effects: EditorView.scrollIntoView(anchor, { y: 'start', yMargin: 16 }),
+                })
+                view.focus()
+                return
+              }
+              content.current
+                ?.querySelector(`[data-source-line="${line}"]`)
+                ?.scrollIntoView({ block: 'start' })
+            }}
+          />
+        )}
         {active && (
           <button
             className="mobile-icon mobile-edit"
@@ -1072,6 +1097,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 key={active.id}
                 noteId={active.id}
                 sourceMode={sourceMode}
+                outline={false}
                 notes={data.notes}
                 body={active.body}
                 onChange={updateBody}

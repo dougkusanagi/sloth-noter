@@ -894,3 +894,42 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
 [data-platform='mobile'] .mobile-setting-switch .switch {
   flex-shrink: 0;
 }
+
+/* Sumário no cabeçalho: abre um painel abaixo dele, sem cobrir o texto fechado. */
+[data-platform='mobile'] .mobile-header {
+  position: relative;
+}
+[data-platform='mobile'] .document-outline.mobile-outline {
+  position: static;
+  max-width: none;
+}
+[data-platform='mobile'] .document-outline.mobile-outline.is-open {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+[data-platform='mobile'] .document-outline.mobile-outline > button {
+  width: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+[data-platform='mobile'] .mobile-outline .document-outline-list {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 8px;
+  right: 8px;
+  width: auto;
+  max-height: 60vh;
+  padding: 8px;
+  background: var(--paper, var(--bg));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+[data-platform='mobile'] .mobile-outline .outline-link {
+  min-height: 44px;
+}

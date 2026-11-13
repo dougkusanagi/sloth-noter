@@ -282,7 +282,7 @@ function Heading({ node, children, ...props }) {
   const { onToggleFold, progress, checklists, onChange } = useContext(MarkdownContext)
   const tasks = section && progress.get(section.line)
   return (
-    <Tag {...props}>
+    <Tag {...props} data-source-line={node.position?.start.line}>
       {(section?.hasContent && onToggleFold) || level > 1 ? (
         section?.hasContent && onToggleFold ? (
           <button

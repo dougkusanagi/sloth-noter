@@ -169,6 +169,7 @@ export function VisualEditor({
   wrapLines = true,
   wrapPage = wrapLines,
   sourceMode = false,
+  outline = true,
 }) {
   const modeCompartment = useRef(new Compartment())
   const visualExtensionsRef = useRef(null)
@@ -1029,7 +1030,7 @@ export function VisualEditor({
       data-wrap-page={wrapPage}
       ref={host}
     >
-      {!sourceMode && (
+      {outline && !sourceMode && (
         <DocumentOutline
           body={body}
           onNavigate={(anchor) => {

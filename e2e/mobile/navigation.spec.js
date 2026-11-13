@@ -688,12 +688,14 @@ test('reading view folds and unfolds sections', async ({ page }) => {
   await page.locator('[data-note-id="sections"]').tap()
   await expect(page.getByText('Texto da primeira.')).toBeVisible()
   await page
+    .locator('.mobile-content')
     .getByRole('button', { name: /Recolher/ })
     .first()
     .tap()
   await expect(page.getByText('Texto da primeira.')).toBeHidden()
   await expect(page.getByText('Texto da segunda.')).toBeVisible()
   await page
+    .locator('.mobile-content')
     .getByRole('button', { name: /Expandir/ })
     .first()
     .tap()
