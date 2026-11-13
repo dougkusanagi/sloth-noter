@@ -62,6 +62,7 @@ class MainActivity : TauriActivity() {
     this.webView = webView
     webView.addJavascriptInterface(ShareBridge(), "SlothShare")
     webView.addJavascriptInterface(SystemBridge(), "SlothSystem")
+    webView.addJavascriptInterface(SecretsBridge(applicationContext), "SlothSecrets")
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {

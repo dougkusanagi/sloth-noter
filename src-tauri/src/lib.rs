@@ -7,6 +7,7 @@ mod errors;
 mod history;
 mod images;
 mod migration;
+mod secrets;
 #[cfg(target_os = "android")]
 mod share;
 mod store;
@@ -662,6 +663,9 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             share_text,
+            secrets::secret_get,
+            secrets::secret_set,
+            secrets::secret_delete,
             updates::update_environment,
             updates::update_restart,
             history_maintain,

@@ -175,13 +175,23 @@ a gravação local precisa ser confiável antes de sincronizar).
       desktop; estados visíveis; primeira sincronização com prévia; pasta de notas respeitada.
       Pronto: unitários do motor (mesclagem, conflito, exclusão, imagens, primeira sincronização);
       E2E desktop com servidor local; texto local nunca perdido em falha de rede ou de servidor.
-      Divisão em incrementos (registrada em 2026-11-13): - [x] **S3.1 — Criptografia e mesclagem:** `src/sync/crypto.js` (Web Crypto, ADR 0019) e
-      `src/sync/merge.js` (três vias por linha, conflitos em blocos), com testes. Feito em 0.10.7. - [ ] **S3.2 — Cofre de chaves:** desktop pelo cofre do sistema (crate `keyring` no Rust) e
-      Android pelo Keystore (ponte Kotlin); sem cofre, sincronização desligada. Conferir
-      `crypto.subtle` no WebView do APK e do desktop. - [ ] **S3.3 — Motor:** `src/sync/engine.js` com cliente HTTP, base comum por nota,
-      exclusões, imagens antes da revisão, primeira sincronização com prévia; testes contra
-      `server/` em memória. - [ ] **S3.4 — Tela no desktop:** Configurações → Sincronização, estados visíveis e E2E com
-      o Worker local.
+      Divisão em incrementos (registrada em 2026-11-13):
+
+  - [x] **S3.1 — Criptografia e mesclagem:** `src/sync/crypto.js` (Web Crypto, ADR 0019) e
+        `src/sync/merge.js` (três vias por linha, conflitos em blocos), com testes. Feito em
+        0.10.7.
+  - [x] **S3.2 — Cofre de chaves:** `src/sync/vault.js` escolhe o cofre e prova que funciona
+        (`probeVault`) antes de oferecer a sincronização. Desktop: `src-tauri/src/secrets.rs`
+        com a crate `keyring` (só a entrada `sync`; ida e volta no Secret Service do Linux
+        conferida com `cargo test -- --ignored`). Android: `SecretsBridge.kt` cifra o valor
+        com chave AES do Keystore. Web: sem cofre, sincronização desligada. Feito em 0.10.8.
+        Faltou no aparelho: Keystore e `crypto.subtle` no WebView (celular desconectado).
+  - [ ] **S3.3 — Motor:** `src/sync/engine.js` com cliente HTTP, base comum por nota,
+        exclusões, imagens antes da revisão, primeira sincronização com prévia; testes contra
+        `server/` em memória.
+  - [ ] **S3.4 — Tela no desktop:** Configurações → Sincronização, estados visíveis e E2E com
+        o Worker local.
+
 - [ ] **S4 — Android e teste ponta a ponta.** Mesma tela no celular; sincronizar ao abrir, ao
       voltar ao primeiro plano, após gravar e por botão.
       Pronto: editar a mesma nota no desktop e no celular e ver a mudança chegar nos dois
@@ -259,6 +269,10 @@ celular e têm documentos próprios; cada uma recebe plano de tarefa próprio qu
 A sincronização pelo servidor próprio não espera a Parte C: ela está na fila 2, acima.
 
 ## Validação no aparelho (pendente)
+
+- S3.2: no APK, `SlothSecrets` grava, lê e apaga; o valor some após restaurar backup em outro
+  aparelho; `crypto.subtle` existe no WebView. No AppImage e no NSIS, `crypto.subtle` existe e o
+  cofre funciona (Windows Credential Manager ainda não conferido).
 
 Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado ao verificar.
 
@@ -343,10 +357,10 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**S3.2 — Cofre de chaves.** Desktop: comando Tauri com a crate `keyring` (Secret Service no
-Linux, Credential Manager no Windows). Android: ponte Kotlin com chave do Android Keystore
-cifrando a chave de sincronização. Sem cofre disponível, manter a sincronização desligada e
-explicar o motivo. Conferir que `crypto.subtle` existe no WebView do APK e do desktop.
+**S3.3 — Motor.** `src/sync/engine.js` puro: cliente HTTP do contrato, base comum por nota
+guardada fora da nota, envio e recebimento com `crypto.js` e `merge.js`, exclusões, imagens
+antes da revisão e prévia da primeira sincronização. Testar contra `server/api.js` com o
+armazenamento em memória. Texto local nunca perdido em falha de rede ou de servidor.
 
 Pendente no aparelho (de entregas anteriores): validar no APK Inserir, seletor de imagem,
 clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,

@@ -1,6 +1,6 @@
 [package]
 name = "sloth-note"
-version = "0.10.7"
+version = "0.10.8"
 description = "Offline Markdown editor with notes in files the user controls"
 edition = "2021"
 rust-version = "1.85"
@@ -33,6 +33,7 @@ tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "=2.12.0"
 arboard = { version = "3.6.1", features = ["wayland-data-control"] }
+keyring = { version = "3.6", features = ["sync-secret-service", "crypto-rust", "windows-native", "apple-native"] }
 
 [profile.release]
 codegen-units = 1
