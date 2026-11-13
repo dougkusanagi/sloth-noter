@@ -97,9 +97,14 @@ test('heading fold arrows align with block handles after heading spacing', async
   for (const title of ['Títulos', 'Subtítulo']) {
     const heading = page.locator('.cm-line', { hasText: title })
     await heading.hover()
-    const arrow = await heading.locator('.cm-fold-toggle').boundingBox()
-    const handle = await page.locator('.cm-block-handle').boundingBox()
-    expect(Math.abs(arrow.y + arrow.height / 2 - handle.y - handle.height / 2)).toBeLessThan(2)
+    await expect
+      .poll(async () => {
+        const arrow = await heading.locator('.cm-fold-toggle').boundingBox()
+        const handle = await page.locator('.cm-block-handle').boundingBox()
+        if (!arrow || !handle) return Infinity
+        return Math.abs(arrow.y + arrow.height / 2 - handle.y - handle.height / 2)
+      })
+      .toBeLessThan(2)
   }
   await page.screenshot({ path: '/tmp/sloth-heading-controls-desktop.png' })
   await page.setViewportSize({ width: 390, height: 844 })

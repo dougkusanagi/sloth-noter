@@ -45,7 +45,11 @@ export const railsLayer = layer({
       const start = block(nestedFrom)
       const end = block(doc.line(to).to)
       const parent = block(doc.line(parentLine).from)
-      const railTop = Math.min(start.top, parent.top + view.defaultLineHeight)
+      const element = renderedLines.get(parentLine)
+      const height = element
+        ? parseFloat(getComputedStyle(element).lineHeight) || view.defaultLineHeight
+        : view.defaultLineHeight
+      const railTop = Math.min(start.top, parent.top + height)
       markers.push(new RectangleMarker('cm-rail', x, top + railTop, null, end.bottom - railTop))
     }
 

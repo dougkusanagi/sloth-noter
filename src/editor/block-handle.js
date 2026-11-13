@@ -174,7 +174,17 @@ export const blockHandle = ViewPlugin.fromClass(
       // Tables have their own handle, and widgets such as columns handle their own content.
       if (event.target.closest?.('.cm-md-table-row, .cm-columns, .cm-column-editor'))
         return this.hide()
-      const block = this.blockAt(event.clientY)
+      const lineElement = event.target.closest?.('.cm-line')
+      const number =
+        lineElement && this.view.contentDOM.contains(lineElement)
+          ? this.view.state.doc.lineAt(this.view.posAtDOM(lineElement, 0)).number
+          : null
+      const block =
+        number == null
+          ? this.blockAt(event.clientY)
+          : blocksOf(this.view.state.doc).find(
+              (item) => number >= item.first && number <= item.last,
+            )
       if (!block || block.kind === 'table') return this.scheduleHide()
       clearTimeout(this.hideTimer)
       if (
