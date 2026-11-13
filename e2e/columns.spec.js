@@ -314,6 +314,12 @@ test('a collapsible block inside a column remains intact and works in reading', 
   await expect(details.getByText('Conteúdo guardado')).toBeVisible()
   await details.locator('summary').click()
   await expect(details.getByText('Conteúdo guardado')).toBeHidden()
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 844 })
+    const sidebar = page.getByRole('button', { name: 'Mostrar/ocultar biblioteca', exact: true })
+    if ((await sidebar.getAttribute('aria-expanded')) === 'true') await sidebar.click()
+    await page.screenshot({ path: `/tmp/sloth-details-${width}.png` })
+  }
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(page.locator('textarea')).toHaveValue(text)
 })

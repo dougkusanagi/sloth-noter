@@ -9,6 +9,7 @@ import {
   placeholder,
 } from '@codemirror/view'
 import { defaultKeymap, undo, redo } from '@codemirror/commands'
+import { foldField } from './folding.js'
 import { columnBlocks } from '../columns.js'
 import { t } from '../i18n.js'
 import { clipboardImageFiles } from '../clipboard.js'
@@ -614,12 +615,20 @@ class ColumnsWidget extends WidgetType {
 
 function decorations(state) {
   return Decoration.set(
-    columnBlocks(state.doc.toString()).map((block) =>
-      Decoration.replace({
-        widget: new ColumnsWidget(block, state.readOnly, state.facet(taskNotes)),
-        block: true,
-      }).range(block.from, block.to),
-    ),
+    columnBlocks(state.doc.toString())
+      .filter((block) => {
+        let hidden = false
+        state.field(foldField, false)?.between(block.from, block.to, () => {
+          hidden = true
+        })
+        return !hidden
+      })
+      .map((block) =>
+        Decoration.replace({
+          widget: new ColumnsWidget(block, state.readOnly, state.facet(taskNotes)),
+          block: true,
+        }).range(block.from, block.to),
+      ),
     true,
   )
 }
@@ -628,6 +637,8 @@ export const columnsField = StateField.define({
   create: decorations,
   update(value, transaction) {
     return transaction.docChanged ||
+      transaction.startState.field(foldField, false) !==
+        transaction.state.field(foldField, false) ||
       transaction.startState.readOnly !== transaction.state.readOnly ||
       transaction.startState.facet(taskNotes) !== transaction.state.facet(taskNotes)
       ? decorations(transaction.state)

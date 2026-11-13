@@ -2777,3 +2777,17 @@ body.cm-section-dragging * {
 .sheet-formula-suggestions [aria-selected='true'] {
   background: var(--hover);
 }
+
+.visual-editor .cm-fold-toggle.cm-details-toggle {
+  position: static;
+  translate: none;
+  opacity: 1;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.visual-editor .cm-details-toggle::before {
+  content: none;
+}
+.visual-editor .cm-details-toggle svg {
+  opacity: 1;
+}
