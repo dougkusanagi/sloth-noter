@@ -186,8 +186,11 @@ export async function runSync({
           ...sealed,
           deleted: false,
         })
-        if (sent.conflict) stale = true
-        else bases[id] = { revision: sent.revision, payload }
+        if (sent.conflict) {
+          // Someone else wrote first: fetch that revision now, even if the feed moved on.
+          stale = true
+          await receive(id)
+        } else bases[id] = { revision: sent.revision, payload }
       }
       for (const [id, base] of Object.entries(bases)) {
         if (working.has(id) || !base.payload) continue
@@ -196,8 +199,11 @@ export async function runSync({
           deleted: true,
           envelope: null,
         })
-        if (sent.conflict) stale = true
-        else bases[id] = { revision: sent.revision, payload: null }
+        if (sent.conflict) {
+          // Someone else wrote first: fetch that revision now, even if the feed moved on.
+          stale = true
+          await receive(id)
+        } else bases[id] = { revision: sent.revision, payload: null }
       }
       if (!stale) return result()
     }

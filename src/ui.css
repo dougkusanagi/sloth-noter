@@ -3196,3 +3196,97 @@ html:has(
   font: 13px/1.5 var(--ui);
   color: var(--muted);
 }
+
+/* Settings → Sync */
+.sync-panel {
+  display: grid;
+  gap: 14px;
+  padding-top: 8px;
+}
+.sync-panel h4 {
+  margin: 0;
+  font: 600 14px var(--ui);
+}
+.setting-hint,
+.sync-preview {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.sync-preview {
+  padding-left: 18px;
+  color: inherit;
+}
+.sync-field {
+  display: grid;
+  gap: 6px;
+}
+.sync-field label,
+.sync-mode legend {
+  padding: 0;
+  font: 600 13px var(--ui);
+}
+.sync-field input {
+  min-height: 36px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper, var(--bg));
+  color: inherit;
+  font: 14px var(--ui);
+}
+.sync-field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.sync-mode {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.sync-mode label,
+.sync-check {
+  display: flex;
+  gap: 8px;
+  align-items: start;
+  font-size: 14px;
+}
+.sync-recovery {
+  display: grid;
+  gap: 10px;
+}
+.sync-recovery p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.sync-recovery code {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sync-status {
+  margin: 0;
+  font-size: 14px;
+}
+.sync-server {
+  overflow-wrap: anywhere;
+}
+.sync-error {
+  margin: 0;
+  color: var(--danger, #b42318);
+  font-size: 13px;
+}

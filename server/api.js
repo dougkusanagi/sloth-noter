@@ -138,7 +138,27 @@ export function createApi({ store, token, limit = () => 0 }) {
     return error(404, 'not_found')
   }
 
+  // The app calls from its own origin (tauri://, http://tauri.localhost, the browser).
+  // Auth is a Bearer header, never a cookie, so any origin may call with it.
+  const CORS = {
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods': 'GET, PUT',
+    'access-control-allow-headers': 'authorization, content-type, if-match, if-none-match',
+    'access-control-expose-headers': 'etag, retry-after',
+    'access-control-max-age': '86400',
+  }
+  const withCors = (response) => {
+    const headers = new Headers(response.headers)
+    for (const [name, value] of Object.entries(CORS)) headers.set(name, value)
+    return new Response(response.body, { status: response.status, headers })
+  }
+
   return async function handle(request) {
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
+    return withCors(await authorized(request))
+  }
+
+  async function authorized(request) {
     const header = request.headers.get('authorization') ?? ''
     if (!header.startsWith('Bearer ') || !sameSecret(header.slice(7), token))
       return error(401, 'unauthorized')

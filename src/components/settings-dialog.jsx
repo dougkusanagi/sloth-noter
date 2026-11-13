@@ -10,10 +10,12 @@ import {
   History,
   Info,
   NotebookPen,
+  RefreshCw,
   X,
 } from 'lucide-react'
 import { AboutPanel } from './about-panel.jsx'
 import { HistoryPanel } from './history-panel.jsx'
+import { SyncPanel } from './sync-panel.jsx'
 import { Modal, ShortcutList } from './dialogs.jsx'
 import { FontSlider, RangeSlider, Segmented, Switch } from './controls.jsx'
 import { CONTENT_WIDTH, FONT_SIZE, contentWidth } from '../storage.js'
@@ -29,6 +31,7 @@ const SECTIONS = [
   ['appearance', Palette],
   ['editor', Type],
   ['data', Database],
+  ['sync', RefreshCw],
   ['history', History],
   ['shortcuts', Keyboard],
   ['changelog', NotebookPen],
@@ -76,6 +79,7 @@ export function SettingsDialog({
   folder,
   note,
   history,
+  sync,
   initialSection = 'appearance',
   onRestore,
   onChange,
@@ -258,6 +262,7 @@ export function SettingsDialog({
             ) : (
               <p className="setting-empty">{t('history.desktopOnly')}</p>
             ))}
+          {section === 'sync' && <SyncPanel sync={sync} />}
           {section === 'shortcuts' && <ShortcutList />}
           {section === 'about' && <AboutPanel />}
         </div>

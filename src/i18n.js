@@ -133,6 +133,72 @@ const messages = {
     'settings.editor': 'Editor',
     'settings.data': 'Dados',
     'settings.about': 'Sobre',
+    'settings.sync': 'Sincronização',
+    'sync.checking': 'Verificando o cofre de senhas…',
+    'sync.noVaultWeb':
+      'A sincronização só está disponível no app para desktop e Android, porque a chave precisa ficar no cofre de senhas do sistema.',
+    'sync.noVault':
+      'O cofre de senhas do sistema não está disponível. No Linux, instale ou desbloqueie um chaveiro (por exemplo, o GNOME Chaveiro) e abra o app de novo.',
+    'sync.intro':
+      'Mantém as notas iguais no desktop e no celular por um servidor seu. As notas e imagens são cifradas neste aparelho: o servidor não consegue ler o conteúdo. Veja como instalar o servidor no README do projeto.',
+    'sync.server': 'Endereço do servidor',
+    'sync.token': 'Chave de acesso',
+    'sync.keyTitle': 'Chave de criptografia',
+    'sync.keyNew': 'Primeiro aparelho: criar uma chave nova',
+    'sync.keyExisting': 'Já sincronizo em outro aparelho: digitar a chave de recuperação',
+    'sync.createKey': 'Criar chave',
+    'sync.recoveryKey': 'Chave de recuperação',
+    'sync.recoveryHint':
+      'Guarde esta chave de recuperação em um lugar seguro. Você vai digitá-la nos outros aparelhos. Sem ela e sem nenhum aparelho conectado, não é possível ler as notas do servidor.',
+    'sync.copy': 'Copiar',
+    'sync.recoverySaved': 'Guardei a chave de recuperação',
+    'sync.continue': 'Continuar',
+    'sync.checkingServer': 'Conferindo o servidor…',
+    'sync.previewTitle': 'Antes de sincronizar',
+    'sync.previewDownload.one': '1 nota será baixada do servidor.',
+    'sync.previewDownload.other': '{count} notas serão baixadas do servidor.',
+    'sync.previewUpload.one': '1 nota deste aparelho será enviada.',
+    'sync.previewUpload.other': '{count} notas deste aparelho serão enviadas.',
+    'sync.previewSameName':
+      'Já existem no servidor notas com estes nomes: {names}. As duas versões serão mantidas.',
+    'sync.previewHint': 'Nenhuma nota é apagada nesta etapa.',
+    'sync.start': 'Sincronizar',
+    'sync.back': 'Voltar',
+    'sync.syncing': 'Sincronizando…',
+    'sync.ready': 'Pronto para sincronizar.',
+    'sync.doneAt': 'Sincronizado às {time}.',
+    'sync.conflicts.one':
+      '1 nota tem trechos em conflito; procure por "Conflito de sincronização" no texto.',
+    'sync.conflicts.other':
+      '{count} notas têm trechos em conflito; procure por "Conflito de sincronização" no texto.',
+    'sync.now': 'Sincronizar agora',
+    'sync.disconnect': 'Desligar',
+    'sync.disconnectConfirm':
+      'Desligar a sincronização neste aparelho? As notas continuam aqui e no servidor.',
+    'sync.conflictMark': 'Conflito de sincronização',
+    'sync.conflictEnd': 'Fim do conflito de sincronização',
+    'sync.thisDevice': 'versão deste aparelho',
+    'sync.otherDevice': 'versão do outro aparelho',
+    'sync.error.offline':
+      'Sem conexão com o servidor. As notas continuam salvas aqui; a sincronização tenta de novo mais tarde.',
+    'sync.error.unauthorized':
+      'O servidor recusou a chave de acesso. Confira a chave e conecte de novo.',
+    'sync.error.rate_limited':
+      'O servidor pediu uma pausa. A sincronização tenta de novo em alguns minutos.',
+    'sync.error.server_error':
+      'O servidor teve um problema. As notas continuam salvas aqui; tente de novo mais tarde.',
+    'sync.error.wrong_key':
+      'A chave de recuperação não abre as notas deste servidor. Confira a chave usada no outro aparelho.',
+    'sync.error.bad_recovery':
+      'A chave de recuperação tem um erro de digitação. Confira os caracteres.',
+    'sync.error.insecure_server': 'O endereço precisa começar com https://.',
+    'sync.error.redirect': 'O servidor redirecionou o pedido. Confira o endereço.',
+    'sync.error.missing_image':
+      'Uma imagem ainda não chegou ao servidor. A sincronização tenta de novo mais tarde.',
+    'sync.error.busy':
+      'Outro aparelho está sincronizando ao mesmo tempo. Tente de novo em instantes.',
+    'sync.error.failed':
+      'Não foi possível sincronizar. As notas continuam salvas aqui; tente de novo.',
     'about.version': 'Versão {version}',
     'about.description': 'Editor de notas Markdown offline, com arquivos que você controla.',
     'settings.shortcuts': 'Atalhos',
@@ -856,6 +922,68 @@ const messages = {
     'settings.editor': 'Editor',
     'settings.data': 'Data',
     'settings.about': 'About',
+    'settings.sync': 'Sync',
+    'sync.checking': 'Checking the password vault…',
+    'sync.noVaultWeb':
+      'Sync is only available in the desktop and Android apps, because the key must stay in the system password vault.',
+    'sync.noVault':
+      'The system password vault is not available. On Linux, install or unlock a keyring (for example, GNOME Keyring) and open the app again.',
+    'sync.intro':
+      'Keeps your notes the same on desktop and phone through a server of your own. Notes and images are encrypted on this device: the server cannot read them. See the project README to set up the server.',
+    'sync.server': 'Server address',
+    'sync.token': 'Access key',
+    'sync.keyTitle': 'Encryption key',
+    'sync.keyNew': 'First device: create a new key',
+    'sync.keyExisting': 'I already sync another device: type the recovery key',
+    'sync.createKey': 'Create key',
+    'sync.recoveryKey': 'Recovery key',
+    'sync.recoveryHint':
+      'Keep this recovery key somewhere safe. You will type it on your other devices. Without it and without any connected device, the notes on the server cannot be read.',
+    'sync.copy': 'Copy',
+    'sync.recoverySaved': 'I saved the recovery key',
+    'sync.continue': 'Continue',
+    'sync.checkingServer': 'Checking the server…',
+    'sync.previewTitle': 'Before syncing',
+    'sync.previewDownload.one': '1 note will be downloaded from the server.',
+    'sync.previewDownload.other': '{count} notes will be downloaded from the server.',
+    'sync.previewUpload.one': '1 note from this device will be sent.',
+    'sync.previewUpload.other': '{count} notes from this device will be sent.',
+    'sync.previewSameName':
+      'The server already has notes with these names: {names}. Both versions will be kept.',
+    'sync.previewHint': 'No note is deleted in this step.',
+    'sync.start': 'Sync',
+    'sync.back': 'Back',
+    'sync.syncing': 'Syncing…',
+    'sync.ready': 'Ready to sync.',
+    'sync.doneAt': 'Synced at {time}.',
+    'sync.conflicts.one': '1 note has conflicting parts; search the text for "Sync conflict".',
+    'sync.conflicts.other':
+      '{count} notes have conflicting parts; search the text for "Sync conflict".',
+    'sync.now': 'Sync now',
+    'sync.disconnect': 'Turn off',
+    'sync.disconnectConfirm':
+      'Turn off sync on this device? Your notes stay here and on the server.',
+    'sync.conflictMark': 'Sync conflict',
+    'sync.conflictEnd': 'End of sync conflict',
+    'sync.thisDevice': "this device's version",
+    'sync.otherDevice': "the other device's version",
+    'sync.error.offline':
+      'Cannot reach the server. Your notes are saved here; sync will try again later.',
+    'sync.error.unauthorized':
+      'The server refused the access key. Check the key and connect again.',
+    'sync.error.rate_limited':
+      'The server asked for a pause. Sync will try again in a few minutes.',
+    'sync.error.server_error':
+      'The server had a problem. Your notes are saved here; try again later.',
+    'sync.error.wrong_key':
+      'The recovery key does not open the notes on this server. Check the key used on the other device.',
+    'sync.error.bad_recovery': 'The recovery key has a typo. Check the characters.',
+    'sync.error.insecure_server': 'The address must start with https://.',
+    'sync.error.redirect': 'The server redirected the request. Check the address.',
+    'sync.error.missing_image':
+      'An image has not reached the server yet. Sync will try again later.',
+    'sync.error.busy': 'Another device is syncing at the same time. Try again in a moment.',
+    'sync.error.failed': 'Could not sync. Your notes are saved here; try again.',
     'about.version': 'Version {version}',
     'about.description': 'Offline Markdown note editor with files you control.',
     'settings.shortcuts': 'Shortcuts',

@@ -208,6 +208,26 @@ export function contract(label, makeStore) {
     assert.equal(read.envelope, 'ZW52ZWxvcGU=')
   })
 
+  test(`${label}: CORS lets the app origin call with its Bearer key`, async () => {
+    const { api, call } = await setup()
+    const preflight = await api(
+      new Request('https://sync.test/v1/notes/n1', {
+        method: 'OPTIONS',
+        headers: { origin: 'tauri://localhost', 'access-control-request-method': 'PUT' },
+      }),
+    )
+    assert.equal(preflight.status, 204)
+    assert.equal(preflight.headers.get('access-control-allow-origin'), '*')
+    assert.match(preflight.headers.get('access-control-allow-headers'), /authorization/)
+    assert.match(preflight.headers.get('access-control-allow-headers'), /if-match/)
+    const read = await call('/v1/changes')
+    assert.equal(read.headers.get('access-control-allow-origin'), '*')
+    assert.match(read.headers.get('access-control-expose-headers'), /retry-after/)
+    const denied = await api(new Request('https://sync.test/v1/changes'))
+    assert.equal(denied.status, 401)
+    assert.equal(denied.headers.get('access-control-allow-origin'), '*')
+  })
+
   test(`${label}: invalid ids, bodies and preconditions are rejected`, async () => {
     const { put, call } = await setup()
     assert.equal((await put('../x', note(), { 'if-none-match': '*' })).status, 404)

@@ -171,7 +171,7 @@ a gravação local precisa ser confiável antes de sincronizar).
       Miniflare (21 testes em `bun run test`); `wrangler dev` local conferido com curl. Guia e
       limites do plano grátis no README. A implantação real na conta do usuário não foi feita:
       depende de login no Cloudflare. Envelope de nota limitado a 1,5 MB (linha D1 de 2 MB).
-- [ ] **S3 — Motor e desktop.** `src/sync/` puro e testado; Configurações → Sincronização no
+- [x] **S3 — Motor e desktop.** `src/sync/` puro e testado; Configurações → Sincronização no
       desktop; estados visíveis; primeira sincronização com prévia; pasta de notas respeitada.
       Pronto: unitários do motor (mesclagem, conflito, exclusão, imagens, primeira sincronização);
       E2E desktop com servidor local; texto local nunca perdido em falha de rede ou de servidor.
@@ -197,8 +197,12 @@ a gravação local precisa ser confiável antes de sincronizar).
         ao receber, todos os blobs são baixados e verificados antes de aplicar a nota; caminho
         fora de `assets/` é recusado; `state.blobs` evita cifrar de novo. Imagens `data:` seguem
         no texto. 4 testes. Feito em 0.10.10.
-  - [ ] **S3.4 — Tela no desktop:** Configurações → Sincronização, estados visíveis e E2E com
-        o Worker local.
+  - [x] **S3.4 — Tela no desktop:** Configurações → Sincronização (`sync-panel.jsx`,
+        `use-sync.js`): criar ou digitar a chave de recuperação, prévia, estados, Sincronizar
+        agora e Desligar; sincroniza ao abrir e a cada 5 min. Estado no documento (ADR 0020).
+        CORS no servidor. E2E `e2e/sync.spec.js` com dois aparelhos e a API real em memória.
+        Feito em 0.11.0. Imagens no desktop usam `image_read`/`image_write`; não conferido
+        com o app Tauri real nem com o Worker implantado.
 
 - [ ] **S4 — Android e teste ponta a ponta.** Mesma tela no celular; sincronizar ao abrir, ao
       voltar ao primeiro plano, após gravar e por botão.
@@ -364,12 +368,11 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**S3.4 — Tela no desktop.** Configurações → Sincronização: endereço do servidor, chave de acesso,
-gerar ou digitar a chave de recuperação, prévia da primeira sincronização, estados visíveis
-(desligada, sincronizando, em dia, offline, erro com próximo passo) e botão Sincronizar agora.
-Guardar segredos com `src/sync/vault.js` e o estado (`cursor`, `bases`, `blobs`) junto do
-documento, aplicando `apply` e `state` na mesma gravação. Adaptador `images` com
-`image_read`/`image_write`. E2E com o Worker local de `server/`.
+**S4 — Android e teste ponta a ponta.** Ligar `useSync` na casca mobile (`mobile-shell.jsx`),
+com a mesma tela em Configurações; sincronizar ao abrir, ao voltar ao primeiro plano, após gravar
+e por botão. Implantar o Worker na conta do usuário (exige `wrangler login` dele) e testar desktop
+↔ celular com dados reais. Fora da fila: 5 E2E desktop já falham no `main` antes da S3.4
+(`layout-feedback:50`, `columns:299`, `columns:321`, `find-replace:63`, `native-clipboard:534`).
 
 Pendente no aparelho (de entregas anteriores): validar no APK Inserir, seletor de imagem,
 clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,

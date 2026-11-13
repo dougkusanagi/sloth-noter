@@ -566,3 +566,13 @@ test('a burst of title edits renames the vault file once, directly to the final 
   assert.deepEqual(operations[0], { kind: 'rename', from: 'Original.md', to: 'Nova nota.md' })
   assert.deepEqual([...host.files], [['Nova nota.md', '# Nova nota\n\nText']])
 })
+
+test('the sync state survives a save and a reload of the notes folder', async () => {
+  const host = fakeHost({ files: { 'a.md': 'A' } })
+  const persistence = start(host)
+  const { document } = await persistence.load()
+  const sync = { server: 'https://s.example', cursor: 'c3', bases: {}, blobs: {} }
+  assert.equal(await persistence.save({ ...document, sync }), null)
+  const { document: reloaded } = await start(host).load()
+  assert.deepEqual(reloaded.sync, sync)
+})

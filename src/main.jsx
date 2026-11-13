@@ -61,6 +61,7 @@ import { openWorkspace } from './boot.js'
 import { createAppPersistence } from './persistence-runtime.js'
 import { VAULT_DISCONNECT, connectVault } from './persistence-vault.js'
 import { VisualEditor } from './visual-editor.jsx'
+import { useSync } from './hooks/use-sync.js'
 import {
   columnSelectionAt,
   columnViewAt,
@@ -196,6 +197,7 @@ function Workspace({ persistence, loaded }) {
     blocked,
     setBlocked,
   } = useNotesStore({ persistence, loaded, mode, onHistoryWarning: setImportError })
+  const sync = useSync({ current, commit, invoke: persistence.invoke, blocked })
   const [sidebarQuery, setSidebarQuery] = useState('')
   const [imageNoteFilter, setImageNoteFilter] = useState(null)
   const [renamingGroup, setRenamingGroup] = useState(null)
@@ -2868,6 +2870,7 @@ function Workspace({ persistence, loaded }) {
           desktop={Boolean(persistence.invoke)}
           note={active}
           history={noteHistory}
+          sync={sync}
           initialSection={settingsSection}
           onRestore={(body) => {
             noteHistory.record(

@@ -122,6 +122,7 @@ export function createVaultAdapter(invoke, path, history = null) {
           : [],
         activeId,
         preferences: aux.preferences ?? newDocument().preferences,
+        ...(aux.sync ? { sync: aux.sync } : {}),
       }
       history?.observe(previous, previous)
       readWarning = pendingExternalWarning(previous)
@@ -178,6 +179,7 @@ export function createVaultAdapter(invoke, path, history = null) {
         pinnedIds: document.pinnedIds ?? [],
         activeId: document.activeId,
         preferences: document.preferences,
+        ...(document.sync ? { sync: document.sync } : {}),
         trash: snapshot.trash,
         externals: snapshot.notes.filter(isExternalNote),
       }
