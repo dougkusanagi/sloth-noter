@@ -162,10 +162,15 @@ a gravação local precisa ser confiável antes de sincronizar).
       independente de armazenamento em `server/api.js`, armazenamento em memória em
       `server/memory-store.js` e 11 testes de contrato em `server/contract.test.js`, que
       rodam em `bun run test`. Nada é implantado e o app ainda não sincroniza.
-- [ ] **S2 — Servidor de referência.** `server/` com Worker + D1 + R2, testes locais
+- [x] **S2 — Servidor de referência.** `server/` com Worker + D1 + R2, testes locais
       (`wrangler dev`/Miniflare), script de implantação e guia de instalação no README.
       Pronto: testes de contrato passam no servidor local; implantação no plano grátis conferida;
       `docs/architecture.md` atualizado com o novo componente.
+      Feito em 0.10.6: `server/worker.js` + `server/cloudflare-store.js` (D1 com escrita em uma
+      instrução, R2 confere o SHA-256); o mesmo `contract()` roda em memória e em D1/R2 via
+      Miniflare (21 testes em `bun run test`); `wrangler dev` local conferido com curl. Guia e
+      limites do plano grátis no README. A implantação real na conta do usuário não foi feita:
+      depende de login no Cloudflare. Envelope de nota limitado a 1,5 MB (linha D1 de 2 MB).
 - [ ] **S3 — Motor e desktop.** `src/sync/` puro e testado; Configurações → Sincronização no
       desktop; estados visíveis; primeira sincronização com prévia; pasta de notas respeitada.
       Pronto: unitários do motor (mesclagem, conflito, exclusão, imagens, primeira sincronização);
@@ -331,10 +336,10 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**S2 — Servidor de referência.** Criar o Worker em `server/` com um armazenamento D1/R2 que
-passe pela mesma `contract()` de `server/contract.test.js` (rodar com Miniflare/`wrangler dev`
-local). Conferir limites e custos do plano grátis nas fontes oficiais antes de escrever o guia
-de implantação. Atualizar `docs/architecture.md` com o novo componente.
+**S3 — Motor e desktop.** Antes do código, escolher e validar a biblioteca de criptografia e os
+adaptadores de cofre (Android Keystore e cofre do sistema no desktop), conforme o ADR 0018. Depois,
+`src/sync/` puro e testado e a tela Configurações → Sincronização no desktop, usando o Worker local
+de `server/` nos testes E2E. Implantar o servidor na conta do usuário só com o login dele.
 
 Pendente no aparelho (de entregas anteriores): validar no APK Inserir, seletor de imagem,
 clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,

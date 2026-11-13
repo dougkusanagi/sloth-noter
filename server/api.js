@@ -3,7 +3,8 @@
 
 const ID = /^[A-Za-z0-9_-]{1,64}$/
 const SHA256 = /^[0-9a-f]{64}$/
-const MAX_ENVELOPE = 8 * 1024 * 1024
+// D1 caps a row at 2 MB; images travel as blobs, not inside the note.
+const MAX_ENVELOPE = 1_500_000
 const MAX_BLOB = 20 * 1024 * 1024
 const PAGE = 100
 
@@ -128,9 +129,10 @@ export function createApi({ store, token, limit = () => 0 }) {
           return error(413, 'too_large')
         const bytes = new Uint8Array(await request.arrayBuffer())
         if (!bytes.length || bytes.length > MAX_BLOB) return error(400, 'bad_request')
-        if ((await sha256Hex(bytes)) !== sha) return error(400, 'hash_mismatch')
-        const created = await store.putBlob(sha, bytes)
-        return new Response(null, { status: created ? 201 : 204 })
+        // The store checks the hash before confirming (R2 does it natively).
+        const result = await store.putBlob(sha, bytes)
+        if (result === 'mismatch') return error(400, 'hash_mismatch')
+        return new Response(null, { status: result === 'created' ? 201 : 204 })
       }
     }
     return error(404, 'not_found')

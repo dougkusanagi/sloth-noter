@@ -1,3 +1,5 @@
+import { sha256Hex } from './api.js'
+
 // In-memory store with the same contract the D1/R2 store must follow in S2.
 // A change and its revision are published together: nothing is visible before `put` commits.
 
@@ -39,9 +41,10 @@ export function memoryStore() {
       return blobs.get(sha) ?? null
     },
     async putBlob(sha, bytes) {
-      if (blobs.has(sha)) return false
+      if (blobs.has(sha)) return 'exists'
+      if ((await sha256Hex(bytes)) !== sha) return 'mismatch'
       blobs.set(sha, bytes)
-      return true
+      return 'created'
     },
     async exportAll() {
       return {

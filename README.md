@@ -103,6 +103,48 @@ Em **Inserir**, use **Refazer** para recuperar uma edição desfeita.
 A interface Android ainda está em implementação: veja o [plano em andamento](docs/plans/mobile-interface.md).
 Os testes mobile rodam localmente com `bun run e2e --project=mobile`.
 
+## Servidor de sincronização (em desenvolvimento)
+
+A pasta `server/` contém o servidor que o app vai usar para sincronizar notas entre o desktop e o
+celular ([ADR 0018](docs/adr/0018-protocolo-sincronizacao.md)). **O app ainda não se conecta a
+ele.** As notas e imagens chegam ao servidor já cifradas; ele guarda só a revisão atual de cada
+nota (Cloudflare D1) e as imagens (Cloudflare R2).
+
+Testar localmente, sem conta no Cloudflare:
+
+```bash
+cd server && bun install && cd ..
+bun run test            # inclui o contrato da API em memória e em D1/R2 locais (Miniflare)
+```
+
+Rodar o Worker local:
+
+```bash
+cd server
+echo "SYNC_TOKEN=$(openssl rand -base64 32)" > .dev.vars   # chave de pelo menos 32 caracteres
+bunx wrangler d1 migrations apply sloth-note-sync --local
+bun run dev
+```
+
+Implantar na sua conta:
+
+```bash
+cd server
+bunx wrangler login
+bunx wrangler d1 create sloth-note-sync          # copie o database_id para wrangler.toml
+bunx wrangler r2 bucket create sloth-note-sync
+bunx wrangler d1 migrations apply sloth-note-sync --remote
+bunx wrangler secret put SYNC_TOKEN              # cole uma chave aleatória longa
+bun run deploy
+```
+
+Limites do plano grátis conferidos em 2026-11-13 nas páginas oficiais: Workers com 100 mil
+pedidos por dia e 10 ms de CPU por pedido; D1 com 500 MB por banco, 100 mil linhas gravadas por
+dia e 2 MB por linha; R2 com 10 GB-mês, 1 milhão de operações de escrita e 10 milhões de
+leitura por mês. Por isso, uma nota cifrada aceita até 1,5 MB e cada imagem até 20 MB; o hash das
+imagens é conferido pelo R2. A variável `RATE_LIMIT` (padrão 600 pedidos por minuto) limita cada
+instância do Worker e não é uma cota exata. Confira os valores atuais antes de implantar.
+
 ## Documentação
 
 - [Arquitetura](docs/architecture.md)

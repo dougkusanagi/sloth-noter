@@ -1,0 +1,14 @@
+# Copy the ids printed by `wrangler d1 create` and `wrangler r2 bucket create` (see README).
+name = "sloth-note-sync"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sloth-note-sync"
+database_id = "replace-with-your-database-id"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "BLOBS"
+bucket_name = "sloth-note-sync"

@@ -1,6 +1,6 @@
 // Contract tests required by ADR 0018 before the reference server (S2).
 // `contract(makeStore)` is exported so the D1/R2 store in S2 runs the same cases.
-import { test } from 'node:test'
+import { test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createApi, rateLimiter, sha256Hex } from './api.js'
 import { memoryStore } from './memory-store.js'
@@ -9,8 +9,8 @@ const TOKEN = 'k'.repeat(40)
 const HASH = 'a'.repeat(64)
 
 export function contract(label, makeStore) {
-  const setup = (options = {}) => {
-    const store = options.store ?? makeStore()
+  const setup = async (options = {}) => {
+    const store = options.store ?? (await makeStore())
     const api = createApi({ store, token: TOKEN, ...options })
     const call = (path, init = {}) =>
       api(
@@ -30,7 +30,7 @@ export function contract(label, makeStore) {
   const note = (envelope = 'ZW52ZWxvcGU=') => ({ hash: HASH, deleted: false, envelope })
 
   test(`${label}: missing or wrong key returns 401 without reading or writing`, async () => {
-    const { store, api } = setup()
+    const { store, api } = await setup()
     let touched = false
     for (const key of Object.keys(store))
       if (typeof store[key] === 'function' && !/Cursor$/.test(key)) {
@@ -57,7 +57,7 @@ export function contract(label, makeStore) {
   })
 
   test(`${label}: create and update keep revision, ETag, hash and cursor coherent`, async () => {
-    const { call, put } = setup()
+    const { call, put } = await setup()
     assert.equal((await put('n1', note())).status, 428)
     const created = await put('n1', note(), { 'if-none-match': '*' })
     assert.equal(created.status, 200)
@@ -92,7 +92,7 @@ export function contract(label, makeStore) {
   })
 
   test(`${label}: two writes on the same base, only one wins and the other gets 409`, async () => {
-    const { call, put } = setup()
+    const { call, put } = await setup()
     await put('n1', note(), { 'if-none-match': '*' })
     const results = await Promise.all([
       put('n1', note('YQ=='), { 'if-match': '"1"' }),
@@ -107,12 +107,12 @@ export function contract(label, makeStore) {
   })
 
   test(`${label}: a failed write is not published in changes`, async () => {
-    const store = makeStore()
+    const store = await makeStore()
     const original = store.putNote
     store.putNote = async () => {
       throw new Error(`disk full ${TOKEN}`)
     }
-    const { call, put } = setup({ store })
+    const { call, put } = await setup({ store })
     const failed = await put('n1', note(), { 'if-none-match': '*' })
     assert.equal(failed.status, 500)
     const text = await failed.text()
@@ -124,7 +124,7 @@ export function contract(label, makeStore) {
   })
 
   test(`${label}: paging does not lose changes made between pages`, async () => {
-    const { call, put } = setup()
+    const { call, put } = await setup()
     for (let index = 0; index < 150; index++)
       await put(`n${index}`, note(), { 'if-none-match': '*' })
     const first = await (await call('/v1/changes')).json()
@@ -148,7 +148,7 @@ export function contract(label, makeStore) {
   })
 
   test(`${label}: a deletion mark shows in changes without the deleted content`, async () => {
-    const { call, put } = setup()
+    const { call, put } = await setup()
     await put('n1', note('c2VncmVkbw=='), { 'if-none-match': '*' })
     const invalid = await put(
       'n1',
@@ -174,7 +174,7 @@ export function contract(label, makeStore) {
   })
 
   test(`${label}: blob PUT is idempotent and a wrong hash is not stored`, async () => {
-    const { call } = setup()
+    const { call } = await setup()
     const bytes = new TextEncoder().encode('envelope-bytes')
     const sha = await sha256Hex(bytes)
     const send = (path, body) => call(path, { method: 'PUT', body })
@@ -193,7 +193,7 @@ export function contract(label, makeStore) {
 
   test(`${label}: rate limit answers 429 with Retry-After and keeps data`, async () => {
     let time = 0
-    const { call, put } = setup({
+    const { call, put } = await setup({
       limit: rateLimiter({ limit: 2, windowMs: 10_000, now: () => time }),
     })
     assert.equal((await put('n1', note(), { 'if-none-match': '*' })).status, 200)
@@ -209,7 +209,7 @@ export function contract(label, makeStore) {
   })
 
   test(`${label}: invalid ids, bodies and preconditions are rejected`, async () => {
-    const { put, call } = setup()
+    const { put, call } = await setup()
     assert.equal((await put('../x', note(), { 'if-none-match': '*' })).status, 404)
     assert.equal((await put('a.b', note(), { 'if-none-match': '*' })).status, 400)
     assert.equal((await put('n1', { ...note(), hash: 'x' }, { 'if-none-match': '*' })).status, 400)
@@ -223,7 +223,7 @@ export function contract(label, makeStore) {
   })
 
   test(`${label}: export and import keep ids, revisions, blobs and marks`, async () => {
-    const { store, put, call } = setup()
+    const { store, put, call } = await setup()
     await put('n1', note(), { 'if-none-match': '*' })
     await put('n1', note('Mg=='), { 'if-match': '"1"' })
     await put('gone', note(), { 'if-none-match': '*' })
@@ -232,7 +232,7 @@ export function contract(label, makeStore) {
     const sha = await sha256Hex(bytes)
     await call(`/v1/blobs/${sha}`, { method: 'PUT', body: bytes })
 
-    const target = setup()
+    const target = await setup()
     await target.store.importAll(await store.exportAll())
     assert.deepEqual(
       await (await target.call('/v1/notes/n1')).json(),
@@ -249,6 +249,26 @@ export function contract(label, makeStore) {
 }
 
 contract('memory', memoryStore)
+
+// Same contract against D1 + R2 through Miniflare (local workerd, no network).
+const { Miniflare } = await import('miniflare')
+const { readFile } = await import('node:fs/promises')
+const schema = await readFile(new URL('./migrations/0001_notes.sql', import.meta.url), 'utf8')
+const { cloudflareStore } = await import('./cloudflare-store.js')
+const instances = []
+after(() => Promise.all(instances.map((mf) => mf.dispose())))
+contract('cloudflare', async () => {
+  const mf = new Miniflare({
+    modules: true,
+    script: 'export default { fetch: () => new Response() }',
+    d1Databases: ['DB'],
+    r2Buckets: ['BLOBS'],
+  })
+  instances.push(mf)
+  const db = await mf.getD1Database('DB')
+  await db.exec(schema.replace(/--.*\n/g, '').replace(/\s+/g, ' '))
+  return cloudflareStore(db, await mf.getR2Bucket('BLOBS'))
+})
 
 test('the API refuses short tokens', () => {
   assert.throws(() => createApi({ store: memoryStore(), token: 'short' }))
