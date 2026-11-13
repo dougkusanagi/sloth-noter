@@ -1,6 +1,6 @@
 {
   "name": "sloth-note",
-  "version": "0.10.4",
+  "version": "0.10.5",
   "description": "Offline Markdown editor with notes in files the user controls",
   "private": true,
   "type": "module",
@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite --port 5173",
     "build": "vite build",
-    "test": "node --test src/*.test.js",
+    "test": "node --test src/*.test.js server/*.test.js",
     "preview": "vite preview",
     "desktop:dev": "bun scripts/desktop-dev.mjs",
     "desktop:build": "tauri build",

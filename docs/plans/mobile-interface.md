@@ -153,11 +153,15 @@ Requisitos na seção 11 dos [requisitos](../plano-mobile.md#11-sincronização)
 [ADR 0009](../adr/0009-sincronizacao-por-servidor-proprio.md). Depende do marco (A3 é obrigatória:
 a gravação local precisa ser confiável antes de sincronizar).
 
-- [ ] **S1 — Protocolo e decisões.** Fechar as decisões em aberto da seção 11.8 e registrar o
+- [x] **S1 — Protocolo e decisões.** Fechar as decisões em aberto da seção 11.8 e registrar o
       protocolo num ADR próprio: formato no servidor, base comum por nota, conflitos, exclusões,
       imagens entre plataformas, armazenamento da chave e criptografia.
       Pronto: ADR aceito pelo usuário; testes de contrato da API (casos de sucesso, 409, 401, 429)
       escritos antes da implementação.
+      Feito em 0.10.5: ADR 0018 aceito em 2026-11-13 (decisão delegada pelo usuário). API
+      independente de armazenamento em `server/api.js`, armazenamento em memória em
+      `server/memory-store.js` e 11 testes de contrato em `server/contract.test.js`, que
+      rodam em `bun run test`. Nada é implantado e o app ainda não sincroniza.
 - [ ] **S2 — Servidor de referência.** `server/` com Worker + D1 + R2, testes locais
       (`wrangler dev`/Miniflare), script de implantação e guia de instalação no README.
       Pronto: testes de contrato passam no servidor local; implantação no plano grátis conferida;
@@ -327,19 +331,15 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**S1 — Protocolo e decisões de sincronização.** A4.2 e A4.3 entregues juntas na
-0.9.0: folha Inserir com busca de notas e Refazer, grupos Tabela e Código com
-comandos compartilhados. A linguagem é editada selecionando o texto na cerca de
-abertura do bloco. A câmera permanece em A13. Mantida a rolagem horizontal do
-grupo contextual, conforme a decisão de A4.1.
+**S2 — Servidor de referência.** Criar o Worker em `server/` com um armazenamento D1/R2 que
+passe pela mesma `contract()` de `server/contract.test.js` (rodar com Miniflare/`wrangler dev`
+local). Conferir limites e custos do plano grátis nas fontes oficiais antes de escrever o guia
+de implantação. Atualizar `docs/architecture.md` com o novo componente.
 
-Validação no APK pendente para Inserir, seletor de imagem, clipboard, linguagem,
-composição com IME real e teclado físico. Não há validação nativa desta entrega.
-
-Validar no APK a lixeira e as configurações; conferir a prévia do voltar preditivo no gesto
-e nos três botões e o aviso de gravação pendente na raiz. Da A3, conferir no aparelho o envio
-ao sair com morte real do processo, a falha de gravação e de histórico no WebView e a
-recuperação de dados corrompidos. A matriz nativa permanece aberta.
+Pendente no aparelho (de entregas anteriores): validar no APK Inserir, seletor de imagem,
+clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,
+aviso de gravação pendente, envio ao sair com morte do processo e recuperação de dados
+corrompidos. A matriz nativa permanece aberta.
 
 ## Retomada em 2026-11-03
 

@@ -1,6 +1,6 @@
 # 0018 — Protocolo de sincronização entre desktop e Android
 
-- Status: Proposto; aguarda aprovação do usuário em S1
+- Status: Aceito em 2026-11-13 (o usuário delegou a decisão ao agente, que manteve a proposta)
 - Data: 2026-11-12
 - Complementa: [0009](0009-sincronizacao-por-servidor-proprio.md)
 
@@ -11,7 +11,7 @@ por pessoa e a API HTTP independente do Cloudflare já foram aceitos no ADR 0009
 Ainda faltam as decisões da seção 11.8 dos requisitos. Esta proposta não ativa
 rede, não migra notas e não declara a sincronização disponível.
 
-## Decisão proposta
+## Decisão
 
 ### Proteção e chaves
 
@@ -118,8 +118,11 @@ Redirecionamentos não recebem as credenciais. A gravação local nunca aguarda 
 - Limite: 429 com Retry-After, sem perda local nem repetição imediata.
 - Migração: exportação/importação conserva IDs, revisões, blobs e marcas.
 
-Os testes executáveis serão escritos contra o contrato aprovado antes do
-servidor de referência. Esta lista não equivale a testes executados.
+Os casos estão em `server/contract.test.js`, executados contra o armazenamento
+em memória (`server/memory-store.js`) e a API `server/api.js`. O armazenamento
+D1/R2 de S2 deve passar pela mesma função `contract()`. Além dos casos acima, o
+servidor responde 400 a IDs, corpos e pré-condições inválidos e 400
+`hash_mismatch` quando o hash do blob não confere.
 
 ## Alternativas e consequências
 
