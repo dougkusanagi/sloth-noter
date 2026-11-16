@@ -2389,6 +2389,8 @@ function Workspace({ persistence, loaded }) {
                   <SortMenu
                     value={prefs.noteSort ?? 'recent'}
                     onChange={(noteSort) => updatePrefs({ noteSort })}
+                    openFirst={prefs.openFirst ?? true}
+                    onOpenFirstChange={(openFirst) => updatePrefs({ openFirst })}
                   />
                   <NewMenu onNote={() => createNote()} onFolder={createGroup} />
                 </>
@@ -2420,6 +2422,7 @@ function Workspace({ persistence, loaded }) {
                     )}
                     groups={data.groups ?? []}
                     sort={prefs.noteSort ?? 'recent'}
+                    openFirst={prefs.openFirst ?? true}
                     query={sidebarQuery}
                     activeId={active?.id}
                     openIds={data.openIds}

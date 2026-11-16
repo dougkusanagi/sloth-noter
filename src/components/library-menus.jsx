@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowDownAZ, ArrowUpDown, Check, Clock, FilePlus, FolderPlus } from 'lucide-react'
+import {
+  ArrowDownAZ,
+  ArrowUpDown,
+  Check,
+  Clock,
+  FilePlus,
+  FileText,
+  FolderPlus,
+} from 'lucide-react'
 import { t } from '../i18n.js'
 import { ShortcutButton } from './shortcut-button.jsx'
 
@@ -67,7 +75,7 @@ const SORTS = [
 ]
 
 /** Icon-only trigger; the menu lists the sort orders, each with its own icon. */
-export function SortMenu({ value, onChange }) {
+export function SortMenu({ value, onChange, openFirst = true, onOpenFirstChange }) {
   const { open, setOpen, wrap, onKeyDown } = useMenu()
   return (
     <div className="split-button" ref={wrap} onKeyDown={onKeyDown}>
@@ -101,6 +109,18 @@ export function SortMenu({ value, onChange }) {
               {value === sort && <Check className="menu-check" size={14} aria-hidden="true" />}
             </button>
           ))}
+          <button
+            role="menuitemcheckbox"
+            aria-checked={openFirst}
+            onClick={() => {
+              setOpen(false)
+              onOpenFirstChange(!openFirst)
+            }}
+          >
+            <FileText size={15} aria-hidden="true" />
+            {t('library.openFirst')}
+            {openFirst && <Check className="menu-check" size={14} aria-hidden="true" />}
+          </button>
         </div>
       )}
     </div>

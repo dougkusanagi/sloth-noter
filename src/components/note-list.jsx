@@ -49,6 +49,7 @@ export function NoteList({
   notes,
   groups = [],
   sort = 'recent',
+  openFirst = true,
   query,
   activeId,
   openIds,
@@ -170,13 +171,17 @@ export function NoteList({
   const shown = notes
     .map((note) => ({ note, result: noteSearchResult(note, query) }))
     .filter(({ result }) => !searching || result.matches.length || result.titleMatches.length)
-    .sort((a, b) =>
-      sort === 'alphabetical'
-        ? displayName(a.note.name).localeCompare(displayName(b.note.name), undefined, {
-            sensitivity: 'base',
-            numeric: true,
-          })
-        : (b.note.modifiedAt ?? 0) - (a.note.modifiedAt ?? 0),
+    .sort(
+      (a, b) =>
+        (openFirst && !searching
+          ? Number(openIds.includes(b.note.id)) - Number(openIds.includes(a.note.id))
+          : 0) ||
+        (sort === 'alphabetical'
+          ? displayName(a.note.name).localeCompare(displayName(b.note.name), undefined, {
+              sensitivity: 'base',
+              numeric: true,
+            })
+          : (b.note.modifiedAt ?? 0) - (a.note.modifiedAt ?? 0)),
     )
   const renderNote = ({ note, result }) => {
     const preview = notePreview(note.body)

@@ -133,6 +133,8 @@ export function validateDocument(value) {
   const prefs = value.preferences
   if (prefs?.noteSort !== undefined && !['recent', 'alphabetical'].includes(prefs.noteSort))
     throw new Error('Invalid note order')
+  if (prefs?.openFirst !== undefined && typeof prefs.openFirst !== 'boolean')
+    throw new Error('Invalid open notes order preference')
   if (prefs?.wrapLines !== undefined && typeof prefs.wrapLines !== 'boolean')
     throw new Error('Invalid line wrapping preference')
   if (
