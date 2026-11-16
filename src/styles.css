@@ -3,6 +3,9 @@
   --bg: #f7f6f2;
   --ink: #23221e;
   --muted: #67645d;
+  --text-body: #3d3b35;
+  --text-heading: var(--ink);
+  --text-secondary: var(--muted);
   --rail: color-mix(in srgb, var(--muted) 45%, transparent);
   --soft: #e8e5de;
   --paper: #fcfbf8;
@@ -62,6 +65,7 @@
   --bg: #171715;
   --ink: #ece9e2;
   --muted: #aaa69d;
+  --text-body: #cfcbc2;
   --soft: #30302d;
   --paper: #1d1d1a;
   --raised: #2b2b27;
@@ -274,7 +278,7 @@ textarea:focus-visible {
   height: 100%;
   min-height: inherit;
   background: transparent;
-  color: var(--ink);
+  color: var(--text-body);
 }
 .visual-editor .cm-editor.cm-focused {
   outline: none;
@@ -556,32 +560,37 @@ textarea:focus-visible {
 .visual-editor .cm-cursor {
   border-left-color: var(--accent);
 }
+.visual-editor :is(.cm-md-h1, .cm-md-h2, .cm-md-h3, .cm-md-h4, .cm-md-h5, .cm-md-h6) {
+  color: var(--text-heading);
+  text-wrap: balance;
+}
 .visual-editor .cm-md-h1 {
   --md-prefix-width: 0.82em;
   font-size: 1.6em;
-  font-weight: 600;
+  font-weight: 650;
   letter-spacing: -0.02em;
 }
 .visual-editor .cm-md-h2 {
   --md-prefix-width: 1.53em;
   font-size: 1.32em;
-  font-weight: 600;
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 .visual-editor .cm-md-h3 {
   --md-prefix-width: 2.36em;
   font-size: 1.14em;
-  font-weight: 600;
+  font-weight: 650;
 }
 .visual-editor .cm-md-h4 {
   --md-prefix-width: 3.07em;
-  font-size: 1em;
-  font-weight: 600;
+  font-size: 1.05em;
+  font-weight: 650;
 }
 .visual-editor .cm-md-quote {
   --md-prefix-width: 2.01em;
-  border-left: 2px solid var(--muted);
+  border-left: 2px solid var(--text-secondary);
   padding-left: 1em;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 .visual-editor .cm-md-quote-nested {
   --md-prefix-width: 4.02em;
@@ -597,7 +606,7 @@ textarea:focus-visible {
   content: '•';
   position: absolute;
   left: 0.4em;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 .visual-editor .cm-md-bullet.cm-md-editing::before {
   content: none;
@@ -944,7 +953,9 @@ textarea:focus-visible {
 :root[data-theme='dark'] .token.code-snippet {
   color: #9bcca5;
 }
-.visual-editor .cm-md-inline-strong {
+.visual-editor .cm-md-inline-strong,
+.markdown strong {
+  color: var(--text-heading);
   font-weight: 700;
 }
 .visual-editor .cm-md-inline-em {
@@ -994,9 +1005,16 @@ textarea:focus-visible {
   :is(p, ul, ol, li, blockquote, table, hr, h1, h2, h3, h4, h5, h6, .code-block, .md-section) {
   margin: calc(var(--gap) * var(--line)) 0 0;
 }
+.markdown {
+  color: var(--text-body);
+}
+.markdown :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--text-heading);
+  text-wrap: balance;
+}
 .markdown h1 {
   font-size: 1.6em;
-  font-weight: 600;
+  font-weight: 650;
   letter-spacing: -0.02em;
 }
 .markdown > .md-section:first-child > h1,
@@ -1005,15 +1023,31 @@ textarea:focus-visible {
 }
 .markdown h2 {
   font-size: 1.32em;
-  font-weight: 600;
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 .markdown h3 {
   font-size: 1.14em;
-  font-weight: 600;
+  font-weight: 650;
 }
-.markdown :is(h4, h5, h6) {
-  font-size: 1em;
+.markdown h4 {
+  font-size: 1.05em;
+  font-weight: 650;
+}
+.markdown h5,
+.visual-editor .cm-md-h5 {
+  font-family: var(--ui);
+  font-size: 0.8em;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.markdown h6,
+.visual-editor .cm-md-h6 {
+  font-size: 0.9em;
+  font-style: italic;
   font-weight: 600;
+  color: var(--text-secondary);
 }
 .markdown table {
   width: 100%;
@@ -1035,12 +1069,12 @@ textarea:focus-visible {
   padding-left: 1.5em;
 }
 .markdown li::marker {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 .markdown blockquote {
   border-left: 2px solid var(--soft);
   padding: 0 0 0 1em;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 .markdown hr {
   height: var(--line);
@@ -1289,10 +1323,6 @@ textarea:focus-visible {
 }
 .cm-md-inline-footnote {
   color: var(--accent-ink);
-}
-.visual-editor .cm-md-h5,
-.visual-editor .cm-md-h6 {
-  font-weight: 600;
 }
 .visual-editor .cm-md-rule {
   color: var(--muted);

@@ -208,8 +208,10 @@ a gravação local precisa ser confiável antes de sincronizar).
       voltar ao primeiro plano, após gravar e por botão.
       Feito em 0.12.0 (parte de código): `useSync` na casca mobile, painel em Configurações,
       sincroniza ao voltar ao primeiro plano e 15 s após editar (também no desktop); rodada sem
-      mudanças não grava. E2E `e2e/mobile/sync.spec.js`. Falta: implantar o Worker na conta do
-      usuário e o teste ponta a ponta com desktop e celular reais.
+      mudanças não grava. E2E `e2e/mobile/sync.spec.js`. Worker implantado. Em 2026-11-16 o celular real (APK 0.14.0 via adb)
+      configurou a sincronização, baixou 45 notas e enviou as suas, e uma nota criada no celular
+      chegou ao servidor e foi decifrada no PC. Falta: editar a mesma nota nos dois lados
+      (conflito), imagem do celular no desktop e abrir o app desktop real.
       Pronto: editar a mesma nota no desktop e no celular e ver a mudança chegar nos dois
       sentidos; conflito gera as duas versões; exclusão e restauração chegam ao outro lado;
       imagem inserida no celular aparece no desktop. Casos de aparelho na lista de validação.

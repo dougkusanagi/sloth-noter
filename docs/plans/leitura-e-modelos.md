@@ -158,13 +158,13 @@ Traduzidos pelo `i18n.js`, recriáveis como a `Welcome.md` ("Recriar modelos pad
 
 Sintaxe compatível com o plugin de Modelos do Obsidian, porque a pasta pode ser usada nele:
 
-| Variável                  | Resultado                                    |
-| ------------------------- | -------------------------------------------- |
-| `{{title}}`               | nome da nota                                 |
-| `{{date}}`                | data de hoje no formato do idioma (16/11/2026) |
-| `{{time}}`                | hora atual (14:30)                           |
-| `{{date:YYYY-MM-DD}}`     | data com formato próprio                     |
-| `{{cursor}}`              | onde o cursor fica (não aparece no texto)    |
+| Variável              | Resultado                                      |
+| --------------------- | ---------------------------------------------- |
+| `{{title}}`           | nome da nota                                   |
+| `{{date}}`            | data de hoje no formato do idioma (16/11/2026) |
+| `{{time}}`            | hora atual (14:30)                             |
+| `{{date:YYYY-MM-DD}}` | data com formato próprio                       |
+| `{{cursor}}`          | onde o cursor fica (não aparece no texto)      |
 
 Extensões do Sloth Note, depois da primeira entrega: `{{date+7d}}` (prazo daqui a uma semana),
 `{{weekday}}`, `{{profile}}`. Variável desconhecida fica como está, sem erro.
@@ -192,15 +192,15 @@ reescrito no arquivo, então o campo não gera alterações nem conflitos de sin
 Precisa ser distinta das variáveis de inserção, para o modelo poder conter as duas. Proposta:
 `{{=nome}}`, com chaves em inglês (iguais em qualquer idioma) e rótulo traduzido na tela.
 
-| Campo                     | Mostra                                                       |
-| ------------------------- | ------------------------------------------------------------ |
-| `{{=updated}}`            | última alteração ("hoje, 14:30" / "há 3 dias")               |
-| `{{=created}}`            | criação da nota                                              |
-| `{{=today}}`              | data de hoje                                                 |
-| `{{=words}}`              | número de palavras                                           |
-| `{{=reading}}`            | tempo de leitura estimado                                    |
-| `{{=tasks}}`              | progresso das tarefas ("7 de 12"), reutilizando `tasks.js`   |
-| `{{=until:2026-12-01}}`   | dias até a data ("faltam 15 dias" / "venceu há 2 dias")      |
+| Campo                   | Mostra                                                     |
+| ----------------------- | ---------------------------------------------------------- |
+| `{{=updated}}`          | última alteração ("hoje, 14:30" / "há 3 dias")             |
+| `{{=created}}`          | criação da nota                                            |
+| `{{=today}}`            | data de hoje                                               |
+| `{{=words}}`            | número de palavras                                         |
+| `{{=reading}}`          | tempo de leitura estimado                                  |
+| `{{=tasks}}`            | progresso das tarefas ("7 de 12"), reutilizando `tasks.js` |
+| `{{=until:2026-12-01}}` | dias até a data ("faltam 15 dias" / "venceu há 2 dias")    |
 
 - No modo Padrão aparece como um chip; com o cursor dentro, mostra o texto cru (como os outros
   marcadores, `live-decorations.js`). Na Leitura, o chip renderizado.
@@ -235,10 +235,11 @@ Precisa ser distinta das variáveis de inserção, para o modelo poder conter as
 ---
 responsavel: Ana
 projeto: Site novo
-prazo: "2026-12-01"
+prazo: '2026-12-01'
 tags:
   - trabalho
 ---
+
 # Planejamento
 
 Responsável: {{=user.responsavel}}
@@ -306,6 +307,12 @@ O ADR 0004 já segue o plugin Tasks do Obsidian para os status. Seguir o mesmo p
 
 Cada etapa é uma entrega com versão, Novidades e capturas próprias.
 
+## Progresso
+
+- 1.1 (tokens `--text-body`, `--text-heading`, `--text-secondary`, teste de contraste) e a parte da 1.2 sobre H4–H6, `text-wrap: balance` e pesos 650: entregues na 0.14.0.
+- Falta da 1.2: `line-height` menor nos títulos de duas linhas.
+- Falta a 1.3 (ritmo vertical por nível de título e respiro das listas).
+
 ## Tentativas que falharam
 
 - Nenhuma ainda.
@@ -325,4 +332,4 @@ Cada etapa é uma entrega com versão, Novidades e capturas próprias.
 
 ## Próximo passo
 
-Responder às dúvidas de largura e de sintaxe; depois capturar o "antes" e começar pela Parte 1.1.
+Concluir a 1.2 (`line-height` dos títulos) e a 1.3 sem quebrar guias e paridade Padrão × Leitura; depois a 1.5–1.8. Responder às dúvidas de largura (1.4) e de sintaxe antes das partes que dependem delas.
