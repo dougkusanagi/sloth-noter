@@ -136,7 +136,7 @@ const messages = {
     'settings.sync': 'Sincronização',
     'profiles.title': 'Perfis neste aparelho',
     'profiles.hint':
-      'Cada perfil tem suas próprias notas e sua própria conexão de sincronização. O nome não conecta aparelhos: para sincronizar, use o mesmo espaço e a mesma chave em cada aparelho. Perfis não protegem as notas de quem usa a mesma conta do sistema.',
+      'Cada perfil tem suas próprias notas e sua própria conta de sincronização. O nome não conecta aparelhos: para sincronizar, entre com a mesma conta em cada aparelho. Perfis não protegem as notas de quem usa a mesma conta do sistema.',
     'profiles.current': 'em uso',
     'profiles.switch': 'Usar',
     'profiles.switchConfirm':
@@ -151,20 +151,41 @@ const messages = {
     'sync.noVault':
       'O cofre de senhas do sistema não está disponível. No Linux, instale ou desbloqueie um chaveiro (por exemplo, o GNOME Chaveiro) e abra o app de novo.',
     'sync.intro':
-      'Mantém as notas iguais no desktop e no celular por um servidor seu. As notas e imagens são cifradas neste aparelho: o servidor não consegue ler o conteúdo. Veja como instalar o servidor no README do projeto.',
+      'Entre com a sua conta para manter as notas iguais no desktop e no celular. As notas e imagens são cifradas neste aparelho com uma chave protegida pela sua senha: o servidor não consegue ler o conteúdo.',
+    'sync.accountMode': 'Conta',
+    'sync.createAccount': 'Criar conta',
+    'sync.signIn': 'Entrar',
+    'sync.name': 'Nome',
+    'sync.email': 'E-mail',
+    'sync.password': 'Senha',
+    'sync.newPassword': 'Senha nova',
+    'sync.passwordHint':
+      'Use pelo menos {count} caracteres. A senha não sai deste aparelho: quem esquecer a senha só abre as notas do servidor com a chave de recuperação.',
+    'sync.invite': 'Código de convite',
+    'sync.inviteHint': 'Peça o código a quem administra o servidor. Cada código cria uma conta.',
+    'sync.creating': 'Criando a conta…',
+    'sync.signingIn': 'Entrando…',
+    'sync.resetting': 'Trocando a senha…',
+    'sync.forgot': 'Esqueci a senha',
+    'sync.resetTitle': 'Criar uma senha nova',
+    'sync.resetHint':
+      'Digite a chave de recuperação mostrada quando a conta foi criada. Sem ela, não é possível abrir as notas guardadas no servidor; as notas dos seus aparelhos continuam salvas.',
+    'sync.resetSubmit': 'Trocar a senha e entrar',
+    'sync.advanced': 'Avançado: outro servidor',
     'sync.server': 'Endereço do servidor',
-    'sync.token': 'Chave de acesso',
-    'sync.keyTitle': 'Chave de criptografia',
-    'sync.keyNew': 'Primeiro aparelho: criar uma chave nova',
-    'sync.keyExisting': 'Já sincronizo em outro aparelho: digitar a chave de recuperação',
-    'sync.createKey': 'Criar chave',
+    'sync.serverHint': 'Mude só se você usa um servidor próprio do Sloth Note.',
+    'sync.serverAt': 'Servidor: {server}',
+    'sync.account': 'Conta',
+    'sync.oldConnection': 'Conexão antiga',
+    'sync.oldConnectionHint':
+      'Este aparelho usa uma chave de acesso antiga, que vai deixar de funcionar. Crie uma conta ou entre na sua conta abaixo: as notas deste aparelho são enviadas para ela.',
+    'sync.signOut': 'Sair da conta',
+    'sync.created': 'Conta criada',
     'sync.recoveryKey': 'Chave de recuperação',
     'sync.recoveryHint':
-      'Guarde esta chave de recuperação em um lugar seguro. Você vai digitá-la nos outros aparelhos. Sem ela e sem nenhum aparelho conectado, não é possível ler as notas do servidor.',
+      'Esta é a sua chave de recuperação. Ela é opcional: nos outros aparelhos basta o e-mail e a senha. Guarde-a num lugar seguro, como um gerenciador de senhas, se quiser poder trocar a senha caso a esqueça.',
     'sync.copy': 'Copiar',
-    'sync.recoverySaved': 'Guardei a chave de recuperação',
     'sync.continue': 'Continuar',
-    'sync.checkingServer': 'Conferindo o servidor…',
     'sync.previewTitle': 'Antes de sincronizar',
     'sync.previewDownload.one': '1 nota será baixada do servidor.',
     'sync.previewDownload.other': '{count} notas serão baixadas do servidor.',
@@ -185,7 +206,7 @@ const messages = {
     'sync.now': 'Sincronizar agora',
     'sync.disconnect': 'Desligar',
     'sync.disconnectConfirm':
-      'Desligar a sincronização neste aparelho? As notas continuam aqui e no servidor.',
+      'Parar de sincronizar neste aparelho? As notas continuam aqui e no servidor.',
     'sync.conflictMark': 'Conflito de sincronização',
     'sync.conflictEnd': 'Fim do conflito de sincronização',
     'sync.thisDevice': 'versão deste aparelho',
@@ -193,7 +214,19 @@ const messages = {
     'sync.error.offline':
       'Sem conexão com o servidor. As notas continuam salvas aqui; a sincronização tenta de novo mais tarde.',
     'sync.error.unauthorized':
-      'O servidor recusou a chave de acesso. Confira a chave e conecte de novo.',
+      'O servidor recusou a conexão. Saia da conta e entre de novo com o seu e-mail e senha.',
+    'sync.error.bad_email': 'Confira o e-mail: ele precisa ter o formato nome@exemplo.com.',
+    'sync.error.bad_name': 'Digite o seu nome.',
+    'sync.error.weak_password': 'A senha precisa ter pelo menos {count} caracteres.',
+    'sync.error.invalid_invite':
+      'Este código de convite não vale ou já foi usado. Confira os caracteres ou peça outro código.',
+    'sync.error.email_taken': 'Já existe uma conta com este e-mail. Use “Entrar”.',
+    'sync.error.invalid_login': 'E-mail ou senha incorretos. Confira e tente de novo.',
+    'sync.error.invalid_recovery':
+      'Esta chave de recuperação não é a desta conta. Confira o e-mail e a chave.',
+    'sync.error.no_accounts':
+      'Este servidor ainda não aceita contas. Peça a quem administra o servidor para atualizá-lo.',
+    'sync.error.too_many': 'Muitas tentativas seguidas. Espere um minuto e tente de novo.',
     'sync.error.rate_limited':
       'O servidor pediu uma pausa. A sincronização tenta de novo em alguns minutos.',
     'sync.error.server_error':
@@ -939,7 +972,7 @@ const messages = {
     'settings.sync': 'Sync',
     'profiles.title': 'Profiles on this device',
     'profiles.hint':
-      'Each profile has its own notes and its own sync connection. The name does not link devices: to sync, use the same space and key on each device. Profiles do not protect notes from other people using the same system account.',
+      'Each profile has its own notes and its own sync account. The name does not link devices: to sync, sign in with the same account on each device. Profiles do not protect notes from other people using the same system account.',
     'profiles.current': 'in use',
     'profiles.switch': 'Use',
     'profiles.switchConfirm':
@@ -954,20 +987,41 @@ const messages = {
     'sync.noVault':
       'The system password vault is not available. On Linux, install or unlock a keyring (for example, GNOME Keyring) and open the app again.',
     'sync.intro':
-      'Keeps your notes the same on desktop and phone through a server of your own. Notes and images are encrypted on this device: the server cannot read them. See the project README to set up the server.',
+      'Sign in to keep your notes the same on desktop and phone. Notes and images are encrypted on this device with a key protected by your password: the server cannot read them.',
+    'sync.accountMode': 'Account',
+    'sync.createAccount': 'Create account',
+    'sync.signIn': 'Sign in',
+    'sync.name': 'Name',
+    'sync.email': 'E-mail',
+    'sync.password': 'Password',
+    'sync.newPassword': 'New password',
+    'sync.passwordHint':
+      'Use at least {count} characters. The password never leaves this device: if you forget it, only the recovery key opens the notes on the server.',
+    'sync.invite': 'Invite code',
+    'sync.inviteHint': 'Ask the server administrator for a code. Each code creates one account.',
+    'sync.creating': 'Creating the account…',
+    'sync.signingIn': 'Signing in…',
+    'sync.resetting': 'Changing the password…',
+    'sync.forgot': 'Forgot password',
+    'sync.resetTitle': 'Set a new password',
+    'sync.resetHint':
+      'Type the recovery key shown when the account was created. Without it, the notes on the server cannot be opened; the notes on your devices stay saved.',
+    'sync.resetSubmit': 'Change password and sign in',
+    'sync.advanced': 'Advanced: another server',
     'sync.server': 'Server address',
-    'sync.token': 'Access key',
-    'sync.keyTitle': 'Encryption key',
-    'sync.keyNew': 'First device: create a new key',
-    'sync.keyExisting': 'I already sync another device: type the recovery key',
-    'sync.createKey': 'Create key',
+    'sync.serverHint': 'Change it only if you run your own Sloth Note server.',
+    'sync.serverAt': 'Server: {server}',
+    'sync.account': 'Account',
+    'sync.oldConnection': 'Old connection',
+    'sync.oldConnectionHint':
+      'This device uses an old access key that will stop working. Create an account or sign in below: the notes on this device are sent to it.',
+    'sync.signOut': 'Sign out',
+    'sync.created': 'Account created',
     'sync.recoveryKey': 'Recovery key',
     'sync.recoveryHint':
-      'Keep this recovery key somewhere safe. You will type it on your other devices. Without it and without any connected device, the notes on the server cannot be read.',
+      'This is your recovery key. It is optional: other devices only need your e-mail and password. Keep it somewhere safe, such as a password manager, if you want to be able to reset a forgotten password.',
     'sync.copy': 'Copy',
-    'sync.recoverySaved': 'I saved the recovery key',
     'sync.continue': 'Continue',
-    'sync.checkingServer': 'Checking the server…',
     'sync.previewTitle': 'Before syncing',
     'sync.previewDownload.one': '1 note will be downloaded from the server.',
     'sync.previewDownload.other': '{count} notes will be downloaded from the server.',
@@ -987,7 +1041,7 @@ const messages = {
     'sync.now': 'Sync now',
     'sync.disconnect': 'Turn off',
     'sync.disconnectConfirm':
-      'Turn off sync on this device? Your notes stay here and on the server.',
+      'Stop syncing on this device? Your notes stay here and on the server.',
     'sync.conflictMark': 'Sync conflict',
     'sync.conflictEnd': 'End of sync conflict',
     'sync.thisDevice': "this device's version",
@@ -995,7 +1049,19 @@ const messages = {
     'sync.error.offline':
       'Cannot reach the server. Your notes are saved here; sync will try again later.',
     'sync.error.unauthorized':
-      'The server refused the access key. Check the key and connect again.',
+      'The server refused the connection. Sign out and sign in again with your e-mail and password.',
+    'sync.error.bad_email': 'Check the e-mail: it must look like name@example.com.',
+    'sync.error.bad_name': 'Type your name.',
+    'sync.error.weak_password': 'The password must have at least {count} characters.',
+    'sync.error.invalid_invite':
+      'This invite code is not valid or was already used. Check the characters or ask for another code.',
+    'sync.error.email_taken': 'An account with this e-mail already exists. Use “Sign in”.',
+    'sync.error.invalid_login': 'Wrong e-mail or password. Check them and try again.',
+    'sync.error.invalid_recovery':
+      'This recovery key does not belong to this account. Check the e-mail and the key.',
+    'sync.error.no_accounts':
+      'This server does not accept accounts yet. Ask the server administrator to update it.',
+    'sync.error.too_many': 'Too many attempts in a row. Wait a minute and try again.',
     'sync.error.rate_limited':
       'The server asked for a pause. Sync will try again in a few minutes.',
     'sync.error.server_error':

@@ -12,11 +12,21 @@ export class SyncError extends Error {
 
 const TIMEOUT = 30_000
 
-export function createClient({ server, token, fetch = globalThis.fetch }) {
-  const base = new URL(server)
+/** Server address without the trailing slash; only https, except on this computer. */
+export function serverRoot(server) {
+  let base
+  try {
+    base = new URL(String(server).trim())
+  } catch {
+    throw new SyncError('insecure_server')
+  }
   if (base.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(base.hostname))
     throw new SyncError('insecure_server')
-  const root = base.href.replace(/\/$/, '')
+  return base.href.replace(/\/$/, '')
+}
+
+export function createClient({ server, token, fetch = globalThis.fetch }) {
+  const root = serverRoot(server)
 
   async function request(path, init = {}) {
     let response

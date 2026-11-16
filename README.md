@@ -63,7 +63,7 @@ A lista completa está em **Configurações → Atalhos** e na [documentação d
 
 **Em ambos**, você pode exportar notas `.md`, baixar e restaurar um backup `.json` com imagens locais e recuperar notas da lixeira. Imagens externas dependem de conexão; a ilustração da ajuda acompanha o app e carrega offline. Mantenha um backup fora do aplicativo, especialmente antes de limpar dados do navegador.
 
-Não há conta nem sincronização em nuvem integrada. A pasta de notas pode ser mantida por uma ferramenta de sincronização escolhida por você.
+A sincronização com conta é opcional (veja “Sincronização”). A pasta de notas também pode ser mantida por uma ferramenta de sincronização escolhida por você.
 
 ## Rodar localmente
 
@@ -110,18 +110,27 @@ A paleta de comandos (`Ctrl+Shift+P`, ou `⌘+Shift+P` no Mac) permite alternar 
 
 ## Sincronização (em testes)
 
-No app desktop e no Android, **Configurações › Sincronização** conecta o Sloth Note a um servidor seu
-([ADR 0018](docs/adr/0018-protocolo-sincronizacao.md)). No primeiro aparelho, crie a chave e
-guarde a chave de recuperação; nos outros, digite essa chave. Antes da primeira sincronização o
-app mostra quantas notas serão baixadas e enviadas. Depois, sincroniza ao abrir, ao voltar ao app,
-15 segundos após uma edição, a cada 5 minutos e pelo botão **Sincronizar agora**. As notas e imagens chegam ao servidor já cifradas; ele guarda
-só a revisão atual de cada nota (Cloudflare D1) e as imagens (Cloudflare R2). A chave fica no
-cofre de senhas do sistema; a versão web não sincroniza.
+No app desktop e no Android, **Configurações › Sincronização** pede só uma conta: nome, e-mail,
+senha e o código de convite, no primeiro aparelho; nos outros, basta **Entrar** com e-mail e senha
+([ADR 0024](docs/adr/0024-contas-com-email-e-senha.md)). O endereço do servidor já vem no app e
+fica em **Avançado**. Antes da primeira sincronização o app mostra quantas notas serão baixadas e
+enviadas. Depois, sincroniza ao abrir, ao voltar ao app, 15 segundos após uma edição, a cada 5
+minutos e pelo botão **Sincronizar agora**. As notas e imagens chegam ao servidor já cifradas
+([ADR 0018](docs/adr/0018-protocolo-sincronizacao.md)); a chave das notas fica protegida pela
+senha, que não sai do aparelho. Ao criar a conta, o app mostra uma chave de recuperação opcional:
+só ela permite criar uma senha nova (**Entrar › Esqueci a senha**) sem perder as notas do servidor.
+A sessão fica no cofre de senhas do sistema; a versão web não sincroniza.
 
-**Perfis (até 5):** na mesma tela, crie perfis com notas e conexão de sincronização próprias
+**Perfis (até 5):** na mesma tela, crie perfis com notas e conta de sincronização próprias
 ([ADR 0023](docs/adr/0023-perfis-e-espacos-de-sincronizacao.md)). Trocar de perfil reinicia o app.
-Cada perfil novo usa um espaço no servidor, criado por quem administra o servidor com
-`node server/profile-admin.js <1 a 4>`: o comando mostra a chave de acesso e o SQL a executar no D1.
+
+**Convites:** quem administra o servidor cria um código por pessoa com `node server/invite-admin.js`
+e roda o comando `wrangler d1 execute` que ele mostra. Cada código cria uma conta.
+
+**Desligar as chaves antigas:** aparelhos configurados antes das contas mostram “Conexão antiga” e
+continuam sincronizando até entrarem numa conta. Depois que todos entrarem, desligue as chaves:
+`bunx wrangler secret delete SYNC_TOKEN` e
+`bunx wrangler d1 execute sloth-note-sync --remote --command "UPDATE profile_spaces SET revoked_at = CURRENT_TIMESTAMP"`.
 
 A pasta `server/` contém o servidor.
 
@@ -136,8 +145,8 @@ Rodar o Worker local:
 
 ```bash
 cd server
-echo "SYNC_TOKEN=$(openssl rand -base64 32)" > .dev.vars   # chave de pelo menos 32 caracteres
 bunx wrangler d1 migrations apply sloth-note-sync --local
+node invite-admin.js            # rode o comando mostrado trocando --remote por --local
 bun run dev
 ```
 
@@ -149,7 +158,6 @@ bunx wrangler login
 bunx wrangler d1 create sloth-note-sync          # copie o database_id para wrangler.toml
 bunx wrangler r2 bucket create sloth-note-sync
 bunx wrangler d1 migrations apply sloth-note-sync --remote   # repita a cada migração nova
-bunx wrangler secret put SYNC_TOKEN              # cole uma chave aleatória longa
 bun run deploy
 ```
 

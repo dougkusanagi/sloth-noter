@@ -1,11 +1,14 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { createServer, memoryDirectory } from '../server/accounts.js'
 import { createApi } from '../server/api.js'
 import { memoryStore } from '../server/memory-store.js'
 import { newDocument, STORAGE_KEY } from '../src/storage.js'
 
 const SERVER = 'https://sync.example.test'
 const TOKEN = 'k'.repeat(40)
+const INVITE = 'ABCD-EFGH-JKMN-PQRS'
+const PASSWORD = 'senha forte 123'
 
 // The real API with an in-memory store answers the page's requests.
 async function serve(context, api) {
@@ -52,8 +55,32 @@ test('without a vault the web build explains why sync is off', async ({ page }) 
   await expect(dialog.getByText(/só está disponível no app para desktop e Android/)).toBeVisible()
 })
 
-test('first device sets up sync and a second device receives its notes', async ({ browser }) => {
-  const api = createApi({ store: memoryStore(), token: TOKEN })
+// Real server code in memory: accounts, sessions and one data store per account.
+async function accountServer() {
+  const directory = memoryDirectory()
+  await directory.addInvite(INVITE)
+  const stores = new Map()
+  const legacyApi = createApi({ store: memoryStore(), token: TOKEN })
+  return createServer({
+    directory,
+    storeFor: (account) => {
+      if (!stores.has(account)) stores.set(account, memoryStore())
+      return stores.get(account)
+    },
+    legacy: (request) =>
+      request.headers.get('authorization') === `Bearer ${TOKEN}` ? legacyApi(request) : null,
+  })
+}
+
+async function useServer(dialog) {
+  await dialog.getByText('Avançado: outro servidor').click()
+  await dialog.getByLabel('Endereço do servidor').fill(SERVER)
+}
+
+test('first device creates an account and a second device signs in with e-mail and password', async ({
+  browser,
+}) => {
+  const api = await accountServer()
 
   const first = await browser.newContext()
   await first.addInitScript(fakeVault)
@@ -61,31 +88,43 @@ test('first device sets up sync and a second device receives its notes', async (
   const desktop = await first.newPage()
   await desktop.goto('/')
   let dialog = await openSync(desktop)
-  await dialog.getByLabel('Endereço do servidor').fill(SERVER)
-  await dialog.getByLabel('Chave de acesso').fill(TOKEN)
-  await dialog.getByRole('button', { name: 'Criar chave' }).click()
-  const recovery = await dialog.getByLabel('Chave de recuperação', { exact: true }).textContent()
-  expect(recovery).toMatch(/^([0-9A-Z]{5}-){10}[0-9A-Z]{5}$/)
-  const next = dialog.getByRole('button', { name: 'Continuar' })
-  await expect(next).toBeDisabled()
-  await dialog.getByLabel('Guardei a chave de recuperação').check()
+  await expect(dialog.getByLabel('Chave de acesso')).toHaveCount(0)
+  await expect(dialog.getByRole('radio', { name: 'Criar conta' })).toBeChecked()
+  await useServer(dialog)
+  await dialog.getByLabel('Nome').fill('Ana')
+  await dialog.getByLabel('E-mail').fill('Ana@Example.com')
+  await dialog.getByLabel('Senha', { exact: true }).fill('curta')
+  await dialog.getByLabel('Código de convite').fill('wrong-code')
+  const create = dialog.getByRole('button', { name: 'Criar conta' })
+  await create.click()
+  await expect(dialog.getByRole('alert')).toContainText('pelo menos 8 caracteres')
+  await dialog.getByLabel('Senha', { exact: true }).fill(PASSWORD)
+  await create.click()
+  await expect(dialog.getByRole('alert')).toContainText('código de convite não vale')
+  await dialog.getByLabel('Código de convite').fill(INVITE.toLowerCase())
   expect(
     await new AxeBuilder({ page: desktop }).include('.settings-dialog').analyze(),
   ).toHaveProperty('violations', [])
   if (process.env.CAPTURE_UI) {
-    await desktop.setViewportSize({ width: 560, height: 900 })
-    await desktop.screenshot({ path: '/tmp/sloth-sync-form-narrow.png' })
+    await desktop.setViewportSize({ width: 390, height: 844 })
+    await desktop.screenshot({ path: '/tmp/sloth-sync-account-narrow.png' })
     await desktop.setViewportSize({ width: 1280, height: 720 })
+    await dialog.screenshot({ path: '/tmp/sloth-sync-account.png' })
   }
-  await next.click()
+  await create.click()
+
+  await expect(dialog.getByRole('heading', { name: 'Conta criada' })).toBeVisible()
+  const recovery = await dialog.getByLabel('Chave de recuperação', { exact: true }).textContent()
+  expect(recovery).toMatch(/^([0-9A-Z]{5}-){10}[0-9A-Z]{5}$/)
+  await dialog.getByRole('button', { name: 'Continuar' }).click()
   await expect(dialog.getByText('1 nota deste aparelho será enviada.')).toBeVisible()
   await expect(dialog.getByText('Nenhuma nota é apagada nesta etapa.')).toBeVisible()
-  if (process.env.CAPTURE_UI) await dialog.screenshot({ path: '/tmp/sloth-sync-preview.png' })
   await dialog.getByRole('button', { name: 'Sincronizar', exact: true }).click()
   await expect(dialog.getByRole('status')).toContainText('Sincronizado às')
+  await expect(dialog.getByText('Ana · ana@example.com')).toBeVisible()
   if (process.env.CAPTURE_UI) await dialog.screenshot({ path: '/tmp/sloth-sync-done.png' })
 
-  // Second device: a wrong recovery key is refused, the right one shows the preview.
+  // Second device: a wrong password is refused; the right one shows the preview.
   const second = await browser.newContext()
   await second.addInitScript(fakeVault)
   await second.addInitScript(({ key, doc }) => localStorage.setItem(key, JSON.stringify(doc)), {
@@ -101,14 +140,15 @@ test('first device sets up sync and a second device receives its notes', async (
   const phone = await second.newPage()
   await phone.goto('/')
   dialog = await openSync(phone)
-  await dialog.getByLabel('Endereço do servidor').fill(SERVER)
-  await dialog.getByLabel('Chave de acesso').fill(TOKEN)
-  await dialog.getByLabel(/Já sincronizo em outro aparelho/).check()
-  await dialog.getByLabel('Chave de recuperação', { exact: true }).fill('0'.repeat(55))
-  await dialog.getByRole('button', { name: 'Continuar' }).click()
-  await expect(dialog.getByRole('alert')).toContainText(/erro de digitação|não abre as notas/)
-  await dialog.getByLabel('Chave de recuperação', { exact: true }).fill(recovery.toLowerCase())
-  await dialog.getByRole('button', { name: 'Continuar' }).click()
+  await useServer(dialog)
+  await dialog.locator('.segmented label', { hasText: 'Entrar' }).click()
+  await expect(dialog.getByLabel('Código de convite')).toHaveCount(0)
+  await dialog.getByLabel('E-mail').fill('ana@example.com')
+  await dialog.getByLabel('Senha', { exact: true }).fill('senha errada')
+  await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toContainText('E-mail ou senha incorretos')
+  await dialog.getByLabel('Senha', { exact: true }).fill(PASSWORD)
+  await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(dialog.getByText('1 nota será baixada do servidor.')).toBeVisible()
   await dialog.getByRole('button', { name: 'Sincronizar', exact: true }).click()
   await expect(dialog.getByRole('status')).toContainText('Sincronizado às')
@@ -127,11 +167,51 @@ test('first device sets up sync and a second device receives its notes', async (
       .getByRole('button', { name: /^Celular/ }),
   ).toBeVisible()
 
-  // Turning off keeps the notes.
+  // Signing out keeps the notes and shows the account form again.
   dialog = await openSync(desktop)
   desktop.once('dialog', (confirm) => confirm.accept())
-  await dialog.getByRole('button', { name: 'Desligar' }).click()
-  await expect(dialog.getByLabel('Endereço do servidor')).toBeVisible()
+  await dialog.getByRole('button', { name: 'Sair da conta' }).click()
+  await expect(dialog.getByLabel('E-mail')).toBeVisible()
+
+  // Forgot password: the recovery key sets a new one on the same account.
+  await useServer(dialog)
+  await dialog.locator('.segmented label', { hasText: 'Entrar' }).click()
+  await dialog.getByRole('button', { name: 'Esqueci a senha' }).click()
+  await dialog.getByLabel('E-mail').fill('ana@example.com')
+  await dialog.getByLabel('Chave de recuperação').fill(recovery)
+  await dialog.getByLabel('Senha nova').fill('outra senha 2')
+  await dialog.getByRole('button', { name: 'Trocar a senha e entrar' }).click()
+  await expect(dialog.getByText('Nenhuma nota é apagada nesta etapa.')).toBeVisible()
+  await dialog.getByRole('button', { name: 'Sincronizar', exact: true }).click()
+  await expect(dialog.getByRole('status')).toContainText('Sincronizado às')
   await first.close()
   await second.close()
+})
+
+test('an old access-key connection moves to an account', async ({ browser }) => {
+  const api = await accountServer()
+  const context = await browser.newContext()
+  await context.addInitScript(fakeVault)
+  await context.addInitScript(
+    (secret) => window.SlothSecrets.set('sync', secret),
+    JSON.stringify({ server: SERVER, token: TOKEN, key: btoa('k'.repeat(32)) }),
+  )
+  await serve(context, api)
+  const page = await context.newPage()
+  await page.goto('/')
+  const dialog = await openSync(page)
+  await expect(dialog.getByText('Conexão antiga')).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Desligar' })).toBeVisible()
+  await dialog.getByLabel('Nome').fill('Ana')
+  await dialog.getByLabel('E-mail').fill('ana@example.com')
+  await dialog.getByLabel('Senha', { exact: true }).fill(PASSWORD)
+  await dialog.getByLabel('Código de convite').fill(INVITE)
+  await dialog.getByRole('button', { name: 'Criar conta' }).click()
+  await dialog.getByRole('button', { name: 'Continuar' }).click()
+  await expect(dialog.getByText('1 nota deste aparelho será enviada.')).toBeVisible()
+  await dialog.getByRole('button', { name: 'Sincronizar', exact: true }).click()
+  await expect(dialog.getByRole('status')).toContainText('Sincronizado às')
+  await expect(dialog.getByText('Conexão antiga')).toHaveCount(0)
+  await expect(dialog.getByText('Ana · ana@example.com')).toBeVisible()
+  await context.close()
 })

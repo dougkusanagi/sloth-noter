@@ -127,3 +127,60 @@ export async function keyFromRecovery(text) {
   const check = new Uint8Array(await crypto.subtle.digest('SHA-256', key)).slice(0, 2)
   return check[0] === bytes[32] && check[1] === bytes[33] ? key : null
 }
+
+// Accounts (ADR 0024). PBKDF2 turns the password into a master secret on the device;
+// HKDF splits it in two: `authKey` goes to the server to prove the password, `wrapKey`
+// never leaves the device and wraps the note key stored on the server.
+export const PASSWORD_ITERATIONS = 600_000
+
+async function hkdf(secret, info) {
+  const base = await crypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveBits'])
+  return new Uint8Array(
+    await crypto.subtle.deriveBits(
+      { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(), info: encoder.encode(info) },
+      base,
+      256,
+    ),
+  )
+}
+
+/** `email` must already be normalized (trimmed, lower case): it is the salt. */
+export async function accountKeys(email, password, iterations = PASSWORD_ITERATIONS) {
+  const base = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(String(password).normalize('NFC')),
+    'PBKDF2',
+    false,
+    ['deriveBits'],
+  )
+  const master = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      {
+        name: 'PBKDF2',
+        hash: 'SHA-256',
+        salt: encoder.encode(`sloth-note/account/${email}`),
+        iterations,
+      },
+      base,
+      256,
+    ),
+  )
+  return {
+    authKey: toBase64Url(await hkdf(master, 'sloth-note auth')),
+    wrapKey: await hkdf(master, 'sloth-note wrap'),
+  }
+}
+
+export async function wrapNoteKey(wrapKey, noteKey, email) {
+  return toBase64Url(await seal(wrapKey, noteKey, `account-key:${email}`))
+}
+
+/** Throws when the password (and so `wrapKey`) is not the one that wrapped the key. */
+export async function unwrapNoteKey(wrapKey, wrapped, email) {
+  return open(wrapKey, fromBase64Url(wrapped), `account-key:${email}`)
+}
+
+/** Proof that someone holds the recovery key, without revealing the key. */
+export async function recoveryProof(noteKey) {
+  return toBase64Url(await hkdf(noteKey, 'sloth-note recovery'))
+}

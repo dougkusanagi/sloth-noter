@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '../sync/client.js'
 import { runSync, previewFirstSync } from '../sync/engine.js'
-import { generateKeyBytes, keyFromRecovery, recoveryKey } from '../sync/crypto.js'
+import { recoverAccount, signIn, signOut, signUp } from '../sync/account.js'
 import { applySync, localNotes, syncState } from '../sync/document.js'
 import { platformVault, probeVault, readSyncSecrets, writeSyncSecrets } from '../sync/vault.js'
 import { t } from '../i18n.js'
@@ -10,6 +10,12 @@ const INTERVAL = 5 * 60 * 1000
 const AFTER_EDIT = 15 * 1000
 const toBase64 = (bytes) => btoa(String.fromCharCode(...bytes))
 const fromBase64 = (text) => Uint8Array.from(atob(text), (char) => char.charCodeAt(0))
+// The sync state belongs to one server space: an account, or the old shared key.
+const remoteOf = (saved) => (saved.email ? `${saved.server}#${saved.email}` : saved.server)
+const statusOf = (saved) => ({
+  server: saved.server,
+  account: saved.email ? { name: saved.name, email: saved.email } : null,
+})
 
 /** Reads and writes images under assets/ through the desktop or Android bridge. */
 function imageAdapter(invoke) {
@@ -46,9 +52,10 @@ export function useSync({ current, commit, invoke, blocked, profileId = 'primary
     setStatus((previous) => ({ ...previous, state: 'syncing' }))
     try {
       const client = createClient({ server: saved.server, token: saved.token })
+      const remote = remoteOf(saved)
       const document = current.current
       const snapshot = localNotes(document)
-      const before = syncState(document, saved.server)
+      const before = syncState(document, remote)
       const result = await runSync({
         client,
         key: fromBase64(saved.key),
@@ -67,11 +74,11 @@ export function useSync({ current, commit, invoke, blocked, profileId = 'primary
       const changed =
         result.apply.upsert.length ||
         result.apply.remove.length ||
-        current.current.sync?.server !== saved.server ||
+        current.current.sync?.server !== remote ||
         JSON.stringify(result.state) !== JSON.stringify(before)
       if (changed)
         live.current.commit(
-          applySync(current.current, { server: saved.server, snapshot, before, result }),
+          applySync(current.current, { server: remote, snapshot, before, result }),
           'sistema',
         )
       setStatus({
@@ -79,10 +86,10 @@ export function useSync({ current, commit, invoke, blocked, profileId = 'primary
         error: result.error,
         at: Date.now(),
         conflicts: result.conflicts.length,
-        server: saved.server,
+        ...statusOf(saved),
       })
     } catch (error) {
-      setStatus({ state: 'error', error: error?.code ?? 'failed', server: saved.server })
+      setStatus({ state: 'error', error: error?.code ?? 'failed', ...statusOf(saved) })
     } finally {
       running.current = false
     }
@@ -97,7 +104,7 @@ export function useSync({ current, commit, invoke, blocked, profileId = 'primary
       secrets.current = await readSyncSecrets(vault.current).catch(() => null)
       if (!alive) return
       if (!secrets.current) return setStatus({ state: 'off' })
-      setStatus({ state: 'idle', server: secrets.current.server })
+      setStatus({ state: 'idle', ...statusOf(secrets.current) })
       void run()
     })()
     return () => {
@@ -130,25 +137,32 @@ export function useSync({ current, commit, invoke, blocked, profileId = 'primary
     }, [run]),
     invoke,
     profileId,
-    newRecoveryKey: async () => recoveryKey(generateKeyBytes()),
-    /** Checks the server and the key and returns the first-sync preview; saves nothing. */
-    async prepare({ server, token, recovery }) {
-      const key = await keyFromRecovery(recovery)
-      if (!key) throw Object.assign(new Error(), { code: 'bad_recovery' })
-      const client = createClient({ server: server.trim(), token: token.trim() })
-      const preview = await previewFirstSync({ client, key, local: localNotes(current.current) })
-      return { preview, key }
+    /** Account calls (ADR 0024). Each returns a session; nothing is saved yet. */
+    signUp,
+    signIn,
+    recover: recoverAccount,
+    /** Ends a session that was never saved (the person went back from the preview). */
+    discard: (session) => signOut(session),
+    /** Checks the session and the key and returns the first-sync preview; saves nothing. */
+    async preview({ server, token, key }) {
+      const client = createClient({ server, token })
+      return previewFirstSync({ client, key, local: localNotes(current.current) })
     },
-    async connect({ server, token, key }) {
-      const value = { server: server.trim(), token: token.trim(), key: toBase64(key) }
+    /** Saves the session in the vault (replacing an old key, if any) and syncs. */
+    async connect({ server, token, key, email, name }) {
+      const previous = secrets.current
+      const value = { server, token, key: toBase64(key), email, name }
       await writeSyncSecrets(vault.current, value)
       secrets.current = value
+      if (previous?.email) void signOut({ server: previous.server, token: previous.token })
       await run()
     },
     async disconnect() {
+      const saved = secrets.current
       await vault.current.delete()
       secrets.current = null
       setStatus({ state: 'off' })
+      if (saved?.email) void signOut({ server: saved.server, token: saved.token })
     },
   }
 }

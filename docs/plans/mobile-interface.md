@@ -378,9 +378,9 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 (`https://sloth-note-sync.dl-aguiar.workers.dev`, D1 + R2, migrações 0001–0002, limite do ADR
 0021). Teste ponta a ponta com o motor contra o servidor real passou: nota e imagem nos dois
 sentidos, mesclagem, conflito, lixeira, restauração, exclusão e 401; o contador de uso registrou
-as operações; os dados de teste foram apagados. Falta configurar o desktop e o celular pela tela
-(a pessoa digita a chave de acesso de `~/.config/sloth-note/sync-token` e a chave de
-recuperação) e conferir com notas reais. Fora da fila: 5 E2E desktop já falham no `main`.
+as operações; os dados de teste foram apagados. Desde 0.15.0 a tela usa conta com e-mail e senha
+(ADR 0024): falta aplicar `0004_accounts.sql` e publicar o Worker, criar um convite, entrar nos
+dois aparelhos e conferir com notas reais; depois, desligar as chaves antigas (README). Fora da fila: 5 E2E desktop já falham no `main`.
 
 Pendente no aparelho (de entregas anteriores): validar no APK Inserir, seletor de imagem,
 clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,

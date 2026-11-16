@@ -1,12 +1,15 @@
 import { test, expect } from '@playwright/test'
-import { createApi } from '../../server/api.js'
+import { createServer, memoryDirectory } from '../../server/accounts.js'
 import { memoryStore } from '../../server/memory-store.js'
 
 const SERVER = 'https://sync.example.test'
-const TOKEN = 'k'.repeat(40)
+const INVITE = 'ABCD-EFGH-JKMN-PQRS'
 
 test('android settings set up sync and sync again after an edit', async ({ page, context }) => {
-  const api = createApi({ store: memoryStore(), token: TOKEN })
+  const directory = memoryDirectory()
+  await directory.addInvite(INVITE)
+  const store = memoryStore()
+  const api = createServer({ directory, storeFor: () => store })
   let puts = 0
   await context.route(`${SERVER}/**`, async (route) => {
     const request = route.request()
@@ -38,14 +41,14 @@ test('android settings set up sync and sync again after an edit', async ({ page,
   await page.getByRole('button', { name: 'Mais opções' }).tap()
   await page.getByRole('button', { name: 'Configurações' }).tap()
   await expect(page.getByRole('heading', { name: 'Sincronização' })).toBeVisible()
+  await page.getByText('Avançado: outro servidor').tap()
   await page.getByLabel('Endereço do servidor').fill(SERVER)
-  await page.getByLabel('Chave de acesso').fill(TOKEN)
-  await page.getByRole('button', { name: 'Criar chave' }).tap()
-  await page.getByLabel('Guardei a chave de recuperação').check()
-  if (process.env.CAPTURE_UI) {
-    await page.getByLabel('Chave de recuperação', { exact: true }).scrollIntoViewIfNeeded()
-    await page.screenshot({ path: '/tmp/sloth-sync-mobile-form.png' })
-  }
+  await page.getByLabel('Nome').fill('Ana')
+  await page.getByLabel('E-mail').fill('ana@example.com')
+  await page.getByLabel('Senha', { exact: true }).fill('senha forte 123')
+  await page.getByLabel('Código de convite').fill(INVITE)
+  if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/sloth-sync-mobile-form.png' })
+  await page.getByRole('button', { name: 'Criar conta' }).tap()
   await page.getByRole('button', { name: 'Continuar' }).tap()
   await expect(page.getByText('1 nota deste aparelho será enviada.')).toBeVisible()
   await page.getByRole('button', { name: 'Sincronizar', exact: true }).tap()

@@ -3290,3 +3290,19 @@ html:has(
   color: var(--danger, #b42318);
   font-size: 13px;
 }
+.sync-recover-head {
+  display: grid;
+  gap: 4px;
+}
+.sync-advanced {
+  font-size: 13px;
+}
+.sync-advanced summary {
+  width: max-content;
+  max-width: 100%;
+  color: var(--muted);
+  cursor: pointer;
+}
+.sync-advanced[open] summary {
+  margin-bottom: 10px;
+}

@@ -1,6 +1,6 @@
 # 0023 — Perfis locais e espaços de sincronização separados
 
-- Status: Aceito
+- Status: Aceito; substituído em parte por [0024](0024-contas-com-email-e-senha.md) (credenciais e cadastro)
 - Data: 2026-11-13
 - Complementa: [0018](0018-protocolo-sincronizacao.md), [0021](0021-limite-gratuito-no-servidor.md)
 

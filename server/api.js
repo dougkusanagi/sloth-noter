@@ -15,6 +15,16 @@ const json = (status, body, headers = {}) =>
   })
 const error = (status, code, headers) => json(status, { error: code }, headers)
 
+// The app calls from its own origin (tauri://, http://tauri.localhost, the browser).
+// Auth is a Bearer header, never a cookie, so any origin may call with it.
+export const CORS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, PUT, POST, DELETE',
+  'access-control-allow-headers': 'authorization, content-type, if-match, if-none-match',
+  'access-control-expose-headers': 'etag, retry-after',
+  'access-control-max-age': '86400',
+}
+
 export async function sha256Hex(bytes) {
   const digest = await crypto.subtle.digest('SHA-256', bytes)
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
@@ -138,15 +148,6 @@ export function createApi({ store, token, limit = () => 0 }) {
     return error(404, 'not_found')
   }
 
-  // The app calls from its own origin (tauri://, http://tauri.localhost, the browser).
-  // Auth is a Bearer header, never a cookie, so any origin may call with it.
-  const CORS = {
-    'access-control-allow-origin': '*',
-    'access-control-allow-methods': 'GET, PUT',
-    'access-control-allow-headers': 'authorization, content-type, if-match, if-none-match',
-    'access-control-expose-headers': 'etag, retry-after',
-    'access-control-max-age': '86400',
-  }
   const withCors = (response) => {
     const headers = new Headers(response.headers)
     for (const [name, value] of Object.entries(CORS)) headers.set(name, value)

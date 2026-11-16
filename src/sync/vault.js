@@ -58,7 +58,10 @@ export function platformVault(env = globalThis, profileId = 'primary') {
   return null
 }
 
-/** Secrets for one server: auth token and encryption key, kept as one entry. */
+/**
+ * Secrets for one server: session (or old access key), encryption key and, for an
+ * account (ADR 0024), its e-mail and name. Kept as one entry.
+ */
 export async function readSyncSecrets(vault) {
   const text = await vault.get()
   if (!text) return null
@@ -72,8 +75,10 @@ export async function readSyncSecrets(vault) {
   return null
 }
 
-export function writeSyncSecrets(vault, { server, token, key }) {
-  return vault.set(JSON.stringify({ server, token, key }))
+export function writeSyncSecrets(vault, { server, token, key, email, name }) {
+  return vault.set(
+    JSON.stringify(email ? { server, token, key, email, name } : { server, token, key }),
+  )
 }
 
 /**

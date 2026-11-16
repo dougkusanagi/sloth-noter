@@ -1,6 +1,8 @@
 import { useEffect, useId, useState } from 'react'
 import { t } from '../i18n.js'
 import { MAX_PROFILES, addProfile } from '../profiles.js'
+import { DEFAULT_SERVER, MIN_PASSWORD } from '../sync/account.js'
+import { Segmented } from './controls.jsx'
 
 const ERRORS = new Set([
   'offline',
@@ -23,7 +25,7 @@ function formatTime(at) {
   }).format(at)
 }
 
-/** Settings → Sync: status, first setup with preview, and disconnect. */
+/** Settings → Sync: profiles, account, status, first sync preview and sign out. */
 export function SyncPanel({ sync }) {
   return (
     <>
@@ -140,14 +142,27 @@ function SyncStatus({ sync }) {
         {t(status.reason === 'none' ? 'sync.noVaultWeb' : 'sync.noVault')}
       </p>
     )
+  if (status.state === 'off') return <AccountForm sync={sync} />
 
-  if (status.state !== 'off')
-    return (
+  const { account } = status
+  return (
+    <>
       <div className="sync-panel">
         <div className="setting">
           <div className="setting-text">
-            <span>{t('sync.server')}</span>
-            <p className="sync-server">{status.server}</p>
+            <span>{t(account ? 'sync.account' : 'sync.oldConnection')}</span>
+            {account ? (
+              <p className="sync-server">
+                {account.name} · {account.email}
+              </p>
+            ) : (
+              <p className="setting-hint">{t('sync.oldConnectionHint')}</p>
+            )}
+            {status.server !== DEFAULT_SERVER && (
+              <p className="sync-server setting-hint">
+                {t('sync.serverAt', { server: status.server })}
+              </p>
+            )}
           </div>
         </div>
         <p className="sync-status" role="status" aria-live="polite">
@@ -170,34 +185,92 @@ function SyncStatus({ sync }) {
               if (window.confirm(t('sync.disconnectConfirm'))) await sync.disconnect()
             }}
           >
-            {t('sync.disconnect')}
+            {t(account ? 'sync.signOut' : 'sync.disconnect')}
           </button>
         </div>
       </div>
-    )
-
-  return <SetupForm sync={sync} />
+      {!account && <AccountForm sync={sync} server={status.server} />}
+    </>
+  )
 }
 
-/** First setup. Mounted only while sync is off, so it always starts from the form. */
-function SetupForm({ sync }) {
+const BUSY = { signup: 'sync.creating', signin: 'sync.signingIn', recover: 'sync.resetting' }
+const SUBMIT = { signup: 'sync.createAccount', signin: 'sync.signIn', recover: 'sync.resetSubmit' }
+// Codes the form explains next to the fields; the rest use the general sync errors.
+const FORM_ERRORS = new Set([
+  'bad_email',
+  'bad_name',
+  'weak_password',
+  'invalid_invite',
+  'email_taken',
+  'invalid_login',
+  'invalid_recovery',
+  'bad_recovery',
+  'no_accounts',
+])
+const formError = (code) =>
+  code === 'rate_limited'
+    ? t('sync.error.too_many')
+    : FORM_ERRORS.has(code)
+      ? t(`sync.error.${code}`, { count: MIN_PASSWORD })
+      : errorText(code)
+
+/**
+ * Create an account, sign in, or set a new password with the recovery key (ADR 0024).
+ * Mounted while sync is off, or below an old-style connection to move it to an account.
+ */
+function AccountForm({ sync, server: initialServer = DEFAULT_SERVER }) {
   const id = useId()
   const [step, setStep] = useState('form')
-  const [mode, setMode] = useState('new')
-  const [server, setServer] = useState('')
-  const [token, setToken] = useState('')
+  const [mode, setMode] = useState('signup')
+  const [server, setServer] = useState(initialServer)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [invite, setInvite] = useState('')
   const [recovery, setRecovery] = useState('')
-  const [created, setCreated] = useState('')
-  const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [prepared, setPrepared] = useState(null)
-  const field = (key, label, input) => (
+  const field = (key, label, input, hint) => (
     <div className="sync-field">
       <label htmlFor={`${id}-${key}`}>{label}</label>
       {input}
+      {hint && (
+        <p className="setting-hint" id={`${id}-${key}-hint`}>
+          {hint}
+        </p>
+      )}
     </div>
   )
+  const back = () => {
+    if (prepared) void sync.discard(prepared.session)
+    setPrepared(null)
+    setStep('form')
+  }
+
+  if (step === 'recovery' && prepared)
+    return (
+      <div className="sync-panel">
+        <h4>{t('sync.created')}</h4>
+        <div className="sync-recovery">
+          <p>{t('sync.recoveryHint')}</p>
+          <code aria-label={t('sync.recoveryKey')}>{prepared.session.recovery}</code>
+          <div className="sync-actions">
+            <button
+              type="button"
+              className="button"
+              onClick={() => navigator.clipboard?.writeText(prepared.session.recovery)}
+            >
+              {t('sync.copy')}
+            </button>
+            <button type="button" className="button primary" onClick={() => setStep('preview')}>
+              {t('sync.continue')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
 
   if (step === 'preview' && prepared)
     return (
@@ -224,7 +297,7 @@ function SetupForm({ sync }) {
               setBusy(true)
               setError('')
               try {
-                await sync.connect({ server, token, key: prepared.key })
+                await sync.connect(prepared.session)
               } catch {
                 setError(t('sync.noVault'))
               } finally {
@@ -234,130 +307,150 @@ function SetupForm({ sync }) {
           >
             {busy ? t('sync.syncing') : t('sync.start')}
           </button>
-          <button className="button" disabled={busy} onClick={() => setStep('form')}>
+          <button className="button" disabled={busy} onClick={back}>
             {t('sync.back')}
           </button>
         </div>
       </div>
     )
 
-  const key = mode === 'new' ? created : recovery
-  const ready = server.trim() && token.trim() && key && (mode === 'existing' || saved)
+  const ready =
+    email.trim() &&
+    password &&
+    (mode !== 'signup' || (name.trim() && invite.trim())) &&
+    (mode !== 'recover' || recovery.trim())
+  const switchMode = (next) => {
+    setMode(next)
+    setError('')
+  }
   return (
     <form
       className="sync-panel"
+      noValidate
       onSubmit={async (event) => {
         event.preventDefault()
         if (!ready || busy) return
         setBusy(true)
         setError('')
         try {
-          setPrepared(await sync.prepare({ server, token, recovery: key }))
-          setStep('preview')
+          const target = server.trim()
+          const result =
+            mode === 'signup'
+              ? await sync.signUp({ server: target, name, email, password, invite })
+              : mode === 'signin'
+                ? await sync.signIn({ server: target, email, password })
+                : await sync.recover({ server: target, email, recovery, password })
+          const session = { ...result, server: target }
+          let preview
+          try {
+            preview = await sync.preview(session)
+          } catch (failure) {
+            void sync.discard(session)
+            throw failure
+          }
+          setPassword('')
+          setPrepared({ session, preview })
+          setStep(mode === 'signup' ? 'recovery' : 'preview')
         } catch (failure) {
           const code = failure?.name === 'OperationError' ? 'wrong_key' : failure?.code
-          setError(errorText(code))
+          setError(formError(code))
         } finally {
           setBusy(false)
         }
       }}
     >
       <p className="setting-hint">{t('sync.intro')}</p>
-      {field(
-        'server',
-        t('sync.server'),
-        <input
-          id={`${id}-server`}
-          type="url"
-          required
-          placeholder="https://sloth-note-sync.example.workers.dev"
-          value={server}
-          onChange={(event) => setServer(event.target.value)}
-          autoComplete="off"
-          spellCheck={false}
-        />,
-      )}
-      {field(
-        'token',
-        t('sync.token'),
-        <input
-          id={`${id}-token`}
-          type="password"
-          required
-          value={token}
-          onChange={(event) => setToken(event.target.value)}
-          autoComplete="off"
-        />,
-      )}
-      <fieldset className="sync-mode">
-        <legend>{t('sync.keyTitle')}</legend>
-        <label>
-          <input
-            type="radio"
-            name={`${id}-mode`}
-            checked={mode === 'new'}
-            onChange={() => setMode('new')}
-          />
-          {t('sync.keyNew')}
-        </label>
-        <label>
-          <input
-            type="radio"
-            name={`${id}-mode`}
-            checked={mode === 'existing'}
-            onChange={() => setMode('existing')}
-          />
-          {t('sync.keyExisting')}
-        </label>
-      </fieldset>
-      {mode === 'new' ? (
-        created ? (
-          <div className="sync-recovery">
-            <p>{t('sync.recoveryHint')}</p>
-            <code aria-label={t('sync.recoveryKey')}>{created}</code>
-            <div className="sync-actions">
-              <button
-                type="button"
-                className="button"
-                onClick={() => navigator.clipboard?.writeText(created)}
-              >
-                {t('sync.copy')}
-              </button>
-            </div>
-            <label className="sync-check">
-              <input
-                type="checkbox"
-                checked={saved}
-                onChange={(event) => setSaved(event.target.checked)}
-              />
-              {t('sync.recoverySaved')}
-            </label>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="button"
-            onClick={async () => setCreated(await sync.newRecoveryKey())}
-          >
-            {t('sync.createKey')}
-          </button>
-        )
+      {mode === 'recover' ? (
+        <div className="sync-recover-head">
+          <h4>{t('sync.resetTitle')}</h4>
+          <p className="setting-hint">{t('sync.resetHint')}</p>
+        </div>
       ) : (
+        <Segmented
+          name={`${id}-mode`}
+          label={t('sync.accountMode')}
+          value={mode}
+          onChange={switchMode}
+          options={[
+            { id: 'signup', text: t('sync.createAccount') },
+            { id: 'signin', text: t('sync.signIn') },
+          ]}
+        />
+      )}
+      {mode === 'signup' &&
+        field(
+          'name',
+          t('sync.name'),
+          <input
+            id={`${id}-name`}
+            required
+            maxLength={100}
+            autoComplete="name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />,
+        )}
+      {field(
+        'email',
+        t('sync.email'),
+        <input
+          id={`${id}-email`}
+          type="email"
+          inputMode="email"
+          required
+          maxLength={254}
+          autoComplete={mode === 'signup' ? 'email' : 'username'}
+          autoCapitalize="none"
+          spellCheck={false}
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />,
+      )}
+      {mode === 'recover' &&
         field(
           'recovery',
           t('sync.recoveryKey'),
           <input
             id={`${id}-recovery`}
-            type="text"
             required
-            value={recovery}
-            onChange={(event) => setRecovery(event.target.value)}
             autoComplete="off"
             autoCapitalize="characters"
             spellCheck={false}
+            value={recovery}
+            onChange={(event) => setRecovery(event.target.value)}
           />,
-        )
+        )}
+      {field(
+        'password',
+        t(mode === 'recover' ? 'sync.newPassword' : 'sync.password'),
+        <input
+          id={`${id}-password`}
+          type="password"
+          required
+          minLength={mode === 'signin' ? undefined : MIN_PASSWORD}
+          autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+          aria-describedby={mode === 'signin' ? undefined : `${id}-password-hint`}
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />,
+        mode === 'signin' ? null : t('sync.passwordHint', { count: MIN_PASSWORD }),
       )}
+      {mode === 'signup' &&
+        field(
+          'invite',
+          t('sync.invite'),
+          <input
+            id={`${id}-invite`}
+            required
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            aria-describedby={`${id}-invite-hint`}
+            value={invite}
+            onChange={(event) => setInvite(event.target.value)}
+          />,
+          t('sync.inviteHint'),
+        )}
       {error && (
         <p className="sync-error" role="alert">
           {error}
@@ -365,9 +458,36 @@ function SetupForm({ sync }) {
       )}
       <div className="sync-actions">
         <button className="button primary" type="submit" disabled={!ready || busy}>
-          {busy ? t('sync.checkingServer') : t('sync.continue')}
+          {busy ? t(BUSY[mode]) : t(SUBMIT[mode])}
         </button>
+        {mode === 'signin' && (
+          <button type="button" className="button" onClick={() => switchMode('recover')}>
+            {t('sync.forgot')}
+          </button>
+        )}
+        {mode === 'recover' && (
+          <button type="button" className="button" onClick={() => switchMode('signin')}>
+            {t('sync.back')}
+          </button>
+        )}
       </div>
+      <details className="sync-advanced">
+        <summary>{t('sync.advanced')}</summary>
+        {field(
+          'server',
+          t('sync.server'),
+          <input
+            id={`${id}-server`}
+            type="url"
+            required
+            value={server}
+            onChange={(event) => setServer(event.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />,
+          t('sync.serverHint'),
+        )}
+      </details>
     </form>
   )
 }

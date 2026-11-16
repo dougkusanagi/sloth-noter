@@ -271,38 +271,9 @@ export function contract(label, makeStore) {
 contract('memory', memoryStore)
 
 // Same contract against D1 + R2 through Miniflare (local workerd, no network).
-const { Miniflare } = await import('miniflare')
-const { readFile } = await import('node:fs/promises')
-const schema = (
-  await Promise.all(
-    ['0001_notes.sql', '0002_usage.sql', '0003_profile_spaces.sql'].map((name) =>
-      readFile(new URL(`./migrations/${name}`, import.meta.url), 'utf8'),
-    ),
-  )
-).join('\n')
+const { miniflare } = await import('./test-d1.js')
 const { cloudflareStore } = await import('./cloudflare-store.js')
-const instances = []
-after(() => Promise.all(instances.map((mf) => mf.dispose())))
-async function miniflare() {
-  const mf = new Miniflare({
-    modules: true,
-    script: 'export default { fetch: () => new Response() }',
-    d1Databases: ['DB'],
-    r2Buckets: ['BLOBS'],
-  })
-  instances.push(mf)
-  const db = await mf.getD1Database('DB')
-  // exec runs one statement per line.
-  await db.exec(
-    schema
-      .replace(/--.*\n/g, '')
-      .split(';')
-      .map((statement) => statement.replace(/\s+/g, ' ').trim())
-      .filter(Boolean)
-      .join(';\n'),
-  )
-  return { db, bucket: await mf.getR2Bucket('BLOBS') }
-}
+after(() => miniflare.dispose())
 
 contract('cloudflare', async () => {
   const { db, bucket } = await miniflare()

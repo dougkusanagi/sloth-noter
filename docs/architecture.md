@@ -37,7 +37,7 @@ flowchart TD
   desktop --> syncEngine[src/sync: motor, criptografia e cofre]
   syncEngine --> store
   syncEngine --> syncServer[Servidor de sincronização Worker]
-  syncServer --> d1[D1: revisão atual e cursor]
+  syncServer --> d1[D1: contas, sessões, revisão atual e cursor]
   syncServer --> r2[R2: imagens cifradas]
 ```
 
@@ -49,9 +49,10 @@ flowchart TD
 - `src/visual-editor.jsx` e `src/markdown.jsx`: edição e leitura compartilhadas.
 - `src/persistence-runtime.js`: escolhe navegador, arquivo interno Tauri ou vault configurado.
 - `server/`: servidor de sincronização (ADR 0018), um Cloudflare Worker com D1 e R2. A API em
-  `server/api.js` não depende do armazenamento.
-- `src/sync/`: cliente HTTP, motor (`runSync`), mesclagem, criptografia (Web Crypto) e cofre de
-  chaves; `src/hooks/use-sync.js` liga o motor ao documento no desktop.
+  `server/api.js` não depende do armazenamento; `server/accounts.js` cria contas por convite,
+  sessões e troca de senha (ADR 0024) e escolhe o espaço de dados pela sessão.
+- `src/sync/`: cliente HTTP, contas (`account.js`), motor (`runSync`), mesclagem, criptografia
+  (Web Crypto) e cofre de chaves; `src/hooks/use-sync.js` liga o motor ao documento no desktop.
 - `src-tauri/`: operações nativas de arquivos, imagens, histórico e integração com a plataforma.
 
 O histórico de navegação contém rotas, busca, rolagem e cursor; o texto das notas permanece na

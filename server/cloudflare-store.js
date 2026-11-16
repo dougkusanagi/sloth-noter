@@ -17,6 +17,12 @@ export class QuotaExceeded extends Error {
 // for operations the Worker does not count, such as the dashboard and exports.
 export const FREE_LIMITS = { bytes: 9e9, writes: 900_000, reads: 9_000_000 }
 
+// Image bytes kept in R2 by every space: the free tier counts the whole bucket.
+export const STORED_BYTES = `SELECT
+  (SELECT COALESCE(SUM(size), 0) FROM blob_sizes) +
+  (SELECT COALESCE(SUM(size), 0) FROM profile_blob_sizes) +
+  (SELECT COALESCE(SUM(size), 0) FROM account_blob_sizes) AS total`
+
 export function cloudflareStore(db, bucket, { limits = FREE_LIMITS, now = () => new Date() } = {}) {
   const month = () => now().toISOString().slice(0, 7)
   // Counts the operation first, so a failed call is counted too (R2 bills it as well).
@@ -34,7 +40,7 @@ export function cloudflareStore(db, bucket, { limits = FREE_LIMITS, now = () => 
   }
   async function stored() {
     const row = await db
-      .prepare('SELECT (SELECT COALESCE(SUM(size), 0) FROM blob_sizes) + (SELECT COALESCE(SUM(size), 0) FROM profile_blob_sizes) AS total')
+      .prepare(STORED_BYTES)
       .first()
     return row.total
   }
