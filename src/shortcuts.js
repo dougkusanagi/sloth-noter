@@ -29,6 +29,7 @@ export const SHORTCUTS = [
   ['Alt+1', 'mode.visual'],
   ['Alt+2', 'mode.source'],
   ['Alt+3', 'mode.reading'],
+  ['Alt+4', 'mode.board'],
   ['Shift+/', 'menu.shortcuts'],
   ['-', 'menu.smaller'],
   ['0', 'menu.resetText'],
@@ -58,9 +59,15 @@ export function appShortcut(event) {
       ? 'outline'
       : event.code === 'KeyB'
         ? 'sidebar'
-        : ({ 1: 'visual', 2: 'source', 3: 'reading', f: 'focus', b: 'sidebar', t: 'outline' }[
-            key
-          ] ?? null)
+        : ({
+            1: 'visual',
+            2: 'source',
+            3: 'reading',
+            4: 'board',
+            f: 'focus',
+            b: 'sidebar',
+            t: 'outline',
+          }[key] ?? null)
   if (event.shiftKey && !event.altKey)
     return (
       {

@@ -60,16 +60,16 @@ status, arquivar com desfazer).
 
 ### Etapa 3 — Modo Quadro (desktop e web)
 
-- [ ] Quarto botão no seletor de modos, atalho e comando na paleta.
-- [ ] Preferência por nota em `noteMeta` (fora do `.md`), preservada no backup, na pasta de
+- [x] Quarto botão no seletor de modos, atalho e comando na paleta.
+- [x] Preferência por nota em `noteMeta` (fora do `.md`), preservada no backup, na pasta de
       notas e em notas abertas no local; os outros modos continuam globais.
-- [ ] Colunas por status; Canceladas riscadas na coluna Feita; raias por seção com "Agrupar
+- [x] Colunas por status; Canceladas riscadas na coluna Feita; raias por seção com "Agrupar
       por seção".
-- [ ] Arrastar entre colunas (muda o status) e entre raias (move a linha para a seção), com
+- [x] Arrastar entre colunas (muda o status) e entre raias (move a linha para a seção), com
       alternativa por menu para teclado.
-- [ ] "+" na coluna cria a tarefa no fim da seção com o status da coluna.
-- [ ] Mensagem de lista vazia com "Adicionar tarefa" em nota sem tarefas.
-- [ ] E2E: trocar modo, mover cartão, conferir o Markdown resultante, nota sem tarefas,
+- [x] "+" na coluna cria a tarefa no fim da seção com o status da coluna.
+- [x] Mensagem de lista vazia com "Adicionar tarefa" em nota sem tarefas.
+- [x] E2E: trocar modo, mover cartão, conferir o Markdown resultante, nota sem tarefas,
       preferência por nota ao trocar de aba e ao reabrir o app.
 
 ### Etapa 4 — Quadro no celular
@@ -86,6 +86,8 @@ status, arquivar com desfazer).
 
 > Etapa 1 concluída em 2026-11-16 (menu por clique direito e toque longo; etiqueta ao lado da tarefa não foi feita: o menu abre na própria caixa). Pendências aceitas: o celular ainda não lê a preferência de datas (usa o padrão, com data) e não há seletor de status por teclado fora do `Alt+1…5`.
 
+> Etapa 3 concluída em 2026-11-16. Desvio do ADR 0006: a preferência do Quadro por nota fica em `preferences.boardNotes` (como `wrapLinesByNote`), não em `noteMeta`, porque as preferências já vão no backup e na pasta de notas; o modo Quadro não grava nada no `.md`.
+
 ## Tentativas que falharam
 
 - Nenhuma até agora.
@@ -101,4 +103,4 @@ status, arquivar com desfazer).
 
 ## Próximo passo
 
-Etapa 3 (modo Quadro): começar pelo seletor de modos e pela preferência por nota em `noteMeta`; depois colunas por status, arrastar entre colunas e o "+" de cada coluna. Pendências da etapa 2: arquivamento automático depois de N dias (fora do escopo manual) e título da raia/grupo para seções H3+ (hoje usa o título da seção mais próxima).
+Etapa 4 (Quadro no celular): uma coluna por vez com abas por status, mudar o status pelo menu do cartão, e decidir onde o Quadro fica na casca mobile (hoje sem seletor de modos). Antes, conferir o Quadro em 390 px com muitos cartões e textos longos.

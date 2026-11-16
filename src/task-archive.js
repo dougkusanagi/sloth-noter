@@ -2,12 +2,12 @@ import { isArchiveTitle, noteTasks } from './tasks.js'
 
 const FENCE = /^\s*(`{3,}|~{3,})/
 const HEADING = /^(#{1,6})[ \t]+(.*?)[ \t#]*$/
-const TASK_LINE = /^(\s*)(?:[-*+]|\d+[.)])\s+\[(.)\]/
-const indentOf = (line) => line.match(/^\s*/)[0].replace(/\t/g, '    ').length
-const isBlank = (line) => !line.trim()
+export const TASK_LINE = /^(\s*)(?:[-*+]|\d+[.)])\s+\[(.)\]/
+export const indentOf = (line) => line.match(/^\s*/)[0].replace(/\t/g, '    ').length
+export const isBlank = (line) => !line.trim()
 
 /** Heading (outside code fences) of every line, or null. */
-function headingsOf(lines) {
+export function headingsOf(lines) {
   let fence = null
   return lines.map((line) => {
     const opener = FENCE.exec(line)?.[1]
@@ -25,7 +25,7 @@ function headingsOf(lines) {
 }
 
 /** Lines inside (or delimiting) a code fence. */
-function fencedLines(lines) {
+export function fencedLines(lines) {
   let fence = null
   return lines.map((line) => {
     const opener = FENCE.exec(line)?.[1]
@@ -42,7 +42,7 @@ function fencedLines(lines) {
 }
 
 /** First and last line (inclusive) of the `## Arquivo` section, or null. */
-function archiveRange(lines, headings) {
+export function archiveRange(lines, headings) {
   const start = headings.findIndex((h) => h && h.level === 2 && isArchiveTitle(h.title))
   if (start < 0) return null
   let end = lines.length
@@ -55,7 +55,7 @@ function archiveRange(lines, headings) {
 }
 
 /** Lines of the task block that starts at `index`: the task plus deeper-indented lines. */
-function blockEnd(lines, index) {
+export function blockEnd(lines, index) {
   const base = indentOf(lines[index])
   let last = index
   for (let i = index + 1; i < lines.length; i++) {
@@ -89,7 +89,7 @@ function parseArchive(lines) {
   return { preamble, groups }
 }
 
-const trimBlank = (lines) => {
+export const trimBlank = (lines) => {
   let from = 0
   let to = lines.length
   while (from < to && isBlank(lines[from])) from++
@@ -110,7 +110,7 @@ function renderArchive(title, preamble, groups) {
 }
 
 /** Collapses runs of blank lines left behind by the removed blocks. */
-function tidy(lines) {
+export function tidy(lines) {
   const fenced = fencedLines(lines)
   const out = []
   lines.forEach((line, index) => {

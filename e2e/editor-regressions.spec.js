@@ -6,7 +6,8 @@ const png = Buffer.from(
   'base64',
 )
 async function source(page, body) {
-  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  // A DOM click: at 390px the footer geometry shifts while the sidebar drawer slides away.
+  await page.getByRole('radio', { name: 'Código', exact: true }).evaluate((radio) => radio.click())
   await page.locator('textarea').fill(body)
 }
 async function visual(page) {

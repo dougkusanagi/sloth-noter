@@ -15,7 +15,7 @@ const STATUS_BY_CHAR = {
   X: 'done',
   '-': 'canceled',
 }
-const CHAR_BY_STATUS = { todo: ' ', doing: '/', waiting: '>', done: 'x', canceled: '-' }
+export const CHAR_BY_STATUS = { todo: ' ', doing: '/', waiting: '>', done: 'x', canceled: '-' }
 export const TASK_STATUSES = Object.keys(CHAR_BY_STATUS)
 /** Unknown characters count as "todo" and are never rewritten by the app. */
 export const taskStatus = (char) => STATUS_BY_CHAR[char] ?? 'todo'

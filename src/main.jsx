@@ -43,6 +43,7 @@ import { DisplayMenu } from './components/display-menu.jsx'
 import { TasksLibrary } from './components/tasks-library.jsx'
 import { resolvedTasks, taskSettings } from './tasks.js'
 import { archiveClosedTasks } from './task-archive.js'
+import { TaskBoard } from './components/task-board.jsx'
 import { displayName } from './note-title.js'
 import { useTabs } from './components/tabs.jsx'
 import { NoteViewport } from './components/note-viewport.jsx'
@@ -102,6 +103,7 @@ import {
 } from './images.js'
 import {
   BookOpen,
+  Columns3,
   Code,
   Eye,
   PanelLeft,
@@ -147,6 +149,7 @@ function ModeIcon({ mode }) {
   const props = { className: 'mode-icon', 'aria-hidden': true }
   if (mode === 'visual') return <Eye {...props} />
   if (mode === 'source') return <Code {...props} />
+  if (mode === 'board') return <Columns3 {...props} />
   return <BookOpen {...props} />
 }
 
@@ -1728,10 +1731,25 @@ function Workspace({ persistence, loaded }) {
         })
     })
   }
+  // "Quadro" is remembered per note (prefs.boardNotes); the other modes stay global.
+  const lastTextMode = useRef('visual')
   function changeMode(next) {
+    if (next !== 'board') lastTextMode.current = next
+    if (active) {
+      const boardNotes = { ...prefs.boardNotes }
+      if (next === 'board') boardNotes[active.id] = true
+      else delete boardNotes[active.id]
+      if (Boolean(prefs.boardNotes?.[active.id]) !== (next === 'board')) updatePrefs({ boardNotes })
+    }
     setMode(next)
     setMenuOpen(false)
   }
+  useEffect(() => {
+    const board = Boolean(active && prefs.boardNotes?.[active.id])
+    setMode((current) => (board ? 'board' : current === 'board' ? lastTextMode.current : current))
+    // Only the note being shown decides; changing the preference itself goes through changeMode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.id])
   async function resetDamagedStorage() {
     const failure = await persistence.save(current.current)
     setError(failure)
@@ -2143,6 +2161,7 @@ function Workspace({ persistence, loaded }) {
     visual: () => changeMode('visual'),
     source: () => changeMode('source'),
     reading: () => changeMode('reading'),
+    board: () => changeMode('board'),
     theme: () =>
       runMenu(() =>
         updatePrefs({
@@ -2679,6 +2698,16 @@ function Workspace({ persistence, loaded }) {
                     onReady={() => {}}
                   />
                 </div>
+              ) : active && mode === 'board' ? (
+                <div className="board-wrap">
+                  <TaskBoard
+                    key={active.id}
+                    body={active.body}
+                    grouped={prefs.boardGrouped !== false}
+                    onGroupedChange={(boardGrouped) => updatePrefs({ boardGrouped })}
+                    onChange={(next) => updateBody(next)}
+                  />
+                </div>
               ) : active ? (
                 <NoteViewport
                   key={`${active.id}:${mode === 'source' ? 'source' : 'visual'}:${prefs.language}`}
@@ -2885,6 +2914,7 @@ function Workspace({ persistence, loaded }) {
                 ['visual', t('mode.visual')],
                 ['source', t('mode.source')],
                 ['reading', t('mode.reading')],
+                ['board', t('mode.board')],
               ].map(([value, label], index) => (
                 <ShortcutHint key={value} label={label} keys={`Alt+${index + 1}`}>
                   <label>

@@ -50,6 +50,14 @@ for (const width of [390, 1280])
       })
     })
   }
+// The changelog note is virtualized: text far down exists only after scrolling to it.
+async function reveal(page, entry, text) {
+  await entry.hover()
+  for (let step = 0; step < 80 && !(await entry.innerText()).includes(text); step++) {
+    await page.mouse.wheel(0, 400)
+    await page.waitForTimeout(100)
+  }
+}
 
 for (const width of [390, 1280]) {
   test(`automatic pairs changelog is readable at ${width}px`, async ({ page }) => {
@@ -59,6 +67,7 @@ for (const width of [390, 1280]) {
     await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
     const entry = page.locator('.visual-editor.read-only')
     await entry.locator('[data-wiki^="Em desenvolvimento|"]').click()
+    await reveal(page, entry, 'confirmação de uma crase com espaço')
     await expect(entry).toContainText('O editor completa parênteses')
     await expect(entry).toContainText('confirmação de uma crase com espaço')
   })

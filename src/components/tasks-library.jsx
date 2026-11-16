@@ -5,7 +5,7 @@ import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
 
 /** Inline Markdown reduced to its text, so a task reads cleanly in the list. */
-function plain(text) {
+export function plain(text) {
   return text
     .replace(/!?\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, label) => label ?? target)
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')

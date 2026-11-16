@@ -139,6 +139,16 @@ export function validateDocument(value) {
     throw new Error('Invalid task dates preference')
   if (prefs?.wrapLines !== undefined && typeof prefs.wrapLines !== 'boolean')
     throw new Error('Invalid line wrapping preference')
+  if (prefs?.boardGrouped !== undefined && typeof prefs.boardGrouped !== 'boolean')
+    throw new Error('Invalid board grouping preference')
+  if (
+    prefs?.boardNotes !== undefined &&
+    (!prefs.boardNotes ||
+      Array.isArray(prefs.boardNotes) ||
+      typeof prefs.boardNotes !== 'object' ||
+      Object.values(prefs.boardNotes).some((value) => typeof value !== 'boolean'))
+  )
+    throw new Error('Invalid board view preferences')
   if (
     prefs?.wrapLinesByNote !== undefined &&
     (!prefs.wrapLinesByNote ||

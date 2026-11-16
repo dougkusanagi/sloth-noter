@@ -1,9 +1,19 @@
 import { test, expect } from '@playwright/test'
 const fill = async (page, text) => {
-  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  // DOM clicks: after a viewport change the sidebar drawer can still cover the footer.
+  await page.getByRole('radio', { name: 'Código', exact: true }).evaluate((radio) => radio.click())
   await page.getByRole('textbox', { name: 'Editor Markdown em texto puro' }).fill(text)
-  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).evaluate((radio) => radio.click())
 }
+// The changelog note is virtualized: text far down exists only after scrolling to it.
+async function reveal(page, entry, text) {
+  await entry.hover()
+  for (let step = 0; step < 80 && !(await entry.innerText()).includes(text); step++) {
+    await page.mouse.wheel(0, 400)
+    await page.waitForTimeout(100)
+  }
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
 })
@@ -149,6 +159,7 @@ for (const width of [390, 1280])
     await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
     const entry = page.locator('.visual-editor.read-only')
     await entry.locator('[data-wiki^="Em desenvolvimento|"]').click()
+    await reveal(page, entry, 'Cores para blocos')
     await expect(entry).toContainText('Cores para blocos')
     const image = entry.getByRole('img', {
       name: 'Paleta com cores do texto, cores de fundo e restauração do padrão',
