@@ -16,10 +16,12 @@ import {
   resolvedTasks,
   remarkPartialTasks,
   toggleTask,
+  applyStatus,
   sectionChecklists,
   sectionTaskChanges,
 } from './tasks.js'
-import { CIRCUMFERENCE, RADIUS } from './progress-badge.js'
+import { openTaskMenu } from './editor/task-menu.js'
+import { progressLabel, progressShares } from './progress-badge.js'
 
 function highlightedCode(tokens) {
   return tokens.map((token, index) =>
@@ -131,6 +133,18 @@ function ListItem({ children, className, node, style }) {
           disabled={!onChange || Boolean(task.progress)}
           aria-label={t(checked ? 'task.complete' : 'task.open')}
           onChange={toggle}
+          onContextMenu={(event) => {
+            if (!onChange || task.progress) return
+            event.preventDefault()
+            const box = event.currentTarget.getBoundingClientRect()
+            openTaskMenu({
+              x: event.clientX || box.left,
+              y: event.clientY || box.bottom,
+              current: task.status,
+              restoreFocus: () => event.currentTarget.focus(),
+              onSelect: (status) => onChange(applyStatus(text, task.mark, status)),
+            })
+          }}
         />
       )}
       {task ? dropLeadingSpace(children) : children}
@@ -232,25 +246,20 @@ function Section({ node, children, className, ...props }) {
     </section>
   )
 }
-function ProgressBadge({ done, total }) {
+function ProgressBadge({ done, total, doing = 0, waiting = 0 }) {
+  const share = progressShares(done, total, doing, waiting)
   return (
     <span
       className="section-progress"
       data-complete={done === total ? '' : undefined}
       role="img"
-      aria-label={t('progress.label', { done, total })}
+      aria-label={progressLabel(done, total, doing, waiting)}
     >
-      <svg viewBox="0 0 14 14" aria-hidden="true">
-        <circle className="section-progress-track" cx="7" cy="7" r={RADIUS} />
-        <circle
-          className="section-progress-fill"
-          cx="7"
-          cy="7"
-          r={RADIUS}
-          strokeDasharray={CIRCUMFERENCE}
-          strokeDashoffset={CIRCUMFERENCE * (1 - done / total)}
-        />
-      </svg>
+      <span className="section-progress-bar" aria-hidden="true">
+        <span className="section-progress-done" style={{ width: `${share.done}%` }} />
+        <span className="section-progress-doing" style={{ width: `${share.doing}%` }} />
+        <span className="section-progress-waiting" style={{ width: `${share.waiting}%` }} />
+      </span>
       <span className="section-progress-count" data-count={`${done}/${total}`} />
     </span>
   )

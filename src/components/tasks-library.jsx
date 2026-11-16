@@ -19,6 +19,7 @@ function plain(text) {
  */
 export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJump }) {
   const [collapsed, setCollapsed] = useState(new Set())
+  const [status, setStatus] = useState('all')
   const groups = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase()
     return notes
@@ -29,7 +30,8 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
           open: tasks.filter((task) => !task.done && task.status !== 'canceled').length,
           tasks: tasks.filter(
             (task) =>
-              (showDone || !task.done) &&
+              (showDone || (!task.done && task.status !== 'canceled')) &&
+              (status === 'all' || task.status === status) &&
               (!needle ||
                 task.text.toLocaleLowerCase().includes(needle) ||
                 note.name.toLocaleLowerCase().includes(needle)),
@@ -37,9 +39,17 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
         }
       })
       .filter((group) => group.tasks.length)
-  }, [notes, query, showDone])
+  }, [notes, query, showDone, status])
   return (
     <section className="tasks-library" aria-label={t('tasks.title')}>
+      <label className="tasks-filter tasks-status-filter">
+        {t('tasks.status')}
+        <select value={status} onChange={(event) => setStatus(event.target.value)}>
+          <option value="all">{t('tasks.statusAll')}</option>
+          <option value="doing">{t('task.status.doing')}</option>
+          <option value="waiting">{t('task.status.waiting')}</option>
+        </select>
+      </label>
       <label className="tasks-filter">
         <input
           type="checkbox"
@@ -87,11 +97,13 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
                   key={task.mark}
                   className="task-row"
                   data-done={task.done || undefined}
+                  data-status={task.status}
                   style={{ '--depth': Math.min(3, Math.floor(task.depth / 2)) }}
                 >
                   <input
                     type="checkbox"
                     className="task-checkbox"
+                    data-status={task.status}
                     checked={task.done}
                     ref={(input) => {
                       if (input) input.indeterminate = task.partial

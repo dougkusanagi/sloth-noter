@@ -161,12 +161,17 @@ test('Leitura collapses a section with its subsections and shares it with Padrã
   await expect(read.locator('.cm-line', { hasText: 'texto um' })).toBeVisible()
 })
 
+const localToday = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 test('Leitura task checkboxes inside a section keep working', async ({ page }) => {
   await box(page).fill('# T\n\n## A\n\n- [ ] item')
   await mode(page, 'Leitura')
   await page.getByRole('checkbox', { name: 'Marcar como concluída' }).check()
   await mode(page, 'Código')
-  await expect(box(page)).toHaveValue('# T\n\n## A\n\n- [x] item')
+  await expect(box(page)).toHaveValue(`# T\n\n## A\n\n- [x] item ✅ ${localToday()}`)
 })
 
 test('headings show their level as a pill without changing the heading text', async ({ page }) => {

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
 const body =
-  '# Checklist\n\n## Projeto\n\n- [x] Pronta\n- [ ] Aberta\n\n### Etapa\n\n- [-] Em andamento\n\n```md\n- [ ] Exemplo\n```\n\n## Outra\n\n- [ ] Não alterar'
+  '# Checklist\n\n## Projeto\n\n- [x] Pronta\n- [ ] Aberta\n\n### Etapa\n\n- [/] Em andamento\n\n```md\n- [ ] Exemplo\n```\n\n## Outra\n\n- [ ] Não alterar'
 
 for (const mode of ['Padrão', 'Leitura']) {
   test(`heading checklist toggles the section and subsections in ${mode}`, async ({ page }) => {
@@ -37,7 +37,7 @@ for (const mode of ['Padrão', 'Leitura']) {
     await expect(page.locator('textarea')).toHaveValue(
       body
         .replace('- [ ] Aberta', '- [x] Aberta')
-        .replace('- [-] Em andamento', '- [x] Em andamento'),
+        .replace('- [/] Em andamento', '- [x] Em andamento'),
     )
   })
   test(`heading checklist works with collapsed sections in ${mode}`, async ({ page }) => {

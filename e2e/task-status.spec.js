@@ -49,3 +49,31 @@ test('Alt+2…5 mudam o status da linha e a data acompanha concluir e reabrir', 
   await mode(page, 'Código')
   await expect(page.locator('textarea')).toHaveValue(/- \[ \] Escrever\n- \[ \] Revisar/)
 })
+
+test('o menu do clique direito troca o status e o progresso mostra os estados', async ({
+  page,
+}) => {
+  await page.locator('.cm-line', { hasText: 'Fim' }).click()
+  await page.locator('.task-checkbox').first().click({ button: 'right' })
+  const menu = page.getByRole('menu', { name: 'Status da tarefa' })
+  await expect(menu.getByRole('menuitemradio')).toHaveCount(5)
+  await menu.getByRole('menuitemradio', { name: /Fazendo/ }).click()
+  await expect(page.locator('.task-checkbox').first()).toHaveAttribute('data-status', 'doing')
+  await expect(menu).toHaveCount(0)
+  await page.locator('.task-checkbox').nth(1).click({ button: 'right' })
+  await page.keyboard.press('Escape')
+  await expect(menu).toHaveCount(0)
+  await mode(page, 'Código')
+  await expect(page.locator('textarea')).toHaveValue(/- \[\/\] Escrever\n- \[ \] Revisar/)
+})
+
+test('a barra de progresso separa tarefas em andamento e informa no rótulo', async ({ page }) => {
+  await mode(page, 'Código')
+  await page
+    .locator('textarea')
+    .fill('# P\n\n## Seção\n\n- [x] A\n- [/] B\n- [>] C\n- [-] D\n- [ ] E')
+  await mode(page, 'Leitura')
+  const badge = page.locator('.visual-editor .section-progress').first()
+  await expect(badge.locator('.section-progress-count')).toHaveAttribute('data-count', '1/4')
+  await expect(badge).toHaveAttribute('aria-label', /1 de 4.*1 fazendo.*1 esperando/)
+})

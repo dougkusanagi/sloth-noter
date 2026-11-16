@@ -88,9 +88,16 @@ function taskTotals(tasks) {
       (sum, task) => ({
         done: sum.done + (task.progress?.done ?? Number(task.done)),
         total: sum.total + (task.progress?.total ?? 1),
+        doing: sum.doing + (task.progress?.doing ?? Number(task.status === 'doing')),
+        waiting: sum.waiting + (task.progress?.waiting ?? Number(task.status === 'waiting')),
       }),
-      { done: 0, total: 0 },
+      { done: 0, total: 0, doing: 0, waiting: 0 },
     )
+}
+
+/** Totals as stored: "doing" and "waiting" only appear when something is in that state. */
+function withStatusCounts(done, total, doing, waiting) {
+  return { done, total, ...(doing && { doing }), ...(waiting && { waiting }) }
 }
 
 /**
@@ -121,9 +128,19 @@ export function sectionProgress(body, tasks = noteTasks(body), collapsed = new S
     )
     const linkedTotal = referenced.reduce((sum, item) => sum + item.total, 0)
     const linkedDone = referenced.reduce((sum, item) => sum + item.done, 0)
+    const linkedDoing = referenced.reduce((sum, item) => sum + (item.doing ?? 0), 0)
+    const linkedWaiting = referenced.reduce((sum, item) => sum + (item.waiting ?? 0), 0)
     const own = taskTotals(inside)
     if (own.total + linkedTotal)
-      progress.set(heading.line, { done: own.done + linkedDone, total: own.total + linkedTotal })
+      progress.set(
+        heading.line,
+        withStatusCounts(
+          own.done + linkedDone,
+          own.total + linkedTotal,
+          own.doing + linkedDoing,
+          own.waiting + linkedWaiting,
+        ),
+      )
   }
   const redundant = headings.filter((heading) => {
     const total = progress.get(heading.line)?.total
@@ -251,7 +268,8 @@ export function resolvedTasks(body, notes = [], ancestors = new Set(), allowCycl
       children.push(...tasks)
     }
     if (!children.length) return task
-    const progress = taskTotals(children)
+    const totals = taskTotals(children)
+    const progress = withStatusCounts(totals.done, totals.total, totals.doing, totals.waiting)
     const done = progress.done === progress.total
     const partial =
       progress.done < progress.total && children.some((item) => item.done || item.partial)

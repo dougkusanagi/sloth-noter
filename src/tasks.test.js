@@ -110,7 +110,11 @@ test('doing tasks remain open and toggling completes them', () => {
     ],
   )
   assert.equal(noteTasks(toggleTask(body, 3))[0].done, true)
-  assert.deepEqual(sectionProgress('## Work\n' + body).get(1), { done: 1, total: 3 })
+  assert.deepEqual(sectionProgress('## Work\n' + body).get(1), {
+    done: 1,
+    total: 3,
+    doing: 2,
+  })
 })
 
 test('linked tasks track progress, headings, aliases and nested notes', () => {
@@ -119,7 +123,7 @@ test('linked tasks track progress, headings, aliases and nested notes', () => {
     { name: 'Parent.md', body: '- [ ] [[Child#Work|Label]]' },
   ]
   const [task] = resolvedTasks(notes[1].body, notes)
-  assert.deepEqual(task.progress, { done: 1, total: 2 })
+  assert.deepEqual(task.progress, { done: 1, total: 2, doing: 1 })
   assert.equal(task.partial, true)
   const synced = syncLinkedTasks(notes.map((note) => ({ ...note, revision: 0 })))
   assert.equal(synced[1].body, '- [/] [[Child#Work|Label]]')
@@ -200,11 +204,15 @@ test('wiki headings summarize the referenced document without changing its tasks
     },
   ]
   const body = '# Projetos\n\n## [[Sistema de Estoque]]'
-  assert.deepEqual(sectionProgress(body, [], new Set(), notes).get(3), { done: 1, total: 3 })
+  assert.deepEqual(sectionProgress(body, [], new Set(), notes).get(3), {
+    done: 1,
+    total: 3,
+    doing: 1,
+  })
   assert.equal(sectionProgress(body, [], new Set(), []).size, 0)
   assert.deepEqual(
     sectionProgress(body.replace('Estoque]]', 'Estoque|Estoque]]'), [], new Set(), notes).get(3),
-    { done: 1, total: 3 },
+    { done: 1, total: 3, doing: 1 },
   )
 })
 
@@ -250,10 +258,11 @@ test('section totals include every task in linked notes, including nested links'
   assert.deepEqual(sectionProgress(body, resolvedTasks(body, [child])).get(3), {
     done: 4,
     total: 10,
+    doing: 1,
   })
   const middle = { name: 'Projetos.md', body: '- [ ] [[Sistema de Estoque]]\n- [x] Outra' }
   const [task] = resolvedTasks('- [ ] [[Projetos]]', [child, middle])
-  assert.deepEqual(task.progress, { done: 5, total: 11 })
+  assert.deepEqual(task.progress, { done: 5, total: 11, doing: 1 })
 })
 
 test('a heading linking to a note shows that note task totals without needing a task link below', () => {
@@ -268,6 +277,7 @@ test('a heading linking to a note shows that note task totals without needing a 
     assert.deepEqual(sectionProgress(body, undefined, undefined, notes).get(3), {
       done: 2,
       total: 4,
+      doing: 1,
     })
   }
   const body = '# À Fazer\n\n## [[Sistema de Estoque#Agora|Estoque]]\n'

@@ -48,7 +48,7 @@ test('the help page renders its sloth image and every example in reading mode', 
   await expect(read.locator('.cm-md-inline-tag')).toHaveText(['#ideias', '#projeto/lista'])
   await expect(read.locator('.cm-md-quote-nested')).toContainText('aninhadas')
   await expect(read.locator('.cm-md-rule')).toHaveCount(1)
-  await expect(read.locator('.cm-task-checkbox')).toHaveCount(3)
+  await expect(read.locator('.cm-task-checkbox')).toHaveCount(4)
   await expect(read.locator('.cm-md-wiki')).toHaveText(['Welcome', 'com outro texto'])
   // Leitura never reveals the Markdown of the line under the cursor.
   await expect(read.locator('.cm-md-editing')).toHaveCount(0)

@@ -28,6 +28,7 @@ import {
 } from '../tasks.js'
 import { Facet } from '@codemirror/state'
 import { progressBadge } from '../progress-badge.js'
+import { onLongPress, openTaskMenu } from './task-menu.js'
 
 const highlightedBlocks = new WeakMap()
 
@@ -74,16 +75,23 @@ class EmptyBodyWidget extends WidgetType {
 }
 
 class ProgressWidget extends WidgetType {
-  constructor(done, total) {
+  constructor({ done, total, doing = 0, waiting = 0 }) {
     super()
     this.done = done
     this.total = total
+    this.doing = doing
+    this.waiting = waiting
   }
   eq(other) {
-    return this.done === other.done && this.total === other.total
+    return (
+      this.done === other.done &&
+      this.total === other.total &&
+      this.doing === other.doing &&
+      this.waiting === other.waiting
+    )
   }
   toDOM() {
-    return progressBadge(this.done, this.total)
+    return progressBadge(this.done, this.total, this.doing, this.waiting)
   }
 }
 
@@ -164,6 +172,26 @@ class TaskWidget extends WidgetType {
     this.updateDOM(input)
     input.className = 'task-checkbox cm-task-checkbox'
     input.addEventListener('mousedown', (event) => event.preventDefault())
+    const openMenu = (x, y) => {
+      if (input.disabled) return
+      const mark = Number(input.dataset.mark)
+      openTaskMenu({
+        x,
+        y,
+        current: input.dataset.status,
+        restoreFocus: () => view.focus(),
+        onSelect: (status) => {
+          const changes = taskStatusChanges(view.state.doc.toString(), mark, status, taskSettings)
+          if (changes.length) view.dispatch({ changes, userEvent: 'tarefa' })
+        },
+      })
+    }
+    input.addEventListener('contextmenu', (event) => {
+      event.preventDefault()
+      const box = input.getBoundingClientRect()
+      openMenu(event.clientX || box.left, event.clientY || box.bottom)
+    })
+    onLongPress(input, openMenu)
     input.addEventListener('change', () =>
       view.dispatch({
         changes: taskStatusChanges(
@@ -458,7 +486,7 @@ export function decorationsFor(view) {
         if (linked)
           ranges.push(
             Decoration.widget({
-              widget: new ProgressWidget(linked.done, linked.total),
+              widget: new ProgressWidget(linked),
               side: 1,
             }).range(line.to),
           )
@@ -565,7 +593,7 @@ export function decorationsFor(view) {
       if (section)
         ranges.push(
           Decoration.widget({
-            widget: new ProgressWidget(section.done, section.total),
+            widget: new ProgressWidget(section),
             side: -1,
           }).range(line.to),
         )

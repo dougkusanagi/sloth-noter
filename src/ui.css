@@ -1498,6 +1498,18 @@ html:has(
   font: 12px var(--ui);
   cursor: pointer;
 }
+.tasks-status-filter select {
+  min-height: 24px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  color: var(--ink);
+  font: inherit;
+}
+.task-row[data-status='canceled'] .task-text {
+  text-decoration: line-through;
+  color: var(--muted);
+}
 .task-group {
   margin-bottom: 12px;
   animation: rise-in var(--medium) var(--ease) both;
