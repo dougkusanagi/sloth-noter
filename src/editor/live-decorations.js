@@ -29,6 +29,8 @@ import {
 import { Facet } from '@codemirror/state'
 import { progressBadge } from '../progress-badge.js'
 import { onLongPress, openTaskMenu } from './task-menu.js'
+import { unarchiveTask } from '../task-archive.js'
+import { documentChanges } from '../search-scope.js'
 
 const highlightedBlocks = new WeakMap()
 
@@ -149,8 +151,9 @@ class SectionChecklistWidget extends WidgetType {
 }
 
 class TaskWidget extends WidgetType {
-  constructor(checked, at, partial = false, automatic = false, status = 'todo') {
+  constructor(checked, at, partial = false, automatic = false, status = 'todo', archived = false) {
     super()
+    this.archived = archived
     this.status = status
     this.checked = checked
     this.at = at
@@ -163,7 +166,8 @@ class TaskWidget extends WidgetType {
       this.at === other.at &&
       this.partial === other.partial &&
       this.automatic === other.automatic &&
-      this.status === other.status
+      this.status === other.status &&
+      this.archived === other.archived
     )
   }
   toDOM(view) {
@@ -180,6 +184,15 @@ class TaskWidget extends WidgetType {
         y,
         current: input.dataset.status,
         restoreFocus: () => view.focus(),
+        onUnarchive:
+          input.dataset.archived === undefined
+            ? undefined
+            : () => {
+                const text = view.state.doc.toString()
+                const next = unarchiveTask(text, mark)
+                if (next !== text)
+                  view.dispatch({ changes: documentChanges(text, next), userEvent: 'tarefa' })
+              },
         onSelect: (status) => {
           const changes = taskStatusChanges(view.state.doc.toString(), mark, status, taskSettings)
           if (changes.length) view.dispatch({ changes, userEvent: 'tarefa' })
@@ -212,6 +225,8 @@ class TaskWidget extends WidgetType {
     input.setAttribute('aria-checked', this.partial ? 'mixed' : String(this.checked))
     input.dataset.mark = String(this.at)
     input.dataset.status = this.status
+    if (this.archived) input.dataset.archived = ''
+    else delete input.dataset.archived
     input.setAttribute('aria-label', t(this.checked ? 'task.complete' : 'task.open'))
     return true
   }
@@ -479,6 +494,7 @@ export function decorationsFor(view) {
                 tasks.get(number)?.partial,
                 Boolean(tasks.get(number)?.progress),
                 tasks.get(number)?.status,
+                tasks.get(number)?.archived,
               ),
             }).range(line.from, line.from + task[0].length),
           )

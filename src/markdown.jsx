@@ -21,6 +21,7 @@ import {
   sectionTaskChanges,
 } from './tasks.js'
 import { openTaskMenu } from './editor/task-menu.js'
+import { unarchiveTask } from './task-archive.js'
 import { progressLabel, progressShares } from './progress-badge.js'
 
 function highlightedCode(tokens) {
@@ -142,6 +143,9 @@ function ListItem({ children, className, node, style }) {
               y: event.clientY || box.bottom,
               current: task.status,
               restoreFocus: () => event.currentTarget.focus(),
+              onUnarchive: task.archived
+                ? () => onChange(unarchiveTask(text, task.mark))
+                : undefined,
               onSelect: (status) => onChange(applyStatus(text, task.mark, status)),
             })
           }}

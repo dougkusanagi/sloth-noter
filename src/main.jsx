@@ -42,6 +42,7 @@ import { WindowControls, isMac } from './components/window-controls.jsx'
 import { DisplayMenu } from './components/display-menu.jsx'
 import { TasksLibrary } from './components/tasks-library.jsx'
 import { resolvedTasks, taskSettings } from './tasks.js'
+import { archiveClosedTasks } from './task-archive.js'
 import { displayName } from './note-title.js'
 import { useTabs } from './components/tabs.jsx'
 import { NoteViewport } from './components/note-viewport.jsx'
@@ -81,7 +82,7 @@ import {
 import { t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
 import { welcomeNote } from './welcome.js'
-import { foldAll, unfoldAll } from './editor/folding.js'
+import { foldAll, foldArchive, unfoldAll } from './editor/folding.js'
 import { continueBlock } from './continue-block.js'
 import { applyChanges, listIndentChanges, mapPosition } from './list-indent.js'
 import { moveListItems } from './list-move.js'
@@ -2031,6 +2032,39 @@ function Workspace({ persistence, loaded }) {
     return () => document.removeEventListener('keydown', onKey, true)
   })
 
+  /** Replaces the active note with `next` as one undo step, touching only what changed. */
+  function replaceActiveBody(next) {
+    const note = current.current.notes.find((item) => item.id === current.current.activeId)
+    if (!note || note.body === next) return
+    const before = note.body
+    let from = 0
+    while (from < before.length && from < next.length && before[from] === next[from]) from++
+    let endBefore = before.length,
+      endNext = next.length
+    while (endBefore > from && endNext > from && before[endBefore - 1] === next[endNext - 1]) {
+      endBefore--
+      endNext--
+    }
+    const insert = next.slice(from, endNext)
+    if (mode === 'visual' && visualRef.current) {
+      visualRef.current.dispatch({ changes: { from, to: endBefore, insert }, userEvent: 'input' })
+    } else if (mode === 'source' && editorRef.current) {
+      const field = editorRef.current
+      field.focus()
+      field.setSelectionRange(from, endBefore)
+      if (!document.execCommand('insertText', false, insert)) updateBody(next)
+    } else updateBody(next)
+  }
+
+  function archiveTasks() {
+    if (!active) return
+    const { body, count } = archiveClosedTasks(active.body, t('tasks.archiveTitle'))
+    if (!count) return toast(t('tasks.archiveNone'))
+    replaceActiveBody(body)
+    if (visualRef.current) foldArchive(visualRef.current)
+    toast(t('tasks.archived', { count }))
+  }
+
   function foldSections(collapse) {
     if (visualRef.current) (collapse ? foldAll : unfoldAll)(visualRef.current)
   }
@@ -2124,6 +2158,7 @@ function Workspace({ persistence, loaded }) {
     language: () =>
       runMenu(() => updatePrefs({ language: prefs.language === 'en' ? 'pt-BR' : 'en' })),
     shortcuts: () => runMenu(() => setShortcutsOpen(true), false),
+    archiveTasks: () => active && runMenu(archiveTasks, false),
     foldAll: () => active && runMenu(() => foldSections(true), false),
     unfoldAll: () => active && runMenu(() => foldSections(false), false),
     welcome: () =>

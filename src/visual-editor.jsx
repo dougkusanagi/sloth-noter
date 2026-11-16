@@ -23,7 +23,7 @@ import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
 import { TASK_STATUSES, taskSettings, taskStatusChanges } from './tasks.js'
 import { emptyBodyLine, emptyNoteBody, liveMarkdown, taskNotes } from './editor/live-decorations.js'
-import { foldField } from './editor/folding.js'
+import { foldArchive, foldField } from './editor/folding.js'
 import {
   columnDrag,
   columnImageHandler,
@@ -956,6 +956,7 @@ export function VisualEditor({
     view.scrollDOM.addEventListener('mousedown', focusBlankArea)
     const openInsert = () => openInsertMenu(view)
     view.dom.addEventListener(OPEN_INSERT_EVENT, openInsert)
+    foldArchive(view)
     callbacks.current.onReady(view)
     return () => {
       view.dom.removeEventListener('pointerup', capturePointerSelection)

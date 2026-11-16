@@ -67,6 +67,7 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
           !active?.external,
           Boolean(active?.external),
         ],
+        ['archiveTasks', 'tasks.archive', Archive, undefined, !active, true],
         ['reopenTab', 'tabs.reopen', Undo2, 'Shift+T'],
         ['previousTab', 'tabs.previous', PanelsTopLeft, 'PageUp', !active],
         ['nextTab', 'tabs.next', PanelsTopLeft, 'PageDown', !active],

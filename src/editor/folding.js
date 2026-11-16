@@ -3,6 +3,7 @@ import { Decoration, EditorView, WidgetType } from '@codemirror/view'
 import { detailsBlocks } from '../details.js'
 import { headingSections } from '../sections.js'
 import { t } from '../i18n.js'
+import { isArchiveTitle } from '../tasks.js'
 
 const chevron =
   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4" /></svg>'
@@ -192,5 +193,21 @@ export function unfoldAll(view) {
   })
   if (!folded.length) return false
   view.dispatch({ effects: folded })
+  return true
+}
+
+/** The `## Arquivo` section starts collapsed (visual only: the Markdown does not change). */
+export function foldArchive(view) {
+  const { state } = view
+  const lines = state.doc.toString().split('\n')
+  const effects = foldableHeadings(state)
+    .filter(
+      (heading) =>
+        heading.depth === 2 && isArchiveTitle(lines[heading.line - 1].replace(/^##\s+/, '')),
+    )
+    .filter((heading) => !isFolded(state, state.doc.line(heading.titleEnd).to))
+    .map((heading) => foldSection.of(foldRange(state, heading)))
+  if (!effects.length) return false
+  view.dispatch({ effects })
   return true
 }

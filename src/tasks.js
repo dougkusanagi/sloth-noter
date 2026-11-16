@@ -21,6 +21,10 @@ export const TASK_STATUSES = Object.keys(CHAR_BY_STATUS)
 export const taskStatus = (char) => STATUS_BY_CHAR[char] ?? 'todo'
 const linkedHeading = (line) => /^#{1,6}\s+\[\[[^\n]+?\]\]\s*#*\s*$/.test(line)
 const FENCE = /^\s*(`{3,}|~{3,})/
+const H2 = /^##[ \t]+(.*?)[ \t#]*$/
+const H1 = /^#[ \t]/
+/** The `## Arquivo` / `## Archive` section holds archived tasks (ADR 0005). */
+export const isArchiveTitle = (title) => /^(arquivo|archive)$/i.test(title.trim())
 
 /**
  * Every Markdown task (`- [ ] text`) of a note, outside code fences. `line` is 1-based,
@@ -30,6 +34,7 @@ const FENCE = /^\s*(`{3,}|~{3,})/
 export function noteTasks(body) {
   const tasks = []
   let fence = null,
+    archived = false,
     offset = 0
   body.split('\n').forEach((text, index) => {
     const opener = FENCE.exec(text)?.[1]
@@ -37,6 +42,9 @@ export function noteTasks(body) {
       if (opener && opener[0] === fence[0] && opener.length >= fence.length) fence = null
     } else if (opener) fence = opener
     else {
+      const h2 = H2.exec(text)
+      if (h2) archived = isArchiveTitle(h2[1])
+      else if (H1.test(text)) archived = false
       const match = TASK.exec(text)
       if (match)
         tasks.push({
@@ -44,6 +52,7 @@ export function noteTasks(body) {
           offset,
           mark: offset + text.indexOf('[') + 1,
           status: taskStatus(match[2]),
+          archived,
           done: /[xX]/.test(match[2]),
           partial: false,
           text: (match[3] ?? '').trim(),
@@ -83,7 +92,7 @@ export function applyStatus(body, mark, status, options = taskSettings) {
 /** Linked checklists contribute their underlying tasks; canceled tasks are left out. */
 function taskTotals(tasks) {
   return tasks
-    .filter((task) => task.status !== 'canceled')
+    .filter((task) => task.status !== 'canceled' && !task.archived)
     .reduce(
       (sum, task) => ({
         done: sum.done + (task.progress?.done ?? Number(task.done)),
@@ -181,6 +190,7 @@ export function sectionChecklists(body, tasks = noteTasks(body)) {
       (task) =>
         !task.progress &&
         task.status !== 'canceled' &&
+        !task.archived &&
         task.line > heading.titleEnd &&
         task.line <= heading.end,
     )

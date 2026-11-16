@@ -46,16 +46,16 @@ status, arquivar com desfazer).
 
 ### Etapa 2 — Arquivar concluídas
 
-- [ ] Função pura que move tarefas Feitas e Canceladas (com subtarefas e linhas recuadas) para
+- [x] Função pura que move tarefas Feitas e Canceladas (com subtarefas e linhas recuadas) para
       `## Arquivo`, agrupadas por `### <seção de origem>`. Só move quando a subárvore inteira
       está concluída.
-- [ ] Reconhecer `Arquivo`/`Archive` e criar o título no idioma atual.
-- [ ] Ação "Arquivar concluídas" na paleta e no menu da nota; um único passo de desfazer;
+- [x] Reconhecer `Arquivo`/`Archive` e criar o título no idioma atual.
+- [x] Ação "Arquivar concluídas" na paleta e no menu da nota; um único passo de desfazer;
       aviso com o número de tarefas arquivadas.
-- [ ] Arquivo recolhido por padrão no Padrão e na Leitura; tarefas arquivadas fora do
+- [x] Arquivo recolhido por padrão no Padrão e na Leitura; tarefas arquivadas fora do
       progresso.
-- [ ] Ação "Desarquivar" na tarefa arquivada, devolvendo para a seção de origem.
-- [ ] Testes: listas aninhadas, linhas recuadas, blocos de código, tarefas sem seção, nota sem
+- [x] Ação "Desarquivar" na tarefa arquivada, devolvendo para a seção de origem.
+- [x] Testes: listas aninhadas, linhas recuadas, blocos de código, tarefas sem seção, nota sem
       Arquivo, Arquivo existente, seção de origem renomeada.
 
 ### Etapa 3 — Modo Quadro (desktop e web)
@@ -101,4 +101,4 @@ status, arquivar com desfazer).
 
 ## Próximo passo
 
-Etapa 2 (arquivar concluídas): começar pela função pura em `src/tasks.js` que move tarefas Feitas e Canceladas para `## Arquivo`, com testes de listas aninhadas, linhas recuadas e blocos de código.
+Etapa 3 (modo Quadro): começar pelo seletor de modos e pela preferência por nota em `noteMeta`; depois colunas por status, arrastar entre colunas e o "+" de cada coluna. Pendências da etapa 2: arquivamento automático depois de N dias (fora do escopo manual) e título da raia/grupo para seções H3+ (hoje usa o título da seção mais próxima).

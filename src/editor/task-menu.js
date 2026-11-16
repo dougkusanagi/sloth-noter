@@ -7,7 +7,7 @@ let closeOpenMenu = null
  * Small menu with the five task statuses, opened at the pointer (right click, long press or
  * the menu key). Arrow keys move, Enter picks, Escape closes; focus returns to `restoreFocus`.
  */
-export function openTaskMenu({ x, y, current, onSelect, restoreFocus }) {
+export function openTaskMenu({ x, y, current, onSelect, onUnarchive, restoreFocus }) {
   closeOpenMenu?.()
   const menu = document.createElement('div')
   menu.className = 'task-status-menu'
@@ -34,6 +34,21 @@ export function openTaskMenu({ x, y, current, onSelect, restoreFocus }) {
     })
     return item
   })
+  if (onUnarchive) {
+    const item = document.createElement('button')
+    item.type = 'button'
+    item.className = 'task-status-item task-unarchive'
+    item.setAttribute('role', 'menuitem')
+    const spacer = document.createElement('span')
+    const label = document.createElement('span')
+    label.textContent = t('task.unarchive')
+    item.append(spacer, label)
+    item.addEventListener('click', () => {
+      close()
+      onUnarchive()
+    })
+    items.push(item)
+  }
   menu.append(...items)
   const close = () => {
     document.removeEventListener('pointerdown', outside, true)

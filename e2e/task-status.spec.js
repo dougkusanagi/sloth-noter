@@ -77,3 +77,39 @@ test('a barra de progresso separa tarefas em andamento e informa no rótulo', as
   await expect(badge.locator('.section-progress-count')).toHaveAttribute('data-count', '1/4')
   await expect(badge).toHaveAttribute('aria-label', /1 de 4.*1 fazendo.*1 esperando/)
 })
+
+test('Arquivar tarefas concluídas move para o Arquivo recolhido e desfazer devolve', async ({
+  page,
+}) => {
+  const original = '# P\n\n## Seção\n\n- [x] Feita\n- [ ] Aberta\n- [-] Cancelada\n'
+  await mode(page, 'Código')
+  await page.locator('textarea').fill(original)
+  await mode(page, 'Padrão')
+  await page.keyboard.press('Control+Shift+P')
+  await page.getByRole('combobox').fill('Arquivar tarefas')
+  await page.keyboard.press('Enter')
+  await expect(page.getByText('Tarefas arquivadas: 2')).toBeVisible()
+  await expect(page.locator('.cm-line', { hasText: 'Cancelada' })).toHaveCount(0)
+  await mode(page, 'Código')
+  await expect(page.locator('textarea')).toHaveValue(
+    '# P\n\n## Seção\n\n- [ ] Aberta\n\n## Arquivo\n\n### Seção\n\n- [x] Feita\n- [-] Cancelada\n',
+  )
+})
+
+test('desfazer reverte o arquivamento inteiro de uma vez e o Arquivo abre recolhido', async ({
+  page,
+}) => {
+  const original = '# P\n\n## Seção\n\n- [x] Feita\n- [ ] Aberta\n'
+  await mode(page, 'Código')
+  await page.locator('textarea').fill(original)
+  await mode(page, 'Padrão')
+  await page.locator('.cm-content').click()
+  await page.keyboard.press('Control+Shift+P')
+  await page.getByRole('combobox').fill('Arquivar tarefas')
+  await page.keyboard.press('Enter')
+  await expect(page.getByText('Tarefas arquivadas: 1')).toBeVisible()
+  await page.locator('.cm-content').click()
+  await page.keyboard.press('Control+z')
+  await mode(page, 'Código')
+  await expect(page.locator('textarea')).toHaveValue(original)
+})

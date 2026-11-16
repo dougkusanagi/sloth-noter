@@ -13,7 +13,7 @@ import {
   uniqueName,
 } from '../notes.js'
 import { isExternalNote } from '../external-notes.js'
-import { resolvedTasks, toggleTask } from '../tasks.js'
+import { resolvedTasks, taskSettings, taskStatus, taskStatusChanges, toggleTask } from '../tasks.js'
 
 // Note actions shared by the screens: open, create, close, rename, trash and jump to tasks.
 export function useNoteActions({
@@ -293,7 +293,12 @@ export function useNoteActions({
     const view = visualRef.current
     if (mode === 'visual' && current.current.activeId === noteId && view) {
       view.dispatch({
-        changes: { from: mark, to: mark + 1, insert: note.body[mark] === ' ' ? 'x' : ' ' },
+        changes: taskStatusChanges(
+          note.body,
+          mark,
+          taskStatus(note.body[mark]) === 'done' ? 'todo' : 'done',
+          taskSettings,
+        ),
         userEvent: 'tarefa',
       })
       return
