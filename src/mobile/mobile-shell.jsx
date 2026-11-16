@@ -5,6 +5,7 @@ import {
   Check,
   CheckCheck,
   Code2,
+  Columns3,
   Copy,
   FileInput,
   FileOutput,
@@ -78,6 +79,7 @@ import { SwipeNoteRow } from './swipe-note-row.jsx'
 import { shareAndroidText } from './share.js'
 import { backEnabled, createMobileBack } from './back.js'
 import { EditingSheet } from './editing-sheet.jsx'
+import { TaskBoard } from '../components/task-board.jsx'
 import { FormattingBar } from './formatting-bar.jsx'
 import { flushOnHide } from './lifecycle.js'
 import { saveTextFile } from './file-save.js'
@@ -242,6 +244,14 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const editing = active && editingId === active.id
   const codeNotes = Array.isArray(prefs.mobileCodeNotes) ? prefs.mobileCodeNotes : []
   const sourceMode = Boolean(active && codeNotes.includes(active.id))
+  // The board view is shared with the desktop (prefs.boardNotes); editing always shows the text.
+  const boardView = Boolean(active && prefs.boardNotes?.[active.id])
+  function setBoardView(id, board) {
+    const boardNotes = { ...current.current.preferences.boardNotes }
+    if (board) boardNotes[id] = true
+    else delete boardNotes[id]
+    updatePrefs({ boardNotes })
+  }
   function setNoteMode(id, source) {
     const saved = Array.isArray(current.current.preferences.mobileCodeNotes)
       ? current.current.preferences.mobileCodeNotes.filter((value) => value !== id)
@@ -942,6 +952,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         {active && !editing && (
           <button
             className="mobile-icon"
+            aria-label={t(boardView ? 'mobile.boardOff' : 'mobile.boardOn')}
+            title={t(boardView ? 'mobile.boardOff' : 'mobile.boardOn')}
+            aria-pressed={boardView}
+            onClick={() => setBoardView(active.id, !boardView)}
+          >
+            <Columns3 size={22} />
+          </button>
+        )}
+        {active && !editing && (
+          <button
+            className="mobile-icon"
             aria-label={t('mobile.noteActions', { name: displayName(active.name) })}
             onClick={() => dispatch({ type: 'layer', route: { name: 'sheet', id: active.id } })}
           >
@@ -1137,6 +1158,18 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   }
                 }}
               />
+            ) : boardView ? (
+              <div className="board-wrap">
+                <TaskBoard
+                  key={active.id}
+                  compact
+                  readOnly={blocked}
+                  body={active.body}
+                  grouped={prefs.boardGrouped !== false}
+                  onGroupedChange={(boardGrouped) => updatePrefs({ boardGrouped })}
+                  onChange={blocked ? () => {} : updateBody}
+                />
+              </div>
             ) : (
               <Markdown
                 wrapLines={prefs.wrapLines !== false}

@@ -262,8 +262,9 @@ a gravação local precisa ser confiável antes de sincronizar).
 - [ ] **A16 — Classes de janela e teclado físico.** P7, P41–P43; problema 26. Requisitos 8.
       Pronto: média e expandida em 600 e 840 dp e em paisagem; consultar duas notas; troca de
       classe sem perder estado; atalhos com teclado físico.
-- [ ] **A17 — Status de tarefas e Quadro.** P44. **Bloqueada** até as etapas 1–3 do
-      [plano de status e quadro](status-arquivo-quadro-tarefas.md). Executa a etapa 4 daquele plano.
+- [x] **A17 — Status de tarefas e Quadro.** P44. Etapas 1–4 do
+      [plano de status e quadro](status-arquivo-quadro-tarefas.md) feitas em 2026-11-16: Quadro
+      compacto com abas por status e menu do cartão. Falta conferir em aparelho real.
 - [ ] **A18 — Polimento nativo** (6.1–6.4). Problemas 2, 4, 8–11, 20, 24.
       Já feito: ícones das barras (6.1); arrastar folhas no navegador (6.2).
       Falta: fundo das barras e matriz de temas com folhas; conflito do arraste com teclado,

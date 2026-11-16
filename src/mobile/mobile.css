@@ -939,3 +939,48 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
 [data-platform='mobile'] .mobile-sheet > button.mobile-profile > svg {
   color: var(--accent);
 }
+
+/* Board view on the phone: one column at a time, picked by tabs. */
+[data-platform='mobile'] .board-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+[data-platform='mobile'] .board-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font: 600 13px var(--ui);
+  white-space: nowrap;
+  cursor: pointer;
+}
+[data-platform='mobile'] .board-tabs button[aria-selected='true'] {
+  background: var(--control);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--edge);
+}
+[data-platform='mobile'] .task-board[data-compact] .board-columns {
+  grid-template-columns: 1fr;
+}
+[data-platform='mobile'] .task-board[data-compact] .board-card {
+  padding-right: 52px;
+  cursor: default;
+}
+[data-platform='mobile'] .board-card-menu,
+[data-platform='mobile'] .board-add {
+  width: 44px;
+  height: 44px;
+}
+[data-platform='mobile'] .board-wrap {
+  padding: 8px 12px 24px;
+}
+[data-platform='mobile'] .task-board[data-compact] .board-column-header > span {
+  display: none;
+}

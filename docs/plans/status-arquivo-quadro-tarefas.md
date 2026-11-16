@@ -74,8 +74,8 @@ status, arquivar com desfazer).
 
 ### Etapa 4 — Quadro no celular
 
-- [ ] Uma coluna por vez, com abas por status; mudar status pelo menu da etiqueta.
-- [ ] Definir onde o Quadro fica na casca mobile (hoje sem seletor de modos).
+- [x] Uma coluna por vez, com abas por status; mudar status pelo menu do cartão.
+- [x] Definir onde o Quadro fica na casca mobile (hoje sem seletor de modos).
 
 ### Em cada etapa
 
@@ -103,4 +103,4 @@ status, arquivar com desfazer).
 
 ## Próximo passo
 
-Etapa 4 (Quadro no celular): uma coluna por vez com abas por status, mudar o status pelo menu do cartão, e decidir onde o Quadro fica na casca mobile (hoje sem seletor de modos). Antes, conferir o Quadro em 390 px com muitos cartões e textos longos.
+Plano concluído (etapas 1 a 4). Pendências aceitas: arquivamento automático depois de N dias; título de raia/grupo para seções H3+; o celular não lê a preferência de datas (usa o padrão, com data); a etapa A17 do plano mobile fica liberada e só falta conferir em aparelho real. Ao revisar, mover decisões para ADR (desvio: `preferences.boardNotes`) e apagar este plano antes de integrar, conforme as regras do projeto.

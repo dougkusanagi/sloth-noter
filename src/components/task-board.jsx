@@ -18,7 +18,16 @@ const CARD_TYPE = 'application/x-sloth-card'
  * A note's tasks as a board (ADR 0006): columns are statuses, lanes are the H2 sections.
  * Every change rewrites the note text through `onChange`; `Desfazer` restores the previous text.
  */
-export function TaskBoard({ body, grouped, onGroupedChange, onChange }) {
+export function TaskBoard({
+  body,
+  grouped,
+  onGroupedChange,
+  onChange,
+  compact = false,
+  readOnly = false,
+}) {
+  // On narrow screens (compact) one column shows at a time, picked by tabs; no dragging.
+  const [tab, setTab] = useState('todo')
   const [history, setHistory] = useState([])
   const [adding, setAdding] = useState(null)
   const [over, setOver] = useState(null)
@@ -26,6 +35,12 @@ export function TaskBoard({ body, grouped, onGroupedChange, onChange }) {
   bodyRef.current = body
   const { lanes } = parseBoard(body)
   const total = lanes.reduce((sum, lane) => sum + lane.cards.length, 0)
+  const visibleColumns = compact ? [tab] : BOARD_COLUMNS
+  const columnCount = (column) =>
+    lanes.reduce(
+      (sum, lane) => sum + lane.cards.filter((card) => columnOf(card.status) === column).length,
+      0,
+    )
   const shown = grouped
     ? lanes
     : [{ title: '', heading: -1, cards: lanes.flatMap((lane) => lane.cards) }]
@@ -91,7 +106,11 @@ export function TaskBoard({ body, grouped, onGroupedChange, onChange }) {
     ) : null
 
   return (
-    <section className="task-board" aria-label={t('board.label')}>
+    <section
+      className="task-board"
+      data-compact={compact || undefined}
+      aria-label={t('board.label')}
+    >
       <div className="board-toolbar">
         <label className="tasks-filter">
           <input
@@ -107,6 +126,23 @@ export function TaskBoard({ body, grouped, onGroupedChange, onChange }) {
           {t('board.undo')}
         </button>
       </div>
+      {compact && total > 0 && (
+        <div className="board-tabs" role="tablist" aria-label={t('board.columns')}>
+          {BOARD_COLUMNS.map((column) => (
+            <button
+              key={column}
+              type="button"
+              role="tab"
+              aria-selected={tab === column}
+              data-column={column}
+              onClick={() => setTab(column)}
+            >
+              {t(`task.status.${column}`)}
+              <span className="count">{columnCount(column)}</span>
+            </button>
+          ))}
+        </div>
+      )}
       {total === 0 ? (
         <div className="empty-state board-empty">
           <p>{t('board.empty')}</p>
@@ -134,7 +170,7 @@ export function TaskBoard({ body, grouped, onGroupedChange, onChange }) {
               </h3>
             )}
             <div className="board-columns">
-              {BOARD_COLUMNS.map((column) => {
+              {visibleColumns.map((column) => {
                 const cards = lane.cards.filter((card) => columnOf(card.status) === column)
                 const cell = `${laneIndex}:${column}`
                 return (
@@ -186,7 +222,7 @@ export function TaskBoard({ body, grouped, onGroupedChange, onChange }) {
                             key={card.mark}
                             className="board-card"
                             data-status={card.status}
-                            draggable
+                            draggable={!compact && !readOnly}
                             onDragStart={(event) => {
                               event.dataTransfer.setData(CARD_TYPE, String(card.mark))
                               event.dataTransfer.effectAllowed = 'move'
