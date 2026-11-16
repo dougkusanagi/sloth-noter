@@ -220,7 +220,7 @@ export function useNoteActions({
     if (!note || note.completedAt) return
     const tasks = resolvedTasks(note.body, current.current.notes)
     if (!tasks.length) return
-    const pending = tasks.filter((task) => !task.done).length
+    const pending = tasks.filter((task) => !task.done && task.status !== 'canceled').length
     if (
       pending &&
       !(await ask({

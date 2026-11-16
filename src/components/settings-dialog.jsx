@@ -184,6 +184,17 @@ export function SettingsDialog({
                   onChange={(wrapLines) => onChange({ wrapLines })}
                 />
               </Row>
+              <Row
+                id="settings-task-dates"
+                title={t('settings.taskDates')}
+                hint={t('settings.taskDatesHint')}
+              >
+                <Switch
+                  id="settings-task-dates"
+                  checked={prefs.taskDates !== false}
+                  onChange={(taskDates) => onChange({ taskDates })}
+                />
+              </Row>
               <Row id="settings-font" title={t('settings.fontSize')} hint={t('settings.fontHint')}>
                 <FontSlider
                   id="settings-font"

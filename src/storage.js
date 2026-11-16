@@ -135,6 +135,8 @@ export function validateDocument(value) {
     throw new Error('Invalid note order')
   if (prefs?.openFirst !== undefined && typeof prefs.openFirst !== 'boolean')
     throw new Error('Invalid open notes order preference')
+  if (prefs?.taskDates !== undefined && typeof prefs.taskDates !== 'boolean')
+    throw new Error('Invalid task dates preference')
   if (prefs?.wrapLines !== undefined && typeof prefs.wrapLines !== 'boolean')
     throw new Error('Invalid line wrapping preference')
   if (

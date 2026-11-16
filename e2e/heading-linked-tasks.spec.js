@@ -11,7 +11,7 @@ for (const width of [390, 1280]) {
           '# Sistema de Estoque\n\n' +
           Array.from(
             { length: 10 },
-            (_, i) => `- [${i < 4 ? 'x' : i === 4 ? '-' : ' '}] Tarefa ${i + 1}`,
+            (_, i) => `- [${i < 4 ? 'x' : i === 4 ? '/' : ' '}] Tarefa ${i + 1}`,
           ).join('\n')
         localStorage.setItem(
           'sloth-note:v3',

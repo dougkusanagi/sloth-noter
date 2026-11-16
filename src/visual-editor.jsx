@@ -21,6 +21,7 @@ import { clipboardAction } from './clipboard-actions.js'
 import { ImageInsert } from './components/image-insert.jsx'
 import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
+import { TASK_STATUSES, taskSettings, taskStatusChanges } from './tasks.js'
 import { emptyBodyLine, emptyNoteBody, liveMarkdown, taskNotes } from './editor/live-decorations.js'
 import { foldField } from './editor/folding.js'
 import {
@@ -493,6 +494,17 @@ export function VisualEditor({
     const visualExtensions = [
       documentColors,
       keymap.of([
+        ...TASK_STATUSES.map((status, index) => ({
+          key: 'Alt-' + (index + 1),
+          run: (view) => {
+            const line = view.state.doc.lineAt(view.state.selection.main.head)
+            if (!/^\s*(?:[-*+]|\d+[.)])\s+\[/.test(line.text)) return false
+            const mark = line.from + line.text.indexOf('[') + 1
+            const changes = taskStatusChanges(view.state.doc.toString(), mark, status, taskSettings)
+            if (changes.length) view.dispatch({ changes, userEvent: 'tarefa' })
+            return true
+          },
+        })),
         {
           key: 'Shift-Home',
           run: (view) => {

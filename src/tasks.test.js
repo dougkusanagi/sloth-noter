@@ -9,6 +9,9 @@ import {
   toggleTask,
   sectionChecklists,
   sectionTaskChanges,
+  setTaskStatus,
+  taskStatusChanges,
+  remarkPartialTasks,
 } from './tasks.js'
 
 const BODY = `# Lista
@@ -96,14 +99,14 @@ test('an empty sibling does not make a repeated parent total useful', () => {
   )
 })
 
-test('partial tasks remain open and toggling completes them', () => {
-  const body = '- [-] In progress\n1. [-] Another\n- [x] Done'
+test('doing tasks remain open and toggling completes them', () => {
+  const body = '- [/] In progress\n1. [/] Another\n- [x] Done'
   assert.deepEqual(
-    noteTasks(body).map(({ done, partial }) => [done, partial]),
+    noteTasks(body).map(({ done, status }) => [done, status]),
     [
-      [false, true],
-      [false, true],
-      [true, false],
+      [false, 'doing'],
+      [false, 'doing'],
+      [true, 'done'],
     ],
   )
   assert.equal(noteTasks(toggleTask(body, 3))[0].done, true)
@@ -112,25 +115,25 @@ test('partial tasks remain open and toggling completes them', () => {
 
 test('linked tasks track progress, headings, aliases and nested notes', () => {
   const notes = [
-    { name: 'Child.md', body: '## Work\n- [x] One\n- [-] Two\n## Later\n- [ ] Three' },
+    { name: 'Child.md', body: '## Work\n- [x] One\n- [/] Two\n## Later\n- [ ] Three' },
     { name: 'Parent.md', body: '- [ ] [[Child#Work|Label]]' },
   ]
   const [task] = resolvedTasks(notes[1].body, notes)
   assert.deepEqual(task.progress, { done: 1, total: 2 })
   assert.equal(task.partial, true)
   const synced = syncLinkedTasks(notes.map((note) => ({ ...note, revision: 0 })))
-  assert.equal(synced[1].body, '- [-] [[Child#Work|Label]]')
+  assert.equal(synced[1].body, '- [/] [[Child#Work|Label]]')
   const completed = synced.map((note, i) =>
-    i === 0 ? { ...note, body: note.body.replace('[-]', '[x]') } : note,
+    i === 0 ? { ...note, body: note.body.replace('[/]', '[x]') } : note,
   )
   assert.equal(syncLinkedTasks(completed)[1].body, '- [x] [[Child#Work|Label]]')
   completed[0].body = completed[0].body.replace('[x]', '[ ]')
-  assert.equal(syncLinkedTasks(completed)[1].body, '- [-] [[Child#Work|Label]]')
+  assert.equal(syncLinkedTasks(completed)[1].body, '- [/] [[Child#Work|Label]]')
   assert.equal(resolvedTasks('- [ ] [[Parent]]', completed)[0].done, false)
 })
 
 test('missing, empty and circular references keep manual state', () => {
-  assert.equal(resolvedTasks('- [-] [[Missing]]', [])[0].partial, true)
+  assert.equal(resolvedTasks('- [/] [[Missing]]', [])[0].status, 'doing')
   assert.equal(
     resolvedTasks('- [x] [[Empty]]', [{ name: 'Empty.md', body: '# Empty' }])[0].done,
     true,
@@ -144,7 +147,7 @@ test('missing, empty and circular references keep manual state', () => {
 
 test('section bulk checkboxes include nested tasks, skip fences and stop at sibling headings', () => {
   const body =
-    '# Note\n## Work\n- [x] First\n### Child\n- [-] Partial\n- [ ] Open\n```md\n- [ ] Example\n```\n## Other\n- [ ] Outside'
+    '# Note\n## Work\n- [x] First\n### Child\n- [/] Partial\n- [ ] Open\n```md\n- [ ] Example\n```\n## Other\n- [ ] Outside'
   const section = sectionChecklists(body).get(2)
   assert.deepEqual(
     [section.title, section.done, section.total, section.partial],
@@ -193,7 +196,7 @@ test('wiki headings summarize the referenced document without changing its tasks
   const notes = [
     {
       name: 'Sistema de Estoque.md',
-      body: '# Sistema de Estoque\n\n- [x] Feito\n- [-] Parcial\n- [ ] Pendente',
+      body: '# Sistema de Estoque\n\n- [x] Feito\n- [/] Parcial\n- [ ] Pendente',
     },
   ]
   const body = '# Projetos\n\n## [[Sistema de Estoque]]'
@@ -240,7 +243,7 @@ test('section totals include every task in linked notes, including nested links'
       '# Sistema de Estoque\n' +
       Array.from(
         { length: 10 },
-        (_, i) => `- [${i < 4 ? 'x' : i === 4 ? '-' : ' '}] Tarefa ${i}`,
+        (_, i) => `- [${i < 4 ? 'x' : i === 4 ? '/' : ' '}] Tarefa ${i}`,
       ).join('\n'),
   }
   const body = '# À Fazer\n\n## Sistemas\n\n- [ ] [[Sistema de Estoque]]'
@@ -257,7 +260,7 @@ test('a heading linking to a note shows that note task totals without needing a 
   const notes = [
     {
       name: 'Sistema de Estoque.md',
-      body: '# Sistema de Estoque\n- [x] A\n- [x] B\n- [-] C\n- [ ] D',
+      body: '# Sistema de Estoque\n- [x] A\n- [x] B\n- [/] C\n- [ ] D',
     },
   ]
   for (const tail of ['', '\n\n- [ ] Uma tarefa local']) {
@@ -279,4 +282,74 @@ test('a heading linking to a note shows that note task totals without needing a 
     total: 2,
   })
   assert.equal(sectionProgress('# T\n## [[Inexistente]]', undefined, undefined, notes).size, 0)
+})
+
+const applyStatus = (body, mark, status, options) =>
+  applyChanges(body, taskStatusChanges(body, mark, status, options))
+
+test('finishing a task adds a date, reopening removes it, canceling swaps it', () => {
+  const date = new Date(2026, 10, 16)
+  let body = '- [ ] Escrever\n- [ ] Outra'
+  body = applyStatus(body, 3, 'done', { date })
+  assert.equal(body, '- [x] Escrever ✅ 2026-11-16\n- [ ] Outra')
+  assert.equal(
+    applyStatus(body, 3, 'canceled', { date }),
+    '- [-] Escrever ❌ 2026-11-16\n- [ ] Outra',
+  )
+  assert.equal(applyStatus(body, 3, 'todo', { date }), '- [ ] Escrever\n- [ ] Outra')
+  assert.equal(applyStatus(body, 3, 'doing', { date }), '- [/] Escrever\n- [ ] Outra')
+  assert.equal(applyStatus('- [ ] A', 3, 'done', { date, dates: false }), '- [x] A')
+  assert.deepEqual(taskStatusChanges(body, 3, 'done', { date }), [])
+  assert.deepEqual(taskStatusChanges('- [?] A', 3, 'todo'), [])
+})
+
+test('every status is read from its character and unknown ones count as todo', () => {
+  const body = '- [ ] a\n- [/] b\n- [>] c\n- [x] d\n- [X] e\n- [-] f\n- [?] g\n- [1] não é tarefa'
+  assert.deepEqual(
+    noteTasks(body).map((task) => task.status),
+    ['todo', 'doing', 'waiting', 'done', 'done', 'canceled', 'todo'],
+  )
+})
+
+test('setTaskStatus changes only the box and ignores positions that are not boxes', () => {
+  const body = '- [>] a\n- [?] b\n- [-] c'
+  const [a, b] = noteTasks(body)
+  assert.equal(setTaskStatus(body, b.mark, 'doing'), '- [>] a\n- [/] b\n- [-] c')
+  assert.equal(setTaskStatus(body, a.mark, 'invalid'), body)
+  assert.equal(toggleTask(body, 0), body)
+})
+
+test('canceled tasks stay out of section totals and bulk changes', () => {
+  const body = '## Work\n- [x] A\n- [-] B\n- [ ] C'
+  assert.deepEqual(sectionProgress(body).get(1), { done: 1, total: 2 })
+  assert.equal(sectionChecklists(body).get(1).total, 2)
+  assert.equal(sectionTaskChanges(body, 1, true).length, 1)
+  assert.equal(sectionProgress('## Work\n- [-] Only').size, 0)
+})
+
+test('an old [-] on a linked task is rewritten from the progress', () => {
+  const notes = [
+    { name: 'A.md', body: '- [-] [[B]]', revision: 0 },
+    { name: 'B.md', body: '- [x] One\n- [ ] Two', revision: 0 },
+  ]
+  assert.equal(syncLinkedTasks(notes)[0].body, '- [/] [[B]]')
+  assert.equal(resolvedTasks('- [-] [[B]]', notes)[0].status, 'doing')
+})
+
+test('the Reading view treats [/], [>] and [-] as unchecked task items with a status', async () => {
+  const { unified } = await import('unified')
+  const { default: remarkParse } = await import('remark-parse')
+  const { default: remarkGfm } = await import('remark-gfm')
+  const processor = unified().use(remarkParse).use(remarkGfm).use(remarkPartialTasks)
+  const tree = await processor.run(processor.parse('- [/] a\n- [>] b\n- [-] c\n- [ ] d'))
+  const items = tree.children[0].children
+  assert.deepEqual(
+    items.map((item) => item.data?.hProperties?.['data-status']),
+    ['doing', 'waiting', 'canceled', undefined],
+  )
+  assert.deepEqual(
+    items.map((item) => item.checked),
+    [false, false, false, false],
+  )
+  assert.equal(items[0].children[0].children[0].value, 'a')
 })

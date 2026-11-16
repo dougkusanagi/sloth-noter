@@ -25,23 +25,23 @@ status, arquivar com desfazer).
 
 ### Etapa 1 — Status das tarefas
 
-- [ ] `noteTasks`: ler o status do caractere (`' '`, `/`, `>`, `x`/`X`, `-`) e preservar
+- [x] `noteTasks`: ler o status do caractere (`' '`, `/`, `>`, `x`/`X`, `-`) e preservar
       caracteres desconhecidos, tratados como A fazer.
-- [ ] `resolvedTasks`/`syncLinkedTasks`: em tarefas com link, gravar `/` no lugar de `-` para o
+- [x] `resolvedTasks`/`syncLinkedTasks`: em tarefas com link, gravar `/` no lugar de `-` para o
       parcial e ignorar o caractere lido; o status vem do progresso.
-- [ ] `remarkPartialTasks`: renderizar `[/]`, `[>]` e `[-]` na Leitura como checkbox com status.
-- [ ] Progresso das seções: Cancelada fora do total; barra com cores por status (substitui o
+- [x] `remarkPartialTasks`: renderizar `[/]`, `[>]` e `[-]` na Leitura como checkbox com status.
+- [~] Progresso das seções: Cancelada fora do total; barra com cores por status (substitui o
       anel atual) e rótulo acessível com as contagens.
-- [ ] Ícones dos cinco status no modo Padrão (decoração fora do cursor) e na Leitura, com
+- [~] Ícones dos cinco status no modo Padrão (decoração fora do cursor) e na Leitura, com
       `aria-checked` e rótulos corretos.
-- [ ] Clique no círculo: alterna entre A fazer e Feita (Fazendo/Esperando → Feita).
-- [ ] Menu de status: etiqueta ao lado da tarefa, clique direito, toque longo, `Alt+1…5` na
+- [x] Clique no círculo: alterna entre A fazer e Feita (Fazendo/Esperando → Feita).
+- [~] Menu de status: etiqueta ao lado da tarefa, clique direito, toque longo, `Alt+1…5` na
       linha do cursor. Foco gerenciado e devolvido ao acionador.
-- [ ] Datas `✅ AAAA-MM-DD` ao concluir e `❌ AAAA-MM-DD` ao cancelar; remover ao reabrir.
+- [x] Datas `✅ AAAA-MM-DD` ao concluir e `❌ AAAA-MM-DD` ao cancelar; remover ao reabrir.
       Opção em Configurações para desligar. Desfazer reverte status e data num passo.
 - [ ] Biblioteca de tarefas: filtro por status (Fazendo, Esperando).
 - [ ] Traduções pt-BR e en para status, menu, atalhos e rótulos acessíveis.
-- [ ] Testes: leitura de todos os status, caractere desconhecido preservado, migração de `[-]`
+- [x] Testes: leitura de todos os status, caractere desconhecido preservado, migração de `[-]`
       em tarefa com link, progresso sem Canceladas, datas e desfazer.
 
 ### Etapa 2 — Arquivar concluídas
@@ -84,6 +84,8 @@ status, arquivar com desfazer).
 - [ ] Changelog e versão conforme `AGENTS.md`, com captura em `public/changelog/`.
 - [ ] Conferir em 1280 px e 390 px, temas claro e escuro.
 
+> Legenda: `[x]` feito; `[~]` parcial. Feito em 2026-11-16: modelo e testes, `Alt+1…5`, datas com opção em Configurações, indicadores por CSS (`data-status`), progresso sem canceladas. Falta: barra de progresso colorida com rótulo acessível, ícones definitivos, menu de status (etiqueta, clique direito, toque longo), filtro por status na biblioteca, traduções dos rótulos do menu e `Alt+1…5` no celular (o celular usa `taskSettings.dates` padrão, sem ler a preferência).
+
 ## Tentativas que falharam
 
 - Nenhuma até agora.
@@ -99,5 +101,5 @@ status, arquivar com desfazer).
 
 ## Próximo passo
 
-Começar a etapa 1 por `src/tasks.js` e `src/tasks.test.js`: modelo de status em `noteTasks` e
-migração do parcial em `syncLinkedTasks`.
+Concluir a etapa 1: menu de status e filtro por status na biblioteca; depois a barra de progresso
+colorida. Só então começar a etapa 2 (arquivar concluídas).

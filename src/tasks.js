@@ -1,7 +1,24 @@
 import { findNote, wikiReferences, markdownTree, walk, wikiParts } from './markdown-model.js'
 import { headingSections } from './sections.js'
 
-const TASK = /^(\s*)(?:[-*+]|\d+[.)])\s+\[([ xX-])\](?:\s+(.*))?$/
+// Unknown symbols such as `[?]` or `[!]` are tasks too; letters and digits are not, so `[1]` stays a reference.
+const BOX = String.raw`[ xX]|[^\w\s[\]]`
+const TASK = new RegExp(String.raw`^(\s*)(?:[-*+]|\d+[.)])\s+\[(${BOX})\](?:\s+(.*))?$`)
+const BOX_ONLY = new RegExp(`^(?:${BOX})$`)
+const isBox = (body, mark) =>
+  body[mark - 1] === '[' && body[mark + 1] === ']' && BOX_ONLY.test(body[mark])
+const STATUS_BY_CHAR = {
+  ' ': 'todo',
+  '/': 'doing',
+  '>': 'waiting',
+  x: 'done',
+  X: 'done',
+  '-': 'canceled',
+}
+const CHAR_BY_STATUS = { todo: ' ', doing: '/', waiting: '>', done: 'x', canceled: '-' }
+export const TASK_STATUSES = Object.keys(CHAR_BY_STATUS)
+/** Unknown characters count as "todo" and are never rewritten by the app. */
+export const taskStatus = (char) => STATUS_BY_CHAR[char] ?? 'todo'
 const linkedHeading = (line) => /^#{1,6}\s+\[\[[^\n]+?\]\]\s*#*\s*$/.test(line)
 const FENCE = /^\s*(`{3,}|~{3,})/
 
@@ -26,8 +43,9 @@ export function noteTasks(body) {
           line: index + 1,
           offset,
           mark: offset + text.indexOf('[') + 1,
+          status: taskStatus(match[2]),
           done: /[xX]/.test(match[2]),
-          partial: match[2] === '-',
+          partial: false,
           text: (match[3] ?? '').trim(),
           depth: match[1].replace(/\t/g, '    ').length,
         })
@@ -37,22 +55,42 @@ export function noteTasks(body) {
   return tasks
 }
 
-/** Flips the task whose box sits at `mark`. */
-export function toggleTask(body, mark) {
-  const box = body[mark]
-  if (box !== ' ' && box !== 'x' && box !== 'X' && box !== '-') return body
-  return body.slice(0, mark) + (/[xX]/.test(box) ? ' ' : 'x') + body.slice(mark + 1)
+/** Sets the status of the task whose box sits at `mark`. */
+export function setTaskStatus(body, mark, status) {
+  if (!isBox(body, mark) || !(status in CHAR_BY_STATUS)) return body
+  return body.slice(0, mark) + CHAR_BY_STATUS[status] + body.slice(mark + 1)
 }
 
-/** Linked checklists contribute their underlying tasks, not one summary checkbox. */
+/** App-wide choice, set from the preferences: write `✅`/`❌` dates when a task is closed. */
+export const taskSettings = { dates: true }
+
+/** Flips the task whose box sits at `mark` between "todo" and "done". */
+export function toggleTask(body, mark) {
+  return applyStatus(body, mark, taskStatus(body[mark]) === 'done' ? 'todo' : 'done')
+}
+
+/** Applies `taskStatusChanges` to the text (with the app-wide date choice). */
+export function applyStatus(body, mark, status, options = taskSettings) {
+  let result = '',
+    at = 0
+  for (const change of taskStatusChanges(body, mark, status, options)) {
+    result += body.slice(at, change.from) + change.insert
+    at = change.to
+  }
+  return result + body.slice(at)
+}
+
+/** Linked checklists contribute their underlying tasks; canceled tasks are left out. */
 function taskTotals(tasks) {
-  return tasks.reduce(
-    (sum, task) => ({
-      done: sum.done + (task.progress?.done ?? Number(task.done)),
-      total: sum.total + (task.progress?.total ?? 1),
-    }),
-    { done: 0, total: 0 },
-  )
+  return tasks
+    .filter((task) => task.status !== 'canceled')
+    .reduce(
+      (sum, task) => ({
+        done: sum.done + (task.progress?.done ?? Number(task.done)),
+        total: sum.total + (task.progress?.total ?? 1),
+      }),
+      { done: 0, total: 0 },
+    )
 }
 
 /**
@@ -83,11 +121,9 @@ export function sectionProgress(body, tasks = noteTasks(body), collapsed = new S
     )
     const linkedTotal = referenced.reduce((sum, item) => sum + item.total, 0)
     const linkedDone = referenced.reduce((sum, item) => sum + item.done, 0)
-    if (inside.length || linkedTotal)
-      progress.set(heading.line, {
-        done: taskTotals(inside).done + linkedDone,
-        total: taskTotals(inside).total + linkedTotal,
-      })
+    const own = taskTotals(inside)
+    if (own.total + linkedTotal)
+      progress.set(heading.line, { done: own.done + linkedDone, total: own.total + linkedTotal })
   }
   const redundant = headings.filter((heading) => {
     const total = progress.get(heading.line)?.total
@@ -125,7 +161,11 @@ export function sectionChecklists(body, tasks = noteTasks(body)) {
   for (const heading of headingSections(body, tree)) {
     if (heading.level === 0 || linkedHeading(lines[heading.line - 1] ?? '')) continue
     const editable = tasks.filter(
-      (task) => !task.progress && task.line > heading.titleEnd && task.line <= heading.end,
+      (task) =>
+        !task.progress &&
+        task.status !== 'canceled' &&
+        task.line > heading.titleEnd &&
+        task.line <= heading.end,
     )
     if (!editable.length) continue
     const done = editable.filter((task) => task.done).length
@@ -133,7 +173,9 @@ export function sectionChecklists(body, tasks = noteTasks(body)) {
       title: titles.get(heading.line) ?? '',
       done,
       total: editable.length,
-      partial: done < editable.length && editable.some((task) => task.done || task.partial),
+      partial:
+        done < editable.length &&
+        editable.some((task) => task.done || task.partial || task.status === 'doing'),
       marks: editable.map((task) => task.mark),
     })
   }
@@ -210,12 +252,11 @@ export function resolvedTasks(body, notes = [], ancestors = new Set(), allowCycl
     }
     if (!children.length) return task
     const progress = taskTotals(children)
-    return {
-      ...task,
-      done: progress.done === progress.total,
-      partial: progress.done < progress.total && children.some((item) => item.done || item.partial),
-      progress,
-    }
+    const done = progress.done === progress.total
+    const partial =
+      progress.done < progress.total && children.some((item) => item.done || item.partial)
+    // A linked task takes its status from the progress, never from the character read.
+    return { ...task, status: done ? 'done' : partial ? 'doing' : 'todo', done, partial, progress }
   })
 }
 
@@ -226,22 +267,53 @@ export function syncLinkedTasks(notes) {
     let body = note.body
     for (const task of resolvedTasks(body, notes, new Set([note])).reverse()) {
       if (!task.progress) continue
-      const mark = task.done ? 'x' : task.partial ? '-' : ' '
+      const mark = task.done ? 'x' : task.partial ? '/' : ' '
       body = body.slice(0, task.mark) + mark + body.slice(task.mark + 1)
     }
     return body === note.body ? note : { ...note, body, revision: note.revision + 1 }
   })
 }
 
-/** GFM has no partial task syntax; adapt it before converting the Markdown tree to HTML. */
+/** GFM has no `[/]`, `[>]` or `[-]` task syntax; adapt them before converting the tree to HTML. */
 export function remarkPartialTasks() {
   return (tree) =>
     walk(tree, (node) => {
       if (node.type !== 'listItem' || node.checked != null) return
       const first = node.children?.[0]?.children?.[0]
-      if (first?.type === 'text' && /^\[-\](?:\s|$)/.test(first.value)) {
-        node.checked = false
-        first.value = first.value.replace(/^\[-\]\s?/, '')
+      const char = first?.type === 'text' && /^\[([/>-])\](?:\s|$)/.exec(first.value)?.[1]
+      if (!char) return
+      node.checked = false
+      first.value = first.value.replace(/^\[[/>-]\]\s?/, '')
+      node.data = {
+        ...node.data,
+        hProperties: { ...node.data?.hProperties, 'data-status': taskStatus(char) },
       }
     })
+}
+
+const localDate = (date = new Date()) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+/**
+ * Edits that give the task at `mark` a new status: the box character and, unless `dates` is
+ * off, the `✅ AAAA-MM-DD` / `❌ AAAA-MM-DD` suffix (removed when the task is reopened).
+ * Meant for a single transaction, so undo reverts both. Same status: no changes.
+ */
+export function taskStatusChanges(body, mark, status, { dates = true, date = new Date() } = {}) {
+  if (!isBox(body, mark) || !(status in CHAR_BY_STATUS)) return []
+  if (taskStatus(body[mark]) === status) return []
+  const changes = []
+  changes.push({ from: mark, to: mark + 1, insert: CHAR_BY_STATUS[status] })
+  if (dates) {
+    const lineEnd = body.indexOf('\n', mark)
+    const end = lineEnd < 0 ? body.length : lineEnd
+    const start = body.lastIndexOf('\n', mark) + 1
+    const line = body.slice(start, end)
+    const found = line.search(/[ \t]+[✅❌][ \t]+\d{4}-\d{2}-\d{2}(?:[ \t]*$)/u)
+    const from = start + (found >= 0 ? found : line.trimEnd().length)
+    const stamp = status === 'done' ? '✅' : status === 'canceled' ? '❌' : ''
+    const insert = stamp ? ' ' + stamp + ' ' + localDate(date) : ''
+    if (from !== end || insert) changes.push({ from, to: end, insert })
+  }
+  return changes
 }

@@ -26,7 +26,7 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
         const tasks = resolvedTasks(note.body, notes)
         return {
           note,
-          open: tasks.filter((task) => !task.done).length,
+          open: tasks.filter((task) => !task.done && task.status !== 'canceled').length,
           tasks: tasks.filter(
             (task) =>
               (showDone || !task.done) &&

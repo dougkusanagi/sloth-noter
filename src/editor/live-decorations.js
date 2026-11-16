@@ -18,7 +18,14 @@ import { detailsBlocks } from '../details.js'
 import { headingSections } from '../sections.js'
 import { FoldToggleWidget, foldField, foldRange, isFolded } from './folding.js'
 import { codeTokens, syntaxRanges } from '../syntax-highlight.js'
-import { sectionProgress, resolvedTasks, sectionChecklists, sectionTaskChanges } from '../tasks.js'
+import {
+  sectionProgress,
+  resolvedTasks,
+  sectionChecklists,
+  sectionTaskChanges,
+  taskSettings,
+  taskStatusChanges,
+} from '../tasks.js'
 import { Facet } from '@codemirror/state'
 import { progressBadge } from '../progress-badge.js'
 
@@ -134,8 +141,9 @@ class SectionChecklistWidget extends WidgetType {
 }
 
 class TaskWidget extends WidgetType {
-  constructor(checked, at, partial = false, automatic = false) {
+  constructor(checked, at, partial = false, automatic = false, status = 'todo') {
     super()
+    this.status = status
     this.checked = checked
     this.at = at
     this.partial = partial
@@ -146,7 +154,8 @@ class TaskWidget extends WidgetType {
       this.checked === other.checked &&
       this.at === other.at &&
       this.partial === other.partial &&
-      this.automatic === other.automatic
+      this.automatic === other.automatic &&
+      this.status === other.status
     )
   }
   toDOM(view) {
@@ -157,11 +166,12 @@ class TaskWidget extends WidgetType {
     input.addEventListener('mousedown', (event) => event.preventDefault())
     input.addEventListener('change', () =>
       view.dispatch({
-        changes: {
-          from: Number(input.dataset.mark),
-          to: Number(input.dataset.mark) + 1,
-          insert: input.checked ? 'x' : ' ',
-        },
+        changes: taskStatusChanges(
+          view.state.doc.toString(),
+          Number(input.dataset.mark),
+          input.checked ? 'done' : 'todo',
+          taskSettings,
+        ),
         userEvent: 'tarefa',
       }),
     )
@@ -173,6 +183,7 @@ class TaskWidget extends WidgetType {
     input.disabled = this.automatic
     input.setAttribute('aria-checked', this.partial ? 'mixed' : String(this.checked))
     input.dataset.mark = String(this.at)
+    input.dataset.status = this.status
     input.setAttribute('aria-label', t(this.checked ? 'task.complete' : 'task.open'))
     return true
   }
@@ -414,7 +425,7 @@ export function decorationsFor(view) {
         continue
       }
       const active = editing.has(number)
-      const task = line.text.match(/^(\s*(?:[-*+]|\d+[.)])\s+)\[([ xX-])\](?:\s+|$)/)
+      const task = line.text.match(/^(\s*(?:[-*+]|\d+[.)])\s+)\[([ xX]|[^\w\s[\]])\](?:\s+|$)/)
       if (task) {
         ranges.push(
           Decoration.line({
@@ -439,6 +450,7 @@ export function decorationsFor(view) {
                 line.from + task[1].length + 1,
                 tasks.get(number)?.partial,
                 Boolean(tasks.get(number)?.progress),
+                tasks.get(number)?.status,
               ),
             }).range(line.from, line.from + task[0].length),
           )

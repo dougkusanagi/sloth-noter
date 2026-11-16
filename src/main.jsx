@@ -41,7 +41,7 @@ import { shortcutText } from './components/shortcut.jsx'
 import { WindowControls, isMac } from './components/window-controls.jsx'
 import { DisplayMenu } from './components/display-menu.jsx'
 import { TasksLibrary } from './components/tasks-library.jsx'
-import { resolvedTasks } from './tasks.js'
+import { resolvedTasks, taskSettings } from './tasks.js'
 import { displayName } from './note-title.js'
 import { useTabs } from './components/tabs.jsx'
 import { NoteViewport } from './components/note-viewport.jsx'
@@ -326,6 +326,7 @@ function Workspace({ persistence, loaded }) {
     active && Object.hasOwn(prefs.wrapLinesByNote ?? {}, active.id)
       ? prefs.wrapLinesByNote[active.id]
       : prefs.wrapLines !== false
+  taskSettings.dates = prefs.taskDates !== false
   function updatePrefs(change) {
     savePrefs('wrapLines' in change ? { ...change, wrapLinesByNote: {} } : change)
   }
@@ -392,7 +393,10 @@ function Workspace({ persistence, loaded }) {
     () =>
       data.notes.reduce(
         (sum, note) =>
-          sum + resolvedTasks(note.body, data.notes).filter((task) => !task.done).length,
+          sum +
+          resolvedTasks(note.body, data.notes).filter(
+            (task) => !task.done && task.status !== 'canceled',
+          ).length,
         0,
       ),
     [data.notes],

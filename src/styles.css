@@ -1644,6 +1644,27 @@ textarea:focus-visible {
 .task-checkbox:indeterminate::after {
   content: none;
 }
+.task-checkbox[data-status='doing']:not(:checked):not(:indeterminate) {
+  border-color: var(--accent);
+  background: radial-gradient(circle, var(--accent) 38%, transparent 42%);
+}
+.task-checkbox[data-status='waiting']:not(:checked) {
+  border-style: dashed;
+  border-color: var(--accent);
+}
+.task-checkbox[data-status='canceled']:not(:checked) {
+  opacity: 0.55;
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 1px),
+    var(--muted) calc(50% - 1px) calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
+}
+.task-list-item[data-status='canceled'] {
+  color: var(--muted);
+  text-decoration: line-through;
+}
 .task-checkbox:disabled {
   cursor: default;
 }

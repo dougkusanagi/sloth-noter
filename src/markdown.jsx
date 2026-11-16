@@ -115,6 +115,7 @@ function ListItem({ children, className, node, style }) {
   return (
     <li
       className={task ? 'task-list-item' : className}
+      data-status={task?.status}
       style={style}
       data-source-line={node.position.start.line}
     >

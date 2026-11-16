@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-const parent = '# Projetos\n\n## Sistemas\n\n- [ ] [[Filho|Sistema]]\n- [-] Em andamento\n\nFim'
+const parent = '# Projetos\n\n## Sistemas\n\n- [ ] [[Filho|Sistema]]\n- [/] Em andamento\n\nFim'
 const child = '# Filho\n\n- [x] Primeiro\n- [ ] Segundo\n\nFim'
 const mode = (page, name) => page.getByRole('radio', { name, exact: true }).check({ force: true })
 
@@ -42,12 +42,12 @@ for (const name of ['Padrão', 'Leitura']) {
     await expect(boxes).toHaveCount(2)
     if (name === 'Leitura') {
       await expect(root).toHaveClass(/read-only/)
-      await expect(root).not.toContainText('[-]')
+      await expect(root).not.toContainText('[/]')
     }
     await expect(boxes.nth(0)).toHaveJSProperty('indeterminate', true)
     await expect(boxes.nth(0)).toBeDisabled()
     await expect(root.locator('.section-progress-count[data-count="1/2"]')).toHaveCount(1)
-    await expect(boxes.nth(1)).toHaveJSProperty('indeterminate', true)
+    await expect(boxes.nth(1)).toHaveAttribute('data-status', 'doing')
     await expect(boxes.nth(1)).not.toHaveCSS('background-image', 'none')
     await boxes.nth(1).check()
     await mode(page, 'Código')
@@ -64,7 +64,7 @@ for (const name of ['Padrão', 'Leitura']) {
     await page.getByRole('button', { name: 'Filho.md', exact: true }).click()
     await page.locator('textarea').fill(child)
     await page.getByRole('button', { name: 'Projetos.md', exact: true }).click()
-    await expect(page.locator('textarea')).toHaveValue(/- \[-\] \[\[Filho/)
+    await expect(page.locator('textarea')).toHaveValue(/- \[\/\] \[\[Filho/)
     await mode(page, name)
     await expect(root.locator('.task-checkbox:not(.section-checkbox)').first()).toHaveJSProperty(
       'indeterminate',
