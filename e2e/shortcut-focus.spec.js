@@ -38,12 +38,3 @@ for (const mode of ['visual', 'source']) {
     })
   }
 }
-
-test('toggling the library from the menu restores focus to the menu button', async ({ page }) => {
-  await page.goto('/')
-  const menu = page.getByRole('button', { name: 'Menu principal' })
-  await menu.click()
-  await page.getByRole('menuitem', { name: /Mostrar\/ocultar biblioteca/ }).click()
-  await expect(page.locator('.notes-sidebar')).toBeHidden()
-  await expect(menu).toBeFocused()
-})

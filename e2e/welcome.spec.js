@@ -89,8 +89,12 @@ test('recreating while the help page exists keeps it and adds a numbered copy', 
 }) => {
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await sourceBox(page).fill('# Welcome\n\nMinhas anotações')
-  await page.getByRole('button', { name: 'Menu principal' }).click()
-  await page.getByRole('menuitem', { name: 'Recriar página de ajuda' }).click()
+  await page.keyboard.press('Control+Shift+P')
+  await page
+    .getByRole('dialog', { name: 'Paleta de comandos' })
+    .getByRole('combobox')
+    .fill('Recriar página de ajuda')
+  await page.keyboard.press('Enter')
   await expect(page.locator('.tab.active')).toHaveText('Welcome (2)')
   await expect(sourceBox(page)).toHaveValue(welcomeBody('pt-BR'))
   await page.getByRole('button', { name: 'Welcome.md', exact: true }).click()

@@ -86,11 +86,11 @@ test('focus preserves the writing selection and supports tab navigation, find an
   await expect(page.locator('.app')).toHaveClass('app')
 })
 
-test('focus is discoverable in the main menu and command palette and remains accessible on mobile', async ({
+test('focus is discoverable in the appearance menu and command palette and remains accessible on mobile', async ({
   page,
 }) => {
-  await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
-  await page.getByRole('menuitem', { name: /Modo foco/ }).click()
+  await page.getByRole('button', { name: 'Aparência', exact: true }).click()
+  await page.getByRole('menuitemcheckbox', { name: /Modo foco/ }).click()
   await expect(page.locator('.app')).toHaveClass('app focus-mode')
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(

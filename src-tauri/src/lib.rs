@@ -291,6 +291,16 @@ fn profile_switch(app: AppHandle, catalog: profiles::Catalog) -> Result<(), Stri
         &app.path().app_data_dir().map_err(|e| e.to_string())?,
         &catalog,
     )?;
+    // Under `desktop:dev`, `app.restart()` makes `tauri dev` stop and take the frontend
+    // server with it, so the new window cannot load. The script asks for a restart file
+    // instead and starts `tauri dev` again with the same server.
+    if let Some(path) = std::env::var_os("SLOTH_DEV_RESTART_FILE") {
+        if cfg!(debug_assertions) {
+            std::fs::write(path, b"profile").map_err(|e| e.to_string())?;
+            app.exit(0);
+            return Ok(());
+        }
+    }
     #[cfg(desktop)]
     app.restart();
     #[cfg(not(desktop))]

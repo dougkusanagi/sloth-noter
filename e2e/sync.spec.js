@@ -45,7 +45,7 @@ async function openSync(page) {
   await page.bringToFront()
   await page.keyboard.press('Control+,')
   const dialog = page.getByRole('dialog', { name: 'Configurações' })
-  await dialog.getByRole('button', { name: 'Sincronização' }).click()
+  await dialog.getByRole('button', { name: 'Conta e sincronização' }).click()
   return dialog
 }
 

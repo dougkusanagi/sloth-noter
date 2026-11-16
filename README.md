@@ -110,7 +110,7 @@ A paleta de comandos (`Ctrl+Shift+P`, ou `⌘+Shift+P` no Mac) permite alternar 
 
 ## Sincronização (em testes)
 
-No app desktop e no Android, **Configurações › Sincronização** pede só uma conta: nome, e-mail,
+No app desktop e no Android, **Configurações › Conta e sincronização** pede só uma conta: nome, e-mail,
 senha e o código de convite, no primeiro aparelho; nos outros, basta **Entrar** com e-mail e senha
 ([ADR 0024](docs/adr/0024-contas-com-email-e-senha.md)). O endereço do servidor já vem no app e
 fica em **Avançado**. Antes da primeira sincronização o app mostra quantas notas serão baixadas e
@@ -121,11 +121,14 @@ senha, que não sai do aparelho. Ao criar a conta, o app mostra uma chave de rec
 só ela permite criar uma senha nova (**Entrar › Esqueci a senha**) sem perder as notas do servidor.
 A sessão fica no cofre de senhas do sistema; a versão web não sincroniza.
 
-**Perfis (até 5):** na mesma tela, crie perfis com notas e conta de sincronização próprias
+**Perfis (até 5):** em **Configurações › Perfis**, crie e renomeie perfis com notas e conta de sincronização próprias
 ([ADR 0023](docs/adr/0023-perfis-e-espacos-de-sincronizacao.md)). Trocar de perfil reinicia o app.
 
-**Convites:** quem administra o servidor cria um código por pessoa com `node server/invite-admin.js`
-e roda o comando `wrangler d1 execute` que ele mostra. Cada código cria uma conta.
+**Administração:** `node server/admin.js` (sem painel web; usa o login do `wrangler`):
+`convite` cria um código e já o grava no servidor (cada código cria uma conta), `convites` e
+`contas` listam o que existe, `uso` mostra o uso do mês frente ao limite grátis do R2 e
+`revogar <e-mail>` encerra as sessões de uma conta. Acrescente `--local` para usar o banco do
+`wrangler dev`; `node server/admin.js ajuda` mostra a lista.
 
 **Desligar as chaves antigas:** aparelhos configurados antes das contas mostram “Conexão antiga” e
 continuam sincronizando até entrarem numa conta. Depois que todos entrarem, desligue as chaves:
@@ -146,7 +149,7 @@ Rodar o Worker local:
 ```bash
 cd server
 bunx wrangler d1 migrations apply sloth-note-sync --local
-node invite-admin.js            # rode o comando mostrado trocando --remote por --local
+node admin.js convite --local   # cria um convite no banco local
 bun run dev
 ```
 
@@ -155,11 +158,15 @@ Implantar na sua conta:
 ```bash
 cd server
 bunx wrangler login
-bunx wrangler d1 create sloth-note-sync          # copie o database_id para wrangler.toml
+bunx wrangler d1 create sloth-note-sync          # copie o database_id para wrangler.local.toml (veja abaixo)
 bunx wrangler r2 bucket create sloth-note-sync
 bunx wrangler d1 migrations apply sloth-note-sync --remote   # repita a cada migração nova
 bun run deploy
 ```
+
+O `wrangler.toml` versionado tem um `database_id` de exemplo. Copie-o para `wrangler.local.toml`
+(ignorado pelo git), coloque o ID real e acrescente `--config wrangler.local.toml` aos comandos
+`wrangler` acima; `server/admin.js` usa esse arquivo sozinho quando ele existe.
 
 Limites do plano grátis conferidos em 2026-11-13 nas páginas oficiais: Workers com 100 mil
 pedidos por dia e 10 ms de CPU por pedido; D1 com 500 MB por banco, 100 mil linhas gravadas por

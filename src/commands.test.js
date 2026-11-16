@@ -6,15 +6,27 @@ import { messageKeys } from './i18n.js'
 const entries = (options) => buildCommands(options).flatMap(([, commands]) => commands)
 const base = { active: null, activePinned: false, trashCount: 0, desktop: false }
 
-test('the help page can be recreated from the menu and palette even with no open note', () => {
+test('the help page can be recreated from the palette even with no open note', () => {
   const welcome = entries({ ...base, prefs: { language: 'pt-BR', theme: 'system' } }).find(
     ([id]) => id === 'welcome',
   )
   assert.ok(welcome)
   assert.equal(welcome[1], 'menu.welcome')
-  assert.equal(welcome[4], false, 'never disabled')
-  assert.equal(welcome[5], true, 'listed in the menu')
+  assert.ok(!welcome[4], 'never disabled')
   for (const language of ['pt-BR', 'en']) assert.ok(messageKeys(language).includes('menu.welcome'))
+})
+
+test('the main menu keeps only frequent actions without another visible place', () => {
+  const menu = (active) =>
+    entries({ ...base, active, prefs: { language: 'pt-BR', theme: 'system' } })
+      .filter((entry) => entry[5])
+      .map(([id]) => id)
+  const ids = menu({ id: 'n1' })
+  assert.ok(ids.length <= 14, `menu has ${ids.length} items`)
+  for (const id of ['newNote', 'findNote', 'searchAllNotes', 'trash', 'settings', 'commands'])
+    assert.ok(ids.includes(id), id)
+  assert.ok(!ids.includes('copyToNotes'), 'shown only for a file opened in place')
+  assert.ok(menu({ id: 'n1', external: true }).includes('copyToNotes'))
 })
 
 test('command ids are unique', () => {

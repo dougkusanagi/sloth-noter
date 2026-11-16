@@ -43,7 +43,27 @@ export function addProfile(catalog, name, id = crypto.randomUUID()) {
     catalog.profiles.some((profile) => profile.id === id)
   )
     throw new Error('invalid_profile')
+  return { ...catalog, profiles: [...catalog.profiles, { id, name: cleanName(catalog, name) }] }
+}
+
+// Two profiles with the same name cannot be told apart on screen.
+function cleanName(catalog, name, except = null) {
   const cleaned = typeof name === 'string' ? name.trim() : ''
   if (!cleaned || cleaned.length > 100) throw new Error('invalid_name')
-  return { ...catalog, profiles: [...catalog.profiles, { id, name: cleaned }] }
+  const key = cleaned.toLocaleLowerCase()
+  if (catalog.profiles.some((p) => p.id !== except && p.name.trim().toLocaleLowerCase() === key))
+    throw new Error('duplicate_name')
+  return cleaned
+}
+
+export function renameProfile(catalog, id, name) {
+  if (!validateProfiles(catalog) || !catalog.profiles.some((profile) => profile.id === id))
+    throw new Error('invalid_profile')
+  const cleaned = cleanName(catalog, name, id)
+  return {
+    ...catalog,
+    profiles: catalog.profiles.map((profile) =>
+      profile.id === id ? { ...profile, name: cleaned } : profile,
+    ),
+  }
 }

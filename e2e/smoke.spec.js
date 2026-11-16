@@ -70,8 +70,8 @@ test('a deleted note goes to the trash and can be restored', async ({ page }) =>
 })
 
 test('renaming uses an in-app dialog and the tab follows', async ({ page }) => {
-  await page.getByRole('button', { name: 'Menu principal' }).click()
-  await page.getByRole('menuitem', { name: 'Renomear nota' }).click()
+  await page.locator('.tab-wrap .tab').first().click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Renomear nota', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Nome da nota' })
   await dialog.getByRole('textbox').fill('Ideias')
   await page.keyboard.press('Enter')

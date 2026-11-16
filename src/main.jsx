@@ -115,7 +115,9 @@ import {
   CheckCircle2,
   Minimize2,
   X,
+  UserRound,
 } from 'lucide-react'
+import { useActiveProfile } from './hooks/use-profile.js'
 import { platform } from './platform.js'
 import { MobileShell } from './mobile/mobile-shell.jsx'
 import '@fontsource-variable/noto-serif/wght.css'
@@ -220,6 +222,7 @@ function Workspace({ persistence, loaded }) {
   const [selectedImage, setSelectedImage] = useState(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const activeProfile = useActiveProfile(persistence.invoke, persistence.profileId)
   const [commandsOpen, setCommandsOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
   const [imageBusy, setImageBusy] = useState(false)
@@ -2507,6 +2510,20 @@ function Workspace({ persistence, loaded }) {
             </div>
             {sidebarSection !== 'trash' && sidebarSection !== 'completed' && (
               <div className="sidebar-footer">
+                {activeProfile && (
+                  <button
+                    className="sidebar-trash sidebar-profile"
+                    aria-label={t('profiles.inUseLabel', { name: activeProfile.name })}
+                    title={t('profiles.inUse', { name: activeProfile.name })}
+                    onClick={() => {
+                      setSettingsSection('profiles')
+                      setSettingsOpen(true)
+                    }}
+                  >
+                    <UserRound size={14} aria-hidden="true" />
+                    <span>{activeProfile.name}</span>
+                  </button>
+                )}
                 <button className="sidebar-trash" onClick={() => showSection('completed')}>
                   <CheckCircle2 size={14} aria-hidden="true" />
                   {t('completed.title')}

@@ -103,8 +103,12 @@ test('global line wrapping is saved and code blocks can override it', async ({ p
   expect(await row.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThan(
     100,
   )
-  await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
-  await page.getByRole('menuitem', { name: 'Alternar quebra nesta nota', exact: true }).click()
+  await page.keyboard.press('Control+Shift+P')
+  await page
+    .getByRole('dialog', { name: 'Paleta de comandos' })
+    .getByRole('combobox')
+    .fill('Alternar quebra nesta nota')
+  await page.keyboard.press('Enter')
   await expect(page.locator('.cm-code-no-wrap')).toHaveCount(0)
   await expect(page.locator('.cm-content')).toHaveClass(/cm-lineWrapping/)
   await page.reload()

@@ -40,7 +40,7 @@ test('android settings set up sync and sync again after an edit', async ({ page,
   await page.goto('/?platform=mobile')
   await page.getByRole('button', { name: 'Mais opções' }).tap()
   await page.getByRole('button', { name: 'Configurações' }).tap()
-  await expect(page.getByRole('heading', { name: 'Sincronização' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Conta e sincronização' })).toBeVisible()
   await page.getByText('Avançado: outro servidor').tap()
   await page.getByLabel('Endereço do servidor').fill(SERVER)
   await page.getByLabel('Nome').fill('Ana')

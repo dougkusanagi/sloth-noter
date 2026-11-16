@@ -40,8 +40,9 @@ import {
 import { t, LANGUAGES } from './i18n.js'
 
 /**
- * Every action the app can run. The main menu shows the `menu` ones; the command
- * palette (Ctrl+K) lists them all, so rarely used actions stay one search away.
+ * Every action the app can run. The main menu shows only the `inMenu` ones: frequent actions
+ * without another visible place in the interface. The command palette (Ctrl+Shift+P) lists them
+ * all, so the rest stays one search away.
  * Entries: [id, label key or text, icon, shortcut, disabled, inMenu].
  */
 export function buildCommands({ active, activePinned, prefs, trashCount, desktop, mode }) {
@@ -54,24 +55,31 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
         ['newNote', 'menu.newNote', FilePlus, 'T', false, true],
         ['findNote', 'menu.findNote', Search, 'P', false, true],
         ['searchAllNotes', 'menu.searchAllNotes', Search, 'Shift+F', false, true],
-        ['findInNote', 'menu.findInNote', ScanSearch, 'F', !active, true],
-        ['replaceInNote', 'find.replace', Replace, 'H', !active, true],
+        ['findInNote', 'menu.findInNote', ScanSearch, 'F', !active],
+        ['replaceInNote', 'find.replace', Replace, 'H', !active],
         ...(desktop ? [['history', 'history.title', History, undefined, !active, true]] : []),
-        ['rename', 'menu.rename', Pencil, 'F2', !active || Boolean(active.external), true],
-        ['copyToNotes', 'external.copy', Copy, undefined, !active?.external, true],
+        ['rename', 'menu.rename', Pencil, 'F2', !active || Boolean(active.external)],
+        [
+          'copyToNotes',
+          'external.copy',
+          Copy,
+          undefined,
+          !active?.external,
+          Boolean(active?.external),
+        ],
         ['reopenTab', 'tabs.reopen', Undo2, 'Shift+T'],
         ['previousTab', 'tabs.previous', PanelsTopLeft, 'PageUp', !active],
         ['nextTab', 'tabs.next', PanelsTopLeft, 'PageDown', !active],
-        ['closeTab', 'tabs.close', X, 'W', !active || activePinned, true],
+        ['closeTab', 'tabs.close', X, 'W', !active || activePinned],
         ['trashMove', 'menu.trashMove', Trash2, 'Shift+Delete', !active, true],
-        ['undoDelete', 'menu.undoDelete', Undo2, undefined, !trashCount, true],
+        ['undoDelete', 'menu.undoDelete', Undo2, undefined, !trashCount],
       ],
     ],
     [
       'menu.files',
       [
         ['images', 'images.title', Image, 'Shift+L', false, true],
-        ['addImage', 'images.import', Plus, undefined, false, true],
+        ['addImage', 'images.import', Plus],
         ['import', 'menu.import', FileInput, 'O', false, true],
         ['export', 'menu.export', FileOutput, 'E', !active, true],
         [
@@ -90,16 +98,16 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
     [
       'menu.view',
       [
-        ['focus', 'focus.toggle', Focus, 'Alt+F', !active, true],
+        ['focus', 'focus.toggle', Focus, 'Alt+F', !active],
         ['outline', 'outline.label', ListTree, 'Alt+T', !active || mode === 'source'],
-        ['sidebar', 'sidebar.toggle', PanelLeft, 'Alt+B', false, true],
+        ['sidebar', 'sidebar.toggle', PanelLeft, 'Alt+B'],
         ['visual', 'mode.visual', Eye, 'Alt+1'],
         ['source', 'mode.source', Code, 'Alt+2'],
         ['reading', 'mode.reading', BookOpen, 'Alt+3'],
         ['foldAll', 'menu.foldAll', ChevronsDownUp, undefined, noFold],
         ['unfoldAll', 'menu.unfoldAll', ChevronsUpDown, undefined, noFold],
         ['wrapLines', 'menu.wrapAll', WrapText],
-        ['wrapPage', 'menu.wrapPage', WrapText, undefined, !active, true],
+        ['wrapPage', 'menu.wrapPage', WrapText, undefined, !active],
         ['tabs', prefs.tabsVisible ? 'menu.tabsHide' : 'menu.tabsShow', PanelsTopLeft],
         [
           'status',
@@ -121,8 +129,8 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
       [
         ['commands', 'menu.commands', Command, 'Shift+P', false, true],
         ['settings', 'menu.settings', Settings, ',', false, true],
-        ['shortcuts', 'menu.shortcuts', Keyboard, 'Shift+/', false, true],
-        ['welcome', 'menu.welcome', LifeBuoy, undefined, false, true],
+        ['shortcuts', 'menu.shortcuts', Keyboard, 'Shift+/'],
+        ['welcome', 'menu.welcome', LifeBuoy],
         ['changelog', 'settings.changelog', NotebookPen, undefined, false, true],
         ...(desktop ? [['updates', 'updates.check', Download, undefined, false, true]] : []),
       ],

@@ -933,3 +933,9 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
 [data-platform='mobile'] .mobile-outline .outline-link {
   min-height: 44px;
 }
+[data-platform='mobile'] .mobile-sheet > button.mobile-profile {
+  overflow-wrap: anywhere;
+}
+[data-platform='mobile'] .mobile-sheet > button.mobile-profile > svg {
+  color: var(--accent);
+}

@@ -15,9 +15,9 @@ export function MainMenu({
   actions,
   onClose,
 }) {
-  const groups = buildCommands({ active, activePinned, prefs, trashCount, desktop }).map(
-    ([group, entries]) => [group, entries.filter((entry) => entry[5])],
-  )
+  const groups = buildCommands({ active, activePinned, prefs, trashCount, desktop })
+    .map(([group, entries]) => [group, entries.filter((entry) => entry[5])])
+    .filter(([, entries]) => entries.length)
   return (
     <div
       id="main-menu"

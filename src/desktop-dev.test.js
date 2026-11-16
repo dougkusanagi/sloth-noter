@@ -36,3 +36,32 @@ test('desktop file drops use the native webview event bridge', async () => {
   )
   assert.equal(config.app.windows.find((window) => window.label === 'main').dragDropEnabled, true)
 })
+
+test('a profile switch in development starts tauri dev again and keeps the frontend', async () => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const { runDesktop } = await import('../scripts/desktop-dev.mjs')
+  const folder = await mkdtemp(join(tmpdir(), 'sloth-dev-test-'))
+  const restartFile = join(folder, 'restart')
+  let runs = 0
+  try {
+    // First run asks for a restart; the second closes normally.
+    const code = await runDesktop({
+      restartFile,
+      launch: async () => {
+        runs++
+        if (runs === 1) await writeFile(restartFile, 'profile')
+        return 0
+      },
+    })
+    assert.equal(runs, 2)
+    assert.equal(code, 0)
+    // A crash without the file ends the loop with its code.
+    runs = 0
+    assert.equal(await runDesktop({ restartFile, launch: async () => (runs++, 101) }), 101)
+    assert.equal(runs, 1)
+  } finally {
+    await rm(folder, { recursive: true, force: true })
+  }
+})

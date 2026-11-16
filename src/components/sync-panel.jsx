@@ -1,6 +1,5 @@
-import { useEffect, useId, useState } from 'react'
+import { useId, useState } from 'react'
 import { t } from '../i18n.js'
-import { MAX_PROFILES, addProfile } from '../profiles.js'
 import { DEFAULT_SERVER, MIN_PASSWORD } from '../sync/account.js'
 import { Segmented } from './controls.jsx'
 
@@ -25,111 +24,9 @@ function formatTime(at) {
   }).format(at)
 }
 
-/** Settings → Sync: profiles, account, status, first sync preview and sign out. */
+/** Settings → Account and sync: account, status, first sync preview and sign out. */
 export function SyncPanel({ sync }) {
-  return (
-    <>
-      <ProfilesPanel invoke={sync.invoke} profileId={sync.profileId} />
-      <SyncStatus sync={sync} />
-    </>
-  )
-}
-
-/** Local profiles: each has its own notes and its own sync space. Switching restarts the app. */
-function ProfilesPanel({ invoke, profileId }) {
-  const [catalog, setCatalog] = useState(null)
-  const [name, setName] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  useEffect(() => {
-    let alive = true
-    invoke?.('profiles_load')
-      .then((value) => alive && setCatalog(value))
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
-  }, [invoke])
-  if (!invoke || !catalog) return null
-  const apply = async (next, command) => {
-    setBusy(true)
-    setError('')
-    try {
-      await invoke(command, { catalog: next })
-      if (command === 'profiles_save') setCatalog(next)
-    } catch {
-      setError(t('profiles.error'))
-    } finally {
-      setBusy(false)
-    }
-  }
-  const full = catalog.profiles.length >= MAX_PROFILES
-  return (
-    <div className="sync-panel">
-      <h4>{t('profiles.title')}</h4>
-      <p className="setting-hint">{t('profiles.hint')}</p>
-      <ul className="sync-preview">
-        {catalog.profiles.map((profile) => (
-          <li
-            key={profile.id}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-              {profile.name}
-              {profile.id === profileId && ` — ${t('profiles.current')}`}
-            </span>
-            {profile.id !== profileId && (
-              <button
-                className="button"
-                disabled={busy}
-                onClick={() => {
-                  if (window.confirm(t('profiles.switchConfirm', { name: profile.name })))
-                    apply({ ...catalog, active: profile.id }, 'profile_switch')
-                }}
-              >
-                {t('profiles.switch')}
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
-      <form
-        className="sync-actions"
-        onSubmit={(event) => {
-          event.preventDefault()
-          try {
-            apply(addProfile(catalog, name), 'profiles_save')
-            setName('')
-          } catch {
-            setError(t('profiles.error'))
-          }
-        }}
-      >
-        <input
-          aria-label={t('profiles.newName')}
-          placeholder={t('profiles.newName')}
-          maxLength={100}
-          value={name}
-          disabled={full || busy}
-          onChange={(event) => setName(event.target.value)}
-        />
-        <button className="button" type="submit" disabled={full || busy || !name.trim()}>
-          {t('profiles.create')}
-        </button>
-      </form>
-      {full && <p className="setting-hint">{t('profiles.full', { count: MAX_PROFILES })}</p>}
-      {error && (
-        <p className="sync-error" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
-  )
+  return <SyncStatus sync={sync} />
 }
 
 function SyncStatus({ sync }) {

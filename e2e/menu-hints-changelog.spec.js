@@ -60,10 +60,8 @@ for (const width of [390, 1280]) {
     await expect(menu).toBeVisible()
     await expect(menu.getByRole('menuitem', { name: 'Nova nota', exact: true })).toBeFocused()
     await expect(
-      menu
-        .getByRole('menuitem', { name: 'Mostrar/ocultar biblioteca', exact: true })
-        .locator('kbd'),
-    ).toHaveText(['Ctrl', 'Alt', 'B'])
+      menu.getByRole('menuitem', { name: 'Buscar em todas as notas', exact: true }).locator('kbd'),
+    ).toHaveText(['Ctrl', '⇧', 'F'])
     await page.keyboard.press('F10')
     await expect(menu).toBeHidden()
     await expect(page.locator('.menu-trigger')).toBeFocused()

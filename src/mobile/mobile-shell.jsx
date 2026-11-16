@@ -28,7 +28,9 @@ import {
   Trash2,
   WrapText,
   X,
+  UserRound,
 } from 'lucide-react'
+import { useActiveProfile } from '../hooks/use-profile.js'
 import { Toaster, toast } from 'sonner'
 import { createAppPersistence } from '../persistence-runtime.js'
 import { openWorkspace } from '../boot.js'
@@ -55,6 +57,7 @@ import { clearImageCache, importImage, libraryImages, markdownImage } from '../i
 import { createFullBackup, readBackupBundle, restoreBackupImages } from '../backup.js'
 import { AboutPanel } from '../components/about-panel.jsx'
 import { SyncPanel } from '../components/sync-panel.jsx'
+import { ProfilesPanel } from '../components/profiles-panel.jsx'
 import { useSync } from '../hooks/use-sync.js'
 import { ImageThumbnail } from '../components/image-library.jsx'
 import { TasksLibrary } from '../components/tasks-library.jsx'
@@ -164,6 +167,7 @@ export function MobileShell() {
 }
 
 function MobileWorkspace({ persistence, loaded, onReload }) {
+  const activeProfile = useActiveProfile(persistence.invoke, persistence.profileId)
   const [rename, setRename] = useState(null)
   const [renameError, setRenameError] = useState('')
   const [purgeId, setPurgeId] = useState(null)
@@ -1311,6 +1315,12 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             <button disabled={blocked} onClick={createHelpNote}>
               {t('menu.welcome')}
             </button>
+            {sync.invoke && (
+              <>
+                <h2>{t('settings.profiles')}</h2>
+                <ProfilesPanel invoke={sync.invoke} profileId={sync.profileId} />
+              </>
+            )}
             <h2>{t('settings.sync')}</h2>
             <SyncPanel sync={sync} />
             <h2>{t('settings.about')}</h2>
@@ -1604,6 +1614,16 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               </>
             ) : (
               <>
+                {activeProfile && (
+                  <button
+                    className="mobile-profile"
+                    aria-label={t('profiles.inUseLabel', { name: activeProfile.name })}
+                    onClick={() => dispatch({ type: 'push', route: { name: 'settings' } })}
+                  >
+                    <UserRound size={20} aria-hidden="true" />
+                    {t('profiles.inUse', { name: activeProfile.name })}
+                  </button>
+                )}
                 <ThemeControl theme={prefs.theme} onChange={updatePrefs} />
                 <button onClick={() => noteInput.current?.click()}>
                   <FileInput size={20} />
