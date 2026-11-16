@@ -3130,57 +3130,70 @@ html:has(
   font-weight: 600;
 }
 
-.update-notice {
-  position: sticky;
-  top: 46px;
-  z-index: 4;
+.update-button {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--line);
-  font: 13px/1.5 var(--ui);
-  background: var(--paper);
-  color: var(--ink);
+  flex: none;
+  margin-right: 4px;
 }
-.update-notice .button {
+.update-button .button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
+  min-height: 30px;
+  padding: 0 12px;
+  font: 600 13px/1 var(--ui);
+  white-space: nowrap;
 }
-@media (max-width: 600px) {
-  .update-notice {
-    justify-content: space-between;
-  }
-}
-
-.update-notice progress {
-  width: 130px;
-  height: 8px;
+.update-button progress {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -3px;
+  width: auto;
+  height: 3px;
   appearance: none;
   border: 0;
-  border-radius: 4px;
+  border-radius: 2px;
   overflow: hidden;
   background: var(--soft);
   accent-color: var(--accent);
 }
-.update-notice progress::-webkit-progress-bar {
+.update-button progress::-webkit-progress-bar {
   background: var(--soft);
 }
-.update-notice progress::-webkit-progress-value {
+.update-button progress::-webkit-progress-value {
   background: var(--accent);
 }
-.update-notice progress::-moz-progress-bar {
+.update-button progress::-moz-progress-bar {
   background: var(--accent);
 }
-.focus-mode .update-notice {
-  top: 0;
+@media (max-width: 600px) {
+  .update-button .button.compact {
+    padding: 0 8px;
+  }
+  .update-button .compact .update-button-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
-.focus-mode[data-native-window] .update-notice {
-  top: 40px;
+.update-button .spin {
+  animation: update-spin 1s linear infinite;
+}
+@keyframes update-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .update-button .spin {
+    animation: none;
+  }
 }
 
 .about-panel {

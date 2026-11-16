@@ -49,7 +49,7 @@ A versão fica em `package.json` (o `tauri.conf.json` a lê de lá) e deve coinc
 git tag vX.Y.Z && git push --tags
 ```
 
-O workflow de release gera um rascunho no GitHub com o instalador NSIS `.exe` por usuário (Windows) e o `.AppImage` (Linux). Os artefatos de atualização recebem a assinatura do updater, sem assinatura de código reconhecida pelo sistema operacional. O CI (`.github/workflows/ci.yml`) roda versão, testes e build a cada push e PR.
+O workflow de release publica no GitHub com o instalador NSIS `.exe` por usuário (Windows) e o `.AppImage` (Linux). Os artefatos de atualização recebem a assinatura do updater, sem assinatura de código reconhecida pelo sistema operacional. O CI (`.github/workflows/ci.yml`) roda versão, testes e build a cada push e PR.
 
 ## Atualizações automáticas publicadas
 
@@ -71,8 +71,8 @@ Para publicar uma atualização:
 1. Faça o lançamento com uma versão SemVer superior à instalada, mantendo manifesto JS e Rust alinhados.
 2. Envie a tag `vX.Y.Z`. O workflow de release usa `tauri.updater.conf.json` para gerar pacotes
    assinados, suas assinaturas e `latest.json`, com os alvos Linux e Windows.
-3. Confira os instaladores anexados e o manifesto antes de publicar o release como estável.
-   Uma tag isolada, um rascunho ou uma prévia não é oferecida como atualização.
+3. Ao terminar, o workflow publica o release como estável e os apps instalados passam a ver o
+   botão **Atualizar** na barra superior. Uma tag com erro não é movida: corrija com outra versão.
 
 A chave pública está em `src-tauri/tauri.conf.json`; `requireSignedVersion` exige que a assinatura
 vincule também a versão anunciada, evitando aceitar um pacote antigo com uma versão falsa.
@@ -81,7 +81,9 @@ A chave privada está fora do repositório, em
 repositório GitHub. O arquivo local tem permissão 600, em uma pasta com permissão 700. Mantenha uma
 cópia segura: perder ou trocar essa chave impede atualizar instalações que confiam na chave atual.
 Não coloque a chave privada em arquivos versionados nem nos logs. A chave não tem senha adicional;
-o acesso depende das permissões locais e do armazenamento de secrets do GitHub.
+o acesso depende das permissões locais e do armazenamento de secrets do GitHub. A chave atual
+(`3BCFAC0C9A68BDF1`) substituiu em 0.17.0 uma chave vazada e outra perdida; veja o
+[ADR 0025](adr/0025-nova-chave-do-atualizador.md).
 
 ### Cópia das credenciais
 

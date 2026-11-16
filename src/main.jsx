@@ -1,5 +1,5 @@
 import { saveBeforeUpdate } from './app-updates.js'
-import { useAppUpdates, UpdateNotice } from './components/app-updates.jsx'
+import { useAppUpdates, UpdateButton } from './components/app-updates.jsx'
 import { changelogDocument, changelogTarget } from './components/changelog-panel.jsx'
 import { pasteGesture } from './paste-intent.js'
 import { quickOpenNotes } from './quick-open.js'
@@ -2283,6 +2283,7 @@ function Workspace({ persistence, loaded }) {
         />
         {tabStrip}
         <div className="window-drag-space" data-tauri-drag-region />
+        <UpdateButton {...appUpdates} />
         <DisplayMenu
           prefs={prefs}
           onChange={updatePrefs}
@@ -2311,7 +2312,6 @@ function Workspace({ persistence, loaded }) {
           }}
         />
       </header>
-      <UpdateNotice {...appUpdates} />
       {tabContextMenu}
       <div className="workspace-layout" inert={switching ? true : undefined}>
         {sidebarVisible && (

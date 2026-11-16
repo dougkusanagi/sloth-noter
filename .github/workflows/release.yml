@@ -45,7 +45,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Sloth Note ${{ github.ref_name }}
-          releaseDraft: true
+          releaseDraft: false
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
           tauriScript: bun run tauri

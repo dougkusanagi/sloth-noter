@@ -76,9 +76,18 @@ async function check(page) {
   await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
   await page.getByRole('menuitem', { name: 'Verificar atualizações', exact: true }).click()
 }
-const download = (page) => page.getByRole('button', { name: 'Baixar atualização', exact: true })
+const download = (page) => page.getByRole('button', { name: 'Atualizar', exact: true })
 const install = (page) => page.getByRole('button', { name: 'Instalar e reiniciar', exact: true })
-const notice = (page) => page.getByRole('complementary', { name: 'Atualização do aplicativo' })
+const primary = (page) =>
+  page.evaluate(() => {
+    const probe = document.createElement('button')
+    probe.className = 'button primary'
+    document.body.append(probe)
+    const color = getComputedStyle(probe).backgroundColor
+    probe.remove()
+    return color
+  })
+const notice = (page) => page.getByRole('group', { name: 'Atualização do aplicativo' })
 
 for (const width of [390, 1280]) {
   test(`signed updates download in the app and save the latest edits before install at ${width}px`, async ({
@@ -96,9 +105,15 @@ for (const width of [390, 1280]) {
         .click()
       await page.keyboard.press('Escape')
     }
+    await expect(download(page)).toHaveCSS('background-color', await primary(page))
+    if (process.env.CAPTURE_UI && width === 1280)
+      await page.screenshot({
+        path: 'public/changelog/botao-atualizar.png',
+        clip: { x: 900, y: 0, width: 380, height: 46 },
+      })
     await download(page).click()
     await expect(page.getByRole('progressbar')).toHaveAttribute('value', '40')
-    await expect(download(page)).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Baixando 40%', exact: true })).toBeDisabled()
     await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
     await page.locator('textarea').fill('# Minha nota\n\nÚltima edição durante o download.')
     if (process.env.CAPTURE_UI)
@@ -108,12 +123,10 @@ for (const width of [390, 1280]) {
     await expect(install(page)).toHaveCount(0)
     await page.evaluate(() => window.finishVerification())
     await expect(install(page)).toBeEnabled()
-    await page.evaluate(() => window.scrollTo(0, 600))
-    expect((await notice(page).boundingBox()).y).toBeGreaterThanOrEqual(46)
-    if (process.env.CAPTURE_UI && width === 390)
-      await notice(page).screenshot({ path: 'public/changelog/download-updates.png' })
+    expect((await notice(page).boundingBox()).y).toBeLessThan(46)
+    await expect(install(page)).toHaveCSS('background-color', await primary(page))
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-    expect((await new AxeBuilder({ page }).include('.update-notice').analyze()).violations).toEqual(
+    expect((await new AxeBuilder({ page }).include('.update-button').analyze()).violations).toEqual(
       [],
     )
     if (process.env.CAPTURE_UI)

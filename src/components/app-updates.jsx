@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Download, RotateCw } from 'lucide-react'
+import { Download, Loader2, RotateCw } from 'lucide-react'
 import { check as checkUpdate } from '@tauri-apps/plugin-updater'
 import { toast } from 'sonner'
 import { downloadUpdate } from '../app-updates.js'
@@ -159,28 +159,48 @@ export function useAppUpdates(invoke, { beforeInstall, resume }) {
   return { update, phase, percent, check, download, install }
 }
 
-export function UpdateNotice({ update, phase, percent, download, install }) {
+/**
+ * Title bar button for an available update: "Atualizar" downloads and verifies the
+ * package; then the same button installs and restarts. The full sentence with the
+ * version stays in the tooltip and is announced to screen readers.
+ */
+export function UpdateButton({ update, phase, percent, download, install }) {
   if (!update) return null
-  const downloading = phase === 'downloading'
   const locked = ['downloading', 'verifying', 'saving', 'installing', 'restarting'].includes(phase)
   const ready = phase === 'ready' || phase === 'restart'
-  const label = phase === 'available' ? 'updates.available' : `updates.${phase}`
+  const status = t(phase === 'available' ? 'updates.available' : `updates.${phase}`, {
+    version: update.version,
+  })
+  const label =
+    phase === 'available'
+      ? t('updates.update')
+      : phase === 'downloading' && percent !== null
+        ? t('updates.downloadingShort', { percent })
+        : phase === 'downloading'
+          ? t('updates.downloadingUnknown')
+          : phase === 'restart'
+            ? t('updates.restart')
+            : ready
+              ? t('updates.install')
+              : t(`updates.${phase}Short`)
+  const Icon = ready ? RotateCw : phase === 'available' ? Download : Loader2
   return (
-    <aside className="update-notice" aria-label={t('updates.title')}>
-      <span role="status">{t(label, { version: update.version })}</span>
-      {downloading && percent !== null && (
+    <div className="update-button" role="group" aria-label={t('updates.title')}>
+      <button
+        className={phase === 'available' ? 'button primary' : 'button primary compact'}
+        disabled={locked}
+        title={status}
+        onClick={ready ? install : download}
+      >
+        <Icon size={15} aria-hidden="true" className={locked ? 'spin' : undefined} />
+        <span className="update-button-label">{label}</span>
+      </button>
+      {phase === 'downloading' && percent !== null && (
         <progress aria-label={t('updates.progress')} max="100" value={percent} />
       )}
-      <button className="button" disabled={locked} onClick={ready ? install : download}>
-        {ready ? (
-          <RotateCw size={15} aria-hidden="true" />
-        ) : (
-          <Download size={15} aria-hidden="true" />
-        )}
-        {t(
-          phase === 'restart' ? 'updates.restart' : ready ? 'updates.install' : 'updates.download',
-        )}
-      </button>
-    </aside>
+      <span className="sr-only" role="status">
+        {status}
+      </span>
+    </div>
   )
 }
