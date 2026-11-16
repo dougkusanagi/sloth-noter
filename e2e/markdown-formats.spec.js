@@ -129,11 +129,11 @@ test('Padrão shows the Markdown source of the clicked line, even below H5 and H
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+End')
-  await page.locator('.cm-line', { hasText: 'Primeira linha' }).click()
+  await page.locator('.cm-line', { hasText: 'Primeira linha' }).click({ position: { x: 8, y: 8 } })
   await expect(page.locator('.cm-line', { hasText: 'Primeira linha' })).toContainText('linha\\')
-  await page.locator('.cm-line', { hasText: 'literal' }).click()
+  await page.locator('.cm-line', { hasText: 'literal' }).click({ position: { x: 8, y: 8 } })
   await expect(page.locator('.cm-line', { hasText: 'literal' })).toContainText('\\*literal\\*')
-  await page.locator('.cm-line', { hasText: 'aninhada' }).click()
+  await page.locator('.cm-line', { hasText: 'aninhada' }).click({ position: { x: 8, y: 8 } })
   await expect(page.locator('.cm-line', { hasText: 'aninhada' })).toContainText('> > aninhada')
 })
 
@@ -157,7 +157,7 @@ test('Leitura renders every Markdown format and never reveals its source', async
     ['aninhada', 'aninhada', '> > aninhada'],
   ]) {
     const line = read.locator('.cm-line', { hasText: text })
-    await line.click()
+    await line.click({ position: { x: 8, y: 8 } })
     await expect(line).toContainText(rendered)
     await expect(line).not.toContainText(source)
   }
