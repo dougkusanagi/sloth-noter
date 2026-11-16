@@ -1,6 +1,6 @@
 {
   "name": "sloth-note",
-  "version": "0.16.1",
+  "version": "0.16.2",
   "description": "Offline Markdown editor with notes in files the user controls",
   "private": true,
   "type": "module",
@@ -22,7 +22,9 @@
     "format:check": "prettier --check .",
     "e2e": "playwright test",
     "desktop:update": "bun scripts/update-desktop.mjs",
-    "store:msix": "bun scripts/package-msix.mjs"
+    "store:msix": "bun scripts/package-msix.mjs",
+    "credentials:save": "bun scripts/credentials.mjs save",
+    "credentials:restore": "bun scripts/credentials.mjs restore"
   },
   "dependencies": {
     "@codemirror/commands": "6.11.1",

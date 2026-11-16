@@ -83,6 +83,18 @@ cópia segura: perder ou trocar essa chave impede atualizar instalações que co
 Não coloque a chave privada em arquivos versionados nem nos logs. A chave não tem senha adicional;
 o acesso depende das permissões locais e do armazenamento de secrets do GitHub.
 
+### Cópia das credenciais
+
+`bun run credentials:save` copia para a pasta `.credenciais/`, no diretório atual, as credenciais de desenvolvimento: chave do
+updater, keystore que assina o APK, chave de recuperação e segredos antigos da sincronização,
+caminhos do Android e configuração local do servidor. A lista com o motivo de cada uma fica em
+`credenciais.json`, dentro da pasta. Em outra máquina, ou depois de formatar,
+`bun run credentials:restore` lê a mesma pasta e coloca cada arquivo no lugar certo. Ele mantém um arquivo
+diferente que já exista, a menos que se use `--forcar`. A pasta guarda segredos sem cifra: o `.gitignore`
+ignora `.credenciais/`, e o comando recusa outras pastas dentro do repositório. Para usar outra
+pasta, passe o caminho: `credentials:save <pasta>` e `credentials:restore <pasta>`. Leve-a para um local cifrado, como um gerenciador de
+senhas com anexos ou um disco cifrado, e rode `save` de novo quando uma credencial mudar.
+
 Um build local comum não exige a chave porque não gera artefatos de updater. Para gerar um AppImage
 assinado localmente, sem instalar nem alterar o aplicativo atual:
 

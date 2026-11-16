@@ -7,3 +7,4 @@ vite.log
 test-results/
 playwright-report/
 updater.key
+.credenciais/
