@@ -197,7 +197,13 @@ function Workspace({ persistence, loaded }) {
     blocked,
     setBlocked,
   } = useNotesStore({ persistence, loaded, mode, onHistoryWarning: setImportError })
-  const sync = useSync({ current, commit, invoke: persistence.invoke, blocked })
+  const sync = useSync({
+    current,
+    commit,
+    invoke: persistence.invoke,
+    blocked,
+    profileId: persistence.profileId,
+  })
   const { scheduleAfterEdit } = sync
   useEffect(() => {
     scheduleAfterEdit()

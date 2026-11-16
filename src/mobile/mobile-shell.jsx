@@ -199,7 +199,13 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const store = useNotesStore({ persistence, loaded, mode: 'visual', onHistoryWarning: setWarning })
   const { data, current, commit, writer, saving, error, blocked } = store
   const { prefs, updatePrefs: savePrefs } = usePrefs({ data, current, commit })
-  const sync = useSync({ current, commit, invoke: persistence.invoke, blocked })
+  const sync = useSync({
+    current,
+    commit,
+    invoke: persistence.invoke,
+    blocked,
+    profileId: persistence.profileId,
+  })
   const { scheduleAfterEdit } = sync
   useEffect(() => {
     scheduleAfterEdit()

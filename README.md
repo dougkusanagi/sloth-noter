@@ -6,10 +6,12 @@ Um bloco de notas com Markdown para escrever, organizar ideias e fechar a janela
 
 ## Escreva do seu jeito
 
+- **Novas páginas:** a segunda linha oferece um subtítulo opcional. Pressione Enter para ignorá-lo e começar o conteúdo pela linha com a dica de blocos e o botão +.
 - **Três modos para a mesma nota:** Padrão, com Markdown formatado enquanto você escreve; Código, com o texto original; e Leitura.
 - **Notas conectadas:** abas, links `[[Nota]]`, referências a títulos e lista de notas que apontam para o documento atual.
 - **Busca onde precisar:** encontre notas pelo nome, pesquise no conteúdo de todas elas com trechos destacados ou busque e substitua dentro de uma nota.
 - **Listas e tarefas:** sublistas, reordenação pelo teclado, visão de tarefas na biblioteca e controles para concluir as tarefas de uma seção.
+- **Pares automáticos:** parênteses, colchetes, chaves, aspas e crases são completados durante a digitação. Selecione texto para envolvê-lo, digite o fechamento para sair do par ou use Backspace para apagar um par automático vazio. Três crases no início da linha criam um bloco de código. A composição de acentos permanece disponível.
 - **Markdown além do básico:** digite `/` numa linha vazia para buscar blocos; copie ou recolha blocos de código e escolha entre quebrar linhas e rolar horizontalmente. A configuração global de quebra fica em Configurações → Editor.
 - **Tabelas:** o mesmo menu abre pelas barras acima das colunas e à esquerda das linhas, pelo ícone no canto da tabela e pelo clique com o botão direito numa célula. Ele age nas células selecionadas (ou na tabela inteira): cores, alinhamento horizontal e vertical, formatação, inserir e remover linhas e colunas, copiar, exportar e cabeçalhos. A linha de cabeçalho fica visível ao rolar; aponte para os pontos nas bordas para inserir linhas e colunas. O cabeçalho é guardado num comentário `<!-- sloth:table … -->` acima da tabela.
 - **Alça de blocos:** com o mouse, cada bloco mostra uma alça à esquerda para transformar, recortar, copiar, excluir, adicionar abaixo ou arrastar. Um título recolhido leva a seção ao ser arrastado. Ao selecionar texto, a barra mostra o tipo do bloco, negrito, tachado, itálico, link, código e mais ações.
@@ -115,6 +117,11 @@ app mostra quantas notas serão baixadas e enviadas. Depois, sincroniza ao abrir
 15 segundos após uma edição, a cada 5 minutos e pelo botão **Sincronizar agora**. As notas e imagens chegam ao servidor já cifradas; ele guarda
 só a revisão atual de cada nota (Cloudflare D1) e as imagens (Cloudflare R2). A chave fica no
 cofre de senhas do sistema; a versão web não sincroniza.
+
+**Perfis (até 5):** na mesma tela, crie perfis com notas e conexão de sincronização próprias
+([ADR 0023](docs/adr/0023-perfis-e-espacos-de-sincronizacao.md)). Trocar de perfil reinicia o app.
+Cada perfil novo usa um espaço no servidor, criado por quem administra o servidor com
+`node server/profile-admin.js <1 a 4>`: o comando mostra a chave de acesso e o SQL a executar no D1.
 
 A pasta `server/` contém o servidor.
 

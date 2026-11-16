@@ -71,7 +71,10 @@ static LIMIT_MB: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::ne
 /// Sets how long and how much history is kept. Values are clamped to sane bounds.
 pub fn configure(days: u64, megabytes: u64) {
     RETENTION_DAYS.store(days.clamp(1, 365), std::sync::atomic::Ordering::Relaxed);
-    LIMIT_MB.store(megabytes.clamp(5, 500), std::sync::atomic::Ordering::Relaxed);
+    LIMIT_MB.store(
+        megabytes.clamp(5, 500),
+        std::sync::atomic::Ordering::Relaxed,
+    );
 }
 fn max_age() -> u64 {
     RETENTION_DAYS.load(std::sync::atomic::Ordering::Relaxed) * 86400

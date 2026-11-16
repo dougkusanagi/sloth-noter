@@ -275,7 +275,7 @@ const { Miniflare } = await import('miniflare')
 const { readFile } = await import('node:fs/promises')
 const schema = (
   await Promise.all(
-    ['0001_notes.sql', '0002_usage.sql'].map((name) =>
+    ['0001_notes.sql', '0002_usage.sql', '0003_profile_spaces.sql'].map((name) =>
       readFile(new URL(`./migrations/${name}`, import.meta.url), 'utf8'),
     ),
   )
@@ -307,6 +307,68 @@ async function miniflare() {
 contract('cloudflare', async () => {
   const { db, bucket } = await miniflare()
   return cloudflareStore(db, bucket)
+})
+
+test('profile stores isolate notes, cursors and images in shared D1 and R2', async () => {
+  const { db, bucket } = await miniflare()
+  await db
+    .prepare(
+      "INSERT INTO profile_spaces (id, slot, credential_hash) VALUES ('a', 1, 'ha'), ('b', 2, 'hb')",
+    )
+    .run()
+  const { profileStore } = await import('./profile-store.js')
+  const a = profileStore(db, bucket, 'a')
+  const b = profileStore(db, bucket, 'b')
+  const body = { hash: 'a'.repeat(64), deleted: false, envelope: 'AQ==' }
+  assert.equal((await a.putNote('same', null, body)).ok, true)
+  assert.equal(await b.getNote('same'), null)
+  assert.deepEqual((await b.changes(0, 10)).changes, [])
+  assert.equal((await b.putNote('same', null, { ...body, envelope: 'Ag==' })).ok, true)
+  assert.equal((await a.getNote('same')).envelope, 'AQ==')
+  const bytes = new TextEncoder().encode('image')
+  const sha = await sha256Hex(bytes)
+  assert.equal(await a.putBlob(sha, bytes), 'created')
+  assert.equal(await b.getBlob(sha), null)
+  assert.equal(await b.putBlob(sha, bytes), 'created')
+  assert.deepEqual(await a.getBlob(sha), bytes)
+})
+
+test('the Worker maps each space credential to its own notes and rejects revoked ones', async () => {
+  const { db, bucket } = await miniflare()
+  const { default: worker } = await import('./worker.js')
+  const tokenA = 'a'.repeat(40)
+  const tokenB = 'b'.repeat(40)
+  const insert = db.prepare(
+    'INSERT INTO profile_spaces (id, slot, credential_hash, revoked_at) VALUES (?, ?, ?, ?)',
+  )
+  await insert.bind('a', 1, await sha256Hex(new TextEncoder().encode(tokenA)), null).run()
+  await insert.bind('b', 2, await sha256Hex(new TextEncoder().encode(tokenB)), '2026-01-01').run()
+  const env = { DB: db, BLOBS: bucket, SYNC_TOKEN: TOKEN }
+  const call = (token, method = 'GET', body) =>
+    worker.fetch(
+      new Request('https://sync.test/v1/notes/same', {
+        method,
+        headers: {
+          authorization: `Bearer ${token}`,
+          'content-type': 'application/json',
+          ...(method === 'PUT' && { 'if-none-match': '*' }),
+        },
+        body,
+      }),
+      env,
+    )
+  assert.equal((await call('c'.repeat(40))).status, 401)
+  assert.equal((await call(tokenB)).status, 401, 'a revoked credential stops working')
+  assert.equal((await call(tokenA)).status, 404, 'the space starts empty')
+  assert.equal((await call(TOKEN)).status, 404, 'the legacy credential reaches only legacy data')
+  const put = await call(
+    tokenA,
+    'PUT',
+    JSON.stringify({ hash: 'a'.repeat(64), deleted: false, envelope: 'AQ==', base: null }),
+  )
+  assert.ok(put.status < 300, `put status ${put.status}`)
+  assert.equal((await call(tokenA)).status, 200)
+  assert.equal((await call(TOKEN)).status, 404, 'legacy space does not see the new note')
 })
 
 test('the Worker stops at its R2 limits and answers 507 without writing', async () => {

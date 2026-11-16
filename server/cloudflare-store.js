@@ -33,7 +33,9 @@ export function cloudflareStore(db, bucket, { limits = FREE_LIMITS, now = () => 
     if (!row) throw new QuotaExceeded()
   }
   async function stored() {
-    const row = await db.prepare('SELECT COALESCE(SUM(size), 0) AS total FROM blob_sizes').first()
+    const row = await db
+      .prepare('SELECT (SELECT COALESCE(SUM(size), 0) FROM blob_sizes) + (SELECT COALESCE(SUM(size), 0) FROM profile_blob_sizes) AS total')
+      .first()
     return row.total
   }
   return {

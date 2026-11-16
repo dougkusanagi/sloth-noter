@@ -4,10 +4,13 @@
 
 const SERVICE: &str = "dev.slothnote.sync";
 // Only these entries exist; the web layer cannot read or write other credentials.
-const NAMES: [&str; 1] = ["sync"];
 
 fn check(name: &str) -> Result<(), String> {
-    if NAMES.contains(&name) {
+    if name == "sync"
+        || name
+            .strip_prefix("sync-")
+            .is_some_and(|id| id != "primary" && crate::profiles::valid_id(id))
+    {
         Ok(())
     } else {
         Err("Unknown secret".into())

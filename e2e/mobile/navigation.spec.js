@@ -912,7 +912,7 @@ test('a new empty note shows title and block hints', async ({ page }) => {
   await expect(page.locator('.cm-empty-title')).toHaveAttribute('data-placeholder', 'Sem título')
   await expect(page.locator('.cm-empty-body')).toHaveAttribute(
     'data-placeholder',
-    'Comece a escrever…',
+    'Subtítulo (opcional)…',
   )
   if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/sloth-mobile-real.png' })
 })

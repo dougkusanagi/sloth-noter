@@ -37,16 +37,9 @@ export function selectionLineSignature(state) {
 
 export const taskNotes = Facet.define({ combine: (values) => values[0] ?? [] })
 
-/**
- * The line that shows the empty-body placeholder, or 0 when the body has text.
- * It follows the cursor inside a blank body, so only one hint ever shows.
- */
+/** Keep the optional subtitle on the second line, even after it is skipped. */
 export function emptyBodyLine(state) {
-  const doc = state.doc
-  if (doc.lines < 2 || doc.sliceString(doc.line(1).to).trim()) return 0
-  if (state.readOnly) return 2
-  const cursor = doc.lineAt(state.selection.main.head).number
-  return cursor >= 2 ? cursor : 2
+  return state.doc.lines >= 2 && !state.doc.line(2).text ? 2 : 0
 }
 
 // Usage tip under an empty note body: where the preview comes from, and the / key.
@@ -60,11 +53,7 @@ class EmptyBodyHintWidget extends WidgetType {
     hint.setAttribute('aria-hidden', 'true')
     const key = document.createElement('kbd')
     key.textContent = '/'
-    hint.append(
-      `${t('editor.listHint')} · ${t('editor.slashBefore')} `,
-      key,
-      ` ${t('editor.slashAfter')}`,
-    )
+    hint.append(`${t('editor.slashBefore')} `, key, ` ${t('editor.slashAfter')}`)
     return hint
   }
   ignoreEvent() {
@@ -503,9 +492,14 @@ export function decorationsFor(view) {
       if (number === placeholderLine && !line.text) {
         attrs.class += ' cm-empty-body'
         attrs['data-placeholder'] = t('editor.previewHint')
-        ranges.push(
-          Decoration.widget({ widget: new EmptyBodyHintWidget(), side: 1 }).range(line.from),
-        )
+        if (
+          doc.sliceString(line.to).trim() === '' &&
+          doc.lineAt(view.state.selection.main.head).number <= 2
+        ) {
+          ranges.push(
+            Decoration.widget({ widget: new EmptyBodyHintWidget(), side: 1 }).range(line.from),
+          )
+        }
       }
       if (shape.kind === 'paragraph' && continuations.has(number) && !listDepths.has(number)) {
         // Text continuing a list item lines up with the item's own text.

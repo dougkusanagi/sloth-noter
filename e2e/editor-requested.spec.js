@@ -7,10 +7,10 @@ test('new note placeholders, slash search and multi-selection', async ({ page })
   await expect(editor.locator('.cm-empty-title')).toHaveAttribute('data-placeholder', 'Sem título')
   await expect(editor.locator('.cm-empty-body')).toHaveAttribute(
     'data-placeholder',
-    'Comece a escrever…',
+    'Subtítulo (opcional)…',
   )
   const hint = editor.locator('.cm-empty-hint')
-  await expect(hint).toHaveText('A primeira linha aparece na lista · Digite / para inserir blocos')
+  await expect(hint).toHaveText('Digite / para inserir blocos')
   await expect(hint.locator('kbd')).toHaveText('/')
   // The tip already shows while the cursor is in the title.
   await expect(hint).toBeVisible()
@@ -18,7 +18,7 @@ test('new note placeholders, slash search and multi-selection', async ({ page })
   await page.keyboard.type('Teste')
   await expect(editor.locator('.cm-empty-body')).toHaveAttribute(
     'data-placeholder',
-    'Comece a escrever…',
+    'Subtítulo (opcional)…',
   )
   await page.keyboard.press('Tab')
   await expect(editor.locator('.cm-empty-body')).toBeVisible()
@@ -272,7 +272,9 @@ test('renaming the active note reveals its new position in the sidebar', async (
     .toBe(true)
 })
 
-test('a blank body shows a single placeholder on the cursor line', async ({ page }) => {
+test('skipping the optional subtitle keeps it on line two and offers blocks at the cursor', async ({
+  page,
+}) => {
   await page.goto('/')
   await page.keyboard.press('Control+t')
   const editor = page.locator('.cm-content')
@@ -281,10 +283,56 @@ test('a blank body shows a single placeholder on the cursor line', async ({ page
   await page.keyboard.press('Enter')
   const body = editor.locator('.cm-empty-body')
   await expect(body).toHaveCount(1)
-  await expect(editor.locator('.cm-line').nth(2)).toHaveClass(/cm-empty-body/)
-  await expect(page.locator('.insert-trigger')).toHaveCount(0)
-  await expect(editor.locator('.cm-empty-hint')).toHaveCount(1)
+  await expect(editor.locator('.cm-line').nth(1)).toHaveClass(/cm-empty-body/)
+  await expect(page.locator('.insert-trigger')).toBeVisible()
+  await expect(page.locator('.insert-button')).toBeVisible()
+  await expect(editor.locator('.cm-empty-hint')).toHaveCount(0)
   await page.keyboard.press('ArrowUp')
   await expect(body).toHaveCount(1)
   await expect(editor.locator('.cm-line').nth(1)).toHaveClass(/cm-empty-body/)
 })
+
+for (const width of [390, 1280]) {
+  test(`optional subtitle and block insertion at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto('/')
+    await page.keyboard.press('Control+t')
+    await page.keyboard.type('Nova página')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Enter')
+    const editor = page.locator('.cm-content')
+    await expect(editor.locator('.cm-line').nth(1)).toHaveAttribute(
+      'data-placeholder',
+      'Subtítulo (opcional)…',
+    )
+    await expect(page.locator('.insert-button')).toBeVisible()
+    await expect(page.locator('.insert-trigger')).toContainText('Digite / para inserir blocos')
+    await page.screenshot({ path: `/tmp/sloth-subtitle-${width}.png` })
+    await page.locator('.insert-button').click()
+    await expect(page.getByPlaceholder('Buscar blocos')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await editor.focus()
+    await page.keyboard.type('Conteúdo da página')
+    await expect(editor.locator('.cm-line').nth(1)).toHaveAttribute(
+      'data-placeholder',
+      'Subtítulo (opcional)…',
+    )
+    await expect(editor).toContainText('Conteúdo da página')
+    await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
+    const entry = page.locator('.visual-editor.read-only')
+    await entry.locator('[data-wiki^="Em desenvolvimento|"]').click()
+    const news = 'Novas páginas identificam a segunda linha como subtítulo opcional'
+    await entry.hover()
+    await expect
+      .poll(
+        async () => {
+          if ((await entry.textContent()).includes(news)) return true
+          await page.mouse.wheel(0, 400)
+          return false
+        },
+        { intervals: [100], timeout: 15000 },
+      )
+      .toBe(true)
+  })
+}

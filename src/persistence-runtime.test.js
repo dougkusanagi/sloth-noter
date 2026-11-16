@@ -17,6 +17,7 @@ function memoryStorage() {
 function memoryHost(overrides = {}) {
   const files = new Map()
   const invoke = async (command, args) => {
+    if (command === 'active_profile') return 'primary'
     if (command === 'read_state') return files.has('state') ? files.get('state') : null
     if (command === 'write_state') {
       files.set('state', args.contents)

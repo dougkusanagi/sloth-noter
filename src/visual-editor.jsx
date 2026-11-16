@@ -1,3 +1,4 @@
+import { autoPairs } from './editor/auto-pairs.js'
 import { selectedColors, blockColorMetadata } from './document-colors.js'
 import { ColorPalette } from './components/color-palette.jsx'
 import { documentColors, colorDocument, colorBlock } from './editor/document-colors.js'
@@ -797,6 +798,7 @@ export function VisualEditor({
               : transaction,
           ),
           mandatoryTitle,
+          autoPairs,
           history(),
           drawSelection(),
           codeWrap,

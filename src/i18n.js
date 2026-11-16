@@ -134,6 +134,17 @@ const messages = {
     'settings.data': 'Dados',
     'settings.about': 'Sobre',
     'settings.sync': 'Sincronização',
+    'profiles.title': 'Perfis neste aparelho',
+    'profiles.hint':
+      'Cada perfil tem suas próprias notas e sua própria conexão de sincronização. O nome não conecta aparelhos: para sincronizar, use o mesmo espaço e a mesma chave em cada aparelho. Perfis não protegem as notas de quem usa a mesma conta do sistema.',
+    'profiles.current': 'em uso',
+    'profiles.switch': 'Usar',
+    'profiles.switchConfirm':
+      'Trocar para o perfil “{name}”? O app fecha as notas atuais e reinicia.',
+    'profiles.newName': 'Nome do novo perfil',
+    'profiles.create': 'Criar perfil',
+    'profiles.full': 'O limite é de {count} perfis.',
+    'profiles.error': 'Não foi possível salvar os perfis. Tente de novo.',
     'sync.checking': 'Verificando o cofre de senhas…',
     'sync.noVaultWeb':
       'A sincronização só está disponível no app para desktop e Android, porque a chave precisa ficar no cofre de senhas do sistema.',
@@ -517,7 +528,7 @@ const messages = {
       'A pasta de notas não foi encontrada. Reconecte a unidade ou escolha outra pasta.',
     'error.nameExists': 'Já existe uma nota com esse nome.',
 
-    'editor.previewHint': 'Comece a escrever…',
+    'editor.previewHint': 'Subtítulo (opcional)…',
     'editor.listHint': 'A primeira linha aparece na lista',
     'editor.slashBefore': 'Digite',
     'editor.slashAfter': 'para inserir blocos',
@@ -927,6 +938,17 @@ const messages = {
     'settings.data': 'Data',
     'settings.about': 'About',
     'settings.sync': 'Sync',
+    'profiles.title': 'Profiles on this device',
+    'profiles.hint':
+      'Each profile has its own notes and its own sync connection. The name does not link devices: to sync, use the same space and key on each device. Profiles do not protect notes from other people using the same system account.',
+    'profiles.current': 'in use',
+    'profiles.switch': 'Use',
+    'profiles.switchConfirm':
+      'Switch to the profile “{name}”? The app closes the current notes and restarts.',
+    'profiles.newName': 'New profile name',
+    'profiles.create': 'Create profile',
+    'profiles.full': 'The limit is {count} profiles.',
+    'profiles.error': 'Could not save the profiles. Try again.',
     'sync.checking': 'Checking the password vault…',
     'sync.noVaultWeb':
       'Sync is only available in the desktop and Android apps, because the key must stay in the system password vault.',
@@ -1301,7 +1323,7 @@ const messages = {
       'The notes folder was not found. Reconnect the drive or choose another folder.',
     'error.nameExists': 'A note with that name already exists.',
 
-    'editor.previewHint': 'Start writing…',
+    'editor.previewHint': 'Subtitle (optional)…',
     'editor.listHint': 'The first line shows in the list',
     'editor.slashBefore': 'Type',
     'editor.slashAfter': 'to insert blocks',

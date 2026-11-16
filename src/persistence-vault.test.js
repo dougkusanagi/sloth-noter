@@ -20,6 +20,7 @@ function fakeHost({ files = {}, aux = null, chosen = '/notes', state = null } = 
     calls: [],
   }
   host.invoke = async (command, args = {}) => {
+    if (command === 'active_profile') return 'primary'
     host.calls.push(command)
     if (command === 'vault_list')
       return [...host.files]

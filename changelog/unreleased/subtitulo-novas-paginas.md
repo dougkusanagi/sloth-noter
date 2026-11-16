@@ -1,0 +1,1 @@
+Corrigido: Novas páginas identificam a segunda linha como subtítulo opcional. Ao ignorá-la com Enter, a indicação permanece no lugar e a linha seguinte oferece a dica de blocos com o botão +, junto ao cursor.

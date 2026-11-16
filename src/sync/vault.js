@@ -2,7 +2,9 @@
 // the system vault through Tauri on desktop, nowhere on the web. Without a vault,
 // sync stays off: secrets never go to localStorage, preferences, backups or logs.
 
-const NAME = 'sync'
+import { validProfileId } from '../profiles.js'
+
+const secretName = (id) => (id === 'primary' ? 'sync' : `sync-${id}`)
 
 export class VaultUnavailable extends Error {
   constructor() {
@@ -11,7 +13,7 @@ export class VaultUnavailable extends Error {
   }
 }
 
-function androidVault(bridge) {
+function androidVault(bridge, name) {
   const check = (result) => {
     if (result === 'error') throw new VaultUnavailable()
     return result
@@ -19,21 +21,21 @@ function androidVault(bridge) {
   return {
     kind: 'android',
     async get() {
-      return check(bridge.get(NAME)) || null
+      return check(bridge.get(name)) || null
     },
     async set(value) {
-      check(bridge.set(NAME, value))
+      check(bridge.set(name, value))
     },
     async delete() {
-      check(bridge.delete(NAME))
+      check(bridge.delete(name))
     },
   }
 }
 
-function desktopVault(invoke) {
+function desktopVault(invoke, name) {
   const call = async (command, args) => {
     try {
-      return await invoke(command, { name: NAME, ...args })
+      return await invoke(command, { name, ...args })
     } catch {
       throw new VaultUnavailable()
     }
@@ -47,10 +49,12 @@ function desktopVault(invoke) {
 }
 
 /** The platform vault, or null when there is none (web, or a desktop without one). */
-export function platformVault(env = globalThis) {
-  if (env.SlothSecrets?.get) return androidVault(env.SlothSecrets)
+export function platformVault(env = globalThis, profileId = 'primary') {
+  if (!validProfileId(profileId)) return null
+  const name = secretName(profileId)
+  if (env.SlothSecrets?.get) return androidVault(env.SlothSecrets, name)
   const invoke = env.__TAURI_INTERNALS__?.invoke
-  if (typeof invoke === 'function') return desktopVault(invoke)
+  if (typeof invoke === 'function') return desktopVault(invoke, name)
   return null
 }
 
