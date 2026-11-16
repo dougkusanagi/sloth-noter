@@ -6,7 +6,7 @@ Um bloco de notas com Markdown para escrever, organizar ideias e fechar a janela
 
 ## Escreva do seu jeito
 
-- **Novas páginas:** a segunda linha oferece um subtítulo opcional. Pressione Enter para ignorá-lo e começar o conteúdo pela linha com a dica de blocos e o botão +.
+- **Novas páginas:** a segunda linha oferece uma descrição opcional. Pressione Enter para ignorá-lo e começar o conteúdo pela linha com a dica de blocos e o botão +.
 - **Três modos para a mesma nota:** Padrão, com Markdown formatado enquanto você escreve; Código, com o texto original; e Leitura.
 - **Notas conectadas:** abas, links `[[Nota]]`, referências a títulos e lista de notas que apontam para o documento atual.
 - **Busca onde precisar:** encontre notas pelo nome, pesquise no conteúdo de todas elas com trechos destacados ou busque e substitua dentro de uma nota.

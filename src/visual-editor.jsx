@@ -21,7 +21,7 @@ import { clipboardAction } from './clipboard-actions.js'
 import { ImageInsert } from './components/image-insert.jsx'
 import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
-import { emptyBodyLine, liveMarkdown, taskNotes } from './editor/live-decorations.js'
+import { emptyBodyLine, emptyNoteBody, liveMarkdown, taskNotes } from './editor/live-decorations.js'
 import { foldField } from './editor/folding.js'
 import {
   columnDrag,
@@ -294,6 +294,35 @@ export function VisualEditor({
       read: () => {
         if (!view.hasFocus || view.state.readOnly || !view.state.selection.main.empty) return null
         const line = view.state.doc.lineAt(view.state.selection.main.head)
+        // In a note with only its title, the tip sits below the optional description.
+        if (line.number <= 2 && emptyNoteBody(view.state)) {
+          const title = view.coordsAtPos(view.state.doc.line(1).from)
+          if (view.state.doc.lines === 1) {
+            if (!title || title.top < 46 || title.bottom > window.innerHeight) return null
+            const subtitleRect = view.dom
+              .querySelector('.cm-empty-body-after')
+              ?.getBoundingClientRect()
+            const y = subtitleRect
+              ? subtitleRect.bottom
+              : title.top + view.lineBlockAt(view.state.doc.line(1).from).height + 28
+            return {
+              from: view.state.doc.line(1).to,
+              x: title.left + 4,
+              y,
+              emptyNote: true,
+            }
+          }
+          const subtitle = view.coordsAtPos(view.state.doc.line(2).from)
+          if (!subtitle || subtitle.top < 46 || subtitle.bottom > window.innerHeight) return null
+          const x = title?.left ?? subtitle.left
+          return {
+            from: view.state.doc.line(2).from,
+            x: x + 4,
+            // Exactly where the next line starts, so Enter does not move the tip.
+            y: subtitle.top + view.lineBlockAt(view.state.doc.line(2).from).height,
+            emptyNote: true,
+          }
+        }
         if (line.text.trim()) return null
         if (insideCodeBlock(view.state, line)) return null
         // The empty-body placeholder already explains the / key.
@@ -905,10 +934,10 @@ export function VisualEditor({
       reposition()
     }
     window.addEventListener('resize', resize)
+    let layoutFrame = 0
     const layoutObserver = new ResizeObserver(() => {
-      view.dispatch({})
-      view.requestMeasure()
-      reposition()
+      cancelAnimationFrame(layoutFrame)
+      layoutFrame = requestAnimationFrame(reposition)
     })
     layoutObserver.observe(view.dom)
     layoutObserver.observe(view.contentDOM)
@@ -923,6 +952,7 @@ export function VisualEditor({
       window.removeEventListener('scroll', reposition, true)
       window.removeEventListener('resize', resize)
       layoutObserver.disconnect()
+      cancelAnimationFrame(layoutFrame)
       view.scrollDOM.removeEventListener('mousedown', focusBlankArea)
       view.dom.removeEventListener(OPEN_INSERT_EVENT, openInsert)
       view.destroy()
@@ -1284,7 +1314,7 @@ export function VisualEditor({
             aria-hidden="true"
             style={{ left: insertAt.x, top: insertAt.y }}
           >
-            {t('editor.slashHint')}
+            {t('editor.slashBefore')} <kbd>/</kbd> {t('editor.slashAfter')}
           </span>
           <button
             type="button"
@@ -1294,7 +1324,13 @@ export function VisualEditor({
             aria-expanded={blockMenu}
             style={{ left: Math.max(4, insertAt.x - 38), top: insertAt.y }}
             onMouseDown={(event) => event.preventDefault()}
-            onClick={() => setBlockMenu(!blockMenu)}
+            onClick={() => {
+              // Blocks go below the empty subtitle, which stays available.
+              const view = viewRef.current
+              if (insertAt.emptyNote && view && !blockMenu)
+                view.dispatch({ selection: EditorSelection.single(view.state.doc.line(1).to) })
+              setBlockMenu(!blockMenu)
+            }}
           >
             <svg
               viewBox="0 0 20 20"

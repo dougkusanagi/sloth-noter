@@ -37,27 +37,32 @@ export function selectionLineSignature(state) {
 
 export const taskNotes = Facet.define({ combine: (values) => values[0] ?? [] })
 
-/** Keep the optional subtitle on the second line, even after it is skipped. */
+/** Keep the optional description on the second line, even after it is skipped. */
 export function emptyBodyLine(state) {
   return state.doc.lines >= 2 && !state.doc.line(2).text ? 2 : 0
 }
 
-// Usage tip under an empty note body: where the preview comes from, and the / key.
-class EmptyBodyHintWidget extends WidgetType {
-  eq() {
-    return true
+/** A note with only its title: the optional description and everything below are empty. */
+export function emptyNoteBody(state) {
+  if (state.doc.lines === 1) return true
+  const line = emptyBodyLine(state)
+  return line > 0 && state.doc.sliceString(state.doc.line(line).to).trim() === ''
+}
+
+class EmptyBodyWidget extends WidgetType {
+  constructor(text) {
+    super()
+    this.text = text
+  }
+  eq(other) {
+    return this.text === other.text
   }
   toDOM() {
-    const hint = document.createElement('span')
-    hint.className = 'cm-empty-hint'
-    hint.setAttribute('aria-hidden', 'true')
-    const key = document.createElement('kbd')
-    key.textContent = '/'
-    hint.append(`${t('editor.slashBefore')} `, key, ` ${t('editor.slashAfter')}`)
-    return hint
-  }
-  ignoreEvent() {
-    return true
+    const span = document.createElement('span')
+    span.className = 'cm-empty-body-after'
+    span.setAttribute('aria-hidden', 'true')
+    span.textContent = this.text
+    return span
   }
 }
 
@@ -492,14 +497,14 @@ export function decorationsFor(view) {
       if (number === placeholderLine && !line.text) {
         attrs.class += ' cm-empty-body'
         attrs['data-placeholder'] = t('editor.previewHint')
-        if (
-          doc.sliceString(line.to).trim() === '' &&
-          doc.lineAt(view.state.selection.main.head).number <= 2
-        ) {
-          ranges.push(
-            Decoration.widget({ widget: new EmptyBodyHintWidget(), side: 1 }).range(line.from),
-          )
-        }
+      } else if (number === 1 && doc.lines === 1) {
+        attrs.class += ' cm-empty-body-host'
+        ranges.push(
+          Decoration.widget({
+            widget: new EmptyBodyWidget(t('editor.previewHint')),
+            side: 1,
+          }).range(line.to),
+        )
       }
       if (shape.kind === 'paragraph' && continuations.has(number) && !listDepths.has(number)) {
         // Text continuing a list item lines up with the item's own text.

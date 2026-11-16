@@ -444,7 +444,8 @@ textarea:focus-visible {
     rotate var(--medium) var(--ease-spring);
 }
 .visual-editor .cm-empty-title,
-.visual-editor .cm-empty-body {
+.visual-editor .cm-empty-body,
+.visual-editor .cm-empty-body-host {
   position: relative;
 }
 .visual-editor .cm-empty-title::after,
@@ -456,7 +457,7 @@ textarea:focus-visible {
   top: 0;
   left: 0;
 }
-/* Three levels: title, body example, then a small usage tip. */
+/* Two levels: title, then the body example. */
 .visual-editor .cm-empty-title::after {
   opacity: 0.6;
 }
@@ -464,18 +465,20 @@ textarea:focus-visible {
   opacity: 0.55;
   font-style: italic;
 }
-.visual-editor .cm-empty-hint {
+.visual-editor .cm-empty-body-after {
   position: absolute;
-  top: calc(100% + 0.9em);
+  top: 100%;
   left: 0;
-  right: 0;
   color: var(--muted);
-  font: 0.78em/1.6 var(--ui);
-  white-space: normal;
+  opacity: 0.55;
+  font: var(--editor-size)/1.62 var(--serif);
+  font-weight: 400;
+  font-style: italic;
+  white-space: nowrap;
   pointer-events: none;
   user-select: none;
 }
-.visual-editor .cm-empty-hint kbd {
+.insert-trigger kbd {
   display: inline-block;
   min-width: 1.5em;
   padding: 0 0.35em;
@@ -484,10 +487,8 @@ textarea:focus-visible {
   background: var(--control);
   color: var(--ink);
   font: inherit;
+  line-height: 1.35;
   text-align: center;
-}
-.visual-editor.block-menu-open .cm-empty-hint {
-  display: none;
 }
 .block-search {
   width: calc(100% - 16px);

@@ -3,22 +3,28 @@ import { test, expect } from '@playwright/test'
 test('new note placeholders, slash search and multi-selection', async ({ page }) => {
   await page.goto('/')
   await page.keyboard.press('Control+t')
+  if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/sloth-title-desktop.png' })
   const editor = page.locator('.cm-content')
-  await expect(editor.locator('.cm-empty-title')).toHaveAttribute('data-placeholder', 'Sem título')
+  await expect(editor.locator('.cm-empty-title')).toHaveAttribute(
+    'data-placeholder',
+    'Dê um título à sua ideia',
+  )
   await expect(editor.locator('.cm-empty-body')).toHaveAttribute(
     'data-placeholder',
-    'Subtítulo (opcional)…',
+    'Sobre o que é esta nota? (opcional)',
   )
-  const hint = editor.locator('.cm-empty-hint')
+  // Only the [+] tip explains the / key, already while the cursor is in the title.
+  await expect(editor.locator('.cm-empty-hint')).toHaveCount(0)
+  const hint = page.locator('.insert-trigger')
   await expect(hint).toHaveText('Digite / para inserir blocos')
   await expect(hint.locator('kbd')).toHaveText('/')
-  // The tip already shows while the cursor is in the title.
-  await expect(hint).toBeVisible()
-  await expect(hint).toHaveCSS('opacity', '1')
+  await expect(page.locator('.insert-button')).toBeVisible()
+  const subtitle = await editor.locator('.cm-empty-body').boundingBox()
+  expect((await hint.boundingBox()).y).toBeGreaterThan(subtitle.y + subtitle.height / 2)
   await page.keyboard.type('Teste')
   await expect(editor.locator('.cm-empty-body')).toHaveAttribute(
     'data-placeholder',
-    'Subtítulo (opcional)…',
+    'Sobre o que é esta nota? (opcional)',
   )
   await page.keyboard.press('Tab')
   await expect(editor.locator('.cm-empty-body')).toBeVisible()
@@ -30,7 +36,7 @@ test('new note placeholders, slash search and multi-selection', async ({ page })
       return { top: hint.top, left: hint.left }
     }),
   ).toEqual({ top: '0px', left: '0px' })
-  await expect(page.locator('.insert-trigger')).toHaveCount(0)
+  await expect(page.locator('.insert-trigger')).toBeVisible()
   await page.keyboard.type('/')
   await expect(page.getByPlaceholder('Buscar blocos')).toBeFocused()
   await expect(page.getByRole('button', { name: 'Título 1', exact: true })).toHaveCount(0)
@@ -272,7 +278,7 @@ test('renaming the active note reveals its new position in the sidebar', async (
     .toBe(true)
 })
 
-test('skipping the optional subtitle keeps it on line two and offers blocks at the cursor', async ({
+test('skipping the optional description keeps it on line two and offers blocks at the cursor', async ({
   page,
 }) => {
   await page.goto('/')
@@ -293,7 +299,7 @@ test('skipping the optional subtitle keeps it on line two and offers blocks at t
 })
 
 for (const width of [390, 1280]) {
-  test(`optional subtitle and block insertion at ${width}px`, async ({ page }) => {
+  test(`optional description and block insertion at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 })
     await page.goto('/')
     await page.keyboard.press('Control+t')
@@ -303,7 +309,7 @@ for (const width of [390, 1280]) {
     const editor = page.locator('.cm-content')
     await expect(editor.locator('.cm-line').nth(1)).toHaveAttribute(
       'data-placeholder',
-      'Subtítulo (opcional)…',
+      'Sobre o que é esta nota? (opcional)',
     )
     await expect(page.locator('.insert-button')).toBeVisible()
     await expect(page.locator('.insert-trigger')).toContainText('Digite / para inserir blocos')
@@ -315,14 +321,14 @@ for (const width of [390, 1280]) {
     await page.keyboard.type('Conteúdo da página')
     await expect(editor.locator('.cm-line').nth(1)).toHaveAttribute(
       'data-placeholder',
-      'Subtítulo (opcional)…',
+      'Sobre o que é esta nota? (opcional)',
     )
     await expect(editor).toContainText('Conteúdo da página')
     await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
     const entry = page.locator('.visual-editor.read-only')
-    await entry.locator('[data-wiki^="Em desenvolvimento|"]').click()
-    const news = 'Novas páginas identificam a segunda linha como subtítulo opcional'
+    await entry.locator('[data-wiki^="Sloth Note 0.13.1|"]').click()
+    const news = 'Novas páginas identificam a segunda linha como descrição opcional'
     await entry.hover()
     await expect
       .poll(
@@ -336,3 +342,52 @@ for (const width of [390, 1280]) {
       .toBe(true)
   })
 }
+
+test('the [+] button of an empty note inserts below the optional description', async ({ page }) => {
+  await page.goto('/')
+  await page.keyboard.press('Control+t')
+  await page.keyboard.type('Nota vazia')
+  await expect(page.locator('.insert-trigger kbd')).toHaveText('/')
+  await page.locator('.insert-button').click()
+  await page.getByRole('button', { name: 'Título 2', exact: true }).click()
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await expect(page.locator('textarea')).toHaveValue(/^# Nota vazia\n\n## /)
+})
+
+test('Enter on the empty description keeps the [+] tip in place', async ({ page }) => {
+  await page.goto('/')
+  await page.keyboard.press('Control+t')
+  await page.keyboard.type('Teste')
+  await page.keyboard.press('Enter')
+  const before = await page.locator('.insert-trigger').boundingBox()
+  await page.keyboard.press('Enter')
+  // Line 3 now holds the cursor; the tip stays where it was.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const node = window.getSelection()?.anchorNode
+        const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement
+        return element?.closest('.cm-line') === document.querySelectorAll('.cm-line')[2]
+      }),
+    )
+    .toBe(true)
+  const after = await page.locator('.insert-trigger').boundingBox()
+  expect(after.y).toBeCloseTo(before.y, 0)
+  expect(after.x).toBeCloseTo(before.x, 0)
+})
+
+test('deleting the second line of an empty note keeps description and block hints visible', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.keyboard.press('Control+t')
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Backspace')
+  const editor = page.locator('.cm-content')
+  await expect(editor.locator('.cm-line')).toHaveCount(1)
+  await expect(editor.locator('.cm-empty-body-after')).toHaveText(
+    'Sobre o que é esta nota? (opcional)',
+  )
+  await expect(page.locator('.insert-trigger')).toContainText('Digite / para inserir blocos')
+  await expect(page.locator('.insert-button')).toBeVisible()
+})

@@ -909,10 +909,13 @@ test('share as .md file appears only with the native bridge and sends name and t
 
 test('a new empty note shows title and block hints', async ({ page }) => {
   await page.getByRole('button', { name: 'Nova nota', exact: true }).tap()
-  await expect(page.locator('.cm-empty-title')).toHaveAttribute('data-placeholder', 'Sem título')
+  await expect(page.locator('.cm-empty-title')).toHaveAttribute(
+    'data-placeholder',
+    'Dê um título à sua ideia',
+  )
   await expect(page.locator('.cm-empty-body')).toHaveAttribute(
     'data-placeholder',
-    'Subtítulo (opcional)…',
+    'Sobre o que é esta nota? (opcional)',
   )
   if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/sloth-mobile-real.png' })
 })

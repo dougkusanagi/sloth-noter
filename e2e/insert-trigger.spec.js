@@ -14,8 +14,9 @@ const trigger = (page) => page.locator('.insert-trigger')
 test('the insert button follows only the typing cursor, including mouse movement in margins', async ({
   page,
 }) => {
-  await openNote(page)
-  const blank = page.locator('.cm-line').nth(1)
+  await openNote(page, '# Inserção\nDescrição\n\nPrimeiro parágrafo\n\nÚltimo parágrafo\n\n')
+  await page.keyboard.press('ArrowDown')
+  const blank = page.locator('.cm-line').nth(2)
   await blank.hover()
   await expect(trigger(page)).toBeHidden()
   await page.keyboard.press('ArrowDown')
