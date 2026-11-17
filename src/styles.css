@@ -610,6 +610,12 @@ textarea:focus-visible {
   left: 0.4em;
   color: var(--text-secondary);
 }
+.visual-editor .cm-md-bullet.cm-md-depth-1::before {
+  content: '◦';
+}
+.visual-editor .cm-md-bullet.cm-md-depth-2::before {
+  content: '▪';
+}
 .visual-editor .cm-md-bullet.cm-md-editing::before {
   content: none;
 }
@@ -815,6 +821,12 @@ textarea:focus-visible {
   border-bottom: 1px solid var(--soft);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+.visual-editor .cm-md-table-row.cm-md-table-head > .cm-md-table-cell {
+  border-bottom-color: var(--edge-strong);
+}
+.visual-editor .cm-md-table-cell {
+  font-variant-numeric: tabular-nums;
 }
 .visual-editor .cm-md-table-cell[data-align='center'] {
   text-align: center;
@@ -1353,6 +1365,19 @@ textarea:focus-visible {
 .image-missing {
   color: var(--muted);
   font: 13px var(--ui);
+}
+.cm-image-figure,
+.markdown .image-figure {
+  display: inline-block;
+  max-width: min(100%, 600px);
+  vertical-align: top;
+}
+.cm-image-caption,
+.markdown .image-caption {
+  display: block;
+  padding-top: 0.35em;
+  color: var(--text-secondary);
+  font: 0.85em/1.4 var(--ui);
 }
 .cm-image-preview {
   max-width: min(100%, 600px);
@@ -2319,18 +2344,21 @@ body.cm-section-dragging * {
 }
 /* More space above a heading than below, so it reads as part of the text that follows. */
 .visual-editor .cm-line:is(.cm-md-h2, .cm-md-h3, .cm-md-h4, .cm-md-h5, .cm-md-h6) {
-  --heading-pad-top: 0.7em;
-  --heading-pad-bottom: 0.2em;
+  /* A title that wraps is set tighter (1.3). The 0.16em added above and below keeps a one-line
+     title as tall as before (1.62 = 1.3 + 2 × 0.16), so guides and handles stay on the grid. */
+  line-height: 1.3;
+  --heading-pad-top: 0.86em;
+  --heading-pad-bottom: 0.36em;
   padding-top: var(--heading-pad-top);
   padding-bottom: var(--heading-pad-bottom);
 }
 .visual-editor .cm-line.cm-md-h2 {
-  --heading-pad-top: 1.4em;
-  --heading-pad-bottom: 0.3em;
+  --heading-pad-top: 1.56em;
+  --heading-pad-bottom: 0.46em;
 }
 .visual-editor .cm-line.cm-md-h3 {
-  --heading-pad-top: 1em;
-  --heading-pad-bottom: 0.25em;
+  --heading-pad-top: 1.16em;
+  --heading-pad-bottom: 0.41em;
 }
 @media (max-width: 700px) {
   .document-outline {

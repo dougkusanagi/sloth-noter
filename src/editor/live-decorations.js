@@ -235,13 +235,14 @@ class TaskWidget extends WidgetType {
   }
 }
 class ImageWidget extends WidgetType {
-  constructor(src, alt) {
+  constructor(src, alt, title = '') {
     super()
     this.src = src
     this.alt = alt
+    this.title = title
   }
   eq(other) {
-    return this.src === other.src && this.alt === other.alt
+    return this.src === other.src && this.alt === other.alt && this.title === other.title
   }
   toDOM() {
     const image = document.createElement('img')
@@ -252,7 +253,15 @@ class ImageWidget extends WidgetType {
         if (src) image.src = src
       })
       .catch(() => {})
-    return image
+    if (!this.title) return image
+    // The Markdown title is the caption: the same text appears under the image in Leitura.
+    const figure = document.createElement('span')
+    figure.className = 'cm-image-figure'
+    const caption = document.createElement('span')
+    caption.className = 'cm-image-caption'
+    caption.textContent = this.title
+    figure.append(image, caption)
+    return figure
   }
 }
 
@@ -262,6 +271,7 @@ export const listMargin = (depth) => `margin-left:calc(${depth} * var(--editor-s
 export function lineAttributes(line, shape, active, listDepth = 0) {
   const classes = [shape.kind === 'paragraph' ? 'cm-md-paragraph' : `cm-md-${shape.kind}`]
   if (active) classes.push('cm-md-editing')
+  if (shape.kind === 'bullet' && listDepth) classes.push(`cm-md-depth-${Math.min(listDepth, 2)}`)
   if (shape.prefix && shape.kind !== 'fence') classes.push('cm-md-prefix')
   if (shape.depth > 1) classes.push('cm-md-quote-nested')
   const syntax =
@@ -517,7 +527,7 @@ export function decorationsFor(view) {
         !active
       ) {
         ranges.push(
-          Decoration.replace({ widget: new ImageWidget(image.src, image.name) }).range(
+          Decoration.replace({ widget: new ImageWidget(image.src, image.name, image.title) }).range(
             line.from,
             line.to,
           ),

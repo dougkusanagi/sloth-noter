@@ -56,7 +56,7 @@ function Image({ src, alt, title }) {
       cancelled = true
     }
   }, [src])
-  return resolved ? (
+  const image = (
     <img
       src={resolved}
       alt={alt ?? ''}
@@ -64,6 +64,16 @@ function Image({ src, alt, title }) {
       loading="lazy"
       onError={() => setResolved(null)}
     />
+  )
+  return resolved ? (
+    title ? (
+      <span className="image-figure">
+        {image}
+        <span className="image-caption">{title}</span>
+      </span>
+    ) : (
+      image
+    )
   ) : (
     <span className="image-missing">{alt || t('images.unavailable')}</span>
   )

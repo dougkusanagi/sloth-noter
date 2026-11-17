@@ -157,13 +157,15 @@ export function imageReferences(text) {
   })
   const result = []
   walk(tree, (node) => {
-    if (node.type === 'image') result.push({ src: node.url, name: node.alt ?? '', node })
+    if (node.type === 'image')
+      result.push({ src: node.url, name: node.alt ?? '', title: node.title ?? '', node })
     if (node.type === 'imageReference') {
       const definition = definitions.get(node.identifier)
       if (definition)
         result.push({
           src: definition.url,
           name: node.alt ?? '',
+          title: definition.title ?? '',
           node: definition,
           occurrence: node,
         })
