@@ -1,5 +1,8 @@
 # Melhorias do editor, imagens e navegação
 
+> Prioridade entre frentes e etapa ativa: [fila central](prioridades.md). Este plano mantém
+> os detalhes da sua frente; seu próximo passo só entra quando ela estiver ativa na fila.
+
 Objetivo: concluir os pedidos de edição, busca, imagens e navegação da lista de notas.
 
 - [x] Navegação por setas na busca.

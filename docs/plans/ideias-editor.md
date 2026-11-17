@@ -1,5 +1,8 @@
 # Plano: melhorias do editor
 
+> Prioridade entre frentes e etapa ativa: [fila central](prioridades.md). Este plano mantém
+> os detalhes da sua frente; seu próximo passo só entra quando ela estiver ativa na fila.
+
 Tipo: tarefa
 
 ## Objetivo
@@ -13,7 +16,8 @@ Revisar e implementar as melhorias solicitadas para navegação e organização 
 - [x] Permitir recolher blocos de código, mostrando a primeira linha e reticências.
 - [x] Acrescentar controle global de quebra de linhas e escolhas individuais por nota e por bloco de código.
 - [x] Permitir consultar duas notas por arraste de aba ou menu de contexto; a lateral abre em leitura e troca de lugar ao clicar no nome para editá-la.
-- [x] Acrescentar bloco recolhível com título e conteúdo usando HTML compatível com Markdown.
+- Retirado do escopo atual: bloco recolhível com `<details>`/`<summary>`, removido pelo
+  [ADR 0029](../adr/0029-remover-blocos-recolhiveis.md). Não reimplementar ao fechar este plano.
 - [x] Acrescentar layout em colunas, com inserção, acréscimo e remoção sem apagar o conteúdo.
 - [x] Permitir arrastar conteúdo selecionado com o mouse da nota para uma coluna e entre colunas, com desfazer; recortar e colar oferece alternativa pelo teclado.
 
@@ -28,4 +32,5 @@ Revisar e implementar as melhorias solicitadas para navegação e organização 
 
 ## Próximo passo
 
-Investigar a falha intermitente de alinhamento das guias no teste `e2e/rails.spec.js`; depois executar a suíte E2E completa, revisar Novidades e concluir a entrega. Testes unitários, lint e build passaram; ainda não houve commit.
+Investigar a falha intermitente de alinhamento das guias no teste `e2e/rails.spec.js`; depois executar a suíte E2E completa, revisar Novidades e concluir a entrega. O relato anterior de testes aprovados e ausência de commit é histórico; os recursos já aparecem
+no código e no histórico de versões. Falta conferir a suíte atual, sem presumir aprovação.

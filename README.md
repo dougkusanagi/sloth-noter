@@ -186,6 +186,7 @@ A pasta `site/` tem a página de apresentação e venda da sincronização. O wo
 - [Arquitetura](docs/architecture.md)
 - [Recursos, comportamento e atalhos](docs/RECURSOS.md)
 - [Desenvolvimento, testes e releases](docs/DESENVOLVIMENTO.md)
+- [Prioridades e próxima etapa](docs/plans/prioridades.md)
 - [Roteiro do projeto](docs/ROADMAP.md)
 
 Novidades no desktop abre uma nota Markdown pelo menu principal ou por Configurações → Novidades.

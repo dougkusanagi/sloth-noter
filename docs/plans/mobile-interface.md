@@ -1,5 +1,8 @@
 # Plano: interface Android
 
+> Prioridade entre frentes e etapa ativa: [fila central](prioridades.md). Este plano mantém
+> os detalhes da sua frente; seu próximo passo só entra quando ela estiver ativa na fila.
+
 Tipo: tarefa
 
 ## Objetivo
@@ -14,13 +17,15 @@ Ordem fixa:
 5. **Ideias novas para as duas plataformas** (Parte C).
 
 O **que** fazer está em [requisitos mobile](../plano-mobile.md); este arquivo é a única
-fonte de **ordem, estado e próximo passo**. Se os dois divergirem, os requisitos valem para o
+fonte de **ordem interna e estado das etapas Android**. A [fila central](prioridades.md)
+define quando esta frente fica ativa. Se os dois divergirem, os requisitos valem para o
 escopo e este plano vale para o andamento; corrija a divergência no mesmo commit.
 
 ## Como trabalhar (para o agente)
 
 1. Leia `AGENTS.md`, `MEMORY.md`, os [requisitos](../plano-mobile.md) e este plano.
-2. Pegue a **primeira etapa não marcada** da fila cujas dependências estão feitas. Não pule etapas
+2. Confira primeiro a [fila central](prioridades.md). Quando a frente Android estiver ativa,
+   pegue a **primeira etapa não marcada** da fila cujas dependências estão feitas. Não pule etapas
    nem adiante itens de outra etapa, salvo pedido explícito do usuário. A fila abaixo já está na
    ordem do objetivo. Não comece a Parte B antes do critério da seção 4.3 dos requisitos, nem a
    Parte C antes de concluir a Parte B.
@@ -219,6 +224,8 @@ a gravação local precisa ser confiável antes de sincronizar).
 ## Fila — 3. Restante da paridade
 
 - [ ] **A5 — Modo Código** (4.2). P20. Depende de A3 e A4.
+      Implementação já descrita em “Continuação: edição e tarefas” abaixo e presente na casca.
+      Conferir critérios e testes antes de marcar; não reimplementar do zero.
       Faz: comparar `textarea` e CodeMirror sem decorações e registrar a escolha (decisão 3);
       preferência por nota; teclas de símbolos na barra (linha "Modo Código" de 5.6).
       Pronto: texto, seleção, desfazer/refazer e histórico preservados ao alternar; editor
@@ -247,7 +254,8 @@ a gravação local precisa ser confiável antes de sincronizar).
       Já feito em 3.3: rolagem local, 1ª coluna fixa, contagem no rótulo, foco por teclado.
       Pronto por parte: cabeçalho fixo e tabelas iguais; cartões; tela cheia com retorno ao
       ponto; edição por célula preservando Markdown e histórico.
-- [ ] **A12 — Colunas e blocos recolhíveis.** P35. Requisitos 5.5. Decisão 5 antes. Depende de A4.
+- [ ] **A12 — Colunas.** P35. Requisitos 5.5. Decisão 5 antes. Depende de A4.
+      Blocos `<details>` foram removidos pelo ADR 0029 e não devem ser reintroduzidos nesta etapa.
       Pronto: leitura e edição em 320 dp e 840 dp; "Mover para a coluna…" com desfazer; Markdown
       igual ao do desktop.
 - [ ] **A13 — Imagens** (4.5 e 5.4). P36, P37. Requisitos 5.8. Depende de A4.
@@ -375,18 +383,28 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-**Fechar S4 com os aparelhos reais.** Servidor no ar em 2026-11-13
+Aguardar a conclusão da prioridade 1 da [fila central](prioridades.md). Ao retomar esta frente,
+**fechar S4 com os aparelhos reais.** Servidor no ar em 2026-11-13
 (`https://sloth-note-sync.dl-aguiar.workers.dev`, D1 + R2, migrações 0001–0002, limite do ADR
 0021). Teste ponta a ponta com o motor contra o servidor real passou: nota e imagem nos dois
 sentidos, mesclagem, conflito, lixeira, restauração, exclusão e 401; o contador de uso registrou
 as operações; os dados de teste foram apagados. Desde 0.15.0 a tela usa conta com e-mail e senha
-(ADR 0024): falta aplicar `0004_accounts.sql` e publicar o Worker, criar um convite, entrar nos
-dois aparelhos e conferir com notas reais; depois, desligar as chaves antigas (README). Fora da fila: 5 E2E desktop já falham no `main`.
+(ADR 0024), e o ADR 0031 removeu os perfis locais. A anotação anterior dizia que faltavam a
+migração `0004_accounts.sql` e a publicação do Worker; conferir o estado remoto antes de agir.
+Validar a conta com dados fictícios nos dois aparelhos. A desativação das chaves antigas exige
+confirmar antes que todos os aparelhos migraram (README). O relato anterior de cinco falhas
+E2E desktop é histórico; investigar o estado atual na prioridade 1 da fila central, sem assumir que continuam iguais.
 
 Pendente no aparelho (de entregas anteriores): validar no APK Inserir, seletor de imagem,
 clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,
 aviso de gravação pendente, envio ao sair com morte do processo e recuperação de dados
 corrompidos. A matriz nativa permanece aberta.
+
+## Histórico de execução
+
+As seções datadas abaixo guardam evidências da época. Seus “próximos passos”, bloqueios e
+instruções sobre checkouts não substituem a fila atual, o estado acima nem os ADRs posteriores.
+O item Novidades por versão foi implementado na consolidação de 2026-11-09.
 
 ## Retomada em 2026-11-03
 

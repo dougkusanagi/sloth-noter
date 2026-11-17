@@ -1,8 +1,8 @@
 # Plano mobile: requisitos
 
 Este documento define **o que** a versão Android deve fazer. O
-[plano de execução](plans/mobile-interface.md) define **em que ordem** fazer, o estado de cada
-etapa e o próximo passo. Não há outros documentos de escopo mobile: o antigo `plano-mobile-v2.md`
+[plano de execução](plans/mobile-interface.md) define a ordem interna do Android e o estado de
+cada etapa. A [fila central](plans/prioridades.md) define quando retomar essa frente. Não há outros documentos de escopo mobile: o antigo `plano-mobile-v2.md`
 foi incorporado aqui em 2026-11-07. O diagnóstico original (APK `962b01b`) está no histórico do
 git: `git show 8631437:docs/plano-mobile.md`.
 

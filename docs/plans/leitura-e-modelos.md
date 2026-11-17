@@ -1,5 +1,8 @@
 # Plano: tipografia de leitura, modelos e variáveis
 
+> Prioridade entre frentes e etapa ativa: [fila central](prioridades.md). Este plano mantém
+> os detalhes da sua frente; seu próximo passo só entra quando ela estiver ativa na fila.
+
 Tipo: tarefa
 
 ## Objetivo
@@ -26,6 +29,11 @@ Tipo: tarefa
 - Contraste mínimo: corpo do texto ≥ 7:1 (AAA); texto secundário ≥ 4.5:1, nos dois temas.
 - Cada commit incrementa a versão e registra Novidades (`AGENTS.md`); novidades visuais levam
   captura em `public/changelog/`. PR com mudança visual leva capturas de antes e depois.
+
+## Especificação de origem
+
+As partes 1–4 abaixo preservam o escopo original. Alternativas e exemplos antigos não reabrem
+decisões aceitas: o estado atual está em Progresso e os contratos estão nos ADRs 0026, 0027 e 0030. Em especial, a sintaxe atual é `{{nome}}`, e modelos próprios são notas marcadas.
 
 ## Parte 1 — Tipografia e espaçamento
 
@@ -324,19 +332,30 @@ Cada etapa é uma entrega com versão, Novidades e capturas próprias.
 
 - Reabrir o cursor após Ctrl+End por temporizadores (corrigir a rolagem do `insert-trigger.spec.js:67`): quebrou o teste de rolagem por aba (`tab-position`) e foi revertido. A falha original continua: em nota longa o cursor pode ficar ~60 px abaixo da tela por causa de alturas estimadas.
 
+## Decisões já resolvidas
+
+- Modelos próprios: notas marcadas, conforme [ADR 0026](../adr/0026-modelos-proprios-como-notas-marcadas.md).
+- Variáveis: `{{nome}}` e `{{user.nome}}`, propriedades de primeiro nível e tipos texto,
+  número, booleano, data ISO e lista simples, conforme [ADR 0027](../adr/0027-propriedades-yaml-e-variaveis.md).
+- Painel: propriedades acima da nota em todas as larguras, conforme
+  [ADR 0030](../adr/0030-propriedades-acima-da-nota.md), que substitui a margem direita do ADR 0028.
+- `{{profile}}` usa o nome ou e-mail da conta conectada, conforme
+  [ADR 0031](../adr/0031-conta-unica-sem-perfis.md); não depende de perfis locais.
+
 ## Dúvidas abertas
 
 - Largura da linha: mudar o padrão para ~680 px, limitar só o texto a `70ch` ou manter 760 px?
-- Modelos próprios: subpasta `Modelos/` (A) ou notas marcadas como modelo (B)?
-- Sintaxe das variáveis: `{{=nome}}` serve, ou prefere outra (ex.: compatível com o
-  Dataview do Obsidian, `` `= this.file.mtime` ``, mais longa)?
-- Prazos com emojis do plugin Tasks (compatível com o Obsidian) ou uma sintaxe própria em texto
-  (ex.: `prazo: 20/11`)?
-- O modelo de tarefas deve abrir no modo quadro ou como lista?
-
-- Confirmar a sintaxe `{{=user.nome}}` e a proposta de propriedades de primeiro nível no YAML.
-- Definir quais tipos de propriedade entram na primeira entrega e a política de edição sem perdas.
+  Não bloqueia as pendências funcionais de variáveis.
+- Prazos com emojis do plugin Tasks ou uma sintaxe própria em texto? Decidir antes da Parte 4.
+- O modelo de tarefas deve abrir no modo Quadro ou como lista? Conferir o comportamento atual
+  antes de propor uma alteração.
 
 ## Próximo passo
 
-Concluir a Parte 3.3: "Variável…" em Inserir no celular e painel de propriedades no celular; criar propriedade direto do seletor. Responder antes às dúvidas de sintaxe das variáveis. Responder às dúvidas de largura (1.4) e de sintaxe antes das partes que dependem delas.
+Quando esta frente estiver ativa na [fila central](prioridades.md), concluir as pendências
+funcionais da Parte 3: “Variável…” em Inserir e painel de propriedades no celular, criação de
+propriedade pelo seletor e leitura de variáveis no painel lateral. As pendências mobile também
+pertencem à paridade (prioridade 3): atualizar este plano quando forem entregues lá.
+Depois tratar `createdAt`/`{{created}}` com ADR e os prazos da Parte 4. Opcionais tipográficos
+ficam para a prioridade 5. A falha de rolagem registrada acima entra no fechamento do editor,
+na prioridade 1; esta reorganização não a declara corrigida.

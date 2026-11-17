@@ -1,5 +1,8 @@
 # Roteiro
 
+A [fila central de prioridades](plans/prioridades.md) define a frente ativa e o que retomar.
+Os planos específicos guardam escopo e critérios; as ideias deste roteiro não alteram essa fila.
+
 ## Contrato de produto
 
 - **Um bloco de notas com Markdown.** O fluxo do Notepad (criar, escrever, fechar sem salvar) com Markdown de verdade. É o critério para aceitar ou recusar qualquer recurso: ele precisa tornar a nota mais rápida de criar, de achar ou de fechar.
@@ -30,8 +33,8 @@
 - **Android offline:** casca por plataforma, lista/busca, criação, leitura, edição inicial, fixadas,
   lixeira com desfazer, Tarefas, imagens referenciadas e Novidades. A prioridade é a paridade com o
   desktop; ideias novas vêm depois. Os [requisitos mobile](plano-mobile.md) definem o escopo e a
-  matriz de paridade; o [plano de execução](plans/mobile-interface.md) define a ordem e a próxima
-  etapa. Compartilhar dados entre as cascas significa
+  matriz de paridade; o [plano de execução](plans/mobile-interface.md) define a ordem interna
+  das etapas Android, subordinada à fila central. Compartilhar dados entre as cascas significa
   reutilizar modelo e persistência, não sincronizar dispositivos. Validação nativa/IME e recursos
   restantes continuam pendentes; não tratar a versão Android como concluída.
 
@@ -50,7 +53,7 @@
 
 ### Rumo ao "Notepad com Markdown"
 
-Ideias avaliadas contra o contrato acima, em ordem de valor:
+Ideias avaliadas contra o contrato acima, para avaliação após as prioridades ativas:
 
 - **Nota nova ao abrir** (opção): o app já abre na última nota; quem quer anotar rápido prefere uma página em branco.
 - **Quebra de linha opcional** no editor.
@@ -69,8 +72,8 @@ sobre IA local, sem substituir os complementos de edição e distribuição acim
 **Ordem entre mobile e recursos novos (2026-11-07):** usabilidade básica do Android →
 sincronização desktop ↔ celular por servidor próprio no Cloudflare (ADR 0009; parte do item 4) →
 restante da paridade do Android com o desktop → ideias novas só do mobile → ideias novas para as
-duas plataformas (itens 1–3 e o restante do item 4 abaixo, IA local, hub de projetos). O trabalho já aprovado em plano próprio, como status e Quadro de tarefas, segue seu
-plano. Detalhes na seção 1 dos [requisitos mobile](plano-mobile.md).
+duas plataformas (itens 1–3 e o restante do item 4 abaixo, IA local, hub de projetos). A fila central intercala o fechamento das entregas existentes antes de retomar S4;
+depois preserva esta ordem interna do mobile. Detalhes na seção 1 dos [requisitos mobile](plano-mobile.md).
 
 Status de tarefas, arquivo de concluídas na própria nota e modo Quadro estão em
 [plano próprio](plans/status-arquivo-quadro-tarefas.md) (ADRs 0004, 0005 e 0006).

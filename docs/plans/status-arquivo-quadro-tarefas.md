@@ -1,5 +1,8 @@
 # Plano: status, arquivo e quadro de tarefas
 
+> Prioridade entre frentes e etapa ativa: [fila central](prioridades.md). Este plano mantém
+> os detalhes da sua frente; seu próximo passo só entra quando ela estiver ativa na fila.
+
 Tipo: tarefa
 
 ## Objetivo
@@ -103,4 +106,13 @@ status, arquivar com desfazer).
 
 ## Próximo passo
 
-Plano concluído (etapas 1 a 4). Pendências aceitas: arquivamento automático depois de N dias; título de raia/grupo para seções H3+; o celular não lê a preferência de datas (usa o padrão, com data); a etapa A17 do plano mobile fica liberada e só falta conferir em aparelho real. Ao revisar, mover decisões para ADR (desvio: `preferences.boardNotes`) e apagar este plano antes de integrar, conforme as regras do projeto.
+Implementação das etapas 1 a 4 marcada como concluída; fechamento documental e validação
+transversal ainda pendentes, na prioridade 1 da [fila central](prioridades.md). Conferir os
+itens de “Em cada etapa” e os testes atuais antes de encerrar.
+
+Pendências: arquivamento automático depois de N dias; título de raia/grupo para seções H3+;
+conferir se o celular aplica a preferência de datas (a opção já aparece em Configurações na
+0.24.0, mas a casca mobile não configura `taskSettings.dates`); conferir A17 em aparelho real.
+Arquivamento automático é evolução futura e não bloqueia o fechamento do escopo entregue.
+Registrar a diferença `preferences.boardNotes` em novo ADR e apagar este plano somente depois
+de cumprir os critérios de fechamento, preservando links e fatos duráveis.
