@@ -28,7 +28,7 @@ test('typed text survives a reload', async ({ page }) => {
 
 test('a new note is named after its first H1', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu principal' }).click()
-  await page.getByRole('menuitem', { name: /Nova nota/ }).click()
+  await page.getByRole('menuitem', { name: 'Nova nota', exact: true }).click()
   await editor(page).click()
   await page.keyboard.press('Control+a')
   await page.keyboard.type('Diário')
@@ -47,7 +47,7 @@ test('find in note reports matches and closes with Escape', async ({ page }) => 
 
 test('the note palette opens another note with the keyboard', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu principal' }).click()
-  await page.getByRole('menuitem', { name: /Nova nota/ }).click()
+  await page.getByRole('menuitem', { name: 'Nova nota', exact: true }).click()
   await page.getByRole('button', { name: 'Menu principal' }).click()
   await page.getByRole('menuitem', { name: /Buscar nota/ }).click()
   const dialog = page.getByRole('dialog', { name: 'Buscar nota' })
@@ -88,7 +88,7 @@ test('the language can be switched to English and is remembered', async ({ page 
   await page.keyboard.press('Escape')
   await expect(settings).toBeHidden()
   await page.getByRole('button', { name: 'Main menu' }).click()
-  await expect(page.getByRole('menuitem', { name: /New note/ })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'New note', exact: true })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('button', { name: 'Main menu' })).toBeVisible()
 })

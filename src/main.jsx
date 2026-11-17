@@ -83,6 +83,8 @@ import {
 import { t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
 import { welcomeNote } from './welcome.js'
+import { renderTemplate, templateList } from './templates.js'
+import { TemplatePicker } from './components/template-picker.jsx'
 import { foldAll, foldArchive, unfoldAll } from './editor/folding.js'
 import { continueBlock } from './continue-block.js'
 import { applyChanges, listIndentChanges, mapPosition } from './list-indent.js'
@@ -225,6 +227,7 @@ function Workspace({ persistence, loaded }) {
   const [imagesLoading, setImagesLoading] = useState(false)
   const [selectedImage, setSelectedImage] = useState(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [templatesOpen, setTemplatesOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const activeProfile = useActiveProfile(persistence.invoke, persistence.profileId)
   const [commandsOpen, setCommandsOpen] = useState(false)
@@ -2118,6 +2121,7 @@ function Workspace({ persistence, loaded }) {
     ),
     focus: () => active && toggleFocusMode(),
     newNote: () => runMenu(() => createNote(), false),
+    newFromTemplate: () => runMenu(() => setTemplatesOpen(true), false),
     findNote: () => runMenu(openPalette, false),
     searchAllNotes: () => runMenu(searchAllNotes, false),
     findInNote: () => active && runMenu(openFind, false),
@@ -2936,6 +2940,30 @@ function Workspace({ persistence, loaded }) {
           </footer>
         </section>
       </div>
+      {templatesOpen && (
+        <TemplatePicker
+          language={prefs.language}
+          onClose={() => {
+            setTemplatesOpen(false)
+            menuButton.current?.focus()
+          }}
+          onPick={(id) => {
+            const template = templateList(prefs.language).find((item) => item.id === id)
+            setTemplatesOpen(false)
+            if (!template) return
+            const { text, cursor } = renderTemplate(template.body, { language: prefs.language })
+            // A template named by the person starts with its title selected; the others, at the marker.
+            const titleEnd = text.indexOf('\n')
+            const named = template.body.split('\n')[0].includes('{{title}}')
+            createNote(
+              undefined,
+              text,
+              undefined,
+              named ? { from: 2, to: titleEnd } : { from: cursor, to: cursor },
+            )
+          }}
+        />
+      )}
       {shortcutsOpen && (
         <ShortcutsDialog
           onClose={() => {

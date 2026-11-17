@@ -3624,3 +3624,48 @@ html:has(
 .task-status-item.task-unarchive {
   grid-template-columns: 18px 1fr;
 }
+
+.palette.template-picker {
+  width: min(760px, 100%);
+}
+.template-picker-body {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+  min-height: 0;
+}
+.template-picker-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  text-align: left;
+}
+.template-picker-item small {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: normal;
+}
+.template-picker-preview {
+  --editor-size: 13px;
+  max-height: min(380px, 55dvh);
+  padding: 10px 14px;
+  overflow: auto;
+  border-left: 1px solid var(--line);
+  font-size: 13px;
+}
+.template-picker > .dialog-close {
+  margin: 8px 6px 8px 6px;
+}
+@media (max-width: 600px) {
+  .template-picker-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .template-picker-preview {
+    max-height: 30dvh;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+}
+.template-picker-preview .fold-toggle {
+  display: none;
+}

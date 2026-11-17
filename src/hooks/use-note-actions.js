@@ -80,7 +80,7 @@ export function useNoteActions({
     if (!current.current.openIds.includes(id)) openNote(id)
   }
 
-  function createNote(name = 'new note.md', body = '', group = undefined) {
+  function createNote(name = 'new note.md', body = '', group = undefined, selection = undefined) {
     const blank = !body
     body = blank && name === 'new note.md' ? '# \n' : ensureTitle(body, name.replace(/\.md$/i, ''))
     const old = current.current
@@ -103,10 +103,10 @@ export function useNoteActions({
       if (palette) closePalette()
     })
     focusEditor()
-    if (blank) {
-      const end = note.body.split('\n')[0].length
-      if (mode === 'source') editorRef.current?.setSelectionRange(2, end)
-      else visualRef.current?.dispatch({ selection: { anchor: 2, head: end } })
+    const range = selection ?? (blank ? { from: 2, to: note.body.split('\n')[0].length } : null)
+    if (range) {
+      if (mode === 'source') editorRef.current?.setSelectionRange(range.from, range.to)
+      else visualRef.current?.dispatch({ selection: { anchor: range.from, head: range.to } })
     }
   }
 
