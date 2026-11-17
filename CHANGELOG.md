@@ -2,6 +2,14 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.25.0] — 2026-11-17
+
+Página de apresentação e sincronização; detalhes em [changelog/0.25.0.md](changelog/0.25.0.md).
+
+## [0.24.0] — 2026-11-17
+
+Melhorias no editor e nas variáveis; detalhes em [changelog/0.24.0.md](changelog/0.24.0.md).
+
 ## [Não lançado]
 
 Nenhuma mudança pendente.

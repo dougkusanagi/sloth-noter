@@ -177,6 +177,10 @@ cifrada aceita até 1,5 MB e cada imagem até 20 MB. A variável `RATE_LIMIT` (p
 por minuto) limita cada instância do Worker e não é uma cota exata. Confira os valores atuais
 antes de implantar.
 
+## Site
+
+A pasta `site/` tem a página de apresentação e venda da sincronização. O workflow `.github/workflows/pages.yml` a publica no GitHub Pages a cada push em `main` que altere a pasta. Ative uma vez em **Settings → Pages → Source: GitHub Actions**.
+
 ## Documentação
 
 - [Arquitetura](docs/architecture.md)

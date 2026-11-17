@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Sloth Note</title>
+  <desc id="desc">Preguiça marrom de olhos tranquilos sobre fundo terracota, com duas linhas de anotação.</desc>
+  <rect width="512" height="512" rx="112" fill="#A55327"/>
+  <path d="M96 251C96 167 145 110 225 103L249 80L263 104C353 105 416 160 416 251C416 331 350 371 256 371S96 331 96 251Z" fill="#663C2C"/>
+  <path d="M128 249C128 196 157 164 196 164C222 164 236 183 256 183C276 183 290 164 316 164C355 164 384 196 384 249C384 304 329 337 256 337S128 304 128 249Z" fill="#F4DBAF"/>
+  <path d="M151 226L207 252M361 226L305 252" stroke="#B17C50" stroke-width="34" stroke-linecap="round"/>
+  <path d="M170 231L192 241M342 231L320 241" stroke="#663C2C" stroke-width="12" stroke-linecap="round"/>
+  <ellipse cx="256" cy="258" rx="18" ry="13" fill="#663C2C"/>
+  <path d="M234 289Q256 306 278 289" stroke="#663C2C" stroke-width="9" stroke-linecap="round"/>
+  <path d="M184 405H328M184 437H280" stroke="#FFF7E9" stroke-width="16" stroke-linecap="round"/>
+</svg>
