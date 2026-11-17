@@ -39,6 +39,7 @@
   --control-hover: linear-gradient(180deg, #ffffff, #f6f4ef);
   --control-pressed: linear-gradient(180deg, #efede7, #f4f2ed);
   --edge: color-mix(in srgb, var(--ink) 12%, transparent);
+  --quote-bar: color-mix(in srgb, var(--accent) 45%, var(--soft));
   --edge-strong: color-mix(in srgb, var(--ink) 19%, transparent);
   --bevel: inset 0 1px 0 rgb(255 255 255 / 90%), inset 0 -1px 0 rgb(30 24 16 / 3%);
   --lift: 0 1px 1px rgb(30 24 16 / 5%), 0 1px 3px rgb(30 24 16 / 6%);
@@ -81,6 +82,7 @@
   --control-hover: linear-gradient(180deg, #363531, #2d2c29);
   --control-pressed: linear-gradient(180deg, #252421, #2a2926);
   --edge: rgb(255 255 255 / 8%);
+  --quote-bar: color-mix(in srgb, var(--accent) 45%, var(--soft));
   --edge-strong: rgb(255 255 255 / 13%);
   --bevel: inset 0 1px 0 rgb(255 255 255 / 6%), inset 0 -1px 0 rgb(0 0 0 / 22%);
   --lift: 0 1px 1px rgb(0 0 0 / 30%), 0 1px 3px rgb(0 0 0 / 25%);
@@ -588,9 +590,9 @@ textarea:focus-visible {
 }
 .visual-editor .cm-md-quote {
   --md-prefix-width: 2.01em;
-  border-left: 2px solid var(--text-secondary);
+  border-left: 2px solid var(--quote-bar);
   padding-left: 1em;
-  color: var(--text-secondary);
+  color: var(--text-body);
 }
 .visual-editor .cm-md-quote-nested {
   --md-prefix-width: 4.02em;
@@ -961,23 +963,35 @@ textarea:focus-visible {
 .visual-editor .cm-md-inline-em {
   font-style: italic;
 }
-.visual-editor .cm-md-inline-code {
+.visual-editor .cm-md-inline-code,
+.markdown code {
   font: 0.85em var(--mono);
-  background: var(--soft);
-  padding: 0.1em 0.25em;
-  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--soft) 65%, transparent);
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
 }
-.visual-editor .cm-md-inline-link {
+.visual-editor .cm-md-inline-link,
+.markdown a {
   color: var(--accent);
   text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.visual-editor .cm-md-inline-link {
   cursor: pointer;
+}
+.visual-editor .cm-md-inline-link:hover,
+.markdown a:hover,
+.markdown a:focus-visible {
+  text-decoration-color: currentColor;
 }
 .visual-editor .cm-md-inline-tag,
 .markdown-tag {
   color: var(--accent-ink);
-  background: var(--soft);
-  border-radius: var(--radius-sm);
-  padding: 0.1em 0.25em;
+  background: color-mix(in srgb, var(--accent) 12%, var(--soft));
+  border-radius: 999px;
+  padding: 0.1em 0.45em;
 }
 .reading {
   flex: 1;
@@ -1055,6 +1069,9 @@ textarea:focus-visible {
   font-size: 0.9em;
   line-height: 1.5;
 }
+.markdown td {
+  font-variant-numeric: tabular-nums;
+}
 .markdown th,
 .markdown td {
   border-bottom: 1px solid var(--soft);
@@ -1062,6 +1079,7 @@ textarea:focus-visible {
   text-align: left;
 }
 .markdown th {
+  border-bottom-color: var(--edge-strong);
   font-weight: 600;
 }
 .markdown ul,
@@ -1070,25 +1088,36 @@ textarea:focus-visible {
 }
 .markdown li::marker {
   color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.visual-editor .cm-md-list-marker {
+  font-variant-numeric: tabular-nums;
+}
+.markdown ul ul {
+  list-style-type: circle;
+}
+.markdown ul ul ul {
+  list-style-type: square;
+}
+/* Avoid a lone word on the last line of a paragraph (progressive enhancement). */
+.markdown p,
+.visual-editor .cm-line.cm-md-paragraph {
+  text-wrap: pretty;
+}
+/* Light text on a dark page looks heavier, so the body is a little lighter. */
+:root[data-theme='dark'] .markdown,
+:root[data-theme='dark'] .visual-editor .cm-content {
+  font-weight: 380;
 }
 .markdown blockquote {
-  border-left: 2px solid var(--soft);
+  border-left: 2px solid var(--quote-bar);
   padding: 0 0 0 1em;
-  color: var(--text-secondary);
+  color: var(--text-body);
 }
 .markdown hr {
   height: var(--line);
   border: 0;
-  background: linear-gradient(var(--soft), var(--soft)) center / 100% 1px no-repeat;
-}
-.markdown a {
-  color: var(--accent);
-}
-.markdown code {
-  font: 0.85em var(--mono);
-  background: var(--soft);
-  padding: 0.1em 0.25em;
-  border-radius: var(--radius-sm);
+  background: linear-gradient(var(--edge-strong), var(--edge-strong)) center / 30% 1px no-repeat;
 }
 .markdown pre {
   background: var(--paper);
@@ -1312,8 +1341,11 @@ textarea:focus-visible {
 .wiki-link.missing {
   text-decoration-style: dashed;
 }
-.cm-md-inline-strike {
+.cm-md-inline-strike,
+.markdown :is(del, s) {
+  color: var(--text-secondary);
   text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, currentColor 70%, transparent);
 }
 .cm-md-inline-footnote,
 .markdown sup {
@@ -1328,7 +1360,7 @@ textarea:focus-visible {
   color: var(--muted);
 }
 .visual-editor .cm-md-rule:not(.cm-md-editing) {
-  background: linear-gradient(var(--soft), var(--soft)) center / 100% 1px no-repeat;
+  background: linear-gradient(var(--edge-strong), var(--edge-strong)) center / 30% 1px no-repeat;
 }
 .visual-editor .cm-md-setext-marker:not(.cm-md-editing) {
   font-size: 0;

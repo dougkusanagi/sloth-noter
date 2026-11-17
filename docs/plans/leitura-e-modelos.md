@@ -313,6 +313,8 @@ Cada etapa é uma entrega com versão, Novidades e capturas próprias.
 - Falta da 1.2: `line-height` menor nos títulos de duas linhas.
 - 1.3, espaço acima e abaixo dos títulos no modo Padrão (H2 1,4/0,3 em; H3 1/0,25 em; H4–H6 0,7/0,2 em), entregue na 0.17.1. Falta o respiro menor dos itens de lista e o primeiro bloco depois do título sem espaço extra.
 
+- 1.5 (parcial), 1.6, 1.7 (citação, separador, listas, tabelas) e 1.8 entregues na 0.17.2: `text-wrap: pretty`, peso 380 no escuro, `tabular-nums`, links, código inline, tags, riscado, barra da citação, separador de 30%, marcadores por nível (só na Leitura), cabeçalho de tabela mais forte (só na Leitura). O celular já usava margens de 16 px. Ficaram de fora: `oldstyle-nums`, `hyphens`, borda dos blocos de código, legenda de imagem e notas de rodapé; marcadores por nível e cabeçalho de tabela no modo Padrão (a tabela do Padrão é outro componente).
+
 ## Tentativas que falharam
 
 - Nenhuma ainda.
@@ -332,4 +334,4 @@ Cada etapa é uma entrega com versão, Novidades e capturas próprias.
 
 ## Próximo passo
 
-Concluir a 1.2 (`line-height` dos títulos) e o que falta da 1.3 (listas) sem quebrar guias e paridade Padrão × Leitura; depois a 1.5–1.8. Responder às dúvidas de largura (1.4) e de sintaxe antes das partes que dependem delas.
+Concluir a 1.2 (`line-height` dos títulos) e o que falta da 1.3 (listas) sem quebrar guias e paridade Padrão × Leitura; depois os itens que ficaram de fora da 1.5–1.7. Em seguida, a Parte 2 (modelos embutidos e variáveis de inserção). Responder às dúvidas de largura (1.4) e de sintaxe antes das partes que dependem delas.
