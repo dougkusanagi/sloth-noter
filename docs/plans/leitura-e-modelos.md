@@ -311,7 +311,7 @@ Cada etapa é uma entrega com versão, Novidades e capturas próprias.
 
 - 1.1 (tokens `--text-body`, `--text-heading`, `--text-secondary`, teste de contraste) e a parte da 1.2 sobre H4–H6, `text-wrap: balance` e pesos 650: entregues na 0.14.0.
 - Falta da 1.2: `line-height` menor nos títulos de duas linhas.
-- Falta a 1.3 (ritmo vertical por nível de título e respiro das listas).
+- 1.3, espaço acima e abaixo dos títulos no modo Padrão (H2 1,4/0,3 em; H3 1/0,25 em; H4–H6 0,7/0,2 em), entregue na 0.17.1. Falta o respiro menor dos itens de lista e o primeiro bloco depois do título sem espaço extra.
 
 ## Tentativas que falharam
 
@@ -332,4 +332,4 @@ Cada etapa é uma entrega com versão, Novidades e capturas próprias.
 
 ## Próximo passo
 
-Concluir a 1.2 (`line-height` dos títulos) e a 1.3 sem quebrar guias e paridade Padrão × Leitura; depois a 1.5–1.8. Responder às dúvidas de largura (1.4) e de sintaxe antes das partes que dependem delas.
+Concluir a 1.2 (`line-height` dos títulos) e o que falta da 1.3 (listas) sem quebrar guias e paridade Padrão × Leitura; depois a 1.5–1.8. Responder às dúvidas de largura (1.4) e de sintaxe antes das partes que dependem delas.

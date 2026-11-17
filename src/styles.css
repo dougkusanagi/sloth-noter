@@ -2256,9 +2256,20 @@ body.cm-section-dragging * {
 .visual-editor .cm-line.cm-md-paragraph {
   padding-bottom: 0.18em;
 }
+/* More space above a heading than below, so it reads as part of the text that follows. */
 .visual-editor .cm-line:is(.cm-md-h2, .cm-md-h3, .cm-md-h4, .cm-md-h5, .cm-md-h6) {
-  padding-top: 0.8em;
-  padding-bottom: 0.35em;
+  --heading-pad-top: 0.7em;
+  --heading-pad-bottom: 0.2em;
+  padding-top: var(--heading-pad-top);
+  padding-bottom: var(--heading-pad-bottom);
+}
+.visual-editor .cm-line.cm-md-h2 {
+  --heading-pad-top: 1.4em;
+  --heading-pad-bottom: 0.3em;
+}
+.visual-editor .cm-line.cm-md-h3 {
+  --heading-pad-top: 1em;
+  --heading-pad-bottom: 0.25em;
 }
 @media (max-width: 700px) {
   .document-outline {
@@ -2282,7 +2293,7 @@ body.cm-section-dragging * {
 /* The heading has more padding above than below; center its arrow on the text. */
 .visual-editor:not(.read-only) .cm-fold-toggle {
   font-size: inherit;
-  top: calc(50% + 0.225em);
+  top: calc(50% + (var(--heading-pad-top, 0.8em) - var(--heading-pad-bottom, 0.35em)) / 2);
 }
 
 .visual-editor .cm-md-table-row,
