@@ -70,6 +70,13 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
           !active?.external,
           Boolean(active?.external),
         ],
+        [
+          'toggleTemplate',
+          prefs.templateNotes?.[active?.id] ? 'menu.removeTemplate' : 'menu.useAsTemplate',
+          FileText,
+          undefined,
+          !active || Boolean(active.external),
+        ],
         ['archiveTasks', 'tasks.archive', Archive, undefined, !active, true],
         ['reopenTab', 'tabs.reopen', Undo2, 'Shift+T'],
         ['previousTab', 'tabs.previous', PanelsTopLeft, 'PageUp', !active],

@@ -327,15 +327,38 @@ const templates = {
 }
 
 const WEEKDAY = { 'pt-BR': 'pt-BR', en: 'en-US' }
+let profileName = ''
+
+/** The active profile's name, for `{{profile}}`; empty when there is none. */
+export function setTemplateProfile(name) {
+  profileName = name ?? ''
+}
+
 const DEFAULT_TITLE = { 'pt-BR': 'Nova nota', en: 'New note' }
 const LOCALES = { 'pt-BR': 'pt-BR', en: 'en-US' }
 
-/** Every built-in template for the language, as `{ id, label, description, body }`. */
+let ownTemplates = []
+
+/** Notes the person marked as templates, from `preferences.templateNotes` (ADR 0026). */
+export function setOwnTemplates(notes, marked, description = '') {
+  ownTemplates = (notes ?? [])
+    .filter((note) => marked?.[note.id] && !note.external)
+    .map((note) => ({
+      id: `note:${note.id}`,
+      label: note.name.replace(/\.md$/i, ''),
+      description,
+      body: note.body,
+      own: true,
+    }))
+}
+
+/** The person's templates first, then the built-in ones: `{ id, label, description, body }`. */
 export function templateList(language = 'pt-BR') {
-  return Object.entries(templates).map(([id, byLanguage]) => {
+  const builtIn = Object.entries(templates).map(([id, byLanguage]) => {
     const item = byLanguage[language] ?? byLanguage['pt-BR']
     return { id, label: item.label, description: item.description, body: item.body.join('\n') }
   })
+  return [...ownTemplates, ...builtIn]
 }
 
 const pad = (value) => String(value).padStart(2, '0')
@@ -362,6 +385,7 @@ export function renderTemplate(body, { title, now = new Date(), language = 'pt-B
     title: title ?? DEFAULT_TITLE[language] ?? DEFAULT_TITLE['pt-BR'],
     date: new Intl.DateTimeFormat(locale).format(now),
     time: formatDate(now, 'HH:mm'),
+    profile: profileName,
   }
   const text = body.replace(
     /\{\{\s*([a-z]+)(?:([+-]\d+)d|:([^}]*))?\s*\}\}/g,

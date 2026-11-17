@@ -83,7 +83,7 @@ import {
 import { t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
 import { welcomeNote } from './welcome.js'
-import { renderTemplate, templateList } from './templates.js'
+import { renderTemplate, setOwnTemplates, setTemplateProfile, templateList } from './templates.js'
 import { TemplatePicker } from './components/template-picker.jsx'
 import { foldAll, foldArchive, unfoldAll } from './editor/folding.js'
 import { continueBlock } from './continue-block.js'
@@ -230,6 +230,7 @@ function Workspace({ persistence, loaded }) {
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const activeProfile = useActiveProfile(persistence.invoke, persistence.profileId)
+  setTemplateProfile(activeProfile?.name)
   const [commandsOpen, setCommandsOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
   const [imageBusy, setImageBusy] = useState(false)
@@ -329,6 +330,7 @@ function Workspace({ persistence, loaded }) {
     [palette, data.notes, data.openIds, query],
   )
   const { prefs, updatePrefs: savePrefs } = usePrefs({ data, current, commit })
+  setOwnTemplates(data.notes, prefs.templateNotes, t('templates.own'))
   const pageWrap =
     active && Object.hasOwn(prefs.wrapLinesByNote ?? {}, active.id)
       ? prefs.wrapLinesByNote[active.id]
@@ -2122,6 +2124,16 @@ function Workspace({ persistence, loaded }) {
     focus: () => active && toggleFocusMode(),
     newNote: () => runMenu(() => createNote(), false),
     newFromTemplate: () => runMenu(() => setTemplatesOpen(true), false),
+    toggleTemplate: () =>
+      active &&
+      runMenu(() => {
+        const templateNotes = { ...prefs.templateNotes }
+        const marked = Boolean(templateNotes[active.id])
+        if (marked) delete templateNotes[active.id]
+        else templateNotes[active.id] = true
+        updatePrefs({ templateNotes })
+        toast(t(marked ? 'templates.removedToast' : 'templates.addedToast'))
+      }, false),
     findNote: () => runMenu(openPalette, false),
     searchAllNotes: () => runMenu(searchAllNotes, false),
     findInNote: () => active && runMenu(openFind, false),

@@ -863,6 +863,35 @@ textarea:focus-visible {
 .visual-editor .cm-md-fence-end {
   border-radius: 0 0 var(--radius) var(--radius);
 }
+/* A hairline keeps the block visible on the light page; shadows add no height. */
+.visual-editor .cm-md-code {
+  box-shadow:
+    inset 1px 0 0 var(--edge),
+    inset -1px 0 0 var(--edge);
+}
+.visual-editor .cm-md-fence-start {
+  box-shadow:
+    inset 1px 0 0 var(--edge),
+    inset -1px 0 0 var(--edge),
+    inset 0 1px 0 var(--edge);
+}
+.visual-editor .cm-md-fence-end {
+  box-shadow:
+    inset 1px 0 0 var(--edge),
+    inset -1px 0 0 var(--edge),
+    inset 0 -1px 0 var(--edge);
+}
+.markdown pre {
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+.markdown section[data-footnotes] {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+.markdown p,
+.visual-editor .cm-line.cm-md-paragraph {
+  hyphens: auto;
+}
 .syntax-keyword,
 .token.keyword {
   color: #904e87;

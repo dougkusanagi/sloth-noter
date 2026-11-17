@@ -1,6 +1,6 @@
 {
   "name": "sloth-note",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "description": "Offline Markdown editor with notes in files the user controls",
   "private": true,
   "type": "module",

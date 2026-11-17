@@ -150,6 +150,14 @@ export function validateDocument(value) {
   )
     throw new Error('Invalid board view preferences')
   if (
+    prefs?.templateNotes !== undefined &&
+    (!prefs.templateNotes ||
+      Array.isArray(prefs.templateNotes) ||
+      typeof prefs.templateNotes !== 'object' ||
+      Object.values(prefs.templateNotes).some((value) => typeof value !== 'boolean'))
+  )
+    throw new Error('Invalid template note preferences')
+  if (
     prefs?.wrapLinesByNote !== undefined &&
     (!prefs.wrapLinesByNote ||
       Array.isArray(prefs.wrapLinesByNote) ||

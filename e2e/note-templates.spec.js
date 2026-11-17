@@ -78,3 +78,26 @@ test('the insert menu adds a template to the current note without a second title
   expect(text.match(/^# /gm)).toHaveLength(1)
   expect(text.startsWith('# Nota\n\nTexto\n\n')).toBe(true)
 })
+
+test('a note marked as a template appears first in the picker and can be unmarked', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page.locator('textarea').fill('# Receita\n\n## Passos\n\n- [ ] Misturar\n')
+  await page.keyboard.press('Control+Shift+P')
+  await palette(page).getByRole('combobox').fill('Usar esta nota como modelo')
+  await page.keyboard.press('Enter')
+  await expect(
+    page.getByText('A nota agora aparece em Nova nota a partir de modelo.'),
+  ).toBeVisible()
+  const picker = await openPicker(page)
+  await expect(picker.getByRole('option')).toHaveCount(7)
+  await expect(picker.getByRole('option').first()).toContainText('Receita')
+  await expect(picker.getByRole('option').first()).toContainText('Seu modelo')
+  await picker.getByRole('button', { name: 'Criar nota com este modelo' }).click()
+  await expect(page.locator('textarea')).toHaveValue(/^# Receita\n\n## Passos/)
+  await page.keyboard.press('Control+Shift+P')
+  await palette(page).getByRole('combobox').fill('Remover esta nota dos modelos')
+  await expect(palette(page).getByRole('option')).toHaveCount(0)
+})

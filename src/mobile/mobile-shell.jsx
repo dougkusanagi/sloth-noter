@@ -69,7 +69,7 @@ import { noteTasks, syncLinkedTasks, toggleTask } from '../tasks.js'
 import { ensureDocumentTitles } from '../title.js'
 import { welcomeNote } from '../welcome.js'
 import { LANGUAGES, t } from '../i18n.js'
-import { renderTemplate, templateList } from '../templates.js'
+import { renderTemplate, setOwnTemplates, setTemplateProfile, templateList } from '../templates.js'
 import { FONT_SIZE } from '../storage.js'
 import { useInsets, useKeyboardOpen } from './use-insets.js'
 import { useSystemBars } from './use-system-bars.js'
@@ -172,6 +172,7 @@ export function MobileShell() {
 
 function MobileWorkspace({ persistence, loaded, onReload }) {
   const activeProfile = useActiveProfile(persistence.invoke, persistence.profileId)
+  setTemplateProfile(activeProfile?.name)
   const [rename, setRename] = useState(null)
   const [renameError, setRenameError] = useState('')
   const [purgeId, setPurgeId] = useState(null)
@@ -207,6 +208,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const store = useNotesStore({ persistence, loaded, mode: 'visual', onHistoryWarning: setWarning })
   const { data, current, commit, writer, saving, error, blocked } = store
   const { prefs, updatePrefs: savePrefs } = usePrefs({ data, current, commit })
+  setOwnTemplates(data.notes, prefs.templateNotes, t('templates.own'))
   const sync = useSync({
     current,
     commit,

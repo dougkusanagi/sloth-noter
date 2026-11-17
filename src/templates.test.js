@@ -1,6 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { renderTemplate, templateInsertEdit, templateList } from './templates.js'
+import {
+  renderTemplate,
+  setTemplateProfile,
+  templateInsertEdit,
+  templateList,
+} from './templates.js'
 
 const now = new Date(2026, 10, 16, 14, 30)
 
@@ -61,4 +66,36 @@ test('templateInsertEdit drops the title line, separates blocks and places the c
   assert.equal(templateInsertEdit(text, 0, 0, 'nope'), null)
   const tasks = templateInsertEdit(text, 6, 6, 'tasks', 'pt-BR', now)
   assert.ok(tasks.insert.includes('Criado em 16/11/2026'))
+})
+
+test('renderTemplate fills the profile name and leaves it empty without one', () => {
+  setTemplateProfile('Ana')
+  assert.equal(renderTemplate('Dono: {{profile}}', { now }).text, 'Dono: Ana')
+  setTemplateProfile(undefined)
+  assert.equal(renderTemplate('Dono: {{profile}}', { now }).text, 'Dono: ')
+})
+
+test('notes marked as templates come first, skip external notes and keep their text', async () => {
+  const { setOwnTemplates } = await import('./templates.js')
+  setOwnTemplates(
+    [
+      { id: 'a', name: 'Minha receita.md', body: '# Minha receita\n\n## Passos\n' },
+      { id: 'b', name: 'Outra.md', body: '# Outra\n' },
+      { id: 'c', name: 'Externa.md', body: '# Externa\n', external: true },
+    ],
+    { a: true, c: true, gone: true },
+    'Seu modelo',
+  )
+  const list = templateList('pt-BR')
+  assert.equal(list[0].id, 'note:a')
+  assert.equal(list[0].label, 'Minha receita')
+  assert.equal(list[0].description, 'Seu modelo')
+  assert.equal(list.filter((item) => item.own).length, 1)
+  const edit = templateInsertEdit('# Nota\n\n', 8, 8, 'note:a', 'pt-BR')
+  assert.equal(edit.insert, '## Passos\n')
+  setOwnTemplates([], {})
+  assert.equal(
+    templateList('pt-BR').some((item) => item.own),
+    false,
+  )
 })
