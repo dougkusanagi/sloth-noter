@@ -11,7 +11,7 @@ import {
 import { parseTableLine } from '../markdown-table.js'
 import { addInlineDecorations } from './inline-decorations.js'
 import { resolveImage } from '../images.js'
-import { t } from '../i18n.js'
+import { currentLanguage, t } from '../i18n.js'
 import { Decoration, EditorView, ViewPlugin, WidgetType } from '@codemirror/view'
 import { classifyLine, inlineSyntax } from '../live-markdown.js'
 import { detailsBlocks } from '../details.js'
@@ -31,6 +31,8 @@ import { progressBadge } from '../progress-badge.js'
 import { onLongPress, openTaskMenu } from './task-menu.js'
 import { unarchiveTask } from '../task-archive.js'
 import { documentChanges } from '../search-scope.js'
+import { titleLineNumber } from '../frontmatter.js'
+import { lineVariables, resolveVariable } from '../variables.js'
 
 const highlightedBlocks = new WeakMap()
 
@@ -46,15 +48,36 @@ export function selectionLineSignature(state) {
 }
 
 export const taskNotes = Facet.define({ combine: (values) => values[0] ?? [] })
+/** Id of the note shown, so variables such as `{{updated}}` can read its data. */
+export const activeNoteId = Facet.define({ combine: (values) => values[0] ?? null })
+
+class VariableWidget extends WidgetType {
+  constructor(text, raw) {
+    super()
+    this.text = text
+    this.raw = raw
+  }
+  eq(other) {
+    return this.text === other.text && this.raw === other.raw
+  }
+  toDOM() {
+    const chip = document.createElement('span')
+    chip.className = 'cm-variable'
+    chip.title = this.raw
+    chip.textContent = this.text
+    return chip
+  }
+}
 
 /** Keep the optional description on the second line, even after it is skipped. */
 export function emptyBodyLine(state) {
-  return state.doc.lines >= 2 && !state.doc.line(2).text ? 2 : 0
+  const body = titleLineNumber(state.doc) + 1
+  return state.doc.lines >= body && !state.doc.line(body).text ? body : 0
 }
 
 /** A note with only its title: the optional description and everything below are empty. */
 export function emptyNoteBody(state) {
-  if (state.doc.lines === 1) return true
+  if (state.doc.lines === titleLineNumber(state.doc)) return true
   const line = emptyBodyLine(state)
   return line > 0 && state.doc.sliceString(state.doc.line(line).to).trim() === ''
 }
@@ -302,7 +325,16 @@ export function decorationsFor(view) {
     for (let number = first; number <= last; number++) editing.add(number)
   }
   const placeholderLine = emptyBodyLine(view.state)
+  const titleLine = titleLineNumber(doc)
   const text = doc.toString()
+  const noteInfo = view.state
+    .facet(taskNotes)
+    .find((note) => note.id === view.state.facet(activeNoteId))
+  const variableContext = () => ({
+    body: text,
+    modifiedAt: noteInfo?.modifiedAt,
+    language: currentLanguage(),
+  })
   const tree = markdownTree(text)
   const foldable = new Map()
   const headingLevels = new Map()
@@ -437,6 +469,17 @@ export function decorationsFor(view) {
     for (let number = first; number <= last; number++) {
       const line = { ...doc.line(number), definitions: definitionText },
         shape = blockShapes.get(number) ?? classifyLine(line.text, false)
+      if (number < titleLine) {
+        // The YAML block (properties) is shown as plain text, never as Markdown.
+        const edge = number === 1 ? ' cm-md-frontmatter-first' : ''
+        const end = number === titleLine - 1 ? ' cm-md-frontmatter-last' : ''
+        ranges.push(
+          Decoration.line({ attributes: { class: `cm-md-frontmatter${edge}${end}` } }).range(
+            line.from,
+          ),
+        )
+        continue
+      }
       if (shape.kind === 'code') {
         ranges.push(Decoration.line({ attributes: { class: 'cm-md-code' } }).range(line.from))
         for (const token of codeRangesByLine.get(number) ?? []) {
@@ -556,14 +599,14 @@ export function decorationsFor(view) {
       if (shape.kind === 'ordered' && indent && listDepths.has(number))
         ranges.push(Decoration.replace({}).range(line.from, line.from + indent))
       const attrs = lineAttributes(line, shape, active, listDepths.get(number))
-      if (number === 1 && line.text === '# ') {
+      if (number === titleLine && line.text === '# ') {
         attrs.class += ' cm-empty-title'
         attrs['data-placeholder'] = t('editor.titleHint')
       }
       if (number === placeholderLine && !line.text) {
         attrs.class += ' cm-empty-body'
         attrs['data-placeholder'] = t('editor.previewHint')
-      } else if (number === 1 && doc.lines === 1) {
+      } else if (number === titleLine && doc.lines === titleLine) {
         attrs.class += ' cm-empty-body-host'
         ranges.push(
           Decoration.widget({
@@ -604,7 +647,8 @@ export function decorationsFor(view) {
             ),
           )
         }
-        if (number === 1) ranges.push(Decoration.replace({}).range(line.from, line.from + 2))
+        if (number === titleLine)
+          ranges.push(Decoration.replace({}).range(line.from, line.from + 2))
         ranges.push(Decoration.line({ attributes: attrs }).range(line.from))
         if (shape.kind !== 'fence' && shape.kind !== 'table')
           addInlineDecorations(ranges, line, shape, true)
@@ -615,6 +659,25 @@ export function decorationsFor(view) {
         ranges.push(Decoration.replace({}).range(line.from, line.from + shape.prefix))
       if (shape.kind === 'fence') continue
       addInlineDecorations(ranges, line, shape, false)
+      if (number !== titleLine && line.text.includes('{{')) {
+        for (const variable of lineVariables(line.text)) {
+          const raw = line.text.slice(variable.from, variable.to)
+          const result = resolveVariable(variable.name, variable.argument, variableContext())
+          const from = line.from + variable.from,
+            to = line.from + variable.to
+          if (result.error)
+            ranges.push(
+              Decoration.mark({
+                class: 'cm-variable cm-variable-error',
+                attributes: { title: result.error },
+              }).range(from, to),
+            )
+          else
+            ranges.push(
+              Decoration.replace({ widget: new VariableWidget(result.text, raw) }).range(from, to),
+            )
+        }
+      }
       const section = progress.get(number)
       if (section)
         ranges.push(

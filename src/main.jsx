@@ -83,6 +83,7 @@ import {
 import { t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
 import { welcomeNote } from './welcome.js'
+import { frontmatterEnd, titleEnd as noteTitleEnd } from './frontmatter.js'
 import { renderTemplate, setOwnTemplates, setTemplateProfile, templateList } from './templates.js'
 import { TemplatePicker } from './components/template-picker.jsx'
 import { foldAll, foldArchive, unfoldAll } from './editor/folding.js'
@@ -1075,7 +1076,7 @@ function Workspace({ persistence, loaded }) {
   function insertMarkdown(text, point = insertionPoint(), noteId = active?.id) {
     const note = current.current.notes.find((item) => item.id === noteId)
     if (!note) return
-    const titleEnd = note.body.indexOf('\n') < 0 ? note.body.length : note.body.indexOf('\n')
+    const titleEnd = noteTitleEnd(note.body)
     const from = Math.max(titleEnd, Math.min(point.from, note.body.length)),
       to = Math.max(from, Math.min(point.to, note.body.length))
     const insert = `${from && note.body[from - 1] !== '\n' ? '\n' : ''}${text}\n`
@@ -2124,6 +2125,22 @@ function Workspace({ persistence, loaded }) {
     focus: () => active && toggleFocusMode(),
     newNote: () => runMenu(() => createNote(), false),
     newFromTemplate: () => runMenu(() => setTemplatesOpen(true), false),
+    insertProperties: () =>
+      active &&
+      runMenu(() => {
+        const start = frontmatterEnd(active.body)
+        const field = '---\npropriedade: valor\n---\n'
+        if (!start) updateBody(field + active.body)
+        // Select the example name, or place the cursor at the start of an existing block.
+        const range = start ? [4, 4] : [4, 15]
+        const place = () => {
+          if (mode === 'source') editorRef.current?.setSelectionRange(...range)
+          else visualRef.current?.dispatch({ selection: { anchor: range[0], head: range[1] } })
+          if (mode === 'source') editorRef.current?.focus()
+          else visualRef.current?.focus()
+        }
+        requestAnimationFrame(() => requestAnimationFrame(place))
+      }, false),
     toggleTemplate: () =>
       active &&
       runMenu(() => {
@@ -2238,9 +2255,13 @@ function Workspace({ persistence, loaded }) {
     setSidebarQuery('')
     setImageNoteFilter(null)
   }
+  const activeBody = active?.body
   const documentStats = useMemo(
-    () => textStatistics(active?.body.replace(/^# /, '') ?? ''),
-    [active?.body],
+    () =>
+      textStatistics(
+        activeBody ? activeBody.slice(frontmatterEnd(activeBody)).replace(/^# /, '') : '',
+      ),
+    [activeBody],
   )
   const wordCount = documentStats.words.toLocaleString(prefs.language)
   const characterCount = documentStats.characters.toLocaleString(prefs.language)
@@ -2587,20 +2608,6 @@ function Workspace({ persistence, loaded }) {
             </div>
             {sidebarSection !== 'trash' && sidebarSection !== 'completed' && (
               <div className="sidebar-footer">
-                {activeProfile && (
-                  <button
-                    className="sidebar-trash sidebar-profile"
-                    aria-label={t('profiles.inUseLabel', { name: activeProfile.name })}
-                    title={t('profiles.inUse', { name: activeProfile.name })}
-                    onClick={() => {
-                      setSettingsSection('profiles')
-                      setSettingsOpen(true)
-                    }}
-                  >
-                    <UserRound size={14} aria-hidden="true" />
-                    <span>{activeProfile.name}</span>
-                  </button>
-                )}
                 <button className="sidebar-trash" onClick={() => showSection('completed')}>
                   <CheckCircle2 size={14} aria-hidden="true" />
                   {t('completed.title')}
@@ -2874,6 +2881,20 @@ function Workspace({ persistence, loaded }) {
             )}
           </div>
           <footer className="document-info">
+            {activeProfile && (
+              <button
+                className="status-profile"
+                aria-label={t('profiles.inUseLabel', { name: activeProfile.name })}
+                title={t('profiles.inUse', { name: activeProfile.name })}
+                onClick={() => {
+                  setSettingsSection('profiles')
+                  setSettingsOpen(true)
+                }}
+              >
+                <UserRound size={13} aria-hidden="true" />
+                <span>{activeProfile.name}</span>
+              </button>
+            )}
             <span
               className="save-status"
               role="status"

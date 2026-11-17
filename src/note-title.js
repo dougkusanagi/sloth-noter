@@ -1,3 +1,4 @@
+import { frontmatterEnd } from './frontmatter.js'
 import { t } from './i18n.js'
 
 const LEADING = [
@@ -38,6 +39,7 @@ export function displayName(name, keepExtension = false) {
 /** First readable line after the title, without inline Markdown, for the library list. */
 export function notePreview(body, limit = 96) {
   const lines = body
+    .slice(frontmatterEnd(body))
     .slice(0, 1200)
     .replace(/<!--\s*sloth:(?:table|block)\b[^>]*-->[ \t]*/g, '')
     .replace(/<span style="(?:(?:color|background-color):#[0-9a-f]{6};?){1,2}">|<\/span>/g, '')

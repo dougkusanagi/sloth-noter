@@ -1,6 +1,7 @@
 import {
   FilePlus,
   FileText,
+  Braces,
   Copy,
   Focus,
   Search,
@@ -74,6 +75,13 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
           'toggleTemplate',
           prefs.templateNotes?.[active?.id] ? 'menu.removeTemplate' : 'menu.useAsTemplate',
           FileText,
+          undefined,
+          !active || Boolean(active.external),
+        ],
+        [
+          'insertProperties',
+          'menu.insertProperties',
+          Braces,
           undefined,
           !active || Boolean(active.external),
         ],

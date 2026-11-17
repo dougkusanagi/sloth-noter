@@ -45,9 +45,8 @@ for (const width of [1280, 390]) {
     await native(page, { profiles: two })
     await page.goto('/')
     const profile = page.getByRole('button', { name: 'Perfil em uso: Douglas. Abrir perfis' })
-    if (width < 700) await page.getByRole('button', { name: 'Mostrar/ocultar biblioteca' }).click()
     await expect(profile).toBeVisible()
-    const footer = page.locator('.sidebar-footer')
+    const footer = page.locator('.document-info')
     expect(await footer.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
     if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/sloth-profile-${width}.png` })
     await profile.click()
@@ -74,10 +73,10 @@ test('with a single profile nothing about profiles shows outside Settings', asyn
   await native(page, { profiles: [{ id: 'primary', name: 'Principal' }] })
   await page.goto('/')
   await expect(page.locator('.notes-sidebar')).toBeVisible()
-  await expect(page.locator('.sidebar-profile')).toHaveCount(0)
+  await expect(page.locator('.status-profile')).toHaveCount(0)
 })
 
-test('a long profile name is shortened in the library footer', async ({ page }) => {
+test('a long profile name is shortened in the status bar', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   const name = 'Perfil com um nome muito comprido para caber no rodapé da biblioteca'
   await native(page, {
@@ -87,11 +86,12 @@ test('a long profile name is shortened in the library footer', async ({ page }) 
     ],
   })
   await page.goto('/')
-  const profile = page.locator('.sidebar-profile')
+  const profile = page.locator('.status-profile')
   await expect(profile).toHaveAttribute('title', `Perfil: ${name}`)
-  const footer = page.locator('.sidebar-footer')
+  const footer = page.locator('.document-info')
   expect(await footer.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
-  await expect(page.locator('.sidebar-footer .sidebar-trash').last()).toBeInViewport()
+  await expect(page.locator('.mode-switch')).toBeInViewport()
+  await expect(page.locator('.sidebar-footer .status-profile')).toHaveCount(0)
 })
 
 test('profiles can be renamed and created from their own section', async ({ page }) => {
@@ -115,8 +115,8 @@ test('profiles can be renamed and created from their own section', async ({ page
   await field.press('Enter')
   await expect(list).toContainText('Trabalho')
   await expect.poll(() => page.evaluate(() => window.catalog.profiles[1].name)).toBe('Trabalho')
-  // The library footer follows the new name.
-  await expect(page.locator('.sidebar-profile')).toContainText('Trabalho')
+  // The status bar follows the new name.
+  await expect(page.locator('.status-profile')).toContainText('Trabalho')
 
   await dialog.getByRole('button', { name: 'Novo perfil' }).click()
   await dialog.getByLabel('Nome do novo perfil').fill('Estudos')

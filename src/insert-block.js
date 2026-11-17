@@ -1,4 +1,5 @@
 import { columnsTemplate } from './columns.js'
+import { titleEnd as noteTitleEnd } from './frontmatter.js'
 
 const blocks = {
   task: ['- [ ] ', 6, 6],
@@ -36,7 +37,7 @@ export function blockTemplate(action) {
 export function blockEdit(text, from, to, action) {
   const template = blockTemplate(action)
   if (!template) return null
-  const titleEnd = text.indexOf('\n') < 0 ? text.length : text.indexOf('\n')
+  const titleEnd = noteTitleEnd(text)
   if (from <= titleEnd) {
     return {
       from: titleEnd,

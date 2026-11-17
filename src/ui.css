@@ -3331,23 +3331,34 @@ html:has(
 .sync-advanced[open] summary {
   margin-bottom: 10px;
 }
-/* Profile in use: shown only with two or more profiles; long names shrink first. */
-.sidebar-footer > .sidebar-trash {
-  flex: none;
-  white-space: nowrap;
-}
-.sidebar-footer > .sidebar-profile {
+/* Profile in use: shown only with two or more profiles; a long name shrinks first. */
+.status-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   flex: 0 1 auto;
   min-width: 0;
+  max-width: 40%;
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--ink);
+  font: inherit;
+  cursor: pointer;
 }
-.sidebar-profile svg {
+.status-profile:hover {
+  background: var(--hover);
+}
+.status-profile svg {
   flex: none;
   color: var(--accent);
 }
-.sidebar-profile span {
+.status-profile span {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Settings → Profiles */

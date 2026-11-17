@@ -3010,3 +3010,49 @@ body.cm-section-dragging * {
 .task-status-item[data-status='canceled'] .task-status-dot {
   opacity: 0.55;
 }
+
+/* The YAML block (properties) at the top of a note: plain text in a quiet box. */
+.visual-editor .cm-md-frontmatter {
+  background: var(--paper);
+  color: var(--text-secondary);
+  font: 0.8em/1.7 var(--mono);
+  padding-left: 1em;
+  box-shadow:
+    inset 1px 0 0 var(--edge),
+    inset -1px 0 0 var(--edge);
+}
+.visual-editor .cm-md-frontmatter-first {
+  border-radius: var(--radius) var(--radius) 0 0;
+  box-shadow:
+    inset 1px 0 0 var(--edge),
+    inset -1px 0 0 var(--edge),
+    inset 0 1px 0 var(--edge);
+}
+.visual-editor .cm-md-frontmatter-last {
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow:
+    inset 1px 0 0 var(--edge),
+    inset -1px 0 0 var(--edge),
+    inset 0 -1px 0 var(--edge);
+}
+.visual-editor .cm-md-frontmatter-first.cm-md-frontmatter-last {
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+
+/* Variables such as {{updated}}: the value is computed on screen; the file keeps the marker. */
+.visual-editor .cm-variable {
+  padding: 0.05em 0.45em;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--soft));
+  color: var(--accent-ink);
+  font-size: 0.92em;
+  white-space: nowrap;
+}
+.visual-editor .cm-variable-error {
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}

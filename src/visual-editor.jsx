@@ -7,6 +7,7 @@ import { ShortcutButton } from './components/shortcut-button.jsx'
 import { openExternalLink } from './external-links.js'
 import { TemplatePicker } from './components/template-picker.jsx'
 import { templateInsertEdit } from './templates.js'
+import { titleLineNumber } from './frontmatter.js'
 import { toast } from 'sonner'
 import { Shortcut } from './components/main-menu.jsx'
 import {
@@ -24,7 +25,13 @@ import { ImageInsert } from './components/image-insert.jsx'
 import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
 import { TASK_STATUSES, taskSettings, taskStatusChanges } from './tasks.js'
-import { emptyBodyLine, emptyNoteBody, liveMarkdown, taskNotes } from './editor/live-decorations.js'
+import {
+  activeNoteId,
+  emptyBodyLine,
+  emptyNoteBody,
+  liveMarkdown,
+  taskNotes,
+} from './editor/live-decorations.js'
 import { foldArchive, foldField } from './editor/folding.js'
 import {
   columnDrag,
@@ -302,18 +309,19 @@ export function VisualEditor({
         if (!view.hasFocus || view.state.readOnly || !view.state.selection.main.empty) return null
         const line = view.state.doc.lineAt(view.state.selection.main.head)
         // In a note with only its title, the tip sits below the optional description.
-        if (line.number <= 2 && emptyNoteBody(view.state)) {
-          const title = view.coordsAtPos(view.state.doc.line(1).from)
-          if (view.state.doc.lines === 1) {
+        const titleLine = titleLineNumber(view.state.doc)
+        if (line.number <= titleLine + 1 && line.number >= titleLine && emptyNoteBody(view.state)) {
+          const title = view.coordsAtPos(view.state.doc.line(titleLine).from)
+          if (view.state.doc.lines === titleLine) {
             if (!title || title.top < 46 || title.bottom > window.innerHeight) return null
             const subtitleRect = view.dom
               .querySelector('.cm-empty-body-after')
               ?.getBoundingClientRect()
             const y = subtitleRect
               ? subtitleRect.bottom
-              : title.top + view.lineBlockAt(view.state.doc.line(1).from).height + 28
+              : title.top + view.lineBlockAt(view.state.doc.line(titleLine).from).height + 28
             return {
-              from: view.state.doc.line(1).to,
+              from: view.state.doc.line(titleLine).to,
               x: title.left + 4,
               y,
               emptyNote: true,
@@ -859,7 +867,7 @@ export function VisualEditor({
           codeFold,
           EditorState.allowMultipleSelections.of(true),
           wrappingCompartment.current.of(wrapPage ? EditorView.lineWrapping : []),
-          notesCompartment.current.of(taskNotes.of(notes)),
+          notesCompartment.current.of([taskNotes.of(notes), activeNoteId.of(noteId)]),
           searchHighlights,
           modeCompartment.current.of(sourceModeRef.current ? sourceExtensions() : visualExtensions),
           EditorView.updateListener.of((update) => {
@@ -1067,9 +1075,9 @@ export function VisualEditor({
 
   useEffect(() => {
     viewRef.current?.dispatch({
-      effects: notesCompartment.current.reconfigure(taskNotes.of(notes)),
+      effects: notesCompartment.current.reconfigure([taskNotes.of(notes), activeNoteId.of(noteId)]),
     })
-  }, [notes])
+  }, [notes, noteId])
 
   const normalizedQuery = blockQuery
     .normalize('NFD')
@@ -1354,7 +1362,11 @@ export function VisualEditor({
               // Blocks go below the empty subtitle, which stays available.
               const view = viewRef.current
               if (insertAt.emptyNote && view && !blockMenu)
-                view.dispatch({ selection: EditorSelection.single(view.state.doc.line(1).to) })
+                view.dispatch({
+                  selection: EditorSelection.single(
+                    view.state.doc.line(titleLineNumber(view.state.doc)).to,
+                  ),
+                })
               setBlockMenu(!blockMenu)
             }}
           >

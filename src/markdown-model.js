@@ -1,3 +1,4 @@
+import { maskFrontmatter } from './frontmatter.js'
 import { createTextCache } from './text-cache.js'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
@@ -10,7 +11,7 @@ const referencesByNote = new WeakMap()
 export function markdownTree(text) {
   const cached = cache.get(text)
   if (cached) return cached
-  const tree = parser.parse(text)
+  const tree = parser.parse(maskFrontmatter(text))
   cache.set(text, tree)
   return tree
 }

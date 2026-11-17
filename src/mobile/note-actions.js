@@ -1,5 +1,6 @@
 import { ensureTitle } from '../title.js'
 import { headingFileName, nameFromHeading, uniqueName } from '../notes.js'
+import { frontmatterEnd } from '../frontmatter.js'
 import { renameWikiReferences } from '../markdown-model.js'
 
 export function newMobileNote(document, title = '', id = crypto.randomUUID(), body = null) {
@@ -65,8 +66,13 @@ export function renameMobileNote(document, id, proposed) {
     )
   )
     return { error: 'error.nameExists' }
-  const end = note.body.indexOf('\n')
+  const start = frontmatterEnd(note.body)
+  const end = note.body.indexOf('\n', start)
   return {
-    document: updateMobileNote(document, id, `# ${title}${end < 0 ? '' : note.body.slice(end)}`),
+    document: updateMobileNote(
+      document,
+      id,
+      `${note.body.slice(0, start)}# ${title}${end < 0 ? '' : note.body.slice(end)}`,
+    ),
   }
 }

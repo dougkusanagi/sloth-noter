@@ -60,3 +60,16 @@ test('title navigation enters the next line and returns from anywhere in the bod
   assert.equal(titleNavigationTarget('# Título', 8), 9)
   assert.equal(titlePosition('T\nCorpo', '# T\nCorpo', 2), 4)
 })
+
+test('titles after a YAML block: the block is left alone and the title keeps its prefix', async () => {
+  const { ensureTitle, titlePosition, titleNavigationTarget } = await import('./title.js')
+  assert.equal(ensureTitle('---\na: 1\n---\nTítulo\n\nTexto'), '---\na: 1\n---\n# Título\n\nTexto')
+  assert.equal(ensureTitle('---\na: 1\n---\n# Título'), '---\na: 1\n---\n# Título')
+  assert.equal(ensureTitle('---\na: 1\n---\n', 'Nova'), '---\na: 1\n---\n# Nova')
+  assert.equal(ensureTitle('---\na: 1\n'), '# ---\na: 1\n')
+  const body = '---\na: 1\n---\nTítulo'
+  assert.equal(titlePosition(body, ensureTitle(body), 3), 3)
+  assert.equal(titlePosition(body, ensureTitle(body), body.length), body.length + 2)
+  assert.equal(titleNavigationTarget('---\na: 1\n---\n# T\n\nx', 14), 17)
+  assert.equal(titleNavigationTarget('---\na: 1\n---\n# T\n\nx', 3), null)
+})

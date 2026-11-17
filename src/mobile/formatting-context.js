@@ -1,3 +1,4 @@
+import { titleLineNumber } from '../frontmatter.js'
 import { markdownTree } from '../markdown-model.js'
 import { selectionInCode } from '../format-selection.js'
 import { tableCells } from '../markdown-table.js'
@@ -12,7 +13,7 @@ export function formattingContext(state) {
   const line = state.doc.lineAt(selection.head)
   const text = state.doc.toString()
   // Line 1 is the note title; its `# ` marker belongs to the title, not to formatting.
-  if (line.number === 1) return selection.empty ? 'text' : 'selection'
+  if (line.number === titleLineNumber(state.doc)) return selection.empty ? 'text' : 'selection'
   if (selectionInCode(markdownTree(text), selection.from, selection.to)) return 'code'
   if (tableCells(line.text)) return 'table'
   if (!selection.empty) return 'selection'

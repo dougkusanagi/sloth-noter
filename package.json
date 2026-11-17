@@ -1,6 +1,6 @@
 {
   "name": "sloth-note",
-  "version": "0.21.0",
+  "version": "0.22.0",
   "description": "Offline Markdown editor with notes in files the user controls",
   "private": true,
   "type": "module",
@@ -43,7 +43,8 @@
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "sonner": "^2.0.8",
-    "unified": "^11.0.5"
+    "unified": "^11.0.5",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

@@ -1,3 +1,4 @@
+import { frontmatterLineCount } from './frontmatter.js'
 import { isArchiveTitle, noteTasks } from './tasks.js'
 
 const FENCE = /^\s*(`{3,}|~{3,})/
@@ -9,7 +10,9 @@ export const isBlank = (line) => !line.trim()
 /** Heading (outside code fences) of every line, or null. */
 export function headingsOf(lines) {
   let fence = null
-  return lines.map((line) => {
+  const yaml = frontmatterLineCount(lines)
+  return lines.map((line, index) => {
+    if (index < yaml) return null
     const opener = FENCE.exec(line)?.[1]
     if (fence) {
       if (opener && opener[0] === fence[0] && opener.length >= fence.length) fence = null

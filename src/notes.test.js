@@ -127,3 +127,11 @@ test('reconciling long duplicate headings preserves names, titles and bodies aft
 test('coloring a heading keeps its readable file name', () => {
   assert.equal(headingFileName('# <span style="color:#e76565">Meu título</span>'), 'Meu título.md')
 })
+
+test('names and previews skip the YAML block', async () => {
+  const { headingFileName } = await import('./notes.js')
+  const { notePreview } = await import('./note-title.js')
+  const body = '---\n# comentário\ntitulo: x\n---\n# Meu projeto\n\nPrimeira linha.'
+  assert.equal(headingFileName(body), 'Meu projeto.md')
+  assert.equal(notePreview(body), 'Primeira linha.')
+})

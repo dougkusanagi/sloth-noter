@@ -1,3 +1,4 @@
+import { frontmatterEnd } from './frontmatter.js'
 import { findNote, wikiReferences, markdownTree, walk, wikiParts } from './markdown-model.js'
 import { headingSections } from './sections.js'
 
@@ -36,7 +37,12 @@ export function noteTasks(body) {
   let fence = null,
     archived = false,
     offset = 0
+  const yaml = frontmatterEnd(body)
   body.split('\n').forEach((text, index) => {
+    if (offset < yaml) {
+      offset += text.length + 1
+      return
+    }
     const opener = FENCE.exec(text)?.[1]
     if (fence) {
       if (opener && opener[0] === fence[0] && opener.length >= fence.length) fence = null
