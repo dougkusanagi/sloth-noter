@@ -1,5 +1,6 @@
 import { EditorState, EditorSelection } from '@codemirror/state'
-import { frontmatterEnd, titleEnd } from './frontmatter.js'
+import { frontmatterEnd, readProperties, titleEnd } from './frontmatter.js'
+import { hideFrontmatter } from './editor/hide-frontmatter.js'
 
 // The YAML block (frontmatter), when there is one, comes first; the title is the line after it.
 export function ensureTitle(body, fallback = '') {
@@ -97,6 +98,33 @@ export const mandatoryTitle = EditorState.transactionFilter.of((transaction) => 
     {
       changes: { from: start, to: line.to, insert: first },
       selection: clamp(selection, start, (position) => titlePosition(body, normalized, position)),
+      sequential: true,
+    },
+  ]
+})
+
+/**
+ * Where the YAML block is hidden (the properties panel shows it), the cursor and selections stay
+ * out of it. With a block that cannot be read the lines stay visible and editable.
+ */
+export const skipHiddenProperties = EditorState.transactionFilter.of((transaction) => {
+  const doc = transaction.newDoc
+  if (!transaction.state.facet(hideFrontmatter)) return transaction
+  if (!/^---[ \t]*$/.test(doc.line(1).text) || !transaction.newSelection) return transaction
+  const start = frontmatterEnd(doc.sliceString(0, Math.min(doc.length, 70000)))
+  if (!start || transaction.newSelection.ranges.every((range) => range.from >= start))
+    return transaction
+  if (!readProperties(doc.sliceString(0, start)).ok) return transaction
+  const move = (position) => (position < start ? Math.min(start + 2, doc.length) : position)
+  return [
+    transaction,
+    {
+      selection: EditorSelection.create(
+        transaction.newSelection.ranges.map((range) =>
+          EditorSelection.range(move(range.anchor), move(range.head)),
+        ),
+        transaction.newSelection.mainIndex,
+      ),
       sequential: true,
     },
   ]

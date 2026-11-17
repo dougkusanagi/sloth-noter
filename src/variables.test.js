@@ -64,3 +64,12 @@ test('lineVariables finds variables outside inline code', () => {
     ],
   )
 })
+
+test('propertyReferences counts uses outside code', async () => {
+  const { propertyReferences } = await import('./variables.js')
+  const text =
+    '---\nnome: Ana\n---\n# T\n\n{{user.nome}} e {{user.nome}} e `{{user.nome}}`\n\n```\n{{user.nome}}\n```\n{{user.outro}}\n'
+  assert.equal(propertyReferences(text, 'nome'), 2)
+  assert.equal(propertyReferences(text, 'outro'), 1)
+  assert.equal(propertyReferences(text, 'x'), 0)
+})

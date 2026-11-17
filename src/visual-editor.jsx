@@ -8,6 +8,7 @@ import { openExternalLink } from './external-links.js'
 import { TemplatePicker } from './components/template-picker.jsx'
 import { templateInsertEdit } from './templates.js'
 import { titleLineNumber } from './frontmatter.js'
+import { hideFrontmatter } from './editor/hide-frontmatter.js'
 import { toast } from 'sonner'
 import { Shortcut } from './components/main-menu.jsx'
 import {
@@ -22,7 +23,7 @@ import { searchHighlights } from './editor/search.js'
 import { clipboardImageFiles } from './clipboard.js'
 import { clipboardAction } from './clipboard-actions.js'
 import { ImageInsert } from './components/image-insert.jsx'
-import { ensureTitle, mandatoryTitle, navigateTitle } from './title.js'
+import { ensureTitle, mandatoryTitle, navigateTitle, skipHiddenProperties } from './title.js'
 import { inlineSyntax } from './live-markdown.js'
 import { TASK_STATUSES, taskSettings, taskStatusChanges } from './tasks.js'
 import {
@@ -184,6 +185,7 @@ export function VisualEditor({
   wrapPage = wrapLines,
   sourceMode = false,
   outline = true,
+  hideProperties = false,
 }) {
   const modeCompartment = useRef(new Compartment())
   const visualExtensionsRef = useRef(null)
@@ -514,6 +516,7 @@ export function VisualEditor({
   useLayoutEffect(() => {
     const visualExtensions = [
       documentColors,
+      skipHiddenProperties,
       keymap.of([
         ...TASK_STATUSES.map((status, index) => ({
           key: 'Alt-' + (index + 1),
@@ -867,7 +870,11 @@ export function VisualEditor({
           codeFold,
           EditorState.allowMultipleSelections.of(true),
           wrappingCompartment.current.of(wrapPage ? EditorView.lineWrapping : []),
-          notesCompartment.current.of([taskNotes.of(notes), activeNoteId.of(noteId)]),
+          notesCompartment.current.of([
+            taskNotes.of(notes),
+            activeNoteId.of(noteId),
+            hideFrontmatter.of(hideProperties),
+          ]),
           searchHighlights,
           modeCompartment.current.of(sourceModeRef.current ? sourceExtensions() : visualExtensions),
           EditorView.updateListener.of((update) => {
@@ -1075,9 +1082,13 @@ export function VisualEditor({
 
   useEffect(() => {
     viewRef.current?.dispatch({
-      effects: notesCompartment.current.reconfigure([taskNotes.of(notes), activeNoteId.of(noteId)]),
+      effects: notesCompartment.current.reconfigure([
+        taskNotes.of(notes),
+        activeNoteId.of(noteId),
+        hideFrontmatter.of(hideProperties),
+      ]),
     })
-  }, [notes, noteId])
+  }, [notes, noteId, hideProperties])
 
   const normalizedQuery = blockQuery
     .normalize('NFD')

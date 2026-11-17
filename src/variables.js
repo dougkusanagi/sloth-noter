@@ -106,3 +106,24 @@ export function lineVariables(line) {
   }
   return found
 }
+
+/** How many `{{user.<key>}}` variables of the note read this property (outside inline code). */
+export function propertyReferences(body, key) {
+  let count = 0
+  let fence = null
+  const lines = body.slice(frontmatterEnd(body)).split('\n')
+  for (const line of lines) {
+    const opener = /^\s{0,3}(`{3,}|~{3,})/.exec(line)?.[1]
+    if (fence) {
+      if (opener && opener[0] === fence[0] && opener.length >= fence.length) fence = null
+      continue
+    }
+    if (opener) {
+      fence = opener
+      continue
+    }
+    if (line.includes('{{'))
+      count += lineVariables(line).filter((item) => item.name === `user.${key}`).length
+  }
+  return count
+}

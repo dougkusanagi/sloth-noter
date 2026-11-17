@@ -3680,3 +3680,197 @@ html:has(
 .template-picker-preview .fold-toggle {
   display: none;
 }
+
+/* ---------- Properties (YAML block) ---------- */
+.properties-dock {
+  width: 100%;
+}
+.properties-dock[data-side] {
+  position: sticky;
+  top: 56px;
+  z-index: 4;
+  height: 0;
+}
+.properties-side {
+  box-sizing: border-box;
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 248px;
+  max-height: calc(100dvh - 130px);
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font: 12.5px/1.4 var(--ui);
+}
+.properties-side h2 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font: 600 11px var(--ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.properties-inline {
+  margin: 8px max(44px, calc((100% - var(--content-width, 760px)) / 2)) 0;
+  padding: 6px 12px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font: 13px/1.4 var(--ui);
+}
+.properties-inline summary {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  cursor: pointer;
+}
+.property-rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.property-head {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.property-name,
+.property-input,
+.property-type {
+  min-width: 0;
+  min-height: 30px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+.property-name {
+  flex: 1;
+  color: var(--muted);
+  font-weight: 600;
+}
+.property-input {
+  width: 100%;
+  box-sizing: border-box;
+  border-color: var(--edge);
+  background: var(--bg);
+}
+.property-name:hover,
+.property-type:hover {
+  background: var(--hover);
+}
+.property-name:focus-visible,
+.property-input:focus-visible,
+.property-type:focus-visible,
+.property-icon:focus-visible,
+.property-add:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.property-type {
+  flex: none;
+  width: 8em;
+  padding-inline: 4px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.property-icon,
+.property-add,
+.property-warning button,
+.property-new button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.property-icon {
+  flex: none;
+  min-width: 30px;
+}
+.property-icon:hover,
+.property-add:hover,
+.property-warning button:hover,
+.property-new button:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.property-check {
+  width: 18px;
+  height: 18px;
+  margin: 4px 8px;
+  accent-color: var(--accent);
+}
+.property-list ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.property-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--soft));
+  color: var(--accent-ink);
+}
+.property-chip button {
+  display: inline-flex;
+  min-width: 22px;
+  min-height: 22px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.property-problem {
+  margin: 4px 0 0;
+  color: var(--danger, #b3261e);
+}
+.property-note {
+  margin: 0;
+  color: var(--muted);
+}
+.property-warning {
+  margin-top: 6px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--soft);
+}
+.property-warning p {
+  margin: 0 0 6px;
+}
+.property-new {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+.property-add {
+  margin-top: 8px;
+}
+.property-note + .property-add {
+  margin-top: 4px;
+}

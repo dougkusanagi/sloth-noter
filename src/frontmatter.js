@@ -71,7 +71,7 @@ export function readProperties(text) {
   const { yaml } = splitFrontmatter(text)
   if (yaml === null) return { ok: true, entries: [], hasBlock: false }
   if (yaml.length > FRONTMATTER_LIMIT)
-    return { ok: false, hasBlock: true, entries: [], error: { code: 'tooLarge', line: 1 } }
+    return { ok: false, hasBlock: true, entries: [], error: { code: 'tooLarge', line: 2 } }
   const document = parseDocument(yaml, options)
   if (document.errors.length) {
     const [problem] = document.errors
@@ -82,16 +82,16 @@ export function readProperties(text) {
       entries: [],
       error: {
         code: duplicate ? 'duplicateKey' : 'invalid',
-        line: (problem.linePos?.[0]?.line ?? 0) + 1,
+        line: (problem.linePos?.[0]?.line ?? 1) + 1,
       },
     }
   }
   let alias = false
   visit(document, { Alias: () => ((alias = true), visit.BREAK) })
-  if (alias) return { ok: false, hasBlock: true, entries: [], error: { code: 'alias', line: 1 } }
+  if (alias) return { ok: false, hasBlock: true, entries: [], error: { code: 'alias', line: 2 } }
   if (document.contents === null) return { ok: true, entries: [], hasBlock: true }
   if (!isMap(document.contents))
-    return { ok: false, hasBlock: true, entries: [], error: { code: 'notMap', line: 1 } }
+    return { ok: false, hasBlock: true, entries: [], error: { code: 'notMap', line: 2 } }
   const entries = []
   for (const pair of document.contents.items) {
     const key = isScalar(pair.key) ? String(pair.key.value) : null
@@ -165,4 +165,26 @@ export function frontmatterLineCount(lines) {
 export function maskFrontmatter(text) {
   const end = frontmatterEnd(text)
   return end ? text.slice(0, end).replace(/[^\n]/g, ' ') + text.slice(end) : text
+}
+
+/**
+ * The text with a property renamed in place (its value, comments and position are kept).
+ * Returns `null` when the block cannot be edited, the property does not exist or the new name is
+ * empty or already used.
+ */
+export function renameProperty(text, from, to) {
+  const name = to.trim()
+  if (!name || name === from) return null
+  const { raw, yaml, body } = splitFrontmatter(text)
+  const read = readProperties(text)
+  if (!read.ok || yaml === null) return null
+  if (read.entries.some((entry) => entry.key === name)) return null
+  const document = parseDocument(yaml, options)
+  const pair = document.contents?.items.find(
+    (item) => isScalar(item.key) && String(item.key.value) === from,
+  )
+  if (!pair) return null
+  pair.key.value = name
+  const newline = raw.includes('\r\n') ? '\r\n' : '\n'
+  return `---${newline}${document.toString().trimEnd()}${newline}---${newline}${body}`
 }

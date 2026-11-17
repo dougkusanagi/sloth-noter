@@ -320,7 +320,7 @@ Cada etapa é uma entrega com versão, Novidades e capturas próprias.
 - 1.2 entregue na 0.21.0: títulos H2–H6 com `line-height` 1,3; 0,16 em de `padding` em cima e embaixo mantém a altura de um título de uma linha (1,3 + 2 × 0,16 = 1,62), então guias, alças e setas continuam na grade. Verificado por medida: H2 de uma linha com 3,32 em como antes; as linhas extras de um título longo ficam 0,32 em mais curtas.
 - Respiro das listas e primeiro bloco depois do título (1.3): já atendidos; os itens de lista não têm espaço extra, ao contrário dos parágrafos (0,18 em), e o parágrafo depois do título só tem o espaço do título.
 
-- Parte 3.1 a 3.3, primeira fase, na 0.22.0 ([ADR 0027](../adr/0027-propriedades-yaml-e-variaveis.md)): sintaxe `{{nome}}` (sem `=`, por escolha da pessoa), bloco YAML antes do título, leitura com a biblioteca `yaml`, variáveis `today`, `updated`, `words`, `reading`, `tasks`, `until` e `user.x`, chips no Padrão e na Leitura, "Inserir propriedades (YAML)" e auditoria do título (nome, prévia, estatísticas, tarefas, seções, rótulos, celular). Faltam: painel de propriedades (adicionar, renomear, remover com aviso de referências), "Variável…" no menu `/`, `{{created}}` (ADR sobre `createdAt`), leitura de variáveis no painel lateral (`.markdown`) e edição pelo celular.
+- Parte 3.1 a 3.3, primeira fase, na 0.22.0 ([ADR 0027](../adr/0027-propriedades-yaml-e-variaveis.md)): sintaxe `{{nome}}` (sem `=`, por escolha da pessoa), bloco YAML antes do título, leitura com a biblioteca `yaml`, variáveis `today`, `updated`, `words`, `reading`, `tasks`, `until` e `user.x`, chips no Padrão e na Leitura, "Inserir propriedades (YAML)" e auditoria do título (nome, prévia, estatísticas, tarefas, seções, rótulos, celular). Painel de propriedades na margem direita na 0.23.0 ([ADR 0028](../adr/0028-painel-de-propriedades-na-margem-direita.md)): adicionar, renomear, remover com aviso de referências, tipos e erros do YAML. Faltam: "Variável…" no menu `/`, `{{created}}` (ADR sobre `createdAt`), leitura de variáveis no painel lateral (`.markdown`) e o painel no celular.
 
 ## Tentativas que falharam
 
@@ -341,4 +341,4 @@ Cada etapa é uma entrega com versão, Novidades e capturas próprias.
 
 ## Próximo passo
 
-Concluir a Parte 3.3 (painel de propriedades) e (frontmatter e propriedades, com ADR). Responder antes às dúvidas de sintaxe das variáveis. Responder às dúvidas de largura (1.4) e de sintaxe antes das partes que dependem delas.
+Concluir a Parte 3.3 ("Variável…" no menu `/` e painel no celular) e (frontmatter e propriedades, com ADR). Responder antes às dúvidas de sintaxe das variáveis. Responder às dúvidas de largura (1.4) e de sintaxe antes das partes que dependem delas.

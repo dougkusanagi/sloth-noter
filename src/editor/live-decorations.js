@@ -31,7 +31,8 @@ import { progressBadge } from '../progress-badge.js'
 import { onLongPress, openTaskMenu } from './task-menu.js'
 import { unarchiveTask } from '../task-archive.js'
 import { documentChanges } from '../search-scope.js'
-import { titleLineNumber } from '../frontmatter.js'
+import { hideFrontmatter } from './hide-frontmatter.js'
+import { readProperties, titleLineNumber } from '../frontmatter.js'
 import { lineVariables, resolveVariable } from '../variables.js'
 
 const highlightedBlocks = new WeakMap()
@@ -45,6 +46,16 @@ export function selectionLineSignature(state) {
       return `${state.doc.lineAt(range.from).number}:${state.doc.lineAt(range.to).number}:${column}`
     })
     .join(',')
+}
+
+let lastBlock = null
+let lastReadable = false
+function frontmatterReadable(block) {
+  if (block !== lastBlock) {
+    lastBlock = block
+    lastReadable = readProperties(block).ok
+  }
+  return lastReadable
 }
 
 export const taskNotes = Facet.define({ combine: (values) => values[0] ?? [] })
@@ -473,10 +484,16 @@ export function decorationsFor(view) {
         // The YAML block (properties) is shown as plain text, never as Markdown.
         const edge = number === 1 ? ' cm-md-frontmatter-first' : ''
         const end = number === titleLine - 1 ? ' cm-md-frontmatter-last' : ''
+        // A readable block is shown by the properties panel; an unreadable one stays as text.
+        const hidden =
+          view.state.facet(hideFrontmatter) &&
+          frontmatterReadable(doc.sliceString(0, doc.line(titleLine - 1).to))
+            ? ' cm-md-frontmatter-hidden'
+            : ''
         ranges.push(
-          Decoration.line({ attributes: { class: `cm-md-frontmatter${edge}${end}` } }).range(
-            line.from,
-          ),
+          Decoration.line({
+            attributes: { class: `cm-md-frontmatter${edge}${end}${hidden}` },
+          }).range(line.from),
         )
         continue
       }

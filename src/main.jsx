@@ -86,6 +86,7 @@ import { welcomeNote } from './welcome.js'
 import { frontmatterEnd, titleEnd as noteTitleEnd } from './frontmatter.js'
 import { renderTemplate, setOwnTemplates, setTemplateProfile, templateList } from './templates.js'
 import { TemplatePicker } from './components/template-picker.jsx'
+import { PropertiesDock } from './components/properties-panel.jsx'
 import { foldAll, foldArchive, unfoldAll } from './editor/folding.js'
 import { continueBlock } from './continue-block.js'
 import { applyChanges, listIndentChanges, mapPosition } from './list-indent.js'
@@ -2693,6 +2694,14 @@ function Workspace({ persistence, loaded }) {
                   </button>
                 </div>
               )}
+              {active && !releaseDoc && (mode === 'visual' || mode === 'reading') && (
+                <PropertiesDock
+                  body={active.body}
+                  textWidth={prefs.documentWidth === 'full' ? null : contentWidth(prefs)}
+                  readOnly={mode === 'reading'}
+                  onApply={(body) => updateBody(body)}
+                />
+              )}
               {releaseDoc ? (
                 <div className="release-doc">
                   <div className="external-bar">
@@ -2803,6 +2812,7 @@ function Workspace({ persistence, loaded }) {
                     </div>
                   ) : (
                     <VisualEditor
+                      hideProperties
                       wrapLines={prefs.wrapLines !== false}
                       wrapPage={pageWrap}
                       notes={data.notes}

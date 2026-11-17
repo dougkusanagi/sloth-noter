@@ -4,6 +4,7 @@ import {
   frontmatterEnd,
   propertyMap,
   readProperties,
+  renameProperty,
   splitFrontmatter,
   titleEnd,
   titleLineNumber,
@@ -92,4 +93,14 @@ test('titleLineNumber follows the YAML block of an editor document', async () =>
   assert.equal(titleLineNumber(Text.of(['---', 'a: 1', '---', '# T'])), 4)
   assert.equal(titleLineNumber(Text.of(['---', 'a: 1', '# T'])), 1)
   assert.equal(titleLineNumber(Text.of(['---', 'a: 1', '---'])), 4)
+})
+
+test('renameProperty keeps the value, comments and position and refuses clashes', () => {
+  const renamed = renameProperty(note, 'responsavel', 'dono')
+  assert.ok(renamed.startsWith('---\ndono: Ana\nprazo: 2026-12-01\n# um comentário\n'))
+  assert.ok(renamed.endsWith('# Título\n\nTexto'))
+  assert.equal(renameProperty(note, 'responsavel', 'prazo'), null)
+  assert.equal(renameProperty(note, 'responsavel', '  '), null)
+  assert.equal(renameProperty(note, 'nada', 'x'), null)
+  assert.equal(renameProperty('# T', 'a', 'b'), null)
 })
