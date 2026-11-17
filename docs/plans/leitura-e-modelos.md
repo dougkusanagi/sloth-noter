@@ -315,7 +315,7 @@ Cada etapa é uma entrega com versão, Novidades e capturas próprias.
 
 - 1.5 (parcial), 1.6, 1.7 (citação, separador, listas, tabelas) e 1.8 entregues na 0.17.2: `text-wrap: pretty`, peso 380 no escuro, `tabular-nums`, links, código inline, tags, riscado, barra da citação, separador de 30%, marcadores por nível (só na Leitura), cabeçalho de tabela mais forte (só na Leitura). O celular já usava margens de 16 px. Ficaram de fora: `oldstyle-nums`, `hyphens`, borda dos blocos de código, legenda de imagem e notas de rodapé; marcadores por nível e cabeçalho de tabela no modo Padrão (a tabela do Padrão é outro componente).
 
-- Parte 2, primeira fase, entregue na 0.18.0: cinco modelos embutidos (Tarefas e projeto, Reunião, Diário, Decisão, Estudo e resumo) em pt-BR e en, variáveis `{{title}}`, `{{date}}`, `{{time}}`, `{{date:FORMATO}}` e `{{cursor}}`, e o seletor com busca e prévia (menu, aba Notas e paleta). Faltam: "Inserir modelo" no menu `/`, o seletor no celular, o modelo Quadro de projeto, `{{date+7d}}`/`{{weekday}}` e os modelos da pessoa (ADR sobre onde ficam).
+- Parte 2 entregue nas 0.18.0 e 0.19.0: seis modelos embutidos (Tarefas e projeto, Quadro de projeto, Reunião, Diário, Decisão, Estudo e resumo) em pt-BR e en; variáveis `{{title}}`, `{{date}}`, `{{time}}`, `{{weekday}}`, `{{date±Nd}}`, `{{date:FORMATO}}` e `{{cursor}}`; seletor com busca e prévia (menu, aba Notas e paleta); "Modelo…" no menu `/`; e, no celular, botão de modelo na lista e "Modelo" em Inserir. Falta só a variável `{{profile}}` e os modelos da pessoa (ADR sobre onde ficam).
 - Decisão sobre o `line-height` dos títulos (1.2): descartada por ora. Mudar a altura da linha de um título a tira do múltiplo de `--line`, e guias, alças e o teste de posições Padrão × Leitura dependem dele.
 - Respiro das listas e primeiro bloco depois do título (1.3): já atendidos; os itens de lista não têm espaço extra, ao contrário dos parágrafos (0,18 em), e o parágrafo depois do título só tem o espaço do título.
 
@@ -338,4 +338,4 @@ Cada etapa é uma entrega com versão, Novidades e capturas próprias.
 
 ## Próximo passo
 
-Completar a Parte 2 (menu `/`, celular, modelo Quadro de projeto) e seguir para a Parte 3.3 (frontmatter e propriedades, com ADR). Responder antes às dúvidas de sintaxe das variáveis. Responder às dúvidas de largura (1.4) e de sintaxe antes das partes que dependem delas.
+Seguir para a Parte 3.3 (frontmatter e propriedades, com ADR). Responder antes às dúvidas de sintaxe das variáveis. Responder às dúvidas de largura (1.4) e de sintaxe antes das partes que dependem delas.

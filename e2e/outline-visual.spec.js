@@ -21,21 +21,42 @@ test('outline visual verification', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
   await page.getByRole('menuitem', { name: /Novidades/ }).click()
   await page.locator('[data-wiki^="Em desenvolvimento"]').first().click()
-  await expect(page.locator('.cm-content')).toContainText('O editor agora oferece um sumário')
   await page.locator('.visual-editor.read-only').hover()
+  // The unreleased entry is long: scroll until each passage is drawn.
   await expect
-    .poll(async () => {
-      if ((await page.locator('.cm-content').textContent()).includes('Exportar XLSX')) return true
-      await page.mouse.wheel(0, 400)
-      return false
-    })
+    .poll(
+      async () => {
+        if (
+          (await page.locator('.cm-content').textContent()).includes(
+            'O editor agora oferece um sumário',
+          )
+        )
+          return true
+        await page.mouse.wheel(0, 400)
+        return false
+      },
+      { intervals: [100], timeout: 20000 },
+    )
     .toBe(true)
   await expect
-    .poll(async () => {
-      const image = page.locator('img[src*="tabela-dimensoes"]')
-      if (await image.count()) return image.evaluate((el) => el.complete && el.naturalWidth > 0)
-      await page.mouse.wheel(0, 300)
-      return false
-    })
+    .poll(
+      async () => {
+        if ((await page.locator('.cm-content').textContent()).includes('Exportar XLSX')) return true
+        await page.mouse.wheel(0, 400)
+        return false
+      },
+      { intervals: [100], timeout: 20000 },
+    )
+    .toBe(true)
+  await expect
+    .poll(
+      async () => {
+        const image = page.locator('img[src*="tabela-dimensoes"]')
+        if (await image.count()) return image.evaluate((el) => el.complete && el.naturalWidth > 0)
+        await page.mouse.wheel(0, 300)
+        return false
+      },
+      { intervals: [100], timeout: 20000 },
+    )
     .toBe(true)
 })

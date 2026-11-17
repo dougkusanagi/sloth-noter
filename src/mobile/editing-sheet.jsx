@@ -4,6 +4,8 @@ import { blockEdit } from '../insert-block.js'
 import { shortcutEdit } from '../editor-shortcuts.js'
 import { t } from '../i18n.js'
 import { displayName } from '../note-title.js'
+import { currentLanguage } from '../i18n.js'
+import { templateInsertEdit, templateList } from '../templates.js'
 
 const blocks = [
   ['h2', 'block.h2', '## Título'],
@@ -21,10 +23,12 @@ const blocks = [
   ['divider', 'mobile.divider', '───'],
   ['date', 'mobile.today', 'dd/mm/aaaa'],
   ['columns', 'block.columns', 'A  |  B'],
+  ['template', 'block.template', '▤'],
 ]
 
 export function EditingSheet({ view, notes, onClose, onImage }) {
   const [linking, setLinking] = useState(false)
+  const [choosingTemplate, setChoosingTemplate] = useState(false)
   const [query, setQuery] = useState('')
   function insert(action, note) {
     if (!view || view.composing || view.compositionStarted) return
@@ -36,19 +40,26 @@ export function EditingSheet({ view, notes, onClose, onImage }) {
       onImage()
       return
     }
+    if (action === 'template' && !note) {
+      setChoosingTemplate(true)
+      return
+    }
     const { from, to } = view.state.selection.main
     const text = view.state.doc.toString()
-    const edit = note
-      ? {
-          from,
-          to,
-          insert: `[[${displayName(note.name)}]]`,
-          selectionFrom: from + displayName(note.name).length + 4,
-          selectionTo: from + displayName(note.name).length + 4,
-        }
-      : action === 'link'
-        ? shortcutEdit(text, from, to, 'link')
-        : blockEdit(text, from, to, action)
+    const edit =
+      action === 'template'
+        ? templateInsertEdit(text, from, to, note, currentLanguage())
+        : note
+          ? {
+              from,
+              to,
+              insert: `[[${displayName(note.name)}]]`,
+              selectionFrom: from + displayName(note.name).length + 4,
+              selectionTo: from + displayName(note.name).length + 4,
+            }
+          : action === 'link'
+            ? shortcutEdit(text, from, to, 'link')
+            : blockEdit(text, from, to, action)
     if (!edit) return
     view.dispatch({
       changes: { from: edit.from, to: edit.to, insert: edit.insert },
@@ -72,7 +83,16 @@ export function EditingSheet({ view, notes, onClose, onImage }) {
       >
         {t('mobile.redo')}
       </button>
-      {linking ? (
+      {choosingTemplate ? (
+        <div className="mobile-insert-grid mobile-template-list">
+          {templateList(currentLanguage()).map((item) => (
+            <button key={item.id} onClick={() => insert('template', item.id)}>
+              <strong>{item.label}</strong>
+              <span>{item.description}</span>
+            </button>
+          ))}
+        </div>
+      ) : linking ? (
         <>
           <label>
             {t('mobile.noteLink')}

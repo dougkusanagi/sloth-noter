@@ -984,3 +984,19 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
 [data-platform='mobile'] .task-board[data-compact] .board-column-header > span {
   display: none;
 }
+
+[data-platform='mobile'] .mobile-template-list {
+  grid-template-columns: minmax(0, 1fr);
+}
+[data-platform='mobile'] .mobile-template-list button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 56px;
+  text-align: left;
+}
+[data-platform='mobile'] .mobile-template-list span {
+  color: var(--muted);
+  font-size: 13px;
+}

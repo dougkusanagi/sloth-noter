@@ -11,6 +11,7 @@ import {
   FileOutput,
   FilePlus,
   FileText,
+  LayoutTemplate,
   Menu,
   Pencil,
   Image as ImageIcon,
@@ -68,6 +69,7 @@ import { noteTasks, syncLinkedTasks, toggleTask } from '../tasks.js'
 import { ensureDocumentTitles } from '../title.js'
 import { welcomeNote } from '../welcome.js'
 import { LANGUAGES, t } from '../i18n.js'
+import { renderTemplate, templateList } from '../templates.js'
 import { FONT_SIZE } from '../storage.js'
 import { useInsets, useKeyboardOpen } from './use-insets.js'
 import { useSystemBars } from './use-system-bars.js'
@@ -465,6 +467,15 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   function createNote(title = '') {
     if (blocked) return
     const next = newMobileNote(current.current, title)
+    commit(next)
+    openNote(next.activeId, true)
+  }
+  function createNoteFromTemplate(id) {
+    if (blocked) return
+    const template = templateList(prefs.language).find((item) => item.id === id)
+    if (!template) return
+    const { text } = renderTemplate(template.body, { language: prefs.language })
+    const next = newMobileNote(current.current, '', undefined, text)
     commit(next)
     openNote(next.activeId, true)
   }
@@ -885,6 +896,15 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               onClick={() => createNote()}
             >
               <FilePlus size={22} />
+            </button>
+            <button
+              className="mobile-icon"
+              disabled={blocked}
+              aria-label={t('menu.newFromTemplate')}
+              title={t('menu.newFromTemplate')}
+              onClick={() => dispatch({ type: 'layer', route: { name: 'templates' } })}
+            >
+              <LayoutTemplate size={22} />
             </button>
           </>
         )}
@@ -1432,9 +1452,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             aria-label={
               layer.name === 'insert'
                 ? t('mobile.insert')
-                : actionsNote
-                  ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
-                  : t('mobile.more')
+                : layer.name === 'templates'
+                  ? t('templates.title')
+                  : actionsNote
+                    ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
+                    : t('mobile.more')
             }
           >
             <div
@@ -1461,15 +1483,32 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               <h2 className="mobile-sheet-title">
                 {layer.name === 'insert'
                   ? t('mobile.insert')
-                  : actionsNote
-                    ? displayName(actionsNote.name)
-                    : 'Sloth Note'}
+                  : layer.name === 'templates'
+                    ? t('templates.title')
+                    : actionsNote
+                      ? displayName(actionsNote.name)
+                      : 'Sloth Note'}
               </h2>
               <button className="mobile-icon" aria-label={t('dialog.close')} onClick={back}>
                 <X size={22} />
               </button>
             </div>
-            {layer.name === 'insert' ? (
+            {layer.name === 'templates' ? (
+              <div className="mobile-insert-grid mobile-template-list">
+                {templateList(prefs.language).map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      back()
+                      createNoteFromTemplate(item.id)
+                    }}
+                  >
+                    <strong>{item.label}</strong>
+                    <span>{item.description}</span>
+                  </button>
+                ))}
+              </div>
+            ) : layer.name === 'insert' ? (
               <EditingSheet
                 view={editor.current}
                 notes={data.notes}

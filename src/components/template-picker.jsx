@@ -6,7 +6,7 @@ import { renderTemplate, templateList } from '../templates.js'
 import { t } from '../i18n.js'
 
 /** Picks a built-in template: a searchable list with a rendered preview of the chosen one. */
-export function TemplatePicker({ language, onPick, onClose }) {
+export function TemplatePicker({ language, insert = false, onPick, onClose }) {
   const input = useRef(null)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(0)
@@ -88,7 +88,7 @@ export function TemplatePicker({ language, onPick, onClose }) {
         disabled={!current}
         onClick={() => current && onPick(current.id)}
       >
-        {t('templates.use')}
+        {t(insert ? 'templates.insert' : 'templates.use')}
       </button>
       <button className="dialog-close" onClick={onClose}>
         {t('dialog.close')}

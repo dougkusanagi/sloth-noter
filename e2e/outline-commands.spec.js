@@ -33,6 +33,18 @@ for (const width of [390, 1280]) {
     const sidebar = page.getByRole('button', { name: 'Mostrar/ocultar biblioteca', exact: true })
     if ((await sidebar.getAttribute('aria-expanded')) === 'true') await sidebar.click()
     const release = page.locator('[data-wiki^="Sloth Note 0.12.6"]')
+    await page.locator('.visual-editor.read-only').hover()
+    // The version index is long: scroll until the entry is drawn.
+    await expect
+      .poll(
+        async () => {
+          if (await release.count()) return true
+          await page.mouse.wheel(0, 600)
+          return false
+        },
+        { intervals: [100], timeout: 15000 },
+      )
+      .toBe(true)
     await release.click()
     await expect(page.locator('.visual-editor.read-only')).toContainText(
       'A lista de comandos inclui alternar o sumário',

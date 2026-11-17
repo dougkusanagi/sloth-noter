@@ -5,6 +5,8 @@ import { documentColors, colorDocument, colorBlock } from './editor/document-col
 import { DocumentOutline } from './components/document-outline.jsx'
 import { ShortcutButton } from './components/shortcut-button.jsx'
 import { openExternalLink } from './external-links.js'
+import { TemplatePicker } from './components/template-picker.jsx'
+import { templateInsertEdit } from './templates.js'
 import { toast } from 'sonner'
 import { Shortcut } from './components/main-menu.jsx'
 import {
@@ -50,7 +52,7 @@ import {
   wrapSelectedText,
 } from './editor/keys.js'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { t } from './i18n.js'
+import { currentLanguage, t } from './i18n.js'
 import { flushSync } from 'react-dom'
 import { Compartment, EditorSelection, EditorState } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, redo } from '@codemirror/commands'
@@ -71,6 +73,7 @@ import {
   Quote,
   Table as TableIcon,
   Columns2,
+  FileText,
   Copy,
   ClipboardPaste,
   Scissors,
@@ -116,6 +119,7 @@ const blockButtons = [
   ['code', 'block.code'],
   ['columns', 'block.columns'],
   ['image', 'block.image'],
+  ['template', 'block.template'],
   ['link', 'format.link'],
 ]
 
@@ -130,6 +134,7 @@ const blockIcons = {
   code: CodeXml,
   columns: Columns2,
   image: ImagePlus,
+  template: FileText,
   link: Link,
 }
 
@@ -195,6 +200,7 @@ export function VisualEditor({
   const [blockQuery, setBlockQuery] = useState('')
   const blockSearch = useRef(null)
   const [imagePanel, setImagePanel] = useState(null)
+  const [templatePanel, setTemplatePanel] = useState(null)
   const blockMenuRef = useRef(false)
   blockMenuRef.current = blockMenu || Boolean(imagePanel)
   const [linkEditing, setLinkEditing] = useState(false)
@@ -400,6 +406,13 @@ export function VisualEditor({
         setInsertAt({ from: selection.from, x: Math.max(8, coords.left - 34), y: coords.top })
       setImagePanel({ from: selection.from, to: selection.to })
       setBlockMenu(false)
+      setToolbar(null)
+      return
+    }
+    if (action === 'template') {
+      setTemplatePanel({ from: selection.from, to: selection.to })
+      setBlockMenu(false)
+      setInsertAt(null)
       setToolbar(null)
       return
     }
@@ -1450,6 +1463,37 @@ export function VisualEditor({
             </div>
           )}
         </>
+      )}
+      {templatePanel && (
+        <TemplatePicker
+          insert
+          language={currentLanguage()}
+          onClose={() => {
+            setTemplatePanel(null)
+            viewRef.current?.focus()
+          }}
+          onPick={(id) => {
+            const view = viewRef.current
+            const range = templatePanel
+            setTemplatePanel(null)
+            if (!view) return
+            const edit = templateInsertEdit(
+              view.state.doc.toString(),
+              range.from,
+              range.to,
+              id,
+              currentLanguage(),
+            )
+            if (!edit) return
+            view.dispatch({
+              changes: { from: edit.from, to: edit.to, insert: edit.insert },
+              selection: EditorSelection.single(edit.selectionFrom, edit.selectionTo),
+              userEvent: 'bloco',
+              scrollIntoView: true,
+            })
+            view.focus()
+          }}
+        />
       )}
       {imagePanel && (
         <ImageInsert

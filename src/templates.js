@@ -106,6 +106,56 @@ const templates = {
       ],
     },
   },
+  board: {
+    'pt-BR': {
+      label: 'Quadro de projeto',
+      description: 'Tarefas por seção, prontas para o modo Quadro.',
+      body: [
+        '# {{title}}',
+        '',
+        'Criado em {{date}}. Abra o modo Quadro (Ctrl+Alt+4) para ver as tarefas em colunas.',
+        '',
+        '## Planejamento',
+        '',
+        '- [ ] {{cursor}}',
+        '- [ ] Definir o prazo final — {{date+7d}}',
+        '',
+        '## Execução',
+        '',
+        '- [/] Primeira entrega',
+        '- [ ] Segunda entrega',
+        '',
+        '## Revisão',
+        '',
+        '- [>] Aguardar retorno',
+        '',
+      ],
+    },
+    en: {
+      label: 'Project board',
+      description: 'Tasks by section, ready for Board mode.',
+      body: [
+        '# {{title}}',
+        '',
+        'Created on {{date}}. Open Board mode (Ctrl+Alt+4) to see the tasks in columns.',
+        '',
+        '## Planning',
+        '',
+        '- [ ] {{cursor}}',
+        '- [ ] Set the final deadline — {{date+7d}}',
+        '',
+        '## Execution',
+        '',
+        '- [/] First delivery',
+        '- [ ] Second delivery',
+        '',
+        '## Review',
+        '',
+        '- [>] Wait for feedback',
+        '',
+      ],
+    },
+  },
   meeting: {
     'pt-BR': {
       label: 'Reunião',
@@ -276,6 +326,7 @@ const templates = {
   },
 }
 
+const WEEKDAY = { 'pt-BR': 'pt-BR', en: 'en-US' }
 const DEFAULT_TITLE = { 'pt-BR': 'Nova nota', en: 'New note' }
 const LOCALES = { 'pt-BR': 'pt-BR', en: 'en-US' }
 
@@ -312,12 +363,46 @@ export function renderTemplate(body, { title, now = new Date(), language = 'pt-B
     date: new Intl.DateTimeFormat(locale).format(now),
     time: formatDate(now, 'HH:mm'),
   }
-  const text = body.replace(/\{\{\s*([a-z]+)(?::([^}]*))?\s*\}\}/g, (match, name, format) => {
-    if (name === 'cursor') return match
-    if (name === 'date' && format !== undefined) return formatDate(now, format.trim())
-    return format === undefined && name in values ? values[name] : match
-  })
+  const text = body.replace(
+    /\{\{\s*([a-z]+)(?:([+-]\d+)d|:([^}]*))?\s*\}\}/g,
+    (match, name, offset, format) => {
+      if (name === 'cursor') return match
+      if (name === 'date' && offset !== undefined) {
+        const moved = new Date(now)
+        moved.setDate(moved.getDate() + Number(offset))
+        return new Intl.DateTimeFormat(locale).format(moved)
+      }
+      if (name === 'date' && format !== undefined) return formatDate(now, format.trim())
+      if (offset !== undefined || format !== undefined) return match
+      if (name === 'weekday')
+        return new Intl.DateTimeFormat(WEEKDAY[language] ?? 'pt-BR', { weekday: 'long' }).format(
+          now,
+        )
+      return name in values ? values[name] : match
+    },
+  )
   const at = text.indexOf(CURSOR)
   if (at < 0) return { text, cursor: text.length }
   return { text: text.replace(CURSOR, ''), cursor: at }
+}
+
+/**
+ * Editor change that inserts a template into an existing note at the selection. The template's
+ * own title line is dropped (the note already has one); `{{title}}` is the current title.
+ */
+export function templateInsertEdit(text, from, to, id, language = 'pt-BR', now = new Date()) {
+  const template = templateList(language).find((item) => item.id === id)
+  if (!template) return null
+  const title = /^# (.*)$/m.exec(text)?.[1]?.trim() || undefined
+  const withoutTitle = template.body.replace(/^# .*\n+/, '')
+  const { text: insert, cursor } = renderTemplate(withoutTitle, { title, now, language })
+  const before = text.slice(0, from)
+  const lead = before && !before.endsWith('\n\n') ? (before.endsWith('\n') ? '\n' : '\n\n') : ''
+  return {
+    from,
+    to,
+    insert: lead + insert,
+    selectionFrom: from + lead.length + cursor,
+    selectionTo: from + lead.length + cursor,
+  }
 }

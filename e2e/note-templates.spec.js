@@ -18,7 +18,7 @@ for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 800 })
     await page.goto('/')
     const picker = await openPicker(page)
-    await expect(picker.getByRole('option')).toHaveCount(5)
+    await expect(picker.getByRole('option')).toHaveCount(6)
     await picker.getByRole('textbox', { name: 'Buscar modelo' }).fill('reuni')
     await expect(picker.getByRole('option')).toHaveCount(1)
     await expect(picker.getByLabel('Prévia do modelo')).toContainText('Pauta')
@@ -52,4 +52,29 @@ test('Escape closes the template picker without creating a note', async ({ page 
   await page.keyboard.press('Escape')
   await expect(picker).toBeHidden()
   await expect(page.locator('.tab')).toHaveCount(before)
+})
+
+test('the insert menu adds a template to the current note without a second title', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page.locator('textarea').fill('# Nota\n\nTexto\n\n')
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  await page.locator('.cm-content').click()
+  await page.keyboard.press('Control+End')
+  await page.getByRole('button', { name: 'Inserir bloco', exact: true }).click()
+  await page
+    .locator('.block-menu')
+    .getByRole('button', { name: /Modelo/ })
+    .click()
+  const picker = page.getByRole('dialog', { name: 'Modelos de nota' })
+  await picker.getByRole('option', { name: /Diário/ }).click()
+  await picker.getByRole('button', { name: 'Inserir este modelo na nota' }).click()
+  await expect(picker).toBeHidden()
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  const text = await page.locator('textarea').inputValue()
+  expect(text).toContain('## Três prioridades')
+  expect(text.match(/^# /gm)).toHaveLength(1)
+  expect(text.startsWith('# Nota\n\nTexto\n\n')).toBe(true)
 })

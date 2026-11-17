@@ -331,7 +331,20 @@ for (const width of [390, 1280]) {
     await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
     const entry = page.locator('.visual-editor.read-only')
-    await entry.locator('[data-wiki^="Sloth Note 0.13.1|"]').click()
+    const release = entry.locator('[data-wiki^="Sloth Note 0.13.1|"]')
+    await entry.hover()
+    // The version index is long: scroll until the entry is drawn.
+    await expect
+      .poll(
+        async () => {
+          if (await release.count()) return true
+          await page.mouse.wheel(0, 600)
+          return false
+        },
+        { intervals: [100], timeout: 15000 },
+      )
+      .toBe(true)
+    await release.click()
     const news = 'Novas páginas identificam a segunda linha como descrição opcional'
     await entry.hover()
     await expect
