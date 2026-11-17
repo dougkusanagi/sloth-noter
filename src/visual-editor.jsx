@@ -6,6 +6,8 @@ import { DocumentOutline } from './components/document-outline.jsx'
 import { ShortcutButton } from './components/shortcut-button.jsx'
 import { openExternalLink } from './external-links.js'
 import { TemplatePicker } from './components/template-picker.jsx'
+import { VariablePicker } from './components/variable-picker.jsx'
+import { variableInsertEdit } from './variables.js'
 import { renderTemplate, templateInsertEdit, templateList } from './templates.js'
 import { TemplateStarters } from './components/template-starters.jsx'
 import { titleLineNumber } from './frontmatter.js'
@@ -83,6 +85,7 @@ import {
   Table as TableIcon,
   Columns2,
   FileText,
+  Braces,
   Copy,
   ClipboardPaste,
   Scissors,
@@ -129,6 +132,7 @@ const blockButtons = [
   ['columns', 'block.columns'],
   ['image', 'block.image'],
   ['template', 'block.template'],
+  ['variable', 'block.variable'],
   ['link', 'format.link'],
 ]
 
@@ -144,6 +148,7 @@ const blockIcons = {
   columns: Columns2,
   image: ImagePlus,
   template: FileText,
+  variable: Braces,
   link: Link,
 }
 
@@ -213,6 +218,7 @@ export function VisualEditor({
   const blockSearch = useRef(null)
   const [imagePanel, setImagePanel] = useState(null)
   const [templatePanel, setTemplatePanel] = useState(null)
+  const [variablePanel, setVariablePanel] = useState(null)
   const [startersAt, setStartersAt] = useState(null)
   const startersRef = useRef(starters)
   startersRef.current = starters
@@ -496,6 +502,13 @@ export function VisualEditor({
         setInsertAt({ from: selection.from, x: Math.max(8, coords.left - 34), y: coords.top })
       setImagePanel({ from: selection.from, to: selection.to })
       setBlockMenu(false)
+      setToolbar(null)
+      return
+    }
+    if (action === 'variable') {
+      setVariablePanel({ from: selection.from, to: selection.to })
+      setBlockMenu(false)
+      setInsertAt(null)
       setToolbar(null)
       return
     }
@@ -1573,6 +1586,34 @@ export function VisualEditor({
           templates={templateList(currentLanguage())}
           position={startersAt}
           onPick={startFromTemplate}
+        />
+      )}
+      {variablePanel && (
+        <VariablePicker
+          body={viewRef.current?.state.doc.toString() ?? ''}
+          modifiedAt={
+            viewRef.current?.state
+              .facet(taskNotes)
+              .find((note) => note.id === viewRef.current.state.facet(activeNoteId))?.modifiedAt
+          }
+          onClose={() => {
+            setVariablePanel(null)
+            viewRef.current?.focus()
+          }}
+          onPick={(choice) => {
+            const view = viewRef.current
+            const range = variablePanel
+            setVariablePanel(null)
+            if (!view) return
+            const edit = variableInsertEdit(range.from, range.to, choice)
+            view.dispatch({
+              changes: { from: edit.from, to: edit.to, insert: edit.insert },
+              selection: EditorSelection.single(edit.selectionFrom, edit.selectionTo),
+              userEvent: 'bloco',
+              scrollIntoView: true,
+            })
+            view.focus()
+          }}
         />
       )}
       {templatePanel && (

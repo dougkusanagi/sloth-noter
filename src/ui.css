@@ -3983,3 +3983,20 @@ button.property-type-icon:hover {
     animation: none;
   }
 }
+
+.variable-picker-list {
+  max-height: min(380px, 55dvh);
+  overflow: auto;
+}
+.variable-picker-group {
+  display: block;
+  padding: 8px 10px 2px;
+  color: var(--text-secondary, var(--muted));
+  font-size: 12px;
+  font-weight: 600;
+}
+.variable-picker-hint {
+  margin: 4px 14px;
+  color: var(--text-secondary, var(--muted));
+  font-size: 12px;
+}

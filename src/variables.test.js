@@ -73,3 +73,27 @@ test('propertyReferences counts uses outside code', async () => {
   assert.equal(propertyReferences(text, 'outro'), 1)
   assert.equal(propertyReferences(text, 'x'), 0)
 })
+
+test('variableChoices lists the document variables and the note properties', async () => {
+  const { variableChoices, variableInsertEdit } = await import('./variables.js')
+  const choices = variableChoices(body, context)
+  assert.deepEqual(
+    choices.map((item) => item.id),
+    [
+      'today',
+      'updated',
+      'words',
+      'reading',
+      'tasks',
+      'until',
+      ...choices.slice(6).map((i) => i.id),
+    ],
+  )
+  assert.ok(choices.some((item) => item.id === 'user.responsavel' && item.preview === 'Ana'))
+  const until = choices.find((item) => item.id === 'until')
+  assert.equal(until.insert, '{{until:2026-11-23}}')
+  const edit = variableInsertEdit(10, 12, until)
+  assert.equal(edit.insert.slice(edit.selectionFrom - 10, edit.selectionTo - 10), '2026-11-23')
+  const today = variableInsertEdit(3, 3, choices[0])
+  assert.equal(today.selectionFrom, 3 + '{{today}}'.length)
+})

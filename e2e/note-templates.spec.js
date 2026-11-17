@@ -83,6 +83,26 @@ test('the insert menu adds a template to the current note without a second title
   expect(text.startsWith('# Nota\n\nTexto\n\n')).toBe(true)
 })
 
+test('the insert menu adds a variable from the note properties', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page.locator('textarea').fill('---\nresponsavel: Ana\n---\n# Nota\n\nTexto\n\n')
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  await page.locator('.cm-content').click()
+  await page.keyboard.press('Control+End')
+  await page.getByRole('button', { name: 'Inserir bloco', exact: true }).click()
+  await page
+    .locator('.block-menu')
+    .getByRole('button', { name: /Variável/ })
+    .click()
+  const picker = page.getByRole('dialog', { name: 'Inserir variável' })
+  await picker.getByRole('searchbox').or(picker.getByRole('textbox')).fill('respons')
+  await picker.getByRole('option', { name: /responsavel/ }).click()
+  await expect(picker).toBeHidden()
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  expect(await page.locator('textarea').inputValue()).toContain('{{user.responsavel}}')
+})
+
 test('a note marked as a template appears first among the starters and can be unmarked', async ({
   page,
 }) => {

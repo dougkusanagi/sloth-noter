@@ -127,3 +127,52 @@ export function propertyReferences(body, key) {
   }
   return count
 }
+
+const DOCUMENT_VARIABLES = ['today', 'updated', 'words', 'reading', 'tasks', 'until']
+const pad = (value) => String(value).padStart(2, '0')
+const isoDate = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+
+/**
+ * What the "Variável…" picker offers: the variables of the document and the note's properties.
+ * `insert` is the marker; `select` is the part of it (offsets) left selected for editing.
+ */
+export function variableChoices(body, context) {
+  const { now = new Date(), language = currentLanguage() } = context
+  const choices = DOCUMENT_VARIABLES.map((name) => {
+    const argument = name === 'until' ? isoDate(new Date(now.getTime() + 7 * DAY)) : undefined
+    const insert = argument ? `{{until:${argument}}}` : `{{${name}}}`
+    const preview = resolveVariable(name, argument, { ...context, now, language })
+    return {
+      id: name,
+      group: 'document',
+      label: t(`variables.name.${name}`),
+      insert,
+      preview: preview.text ?? '',
+      select: argument ? [8, 8 + argument.length] : null,
+    }
+  })
+  for (const [key, entry] of propertyMap(body)) {
+    if (!/^[a-z][a-z0-9_.-]*$/.test(key)) continue
+    choices.push({
+      id: `user.${key}`,
+      group: 'user',
+      label: key,
+      insert: `{{user.${key}}}`,
+      preview: formatValue(entry, language),
+      select: null,
+    })
+  }
+  return choices
+}
+
+/** The edit that puts a variable at the selection (the cursor lands after it, or selects its date). */
+export function variableInsertEdit(from, to, choice) {
+  const end = from + choice.insert.length
+  return {
+    from,
+    to,
+    insert: choice.insert,
+    selectionFrom: choice.select ? from + choice.select[0] : end,
+    selectionTo: choice.select ? from + choice.select[1] : end,
+  }
+}
