@@ -2,8 +2,35 @@ import { EditorState, EditorSelection } from '@codemirror/state'
 import { frontmatterEnd, readProperties, titleEnd } from './frontmatter.js'
 import { hideFrontmatter } from './editor/hide-frontmatter.js'
 
+/**
+ * `---` written on the title line starts a YAML block, not a title. Without this, the title's `# `
+ * turned the opening fence into `# ---` and the properties showed as headings. A note already
+ * saved that way is repaired when the lines up to the next fence are readable properties.
+ */
+function openPropertiesFromTitle(body) {
+  if (frontmatterEnd(body)) return body
+  const fence = /^[ \t]*#*[ \t]*---[ \t]*(?=\n|$)/.exec(body)
+  if (!fence) return body
+  const rest = body.slice(fence[0].length)
+  const candidate = `---${rest}`
+  const end = frontmatterEnd(candidate)
+  if (end) {
+    const read = readProperties(candidate.slice(0, end))
+    return read.ok && read.entries.length ? candidate : body
+  }
+  // Unclosed: only a title that is just `---` (nothing right below it) becomes a new empty block.
+  if (rest && !/^\n[ \t]*(?:\n|$)/.test(rest)) return body
+  return `---\n\n---\n${rest.replace(/^\n/, '')}`
+}
+
+/** True when the edit turned a `---` title into the opening of a YAML block. */
+export function startsProperties(body) {
+  return openPropertiesFromTitle(body) !== body
+}
+
 // The YAML block (frontmatter), when there is one, comes first; the title is the line after it.
 export function ensureTitle(body, fallback = '') {
+  body = openPropertiesFromTitle(body)
   const start = frontmatterEnd(body)
   const text = body.slice(start)
   const end = text.indexOf('\n')
@@ -64,6 +91,19 @@ export const mandatoryTitle = EditorState.transactionFilter.of((transaction) => 
   const body = transaction.newDoc.toString()
   const normalized = ensureTitle(body)
   const start = frontmatterEnd(body)
+  if (startsProperties(body)) {
+    // The block is new: the whole start of the note changes, and the cursor goes to the title.
+    const titleStart = frontmatterEnd(normalized)
+    const titleLine = normalized.slice(titleStart).split('\n')[0]
+    return [
+      transaction,
+      {
+        changes: { from: 0, to: body.length, insert: normalized },
+        selection: EditorSelection.single(titleStart + titleLine.length),
+        sequential: true,
+      },
+    ]
+  }
   let selection = transaction.newSelection
   const previous = transaction.startState.selection
   // Some webviews report the replaced range as still selected for the first

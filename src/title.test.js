@@ -73,3 +73,19 @@ test('titles after a YAML block: the block is left alone and the title keeps its
   assert.equal(titleNavigationTarget('---\na: 1\n---\n# T\n\nx', 14), 17)
   assert.equal(titleNavigationTarget('---\na: 1\n---\n# T\n\nx', 3), null)
 })
+
+test('a --- title opens an empty YAML block instead of a "# ---" heading', () => {
+  assert.equal(ensureTitle('# ---'), '---\n\n---\n# ')
+  assert.equal(ensureTitle('# ---\n\nTexto'), '---\n\n---\n# \nTexto')
+  assert.equal(ensureTitle('---'), '---\n\n---\n# ')
+})
+
+test('a note saved with "# ---" and readable properties is repaired', () => {
+  assert.equal(
+    ensureTitle('# ---\nstatus: rascunho\nprioridade: 3\n---\n# Teste1\n\n## aa'),
+    '---\nstatus: rascunho\nprioridade: 3\n---\n# Teste1\n\n## aa',
+  )
+  // With a separator later in the note and no readable YAML before it, nothing is rewritten.
+  const text = '# ---\n\nUm texto: com dois pontos e mais\n\n- item\n---\nfim'
+  assert.equal(ensureTitle(text), text)
+})

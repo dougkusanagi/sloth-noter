@@ -46,6 +46,7 @@ test('android settings set up sync and sync again after an edit', async ({ page,
   await page.getByLabel('Nome').fill('Ana')
   await page.getByLabel('E-mail').fill('ana@example.com')
   await page.getByLabel('Senha', { exact: true }).fill('senha forte 123')
+  await page.getByLabel('Confirme a senha').fill('senha forte 123')
   await page.getByLabel('Código de convite').fill(INVITE)
   if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/sloth-sync-mobile-form.png' })
   await page.getByRole('button', { name: 'Criar conta' }).tap()

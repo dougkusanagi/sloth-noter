@@ -2,9 +2,7 @@
 // the system vault through Tauri on desktop, nowhere on the web. Without a vault,
 // sync stays off: secrets never go to localStorage, preferences, backups or logs.
 
-import { validProfileId } from '../profiles.js'
-
-const secretName = (id) => (id === 'primary' ? 'sync' : `sync-${id}`)
+const SECRET = 'sync'
 
 export class VaultUnavailable extends Error {
   constructor() {
@@ -49,9 +47,8 @@ function desktopVault(invoke, name) {
 }
 
 /** The platform vault, or null when there is none (web, or a desktop without one). */
-export function platformVault(env = globalThis, profileId = 'primary') {
-  if (!validProfileId(profileId)) return null
-  const name = secretName(profileId)
+export function platformVault(env = globalThis) {
+  const name = SECRET
   if (env.SlothSecrets?.get) return androidVault(env.SlothSecrets, name)
   const invoke = env.__TAURI_INTERNALS__?.invoke
   if (typeof invoke === 'function') return desktopVault(invoke, name)

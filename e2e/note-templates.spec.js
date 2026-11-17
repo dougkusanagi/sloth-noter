@@ -2,56 +2,60 @@ import { expect, test } from '@playwright/test'
 
 const palette = (page) => page.getByRole('dialog', { name: 'Paleta de comandos' })
 
-async function openPicker(page) {
-  await page.keyboard.press('Control+Shift+P')
-  await palette(page).getByRole('combobox').fill('Nova nota a partir de modelo')
-  await page.keyboard.press('Enter')
-  const picker = page.getByRole('dialog', { name: 'Modelos de nota' })
-  await expect(picker).toBeVisible()
-  return picker
+async function newNote(page) {
+  await page.keyboard.press('Control+t')
+  const starters = page.getByRole('group', { name: 'Modelos para começar a nota' })
+  await expect(starters).toBeVisible()
+  return starters
 }
 
 for (const width of [1280, 390]) {
-  test(`a note is created from a template with its variables filled at ${width}px`, async ({
-    page,
-  }) => {
+  test(`an empty new note offers every template with an icon at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 })
     await page.goto('/')
-    const picker = await openPicker(page)
-    await expect(picker.getByRole('option')).toHaveCount(6)
-    await picker.getByRole('textbox', { name: 'Buscar modelo' }).fill('reuni')
-    await expect(picker.getByRole('option')).toHaveCount(1)
-    await expect(picker.getByLabel('Prévia do modelo')).toContainText('Pauta')
-    await page.screenshot({ path: test.info().outputPath(`picker-${width}.png`) })
-    await picker.getByRole('button', { name: 'Criar nota com este modelo' }).click()
-    await expect(picker).toBeHidden()
+    const starters = await newNote(page)
+    await expect(starters.getByRole('button')).toHaveCount(3)
+    await expect(starters.locator('button svg')).toHaveCount(3)
+    const box = await starters.boundingBox()
+    expect(box.x).toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width).toBeLessThanOrEqual(width)
+    await page.screenshot({ path: test.info().outputPath(`starters-${width}.png`) })
+    await starters.getByRole('button', { name: /Reunião/ }).click()
+    await expect(starters).toBeHidden()
     await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
     const text = await page.locator('textarea').inputValue()
     expect(text).toMatch(/^# Reunião \d{4}-\d{2}-\d{2}\n/)
     expect(text).not.toContain('{{')
-    expect(text).toContain('Participantes: \n')
+    expect(text).toContain('## Participantes\n- \n')
   })
 }
 
-test('the task template selects the title and offers all five statuses', async ({ page }) => {
+test('a titled note keeps its title when a template starts it', async ({ page }) => {
   await page.goto('/')
-  const picker = await openPicker(page)
-  await picker.getByRole('option', { name: /Tarefas e projeto/ }).click()
-  await picker.getByRole('button', { name: 'Criar nota com este modelo' }).click()
+  const starters = await newNote(page)
+  await page.keyboard.type('Minha reunião')
+  await starters.getByRole('button', { name: /Diário/ }).click()
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   const text = await page.locator('textarea').inputValue()
-  expect(text).toContain('- [/] Tarefa em andamento')
-  expect(text).toContain('<summary>Como usar este modelo</summary>')
-  await expect(page.locator('.tab.active')).toContainText('Nova nota')
+  expect(text.startsWith('# Minha reunião\n')).toBe(true)
+  expect(text).toContain('## Prioridades')
+  expect(text.match(/^# /gm)).toHaveLength(1)
 })
 
-test('Escape closes the template picker without creating a note', async ({ page }) => {
+test('the templates disappear once the note has content', async ({ page }) => {
   await page.goto('/')
-  const before = await page.locator('.tab').count()
-  const picker = await openPicker(page)
-  await page.keyboard.press('Escape')
-  await expect(picker).toBeHidden()
-  await expect(page.locator('.tab')).toHaveCount(before)
+  const starters = await newNote(page)
+  await page.keyboard.type('Título')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Uma descrição')
+  await expect(starters).toBeHidden()
+})
+
+test('there is no New note from template command', async ({ page }) => {
+  await page.goto('/')
+  await page.keyboard.press('Control+Shift+P')
+  await palette(page).getByRole('combobox').fill('Nova nota a partir de modelo')
+  await expect(palette(page).getByRole('option')).toHaveCount(0)
 })
 
 test('the insert menu adds a template to the current note without a second title', async ({
@@ -74,12 +78,12 @@ test('the insert menu adds a template to the current note without a second title
   await expect(picker).toBeHidden()
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   const text = await page.locator('textarea').inputValue()
-  expect(text).toContain('## Três prioridades')
+  expect(text).toContain('## Prioridades')
   expect(text.match(/^# /gm)).toHaveLength(1)
   expect(text.startsWith('# Nota\n\nTexto\n\n')).toBe(true)
 })
 
-test('a note marked as a template appears first in the picker and can be unmarked', async ({
+test('a note marked as a template appears first among the starters and can be unmarked', async ({
   page,
 }) => {
   await page.goto('/')
@@ -89,15 +93,28 @@ test('a note marked as a template appears first in the picker and can be unmarke
   await palette(page).getByRole('combobox').fill('Usar esta nota como modelo')
   await page.keyboard.press('Enter')
   await expect(
-    page.getByText('A nota agora aparece em Nova nota a partir de modelo.'),
+    page.getByText('A nota agora aparece entre os modelos de uma nota nova.'),
   ).toBeVisible()
-  const picker = await openPicker(page)
-  await expect(picker.getByRole('option')).toHaveCount(7)
-  await expect(picker.getByRole('option').first()).toContainText('Receita')
-  await expect(picker.getByRole('option').first()).toContainText('Seu modelo')
-  await picker.getByRole('button', { name: 'Criar nota com este modelo' }).click()
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  const starters = await newNote(page)
+  await expect(starters.getByRole('button')).toHaveCount(4)
+  await expect(starters.getByRole('button').first()).toContainText('Receita')
+  await starters.getByRole('button').first().click()
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(page.locator('textarea')).toHaveValue(/^# Receita\n\n## Passos/)
   await page.keyboard.press('Control+Shift+P')
   await palette(page).getByRole('combobox').fill('Remover esta nota dos modelos')
   await expect(palette(page).getByRole('option')).toHaveCount(0)
+})
+
+test('the board template opens the note in Board mode', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/')
+  const starters = await newNote(page)
+  await starters.getByRole('button', { name: /^Quadro/ }).click()
+  await expect(page.getByRole('radio', { name: 'Quadro', exact: true })).toBeChecked()
+  await expect(page.getByText('Planejamento').first()).toBeVisible()
+  await page.screenshot({
+    path: '/tmp/claude-1000/-home-servidor-dev-sloth-noter/deb3e673-78de-4db9-b83c-5aa600c6c1aa/scratchpad/board.png',
+  })
 })

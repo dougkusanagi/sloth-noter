@@ -5,8 +5,8 @@ import { Markdown } from '../markdown.jsx'
 import { renderTemplate, templateList } from '../templates.js'
 import { t } from '../i18n.js'
 
-/** Picks a built-in template: a searchable list with a rendered preview of the chosen one. */
-export function TemplatePicker({ language, insert = false, onPick, onClose }) {
+/** Picks a template to insert into the open note: a searchable list with a rendered preview. */
+export function TemplatePicker({ language, onPick, onClose }) {
   const input = useRef(null)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(0)
@@ -88,7 +88,7 @@ export function TemplatePicker({ language, insert = false, onPick, onClose }) {
         disabled={!current}
         onClick={() => current && onPick(current.id)}
       >
-        {t(insert ? 'templates.insert' : 'templates.use')}
+        {t('templates.insert')}
       </button>
       <button className="dialog-close" onClick={onClose}>
         {t('dialog.close')}

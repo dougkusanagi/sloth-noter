@@ -1,0 +1,1 @@
+Removido: os perfis locais. O app tem agora um só conjunto de notas, ligado à conta de sincronização: crie a conta ou entre em **Configurações › Conta e sincronização** para sincronizar. Notas de perfis extras criados antes continuam guardadas no aparelho, mas o app não as abre mais.

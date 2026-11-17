@@ -56,7 +56,6 @@ export function buildCommands({ active, activePinned, prefs, trashCount, desktop
       'menu.notes',
       [
         ['newNote', 'menu.newNote', FilePlus, 'T', false, true],
-        ['newFromTemplate', 'menu.newFromTemplate', FileText, undefined, false, true],
         ['findNote', 'menu.findNote', Search, 'P', false, true],
         ['searchAllNotes', 'menu.searchAllNotes', Search, 'Shift+F', false, true],
         ['findInNote', 'menu.findInNote', ScanSearch, 'F', !active],

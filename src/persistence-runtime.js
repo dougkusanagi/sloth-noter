@@ -11,7 +11,6 @@ import { browserStorage, createWebAdapter } from './persistence-web.js'
 export async function createAppPersistence(target = window, loadCore) {
   const invoke = await desktopInvoke(target, loadCore)
   if (!invoke) return createPersistence(createWebAdapter(browserStorage(target)))
-  const profileId = await invoke('active_profile')
   const history = createHistory(invoke, (message) => history.onWarning?.(message))
   let status = { path: null, available: false }
   try {
@@ -21,7 +20,7 @@ export async function createAppPersistence(target = window, loadCore) {
   }
   if (status.path && status.available) {
     const persistence = createPersistence(createVaultAdapter(invoke, status.path, history))
-    return Object.assign(persistence, { invoke, history, profileId, vault: { path: status.path } })
+    return Object.assign(persistence, { invoke, history, vault: { path: status.path } })
   }
   const adapter = createDesktopAdapter(invoke, history)
   let label = adapter.label
@@ -34,7 +33,6 @@ export async function createAppPersistence(target = window, loadCore) {
   return Object.assign(createPersistence(adapter, label), {
     invoke,
     history,
-    profileId,
     vault: null,
     vaultProblem: status.path ? { path: status.path } : null,
   })

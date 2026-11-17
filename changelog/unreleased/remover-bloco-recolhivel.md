@@ -1,1 +1,1 @@
-Removido: O Bloco recolhível saiu do menu de inserção, no computador e no celular. Notas que já têm um bloco recolhível não perdem o texto: ele aparece aberto, com as marcas `<details>` e `<summary>` visíveis. Apague essas marcas para deixar só o conteúdo.
+Removido: O Bloco recolhível (`<details>`) foi removido do app. Ele não aparece mais no menu de inserção nem nos modelos, e o editor e a leitura não o recolhem mais. Notas que já têm esse bloco não perdem o texto: as marcas `<details>` e `<summary>` aparecem como texto. Apague-as para deixar só o conteúdo.

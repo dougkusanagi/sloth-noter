@@ -11,7 +11,6 @@ import {
   FileOutput,
   FilePlus,
   FileText,
-  LayoutTemplate,
   Menu,
   Pencil,
   Image as ImageIcon,
@@ -30,9 +29,7 @@ import {
   Trash2,
   WrapText,
   X,
-  UserRound,
 } from 'lucide-react'
-import { useActiveProfile } from '../hooks/use-profile.js'
 import { Toaster, toast } from 'sonner'
 import { createAppPersistence } from '../persistence-runtime.js'
 import { openWorkspace } from '../boot.js'
@@ -59,7 +56,6 @@ import { clearImageCache, importImage, libraryImages, markdownImage } from '../i
 import { createFullBackup, readBackupBundle, restoreBackupImages } from '../backup.js'
 import { AboutPanel } from '../components/about-panel.jsx'
 import { SyncPanel } from '../components/sync-panel.jsx'
-import { ProfilesPanel } from '../components/profiles-panel.jsx'
 import { useSync } from '../hooks/use-sync.js'
 import { ImageThumbnail } from '../components/image-library.jsx'
 import { TasksLibrary } from '../components/tasks-library.jsx'
@@ -69,7 +65,7 @@ import { noteTasks, syncLinkedTasks, toggleTask } from '../tasks.js'
 import { ensureDocumentTitles } from '../title.js'
 import { welcomeNote } from '../welcome.js'
 import { LANGUAGES, t } from '../i18n.js'
-import { renderTemplate, setOwnTemplates, setTemplateProfile, templateList } from '../templates.js'
+import { setOwnTemplates, setTemplateProfile } from '../templates.js'
 import { FONT_SIZE } from '../storage.js'
 import { useInsets, useKeyboardOpen } from './use-insets.js'
 import { useSystemBars } from './use-system-bars.js'
@@ -171,8 +167,6 @@ export function MobileShell() {
 }
 
 function MobileWorkspace({ persistence, loaded, onReload }) {
-  const activeProfile = useActiveProfile(persistence.invoke, persistence.profileId)
-  setTemplateProfile(activeProfile?.name)
   const [rename, setRename] = useState(null)
   const [renameError, setRenameError] = useState('')
   const [purgeId, setPurgeId] = useState(null)
@@ -214,8 +208,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     commit,
     invoke: persistence.invoke,
     blocked,
-    profileId: persistence.profileId,
   })
+  setTemplateProfile(sync.status.account?.name || sync.status.account?.email)
   const { scheduleAfterEdit } = sync
   useEffect(() => {
     scheduleAfterEdit()
@@ -469,15 +463,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   function createNote(title = '') {
     if (blocked) return
     const next = newMobileNote(current.current, title)
-    commit(next)
-    openNote(next.activeId, true)
-  }
-  function createNoteFromTemplate(id) {
-    if (blocked) return
-    const template = templateList(prefs.language).find((item) => item.id === id)
-    if (!template) return
-    const { text } = renderTemplate(template.body, { language: prefs.language })
-    const next = newMobileNote(current.current, '', undefined, text)
     commit(next)
     openNote(next.activeId, true)
   }
@@ -899,15 +884,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             >
               <FilePlus size={22} />
             </button>
-            <button
-              className="mobile-icon"
-              disabled={blocked}
-              aria-label={t('menu.newFromTemplate')}
-              title={t('menu.newFromTemplate')}
-              onClick={() => dispatch({ type: 'layer', route: { name: 'templates' } })}
-            >
-              <LayoutTemplate size={22} />
-            </button>
           </>
         )}
         {root && route.name === 'tasks' && (
@@ -1156,6 +1132,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 wrapPage={pageWrap}
                 key={active.id}
                 noteId={active.id}
+                starters
+                onTemplateMode={(mode) => mode === 'board' && setBoardView(active.id, true)}
                 sourceMode={sourceMode}
                 outline={false}
                 notes={data.notes}
@@ -1370,12 +1348,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             <button disabled={blocked} onClick={createHelpNote}>
               {t('menu.welcome')}
             </button>
-            {sync.invoke && (
-              <>
-                <h2>{t('settings.profiles')}</h2>
-                <ProfilesPanel invoke={sync.invoke} profileId={sync.profileId} />
-              </>
-            )}
             <h2>{t('settings.sync')}</h2>
             <SyncPanel sync={sync} />
             <h2>{t('settings.about')}</h2>
@@ -1454,11 +1426,9 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             aria-label={
               layer.name === 'insert'
                 ? t('mobile.insert')
-                : layer.name === 'templates'
-                  ? t('templates.title')
-                  : actionsNote
-                    ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
-                    : t('mobile.more')
+                : actionsNote
+                  ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
+                  : t('mobile.more')
             }
           >
             <div
@@ -1485,32 +1455,15 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               <h2 className="mobile-sheet-title">
                 {layer.name === 'insert'
                   ? t('mobile.insert')
-                  : layer.name === 'templates'
-                    ? t('templates.title')
-                    : actionsNote
-                      ? displayName(actionsNote.name)
-                      : 'Sloth Note'}
+                  : actionsNote
+                    ? displayName(actionsNote.name)
+                    : 'Sloth Note'}
               </h2>
               <button className="mobile-icon" aria-label={t('dialog.close')} onClick={back}>
                 <X size={22} />
               </button>
             </div>
-            {layer.name === 'templates' ? (
-              <div className="mobile-insert-grid mobile-template-list">
-                {templateList(prefs.language).map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      back()
-                      createNoteFromTemplate(item.id)
-                    }}
-                  >
-                    <strong>{item.label}</strong>
-                    <span>{item.description}</span>
-                  </button>
-                ))}
-              </div>
-            ) : layer.name === 'insert' ? (
+            {layer.name === 'insert' ? (
               <EditingSheet
                 view={editor.current}
                 notes={data.notes}
@@ -1688,16 +1641,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               </>
             ) : (
               <>
-                {activeProfile && (
-                  <button
-                    className="mobile-profile"
-                    aria-label={t('profiles.inUseLabel', { name: activeProfile.name })}
-                    onClick={() => dispatch({ type: 'push', route: { name: 'settings' } })}
-                  >
-                    <UserRound size={20} aria-hidden="true" />
-                    {t('profiles.inUse', { name: activeProfile.name })}
-                  </button>
-                )}
                 <ThemeControl theme={prefs.theme} onChange={updatePrefs} />
                 <button onClick={() => noteInput.current?.click()}>
                   <FileInput size={20} />

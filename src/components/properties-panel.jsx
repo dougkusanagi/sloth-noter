@@ -1,12 +1,25 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Plus, Trash2, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Calendar,
+  CheckSquare,
+  ChevronRight,
+  Hash,
+  List,
+  Plus,
+  Text,
+  Trash2,
+  TriangleAlert,
+  X,
+} from 'lucide-react'
 import { readProperties, renameProperty, writeProperty } from '../frontmatter.js'
 import { propertyReferences } from '../variables.js'
 import { currentLanguage, t } from '../i18n.js'
 
 const TYPES = ['text', 'number', 'boolean', 'date', 'list']
+const ICONS = { text: Text, number: Hash, boolean: CheckSquare, date: Calendar, list: List }
 const ISO = /^\d{4}-\d{2}-\d{2}$/
-const today = () => {
+
+function today() {
   const now = new Date()
   const pad = (value) => String(value).padStart(2, '0')
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
@@ -20,7 +33,7 @@ function parseNumber(text) {
   return value !== '' && Number.isFinite(Number(value)) ? Number(value) : null
 }
 
-/** A value in another type, or `null` when it cannot be converted without guessing. */
+/** The value in another type, or `null` when it cannot be converted without guessing. */
 function convert(entry, type) {
   const { value } = entry
   if (type === entry.type) return { value }
@@ -33,23 +46,200 @@ function convert(entry, type) {
     return number === null ? null : { value: number }
   }
   if (type === 'date') return typeof value === 'string' && ISO.test(value) ? { value } : null
-  if (type === 'boolean') {
-    if (typeof value === 'string' && ['true', 'false'].includes(value.toLowerCase()))
-      return { value: value.toLowerCase() === 'true' }
-    return null
-  }
+  if (type === 'boolean' && typeof value === 'string' && /^(true|false)$/i.test(value))
+    return { value: value.toLowerCase() === 'true' }
   return null
 }
 
-function Row({ entry, body, readOnly, onApply }) {
-  const id = useId()
-  const [name, setName] = useState(entry.key)
-  const [problem, setProblem] = useState('')
-  const [pending, setPending] = useState(null)
+/** The type button: shows the type icon and opens a small menu to change it or remove the row. */
+function TypeMenu({ entry, readOnly, onType, onRemove }) {
+  const [open, setOpen] = useState(false)
+  const button = useRef(null)
+  const menu = useRef(null)
+  const Icon = ICONS[entry.type] ?? (entry.type === 'unsupported' ? TriangleAlert : Text)
+  useEffect(() => {
+    if (!open) return undefined
+    menu.current?.querySelector('button')?.focus()
+    const away = (event) => {
+      if (!menu.current?.contains(event.target) && !button.current?.contains(event.target))
+        setOpen(false)
+    }
+    document.addEventListener('pointerdown', away)
+    return () => document.removeEventListener('pointerdown', away)
+  }, [open])
+  const close = () => {
+    setOpen(false)
+    button.current?.focus()
+  }
+  const label = t('properties.type', { name: entry.key })
+  if (readOnly || entry.type === 'unsupported')
+    return (
+      <span className="property-type-icon" title={label}>
+        <Icon size={15} aria-hidden="true" />
+      </span>
+    )
+  return (
+    <span className="property-type-wrap">
+      <button
+        ref={button}
+        type="button"
+        className="property-type-icon"
+        aria-label={label}
+        title={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Icon size={15} aria-hidden="true" />
+      </button>
+      {open && (
+        <div
+          ref={menu}
+          className="property-menu"
+          role="menu"
+          aria-label={label}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') close()
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+              event.preventDefault()
+              const items = [...menu.current.querySelectorAll('button')]
+              const at = items.indexOf(document.activeElement)
+              const step = event.key === 'ArrowDown' ? 1 : -1
+              items[(at + step + items.length) % items.length]?.focus()
+            }
+          }}
+        >
+          {TYPES.map((type) => {
+            const TypeIcon = ICONS[type]
+            return (
+              <button
+                key={type}
+                type="button"
+                role="menuitemradio"
+                aria-checked={entry.type === type}
+                onClick={() => {
+                  close()
+                  onType(type)
+                }}
+              >
+                <TypeIcon size={14} aria-hidden="true" />
+                {t(`properties.type.${type}`)}
+              </button>
+            )
+          })}
+          <hr />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              close()
+              onRemove()
+            }}
+          >
+            <Trash2 size={14} aria-hidden="true" />
+            {t('properties.remove', { name: entry.key })}
+          </button>
+        </div>
+      )}
+    </span>
+  )
+}
+
+function Value({ entry, readOnly, setValue, setProblem }) {
+  const { key, type, value } = entry
   const [draft, setDraft] = useState(null)
   const [item, setItem] = useState('')
-  const { key, type, value } = entry
-  const editable = type !== 'unsupported'
+  const label = t('properties.valueOf', { name: key })
+  if (type === 'unsupported')
+    return <span className="property-note">{t('properties.unsupported')}</span>
+  if (type === 'boolean')
+    return (
+      <input
+        type="checkbox"
+        className="property-check"
+        aria-label={label}
+        checked={Boolean(value)}
+        disabled={readOnly}
+        onChange={(event) => setValue(event.target.checked)}
+      />
+    )
+  if (type === 'list')
+    return (
+      <div className="property-list">
+        <ul aria-label={label}>
+          {value.map((part, index) => (
+            <li key={`${part}-${index}`} className="property-chip">
+              <span>{String(part)}</span>
+              {!readOnly && (
+                <button
+                  type="button"
+                  aria-label={t('properties.itemRemove', { item: String(part) })}
+                  onClick={() => setValue(value.filter((_, at) => at !== index))}
+                >
+                  <X size={12} aria-hidden="true" />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+        {!readOnly && (
+          <input
+            className="property-value"
+            aria-label={t('properties.itemAdd', { name: key })}
+            placeholder={value.length ? '' : t('properties.emptyValue')}
+            value={item}
+            onChange={(event) => setItem(event.target.value)}
+            onKeyDown={(event) => {
+              if ((event.key === 'Enter' || event.key === ',') && item.trim()) {
+                event.preventDefault()
+                setValue([...value, item.trim()])
+                setItem('')
+              } else if (event.key === 'Backspace' && !item && value.length)
+                setValue(value.slice(0, -1))
+            }}
+          />
+        )}
+      </div>
+    )
+  const shown =
+    draft ??
+    (type === 'number'
+      ? String(value).replace('.', currentLanguage() === 'en' ? '.' : ',')
+      : (value ?? ''))
+  return (
+    <input
+      className="property-value"
+      type={type === 'date' ? 'date' : 'text'}
+      inputMode={type === 'number' ? 'decimal' : undefined}
+      aria-label={label}
+      placeholder={t('properties.emptyValue')}
+      value={shown}
+      readOnly={readOnly}
+      onChange={(event) => {
+        const text = event.target.value
+        if (type === 'number') {
+          setDraft(text)
+          const number = parseNumber(text)
+          if (number === null) return setProblem(t('properties.invalidNumber'))
+          setProblem('')
+          return setValue(number)
+        }
+        if (type === 'date') {
+          if (!ISO.test(text)) return setProblem(t('properties.invalidDate'))
+          setProblem('')
+        }
+        return setValue(text)
+      }}
+      onBlur={() => setDraft(null)}
+    />
+  )
+}
+
+function Row({ entry, body, readOnly, onApply }) {
+  const { key } = entry
+  const [name, setName] = useState(key)
+  const [problem, setProblem] = useState('')
+  const [pending, setPending] = useState(null)
   const references = (target) => propertyReferences(body, target)
 
   function commitName(confirmed = false) {
@@ -59,159 +249,55 @@ function Row({ entry, body, readOnly, onApply }) {
     const result = renameProperty(body, key, next)
     if (result === null) return setProblem(t('properties.nameExists'))
     const count = references(key)
-    if (count && !confirmed) {
-      setPending({ kind: 'rename', count })
-      return undefined
-    }
+    if (count && !confirmed) return setPending({ kind: 'rename', count })
     setPending(null)
     setProblem('')
-    onApply(result)
-    return undefined
+    return onApply(result)
   }
   function setValue(next) {
     const result = writeProperty(body, key, next)
-    if (result !== null) {
-      setProblem('')
-      onApply(result)
-    }
+    if (result === null) return
+    setProblem('')
+    onApply(result)
+  }
+  function remove() {
+    const count = references(key)
+    if (count) setPending({ kind: 'remove', count })
+    else setValue(undefined)
   }
   function changeType(target) {
     const converted = convert(entry, target)
     if (!converted) return setProblem(t('properties.cannotConvert'))
-    setValue(converted.value)
-    return undefined
+    return setValue(converted.value)
   }
-  const shown =
-    draft ??
-    (type === 'number'
-      ? String(value).replace('.', currentLanguage() === 'en' ? '.' : ',')
-      : (value ?? ''))
+  const reset = () => {
+    setName(key)
+    setPending(null)
+    setProblem('')
+  }
   return (
-    <li className="property-row" data-type={type}>
-      <div className="property-head">
-        <input
-          className="property-name"
-          aria-label={t('properties.nameOf', { name: key })}
-          value={name}
-          readOnly={readOnly}
-          onChange={(event) => {
-            setName(event.target.value)
-            setProblem('')
-            setPending(null)
-          }}
-          onBlur={() => !readOnly && name.trim() !== key && commitName()}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') commitName()
-            if (event.key === 'Escape') {
-              setName(key)
-              setPending(null)
-              setProblem('')
-            }
-          }}
-        />
-        {!readOnly && editable && (
-          <select
-            className="property-type"
-            aria-label={t('properties.type', { name: key })}
-            value={TYPES.includes(type) ? type : 'text'}
-            onChange={(event) => changeType(event.target.value)}
-          >
-            {TYPES.map((option) => (
-              <option key={option} value={option}>
-                {t(`properties.type.${option}`)}
-              </option>
-            ))}
-          </select>
-        )}
-        {!readOnly && (
-          <button
-            type="button"
-            className="property-icon"
-            aria-label={t('properties.remove', { name: key })}
-            title={t('properties.remove', { name: key })}
-            onClick={() => {
-              const count = references(key)
-              if (count) setPending({ kind: 'remove', count })
-              else setValue(undefined)
-            }}
-          >
-            <Trash2 size={14} aria-hidden="true" />
-          </button>
-        )}
+    <li className="property-row" data-type={entry.type}>
+      <TypeMenu entry={entry} readOnly={readOnly} onType={changeType} onRemove={remove} />
+      <input
+        className="property-key"
+        aria-label={t('properties.nameOf', { name: key })}
+        value={name}
+        readOnly={readOnly}
+        title={name}
+        onChange={(event) => {
+          setName(event.target.value)
+          setProblem('')
+          setPending(null)
+        }}
+        onBlur={() => !readOnly && name.trim() !== key && !pending && commitName()}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') commitName()
+          if (event.key === 'Escape') reset()
+        }}
+      />
+      <div className="property-cell">
+        <Value entry={entry} readOnly={readOnly} setValue={setValue} setProblem={setProblem} />
       </div>
-      {!editable ? (
-        <p className="property-note">{t('properties.unsupported')}</p>
-      ) : type === 'boolean' ? (
-        <input
-          type="checkbox"
-          className="property-check"
-          aria-label={t('properties.valueOf', { name: key })}
-          checked={Boolean(value)}
-          disabled={readOnly}
-          onChange={(event) => setValue(event.target.checked)}
-        />
-      ) : type === 'list' ? (
-        <div className="property-list">
-          <ul aria-label={t('properties.valueOf', { name: key })}>
-            {value.map((part, index) => (
-              <li key={`${part}-${index}`} className="property-chip">
-                <span>{String(part)}</span>
-                {!readOnly && (
-                  <button
-                    type="button"
-                    aria-label={t('properties.itemRemove', { item: String(part) })}
-                    onClick={() => setValue(value.filter((_, at) => at !== index))}
-                  >
-                    <X size={12} aria-hidden="true" />
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-          {!readOnly && (
-            <input
-              className="property-input"
-              aria-label={t('properties.itemAdd', { name: key })}
-              value={item}
-              onChange={(event) => setItem(event.target.value)}
-              onKeyDown={(event) => {
-                if ((event.key === 'Enter' || event.key === ',') && item.trim()) {
-                  event.preventDefault()
-                  setValue([...value, item.trim()])
-                  setItem('')
-                }
-              }}
-            />
-          )}
-        </div>
-      ) : (
-        <input
-          id={id}
-          className="property-input"
-          type={type === 'date' ? 'date' : 'text'}
-          inputMode={type === 'number' ? 'decimal' : undefined}
-          aria-label={t('properties.valueOf', { name: key })}
-          value={shown}
-          readOnly={readOnly}
-          onChange={(event) => {
-            const text = event.target.value
-            if (type === 'number') {
-              setDraft(text)
-              const number = parseNumber(text)
-              if (number === null) return setProblem(t('properties.invalidNumber'))
-              setProblem('')
-              return setValue(number)
-            }
-            if (type === 'date') {
-              if (!ISO.test(text)) return setProblem(t('properties.invalidDate'))
-              setProblem('')
-              return setValue(text)
-            }
-            return setValue(text)
-          }}
-          onBlur={() => setDraft(null)}
-        />
-      )}
       {problem && (
         <p className="property-problem" role="alert">
           {problem}
@@ -236,13 +322,7 @@ function Row({ entry, body, readOnly, onApply }) {
               ? t('properties.confirmRemove')
               : t('properties.confirmRename')}
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setPending(null)
-              setName(key)
-            }}
-          >
+          <button type="button" onClick={reset}>
             {t('properties.cancel')}
           </button>
         </div>
@@ -251,16 +331,54 @@ function Row({ entry, body, readOnly, onApply }) {
   )
 }
 
+/** The row that names a new property; it starts as text and the type can change afterwards. */
+function NewRow({ names, onCreate, onCancel }) {
+  const [name, setName] = useState('')
+  const [problem, setProblem] = useState('')
+  function create() {
+    const key = name.trim()
+    if (!key) return onCancel()
+    if (names.includes(key)) return setProblem(t('properties.nameExists'))
+    return onCreate(key)
+  }
+  return (
+    <li className="property-row">
+      <span className="property-type-icon">
+        <Text size={15} aria-hidden="true" />
+      </span>
+      <input
+        autoFocus
+        className="property-key"
+        aria-label={t('properties.name')}
+        placeholder={t('properties.name')}
+        value={name}
+        onChange={(event) => {
+          setName(event.target.value)
+          setProblem('')
+        }}
+        onBlur={create}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') create()
+          if (event.key === 'Escape') onCancel()
+        }}
+      />
+      <div className="property-cell" />
+      {problem && (
+        <p className="property-problem" role="alert">
+          {problem}
+        </p>
+      )}
+    </li>
+  )
+}
+
 /**
- * The note's YAML properties as a form. `body` is the whole note; every edit calls `onApply` with
- * the new text, so the file keeps comments, order and the other properties.
+ * The note's YAML properties as a list of rows. `body` is the whole note; every edit calls
+ * `onApply` with the new text, so the file keeps comments, order and the other properties.
  */
 export function PropertiesPanel({ body, readOnly = false, onApply }) {
   const read = useMemo(() => readProperties(body), [body])
   const [adding, setAdding] = useState(false)
-  const [name, setName] = useState('')
-  const [type, setType] = useState('text')
-  const [problem, setProblem] = useState('')
   if (!read.hasBlock) return null
   if (!read.ok)
     return (
@@ -271,86 +389,31 @@ export function PropertiesPanel({ body, readOnly = false, onApply }) {
         })}
       </p>
     )
-  function create() {
-    const key = name.trim()
-    if (!key) return setProblem(t('properties.nameEmpty'))
-    if (read.entries.some((entry) => entry.key === key))
-      return setProblem(t('properties.nameExists'))
-    const result = writeProperty(body, key, defaultValue(type))
-    if (result === null) return undefined
-    onApply(result)
-    setAdding(false)
-    setName('')
-    setType('text')
-    setProblem('')
-    return undefined
-  }
   return (
-    <div className="properties-body">
-      {read.entries.length === 0 && !adding && (
-        <p className="property-note">{t('properties.empty')}</p>
-      )}
+    <>
       <ul className="property-rows">
         {read.entries.map((entry) => (
-          <Row
-            key={`${entry.key}:${entry.type}`}
-            entry={entry}
-            body={body}
-            readOnly={readOnly}
-            onApply={onApply}
-          />
+          <Row key={entry.key} entry={entry} body={body} readOnly={readOnly} onApply={onApply} />
         ))}
-      </ul>
-      {!readOnly &&
-        (adding ? (
-          <form
-            className="property-new"
-            onSubmit={(event) => {
-              event.preventDefault()
-              create()
+        {adding && (
+          <NewRow
+            names={read.entries.map((entry) => entry.key)}
+            onCancel={() => setAdding(false)}
+            onCreate={(key) => {
+              setAdding(false)
+              const result = writeProperty(body, key, '')
+              if (result !== null) onApply(result)
             }}
-          >
-            <input
-              autoFocus
-              className="property-input"
-              aria-label={t('properties.name')}
-              placeholder={t('properties.name')}
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value)
-                setProblem('')
-              }}
-              onKeyDown={(event) => event.key === 'Escape' && setAdding(false)}
-            />
-            <select
-              className="property-type"
-              aria-label={t('properties.newType')}
-              value={type}
-              onChange={(event) => setType(event.target.value)}
-            >
-              {TYPES.map((option) => (
-                <option key={option} value={option}>
-                  {t(`properties.type.${option}`)}
-                </option>
-              ))}
-            </select>
-            <button type="submit">{t('properties.create')}</button>
-            <button type="button" onClick={() => setAdding(false)}>
-              {t('properties.cancel')}
-            </button>
-            {problem && (
-              <p className="property-problem" role="alert">
-                {problem}
-              </p>
-            )}
-          </form>
-        ) : (
-          <button type="button" className="property-add" onClick={() => setAdding(true)}>
-            <Plus size={14} aria-hidden="true" />
-            {t('properties.add')}
-          </button>
-        ))}
-    </div>
+          />
+        )}
+      </ul>
+      {!readOnly && !adding && (
+        <button type="button" className="property-add" onClick={() => setAdding(true)}>
+          <Plus size={15} aria-hidden="true" />
+          {t('properties.add')}
+        </button>
+      )}
+    </>
   )
 }
 
@@ -359,42 +422,26 @@ export const propertyCount = (body) => {
   return read.ok ? read.entries.length : 0
 }
 
-/** Room needed beside the text for the side panel: its width plus a gap on each side. */
-const SIDE_ROOM = 280
-
 /**
- * Places the properties where there is room: in the free margin to the right of the text on a wide
- * window, or as a collapsible section above the note otherwise. Nothing shows without a YAML block.
+ * The properties above the note, aligned with the text, like Obsidian: a "Properties" heading
+ * that collapses the rows. Nothing shows without a YAML block.
  */
-export function PropertiesDock({ body, textWidth, readOnly, onApply }) {
-  const ref = useRef(null)
-  const [width, setWidth] = useState(0)
-  useEffect(() => {
-    const element = ref.current
-    if (!element || typeof ResizeObserver === 'undefined') return undefined
-    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width))
-    observer.observe(element)
-    setWidth(element.getBoundingClientRect().width)
-    return () => observer.disconnect()
-  }, [])
-  const read = useMemo(() => readProperties(body), [body])
-  const side = typeof textWidth === 'number' && (width - textWidth) / 2 >= SIDE_ROOM
+export function PropertiesDock({ body, readOnly, onApply }) {
+  const [open, setOpen] = useState(true)
+  const hasBlock = useMemo(() => readProperties(body).hasBlock, [body])
+  if (!hasBlock) return null
   return (
-    <div ref={ref} className="properties-dock" data-side={side ? '' : undefined}>
-      {read.hasBlock &&
-        (side ? (
-          <aside className="properties-side" aria-label={t('properties.title')}>
-            <h2>{t('properties.title')}</h2>
-            <PropertiesPanel body={body} readOnly={readOnly} onApply={onApply} />
-          </aside>
-        ) : (
-          <details className="properties-inline">
-            <summary>
-              {t('properties.toggleInline', { count: read.ok ? read.entries.length : 0 })}
-            </summary>
-            <PropertiesPanel body={body} readOnly={readOnly} onApply={onApply} />
-          </details>
-        ))}
-    </div>
+    <section className="properties" aria-label={t('properties.title')}>
+      <button
+        type="button"
+        className="properties-heading"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <ChevronRight size={14} aria-hidden="true" />
+        {t('properties.title')}
+      </button>
+      {open && <PropertiesPanel body={body} readOnly={readOnly} onApply={onApply} />}
+    </section>
   )
 }

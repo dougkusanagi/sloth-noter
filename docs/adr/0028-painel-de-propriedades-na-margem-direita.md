@@ -1,6 +1,6 @@
 # 0028 — Painel de propriedades na margem direita
 
-- Estado: aceito
+- Estado: substituído por 0030
 - Data: 2026-11-17
 
 ## Contexto

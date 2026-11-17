@@ -18,7 +18,6 @@ Um bloco de notas com Markdown para escrever, organizar ideias e fechar a janela
 - **Tabelas:** arraste a divisão entre colunas para redistribuir sua largura. A tabela sempre preenche o documento e as linhas têm altura automática. As tabelas funcionam como planilha: um clique seleciona, arrastar ou Shift seleciona várias células, e clique duplo, F2 ou digitar edita. As barras externas identificam colunas por letras e linhas por números. Copie e cole blocos de células de e para Excel ou Google Sheets. Arraste o quadradinho no canto inferior direito da seleção para copiar células nas linhas ou colunas vizinhas; fórmulas copiadas dentro do app ajustam suas referências relativas, preservando as partes fixadas com `$`. Células que começam com `=` são fórmulas (`=SOMA(B2:B5)`, `=SE(A2>0;"sim";"não")`); o arquivo guarda a fórmula. Ao digitar `=`, escolha uma função na lista; a primeira linha da tabela é a linha 1 nas referências. Clique com o botão direito numa célula para escolher cores. Ao editar, Shift+Enter quebra a linha e continua listas e tarefas (`- [ ]`). No menu da tabela, exporte os textos como CSV (UTF-8, ponto e vírgula) ou XLSX; as células XLSX são texto, sem fórmulas nem formatação.
 - **Sumário:** no editor padrão, abra o botão à esquerda para navegar pelos títulos e recolher subtítulos. Em linhas vazias, use **+** para inserir um bloco.
 - **Duas notas:** use o menu de uma aba ou arraste-a para o editor para consultá-la ao lado. A nota lateral abre em leitura; clique no nome para editá-la.
-- **Blocos recolhíveis:** notas com `<details>`, `<summary>Título</summary>` e `</details>` em linhas próprias podem ser recolhidas no editor e na leitura, inclusive com colunas. O título deve ser texto simples, sem tags nem atributos HTML; o modo Código preserva o arquivo original.
 - **Colunas:** digite `/` e escolha Colunas; use + para acrescentar colunas e arraste uma seleção com o mouse ou use recortar e colar para mover texto. A edição mostra Markdown; na leitura ele aparece formatado. Remover o layout mantém o conteúdo. As notas usam comentários HTML para delimitar as colunas e permanecem legíveis em sequência em outros leitores Markdown.
 - **Imagens junto das ideias:** cole ou arraste arquivos, reutilize imagens da biblioteca e encontre as notas que as utilizam.
 - **Um espaço para se concentrar:** modo de foco, temas claro e escuro, fonte, tamanho do texto e largura do documento ajustáveis. Interface em português do Brasil ou inglês.
@@ -121,8 +120,7 @@ senha, que não sai do aparelho. Ao criar a conta, o app mostra uma chave de rec
 só ela permite criar uma senha nova (**Entrar › Esqueci a senha**) sem perder as notas do servidor.
 A sessão fica no cofre de senhas do sistema; a versão web não sincroniza.
 
-**Perfis (até 5):** em **Configurações › Perfis**, crie e renomeie perfis com notas e conta de sincronização próprias
-([ADR 0023](docs/adr/0023-perfis-e-espacos-de-sincronizacao.md)). Trocar de perfil reinicia o app.
+**Conta única:** a conta de sincronização é o perfil. Basta criar a conta ou entrar em **Configurações › Conta e sincronização** ([ADR 0031](docs/adr/0031-conta-unica-sem-perfis.md)).
 
 **Administração:** `node server/admin.js` (sem painel web; usa o login do `wrangler`):
 `convite` cria um código e já o grava no servidor (cada código cria uma conta), `convites` e

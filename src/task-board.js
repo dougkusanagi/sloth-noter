@@ -126,6 +126,50 @@ export function moveCardToLane(body, mark, laneTitle) {
   return placed ? finish(placed, body.endsWith('\n')) : body
 }
 
+const allCards = (body) => parseBoard(body).lanes.flatMap((lane) => lane.cards)
+
+/**
+ * Drops a card, as on a kanban: sets its column (`status`) and places its block right before the
+ * card `before`, or at the end of `laneTitle` when `before` is null. With `laneTitle` undefined
+ * and no `before`, the card stays where it is in the text.
+ */
+export function dropCard(body, mark, { status, laneTitle, before = null } = {}) {
+  const card = allCards(body).find((item) => item.mark === mark)
+  if (!card) return body
+  const next = status && columnOf(card.status) !== status ? applyStatus(body, mark, status) : body
+  // A status change only rewrites the card's own line, so line numbers stay valid.
+  const moved = allCards(next).find((item) => item.line === card.line)
+  if (before === null || before === undefined) {
+    if (laneTitle === undefined) return next
+    const lane = parseBoard(next).lanes.find((item) =>
+      item.cards.some((entry) => entry.line === moved.line),
+    )
+    if (lane?.title === laneTitle && lane.cards.at(-1).line === moved.line) return next
+    return moveCardToLane(next, moved.mark, laneTitle)
+  }
+  const target = allCards(next).find((item) => item.mark === before)
+  if (!target || target.line === moved.line) return next
+  const lines = next.split('\n')
+  const block = trimBlank(lines.slice(moved.line, moved.last + 1))
+  const out = []
+  lines.forEach((line, index) => {
+    if (index === target.line) out.push(...block)
+    if (index < moved.line || index > moved.last) out.push(line)
+  })
+  return finish(out, next.endsWith('\n'))
+}
+
+/** Rewrites the text of a card's first line, keeping its marker, box and subtasks. */
+export function setCardText(body, mark, text) {
+  const card = allCards(body).find((item) => item.mark === mark)
+  const clean = text.replace(/\s+/g, ' ').trim()
+  if (!card || !clean) return body
+  const lines = body.split('\n')
+  const prefix = /^\s*(?:[-*+]|\d+[.)])\s+\[.\]/.exec(lines[card.line])[0]
+  lines[card.line] = `${prefix} ${clean}`
+  return lines.join('\n')
+}
+
 /** Adds a task with `status` to the end of a lane (or of the note, before the archive). */
 export function addBoardTask(body, laneTitle, status, text) {
   const clean = text.replace(/\s+/g, ' ').trim()

@@ -7,7 +7,6 @@ mod errors;
 mod history;
 mod images;
 mod migration;
-mod profiles;
 mod secrets;
 #[cfg(target_os = "android")]
 mod share;
@@ -277,57 +276,12 @@ struct PersistenceInfo {
     app_version: String,
 }
 
-struct ActiveProfile(String);
-
-#[tauri::command]
-fn active_profile(app: AppHandle) -> String {
-    app.state::<ActiveProfile>().0.clone()
-}
-
-/// Saves the catalog and restarts, because each process keeps one fixed data directory.
-#[tauri::command]
-fn profile_switch(app: AppHandle, catalog: profiles::Catalog) -> Result<(), String> {
-    profiles::save(
-        &app.path().app_data_dir().map_err(|e| e.to_string())?,
-        &catalog,
-    )?;
-    // Under `desktop:dev`, `app.restart()` makes `tauri dev` stop and take the frontend
-    // server with it, so the new window cannot load. The script asks for a restart file
-    // instead and starts `tauri dev` again with the same server.
-    if let Some(path) = std::env::var_os("SLOTH_DEV_RESTART_FILE") {
-        if cfg!(debug_assertions) {
-            std::fs::write(path, b"profile").map_err(|e| e.to_string())?;
-            app.exit(0);
-            return Ok(());
-        }
-    }
-    #[cfg(desktop)]
-    app.restart();
-    #[cfg(not(desktop))]
-    app.exit(0);
-    #[allow(unreachable_code)]
-    Ok(())
-}
-
 fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let root = app
         .path()
         .app_data_dir()
         .map_err(|error| error.to_string())?;
-    profiles::data_dir(&root, &app.state::<ActiveProfile>().0)
-}
-
-#[tauri::command]
-fn profiles_load(app: AppHandle) -> Result<profiles::Catalog, String> {
-    profiles::load(&app.path().app_data_dir().map_err(|e| e.to_string())?)
-}
-
-#[tauri::command]
-fn profiles_save(app: AppHandle, catalog: profiles::Catalog) -> Result<(), String> {
-    profiles::save(
-        &app.path().app_data_dir().map_err(|e| e.to_string())?,
-        &catalog,
-    )
+    Ok(root)
 }
 
 async fn history_job<T: Send + 'static>(
@@ -699,12 +653,8 @@ pub fn run() {
             #[cfg(desktop)]
             app.handle()
                 .plugin(tauri_plugin_updater::Builder::new().build())?;
-            let root = app.path().app_data_dir()?;
-            let catalog = profiles::load(&root).map_err(std::io::Error::other)?;
-            let selected =
-                profiles::data_dir(&root, &catalog.active).map_err(std::io::Error::other)?;
+            let selected = app.path().app_data_dir()?;
             std::fs::create_dir_all(&selected)?;
-            app.manage(ActiveProfile(catalog.active));
             let _ = history::maintain(&selected.join("history"));
             migration::recover(&selected.join("migration.json")).map_err(std::io::Error::other)?;
             Ok(())
@@ -731,10 +681,6 @@ pub fn run() {
             history_list,
             history_object,
             history_clear,
-            active_profile,
-            profiles_load,
-            profiles_save,
-            profile_switch,
             read_state,
             write_state,
             persistence_info,

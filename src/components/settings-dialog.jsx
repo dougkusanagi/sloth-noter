@@ -11,13 +11,11 @@ import {
   Info,
   NotebookPen,
   RefreshCw,
-  UsersRound,
   X,
 } from 'lucide-react'
 import { AboutPanel } from './about-panel.jsx'
 import { HistoryPanel } from './history-panel.jsx'
 import { SyncPanel } from './sync-panel.jsx'
-import { ProfilesPanel } from './profiles-panel.jsx'
 import { Modal, ShortcutList } from './dialogs.jsx'
 import { FontSlider, RangeSlider, Segmented, Switch } from './controls.jsx'
 import { CONTENT_WIDTH, FONT_SIZE, contentWidth } from '../storage.js'
@@ -33,7 +31,6 @@ const SECTIONS = [
   ['appearance', Palette],
   ['editor', Type],
   ['data', Database],
-  ['profiles', UsersRound],
   ['sync', RefreshCw],
   ['history', History],
   ['shortcuts', Keyboard],
@@ -106,7 +103,7 @@ export function SettingsDialog({
       </header>
       <div className="settings-body">
         <nav className="settings-nav" aria-label={t('menu.settings')}>
-          {SECTIONS.filter(([id]) => desktop || id !== 'profiles').map(([id, Icon]) => (
+          {SECTIONS.map(([id, Icon]) => (
             <button
               key={id}
               autoFocus={id === section}
@@ -276,9 +273,6 @@ export function SettingsDialog({
             ) : (
               <p className="setting-empty">{t('history.desktopOnly')}</p>
             ))}
-          {section === 'profiles' && (
-            <ProfilesPanel invoke={sync.invoke} profileId={sync.profileId} />
-          )}
           {section === 'sync' && <SyncPanel sync={sync} />}
           {section === 'shortcuts' && <ShortcutList />}
           {section === 'about' && <AboutPanel />}

@@ -43,13 +43,20 @@ const bodies = (page) =>
     STORAGE_KEY,
   )
 
-test('a new note is created from a template in the mobile sheet', async ({ page }) => {
-  await page.getByRole('button', { name: 'Nova nota a partir de modelo…', exact: true }).tap()
-  const sheet = page.getByRole('dialog', { name: 'Modelos de nota' })
-  await expect(sheet.getByRole('button')).toHaveCount(7)
-  await page.screenshot({ path: test.info().outputPath('templates-sheet.png') })
-  await sheet.getByRole('button', { name: /Reunião/ }).tap()
-  await expect(sheet).toBeHidden()
+test('a new mobile note offers the templates and fills the note with the chosen one', async ({
+  page,
+}) => {
+  await expect(page.getByRole('button', { name: 'Nova nota a partir de modelo…' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Nova nota', exact: true }).tap()
+  const starters = page.getByRole('group', { name: 'Modelos para começar a nota' })
+  await expect(starters.getByRole('button')).toHaveCount(3)
+  await expect(starters.locator('button svg')).toHaveCount(3)
+  const box = await starters.boundingBox()
+  expect(box.x).toBeGreaterThanOrEqual(0)
+  expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize().width)
+  await page.screenshot({ path: test.info().outputPath('starters.png') })
+  await starters.getByRole('button', { name: /Reunião/ }).tap()
+  await expect(starters).toBeHidden()
   await expect
     .poll(async () =>
       (await bodies(page)).some((body) => /^# Reunião \d{4}-\d{2}-\d{2}/.test(body)),
@@ -68,7 +75,7 @@ test('Inserir adds a template to the open note without a second title', async ({
   await expect(sheet).toBeHidden()
   await expect
     .poll(async () => (await bodies(page)).find((body) => body.startsWith('# Doc')))
-    .toContain('## Três prioridades')
+    .toContain('## Prioridades')
   const doc = (await bodies(page)).find((body) => body.startsWith('# Doc'))
   expect(doc.match(/^# /gm)).toHaveLength(1)
 })

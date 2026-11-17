@@ -6,7 +6,8 @@ import { DocumentOutline } from './components/document-outline.jsx'
 import { ShortcutButton } from './components/shortcut-button.jsx'
 import { openExternalLink } from './external-links.js'
 import { TemplatePicker } from './components/template-picker.jsx'
-import { templateInsertEdit } from './templates.js'
+import { renderTemplate, templateInsertEdit, templateList } from './templates.js'
+import { TemplateStarters } from './components/template-starters.jsx'
 import { titleLineNumber } from './frontmatter.js'
 import { hideFrontmatter } from './editor/hide-frontmatter.js'
 import { toast } from 'sonner'
@@ -171,6 +172,7 @@ export function VisualEditor({
   notes = [],
   body,
   onChange,
+  onTemplateMode,
   onReady,
   onSelectionChange,
   onStatisticsSelection,
@@ -186,6 +188,7 @@ export function VisualEditor({
   sourceMode = false,
   outline = true,
   hideProperties = false,
+  starters = false,
 }) {
   const modeCompartment = useRef(new Compartment())
   const visualExtensionsRef = useRef(null)
@@ -210,6 +213,9 @@ export function VisualEditor({
   const blockSearch = useRef(null)
   const [imagePanel, setImagePanel] = useState(null)
   const [templatePanel, setTemplatePanel] = useState(null)
+  const [startersAt, setStartersAt] = useState(null)
+  const startersRef = useRef(starters)
+  startersRef.current = starters
   const blockMenuRef = useRef(false)
   blockMenuRef.current = blockMenu || Boolean(imagePanel)
   const [linkEditing, setLinkEditing] = useState(false)
@@ -303,7 +309,81 @@ export function VisualEditor({
     turnBlocksInto(view, selectedBlocks(view), kind)
   }
 
+  // On a note with only its title, the templates are offered below the "/" tip.
+  function positionStarters(view) {
+    view.requestMeasure({
+      key: 'template-starters',
+      read: () => {
+        const doc = view.state.doc
+        if (
+          !startersRef.current ||
+          sourceModeRef.current ||
+          view.state.readOnly ||
+          !emptyNoteBody(view.state)
+        )
+          return null
+        const titleLine = titleLineNumber(doc)
+        const title = view.coordsAtPos(doc.line(titleLine).from)
+        const last = view.coordsAtPos(doc.line(Math.min(doc.lines, titleLine + 1)).from)
+        if (!title || !last || title.top < 0 || title.top > window.innerHeight) return null
+        const content = view.contentDOM.getBoundingClientRect()
+        const lastBlock = view.lineBlockAt(doc.line(Math.min(doc.lines, titleLine + 1)).from)
+        return {
+          x: title.left,
+          y: last.top + lastBlock.height + 72,
+          width: Math.max(0, content.right - title.left),
+        }
+      },
+      write: (position) =>
+        setStartersAt((old) =>
+          old?.x === position?.x && old?.y === position?.y && old?.width === position?.width
+            ? old
+            : position,
+        ),
+    })
+  }
+
+  // Fills the empty note with a template. An untitled note takes the template's own title (selected
+  // when it asks for one); a titled note keeps its title, as when a template is inserted.
+  function startFromTemplate(id) {
+    const view = viewRef.current
+    const language = currentLanguage()
+    const template = templateList(language).find((item) => item.id === id)
+    if (!view || !template) return
+    const doc = view.state.doc
+    const titleLine = doc.line(titleLineNumber(doc))
+    if (titleLine.text.replace(/^#\s*/, '').trim()) {
+      const edit = templateInsertEdit(doc.toString(), doc.length, doc.length, id, language)
+      if (!edit) return
+      view.dispatch({
+        changes: { from: edit.from, to: edit.to, insert: edit.insert },
+        selection: EditorSelection.single(edit.selectionFrom, edit.selectionTo),
+        userEvent: 'bloco',
+        scrollIntoView: true,
+      })
+    } else {
+      const { text, cursor } = renderTemplate(template.body, { language })
+      const named = template.body.split('\n')[0].includes('{{title}}')
+      const end = text.indexOf('\n')
+      view.dispatch({
+        changes: { from: titleLine.from, to: doc.length, insert: text },
+        selection: named
+          ? EditorSelection.single(
+              titleLine.from + 2,
+              titleLine.from + (end < 0 ? text.length : end),
+            )
+          : EditorSelection.single(titleLine.from + cursor),
+        userEvent: 'bloco',
+        scrollIntoView: true,
+      })
+    }
+    setStartersAt(null)
+    view.focus()
+    if (template.mode) onTemplateMode?.(template.mode)
+  }
+
   function positionInsert(view) {
+    positionStarters(view)
     if (sourceModeRef.current || blockMenuRef.current) return
     view.requestMeasure({
       key: 'insert-trigger',
@@ -985,6 +1065,7 @@ export function VisualEditor({
     const openInsert = () => openInsertMenu(view)
     view.dom.addEventListener(OPEN_INSERT_EVENT, openInsert)
     foldArchive(view)
+    positionStarters(view)
     callbacks.current.onReady(view)
     return () => {
       view.dom.removeEventListener('pointerup', capturePointerSelection)
@@ -1487,9 +1568,15 @@ export function VisualEditor({
           )}
         </>
       )}
+      {startersAt && (
+        <TemplateStarters
+          templates={templateList(currentLanguage())}
+          position={startersAt}
+          onPick={startFromTemplate}
+        />
+      )}
       {templatePanel && (
         <TemplatePicker
-          insert
           language={currentLanguage()}
           onClose={() => {
             setTemplatePanel(null)
@@ -1515,6 +1602,8 @@ export function VisualEditor({
               scrollIntoView: true,
             })
             view.focus()
+            const mode = templateList(currentLanguage()).find((item) => item.id === id)?.mode
+            if (mode) onTemplateMode?.(mode)
           }}
         />
       )}

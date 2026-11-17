@@ -1,6 +1,5 @@
 import { StateEffect, StateField } from '@codemirror/state'
 import { Decoration, EditorView, WidgetType } from '@codemirror/view'
-import { detailsBlocks } from '../details.js'
 import { headingSections } from '../sections.js'
 import { t } from '../i18n.js'
 import { isArchiveTitle } from '../tasks.js'
@@ -17,21 +16,19 @@ export const unfoldSection = StateEffect.define({
 })
 
 export class FoldToggleWidget extends WidgetType {
-  constructor(line, folded, level, foldable = true, block = false) {
+  constructor(line, folded, level, foldable = true) {
     super()
     this.line = line
     this.folded = folded
     this.level = level
     this.foldable = foldable
-    this.block = block
   }
   eq(other) {
     return (
       this.line === other.line &&
       this.folded === other.folded &&
       this.level === other.level &&
-      this.foldable === other.foldable &&
-      this.block === other.block
+      this.foldable === other.foldable
     )
   }
   toDOM(view) {
@@ -44,19 +41,8 @@ export class FoldToggleWidget extends WidgetType {
     }
     const button = document.createElement('button')
     button.type = 'button'
-    button.className = `cm-fold-toggle${this.block ? ' cm-details-toggle' : ''}${this.folded ? ' folded' : ''}`
-    button.setAttribute(
-      'aria-label',
-      t(
-        this.block
-          ? this.folded
-            ? 'details.expand'
-            : 'details.collapse'
-          : this.folded
-            ? 'fold.expand'
-            : 'fold.collapse',
-      ),
-    )
+    button.className = `cm-fold-toggle${this.folded ? ' folded' : ''}`
+    button.setAttribute('aria-label', t(this.folded ? 'fold.expand' : 'fold.collapse'))
     button.setAttribute('aria-expanded', String(!this.folded))
     button.dataset.level = String(this.level)
     button.innerHTML = chevron
@@ -79,7 +65,7 @@ export function foldRange(state, heading) {
 }
 
 export function foldableHeadings(state) {
-  return [...headingSections(state.doc.toString()), ...detailsBlocks(state.doc.toString())].filter(
+  return headingSections(state.doc.toString()).filter(
     (heading) => heading.level > 0 && foldRange(state, heading),
   )
 }
@@ -102,7 +88,7 @@ export const foldField = StateField.define({
     if (transaction.docChanged && folds.size) {
       // Keep a fold only while its heading line is still a heading.
       const anchors = new Set(
-        [...headingSections(state.doc.toString()), ...detailsBlocks(state.doc.toString())]
+        headingSections(state.doc.toString())
           .filter((heading) => heading.level > 0)
           .map((heading) => state.doc.line(heading.titleEnd).to),
       )

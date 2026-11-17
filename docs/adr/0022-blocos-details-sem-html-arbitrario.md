@@ -1,6 +1,6 @@
 # 0022 — Blocos recolhíveis sem HTML arbitrário
 
-Status: Aceito
+Status: Substituído por 0029
 
 ## Contexto
 

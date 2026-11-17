@@ -14,7 +14,6 @@ import { resolveImage } from '../images.js'
 import { currentLanguage, t } from '../i18n.js'
 import { Decoration, EditorView, ViewPlugin, WidgetType } from '@codemirror/view'
 import { classifyLine, inlineSyntax } from '../live-markdown.js'
-import { detailsBlocks } from '../details.js'
 import { headingSections } from '../sections.js'
 import { FoldToggleWidget, foldField, foldRange, isFolded } from './folding.js'
 import { codeTokens, syntaxRanges } from '../syntax-highlight.js'
@@ -355,13 +354,6 @@ export function decorationsFor(view) {
     const range = heading.level > 0 && foldRange(view.state, heading)
     if (range) foldable.set(heading.line, isFolded(view.state, range.from))
   }
-  const details = detailsBlocks(text)
-  const detailLines = new Map()
-  for (const block of details) {
-    detailLines.set(block.line, block)
-    detailLines.set(block.titleEnd, block)
-    detailLines.set(block.end, block)
-  }
   const collapsed = new Set([...foldable].filter(([, folded]) => folded).map(([line]) => line))
   const tasks = new Map(
     resolvedTasks(text, view.state.facet(taskNotes)).map((task) => [task.line, task]),
@@ -478,7 +470,9 @@ export function decorationsFor(view) {
     const first = doc.lineAt(visible.from).number,
       last = doc.lineAt(visible.to).number
     for (let number = first; number <= last; number++) {
-      const line = { ...doc.line(number), definitions: definitionText },
+      const source = doc.line(number)
+      // `length` is a getter of CodeMirror's Line: the spread does not copy it.
+      const line = { ...source, length: source.length, definitions: definitionText },
         shape = blockShapes.get(number) ?? classifyLine(line.text, false)
       if (number < titleLine) {
         // The YAML block (properties) is shown as plain text, never as Markdown.
@@ -517,24 +511,6 @@ export function decorationsFor(view) {
       const table = shape.kind === 'table' ? tableAt(doc, number) : null
       if (table) {
         tableDecorations(ranges, view, line, number, table)
-        continue
-      }
-      const detail = detailLines.get(number)
-      if (detail) {
-        ranges.push(Decoration.line({ attributes: { class: 'cm-md-paragraph' } }).range(line.from))
-        if (number === detail.titleEnd) {
-          const folded = isFolded(view.state, doc.line(detail.titleEnd).to)
-          ranges.push(
-            Decoration.widget({
-              widget: new FoldToggleWidget(detail.line, folded, 0, true, true),
-              side: -2,
-            }).range(line.from),
-          )
-          ranges.push(
-            Decoration.replace({}).range(line.from, line.from + line.text.indexOf('>') + 1),
-          )
-          ranges.push(Decoration.replace({}).range(line.to - '</summary>'.length, line.to))
-        } else if (line.length) ranges.push(Decoration.replace({}).range(line.from, line.to))
         continue
       }
       const active = editing.has(number)

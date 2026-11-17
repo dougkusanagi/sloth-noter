@@ -282,7 +282,7 @@ Cores, fontes e raios vêm dos tokens de `src/styles.css` (`--bg`, `--paper`, `-
 
 **Código:** preservar o texto; alinhar colunas só por ação explícita (`markdown-table.js`).
 
-### 5.5 Colunas e blocos recolhíveis
+### 5.5 Colunas
 
 - **Leitura em largura compacta:** colunas viram uma pilha vertical, na ordem do Markdown, com um
   separador e o rótulo "Coluna 1 de 2". Em média e expandida, lado a lado como no desktop. O
@@ -290,8 +290,6 @@ Cores, fontes e raios vêm dos tokens de `src/styles.css` (`--bg`, `--paper`, `-
 - **Edição:** inserir pelo Inserir; adicionar e remover coluna pela barra contextual da coluna,
   sem apagar o conteúdo. Arrastar entre colunas (desktop) tem equivalente por toque: "Mover para
   a coluna…" na seleção, com desfazer.
-- **Blocos recolhíveis:** o título abre e fecha com um toque (alvo de 48 dp); editar o título e
-  o conteúdo como no desktop.
 - Testar 320 dp, fonte 2×, colunas com tabela ou imagem dentro.
 
 ### 5.6 Barra de formatação
@@ -303,7 +301,7 @@ Altura mínima de 52 dp sobre o teclado. Cinco ações no grupo é um teto, não
 ```
 
 1. **＋ Inserir:** folha com cartões e miniatura do resultado: Título, Lista, Tarefa, Tabela,
-   Código, Citação, Imagem, Câmera, Link para nota, Divisor, Data de hoje, Bloco recolhível,
+   Código, Citação, Imagem, Câmera, Link para nota, Divisor, Data de hoje,
    Colunas. Insere na linha do cursor. Usa as mesmas ações do menu `/` (`insert-block.js`).
 2. **Grupo do contexto** (até 5 ícones lucide):
 

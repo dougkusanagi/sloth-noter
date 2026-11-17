@@ -23,7 +23,6 @@ test.beforeEach(async ({ page }) => {
         transformCallback: () => 1,
         invoke: async (command, args) => {
           if (command === 'plugin:event|listen') return 1
-          if (command === 'active_profile') return 'primary'
           if (command === 'plugin:event|unlisten') return null
           if (
             ['minimize', 'toggle_maximize', 'close'].some(

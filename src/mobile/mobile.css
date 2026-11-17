@@ -933,12 +933,6 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
 [data-platform='mobile'] .mobile-outline .outline-link {
   min-height: 44px;
 }
-[data-platform='mobile'] .mobile-sheet > button.mobile-profile {
-  overflow-wrap: anywhere;
-}
-[data-platform='mobile'] .mobile-sheet > button.mobile-profile > svg {
-  color: var(--accent);
-}
 
 /* Board view on the phone: one column at a time, picked by tabs. */
 [data-platform='mobile'] .board-tabs {

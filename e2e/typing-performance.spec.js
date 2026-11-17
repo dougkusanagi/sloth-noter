@@ -45,7 +45,7 @@ for (const historyEnabled of [false, true]) {
     }, document)
     await page.goto('/')
     const editor = page.getByRole('textbox', { name: 'Editor Markdown visual' })
-    await editor.click()
+    await editor.locator('.cm-line').first().click()
     await page.keyboard.press('Control+End')
     await page.evaluate(() => {
       window.keyDelays = []

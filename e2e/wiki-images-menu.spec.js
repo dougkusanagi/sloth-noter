@@ -208,7 +208,7 @@ test('title marker cannot be selected and clearing the title keeps the last vali
 async function openImagePanel(page) {
   await source(page, '# Imagens\n\n')
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
-  await page.locator('.cm-content').click()
+  await page.locator('.cm-content .cm-line').first().click()
   await page.keyboard.press('Control+End')
   await page.keyboard.type('/')
   await page.getByRole('button', { name: 'Imagem', exact: true }).click()

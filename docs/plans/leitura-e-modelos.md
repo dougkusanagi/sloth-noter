@@ -132,9 +132,8 @@ de tamanho e peso.
 
 ### 2.1 Como a pessoa usa
 
-- **Nova nota a partir de modelo**: botão de nova nota com opção "A partir de modelo…", item na
-  paleta de comandos e no menu principal. Abre um seletor com busca, lista à esquerda e prévia
-  renderizada (`.markdown`) à direita; no celular, uma folha com a lista e a prévia ao tocar.
+- **Começar uma nota com um modelo**: numa nota que só tem o título, botões com ícone abaixo dele
+  ("Começar com"), no computador e no celular. O item "Nova nota a partir de modelo…" foi removido.
 - **Inserir modelo na nota atual**: item "Modelo…" no menu `/` (`src/insert-block.js`).
 - O cursor vai para o lugar marcado no modelo (`{{cursor}}`), ou para o título.
 
@@ -144,9 +143,8 @@ Traduzidos pelo `i18n.js`, recriáveis como a `Welcome.md` ("Recriar modelos pad
 
 - **Tarefas / projeto** (o pedido): título; linha "Criado em {{date}}"; Objetivo; Critério de
   pronto; Tarefas com os status do ADR 0004 (`[ ]`, `[/]`, `[>]`, `[x]`, `[-]`) e prazos;
-  Esperando/bloqueios; Decisões; Registro datado; Links. Um bloco recolhível (ADR 0007)
-  "Como usar este modelo" explica os status, como escrever uma tarefa boa (verbo no início, um
-  resultado verificável, prazo, responsável) e pode ser apagado.
+  Esperando/bloqueios; Decisões; Registro datado; Links. (Refeitos em 2026-11-17: sem bloco
+  de instruções nem tarefas de exemplo; ver ADR 0029.)
 - **Reunião**: data e hora, participantes, pauta, anotações, decisões, próximos passos com
   responsável e prazo.
 - **Diário**: data por extenso, três prioridades, anotações, pendências para amanhã.

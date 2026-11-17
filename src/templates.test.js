@@ -45,9 +45,12 @@ test('every built-in template has a title line, a unique id and the same set in 
   }
 })
 
-test('the task template uses every task status', () => {
-  const body = templateList('pt-BR').find((item) => item.id === 'tasks').body
-  for (const mark of ['[ ]', '[/]', '[>]', '[x]', '[-]']) assert.ok(body.includes(`- ${mark} `))
+test('built-in templates have no sample content, HTML or instruction blocks', () => {
+  for (const item of [...templateList('pt-BR'), ...templateList('en')]) {
+    assert.doesNotMatch(item.body, /<[a-z/]/i)
+    assert.doesNotMatch(item.body, /- \[[/>x-]\]/)
+    assert.doesNotMatch(item.body, /\n\n\n/)
+  }
 })
 
 test('renderTemplate supports date offsets and the weekday', () => {
@@ -60,12 +63,13 @@ test('renderTemplate supports date offsets and the weekday', () => {
 test('templateInsertEdit drops the title line, separates blocks and places the cursor', () => {
   const text = '# Site\n\nTexto'
   const edit = templateInsertEdit(text, text.length, text.length, 'daily', 'pt-BR', now)
-  assert.ok(edit.insert.startsWith('\n\n## Três prioridades'))
+  assert.ok(edit.insert.startsWith('\n\n## Prioridades'))
   assert.ok(!edit.insert.includes('# Diário'))
   assert.equal(edit.selectionFrom, text.length + edit.insert.indexOf('- [ ] ') + 6)
   assert.equal(templateInsertEdit(text, 0, 0, 'nope'), null)
-  const tasks = templateInsertEdit(text, 6, 6, 'tasks', 'pt-BR', now)
-  assert.ok(tasks.insert.includes('Criado em 16/11/2026'))
+  const board = templateInsertEdit(text, 6, 6, 'board', 'pt-BR', now)
+  assert.ok(!board.insert.includes('Quadro criado em'))
+  assert.ok(board.insert.startsWith('\n\n## Planejamento'))
 })
 
 test('renderTemplate fills the profile name and leaves it empty without one', () => {
@@ -97,5 +101,13 @@ test('notes marked as templates come first, skip external notes and keep their t
   assert.equal(
     templateList('pt-BR').some((item) => item.own),
     false,
+  )
+})
+
+test('only the board template asks for Board mode', () => {
+  const modes = templateList('pt-BR').filter((item) => item.mode)
+  assert.deepEqual(
+    modes.map((item) => [item.id, item.mode]),
+    [['board', 'board']],
   )
 })

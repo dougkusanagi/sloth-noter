@@ -1,6 +1,6 @@
 # 0007. Blocos recolhíveis no Markdown
 
-- Status: Aceito
+- Status: Substituído por 0029
 - Data: 2026-11-03
 
 ## Contexto

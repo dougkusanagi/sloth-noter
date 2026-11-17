@@ -36,8 +36,8 @@ function imageAdapter(invoke) {
  * Sync controller. status: unavailable | off | syncing | idle | error.
  * Secrets stay in the platform vault; the sync state is saved with the document.
  */
-export function useSync({ current, commit, invoke, blocked, profileId = 'primary' }) {
-  const vault = useRef(platformVault(globalThis, profileId))
+export function useSync({ current, commit, invoke, blocked }) {
+  const vault = useRef(platformVault(globalThis))
   const secrets = useRef(null)
   const running = useRef(false)
   const [status, setStatus] = useState({ state: 'checking' })
@@ -136,7 +136,6 @@ export function useSync({ current, commit, invoke, blocked, profileId = 'primary
       live.current.timer = setTimeout(() => void run(), AFTER_EDIT)
     }, [run]),
     invoke,
-    profileId,
     /** Account calls (ADR 0024). Each returns a session; nothing is saved yet. */
     signUp,
     signIn,

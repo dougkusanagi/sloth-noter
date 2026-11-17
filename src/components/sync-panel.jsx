@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { t } from '../i18n.js'
 import { DEFAULT_SERVER, MIN_PASSWORD } from '../sync/account.js'
 import { Segmented } from './controls.jsx'
@@ -22,6 +23,23 @@ function formatTime(at) {
   return new Intl.DateTimeFormat(document.documentElement.lang || undefined, {
     timeStyle: 'short',
   }).format(at)
+}
+
+/** A password field with a button that shows or hides what was typed. */
+function PasswordInput({ shown, onToggle, ...props }) {
+  return (
+    <span className="password-input">
+      <input {...props} type={shown ? 'text' : 'password'} />
+      <button
+        type="button"
+        aria-label={t(shown ? 'sync.hidePassword' : 'sync.showPassword')}
+        aria-pressed={shown}
+        onClick={onToggle}
+      >
+        {shown ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+      </button>
+    </span>
+  )
 }
 
 /** Settings → Account and sync: account, status, first sync preview and sign out. */
@@ -124,6 +142,8 @@ function AccountForm({ sync, server: initialServer = DEFAULT_SERVER }) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [invite, setInvite] = useState('')
   const [recovery, setRecovery] = useState('')
   const [busy, setBusy] = useState(false)
@@ -211,9 +231,13 @@ function AccountForm({ sync, server: initialServer = DEFAULT_SERVER }) {
       </div>
     )
 
+  // A new password is typed twice, so a typo does not lock the person out.
+  const confirming = mode !== 'signin'
+  const mismatch = confirming && confirm !== '' && confirm !== password
   const ready =
     email.trim() &&
     password &&
+    (!confirming || confirm === password) &&
     (mode !== 'signup' || (name.trim() && invite.trim())) &&
     (mode !== 'recover' || recovery.trim())
   const switchMode = (next) => {
@@ -246,6 +270,7 @@ function AccountForm({ sync, server: initialServer = DEFAULT_SERVER }) {
             throw failure
           }
           setPassword('')
+          setConfirm('')
           setPrepared({ session, preview })
           setStep(mode === 'signup' ? 'recovery' : 'preview')
         } catch (failure) {
@@ -320,9 +345,10 @@ function AccountForm({ sync, server: initialServer = DEFAULT_SERVER }) {
       {field(
         'password',
         t(mode === 'recover' ? 'sync.newPassword' : 'sync.password'),
-        <input
+        <PasswordInput
           id={`${id}-password`}
-          type="password"
+          shown={showPassword}
+          onToggle={() => setShowPassword((value) => !value)}
           required
           minLength={mode === 'signin' ? undefined : MIN_PASSWORD}
           autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
@@ -331,6 +357,27 @@ function AccountForm({ sync, server: initialServer = DEFAULT_SERVER }) {
           onChange={(event) => setPassword(event.target.value)}
         />,
         mode === 'signin' ? null : t('sync.passwordHint', { count: MIN_PASSWORD }),
+      )}
+      {confirming &&
+        field(
+          'confirm',
+          t('sync.confirmPassword'),
+          <PasswordInput
+            id={`${id}-confirm`}
+            shown={showPassword}
+            onToggle={() => setShowPassword((value) => !value)}
+            required
+            autoComplete="new-password"
+            aria-invalid={mismatch || undefined}
+            aria-describedby={mismatch ? `${id}-confirm-error` : undefined}
+            value={confirm}
+            onChange={(event) => setConfirm(event.target.value)}
+          />,
+        )}
+      {mismatch && (
+        <p className="sync-error" id={`${id}-confirm-error`}>
+          {t('sync.passwordMismatch')}
+        </p>
       )}
       {mode === 'signup' &&
         field(

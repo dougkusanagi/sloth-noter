@@ -11,7 +11,7 @@ import { clipboardImageFiles, readNativeClipboard } from './clipboard.js'
 import { createMiddleClickPasteGuard } from './middle-click-paste.js'
 import { createPasteIntentGuard } from './paste-intent.js'
 import { listenNativeImageDrops, routeNativeImageDrop } from './native-image-drop.js'
-import { ensureTitle, titlePosition, titleNavigationTarget } from './title.js'
+import { ensureTitle, startsProperties, titlePosition, titleNavigationTarget } from './title.js'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { createRoot } from 'react-dom/client'
@@ -84,8 +84,8 @@ import { t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
 import { welcomeNote } from './welcome.js'
 import { frontmatterEnd, titleEnd as noteTitleEnd } from './frontmatter.js'
-import { renderTemplate, setOwnTemplates, setTemplateProfile, templateList } from './templates.js'
-import { TemplatePicker } from './components/template-picker.jsx'
+import { setOwnTemplates, setTemplateProfile } from './templates.js'
+import { SyncStatusButton } from './components/sync-status-button.jsx'
 import { PropertiesDock } from './components/properties-panel.jsx'
 import { foldAll, foldArchive, unfoldAll } from './editor/folding.js'
 import { continueBlock } from './continue-block.js'
@@ -122,9 +122,7 @@ import {
   CheckCircle2,
   Minimize2,
   X,
-  UserRound,
 } from 'lucide-react'
-import { useActiveProfile } from './hooks/use-profile.js'
 import { platform } from './platform.js'
 import { MobileShell } from './mobile/mobile-shell.jsx'
 import '@fontsource-variable/noto-serif/wght.css'
@@ -212,7 +210,6 @@ function Workspace({ persistence, loaded }) {
     commit,
     invoke: persistence.invoke,
     blocked,
-    profileId: persistence.profileId,
   })
   const { scheduleAfterEdit } = sync
   useEffect(() => {
@@ -229,10 +226,8 @@ function Workspace({ persistence, loaded }) {
   const [imagesLoading, setImagesLoading] = useState(false)
   const [selectedImage, setSelectedImage] = useState(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const [templatesOpen, setTemplatesOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const activeProfile = useActiveProfile(persistence.invoke, persistence.profileId)
-  setTemplateProfile(activeProfile?.name)
+  setTemplateProfile(sync.status.account?.name || sync.status.account?.email)
   const [commandsOpen, setCommandsOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
   const [imageBusy, setImageBusy] = useState(false)
@@ -690,8 +685,10 @@ function Workspace({ persistence, loaded }) {
     const field = event.target
     const raw = field.value
     const normalized = ensureTitle(raw)
-    const from = titlePosition(raw, normalized, field.selectionStart)
-    const to = titlePosition(raw, normalized, field.selectionEnd)
+    // A `---` title opens a YAML block: the cursor goes to its empty line.
+    const opened = startsProperties(raw) && !frontmatterEnd(raw)
+    const from = opened ? 4 : titlePosition(raw, normalized, field.selectionStart)
+    const to = opened ? 4 : titlePosition(raw, normalized, field.selectionEnd)
     updateBody(normalized)
     updateSelectionStatistics(normalized.slice(from, to))
     if (raw !== normalized) requestAnimationFrame(() => field.setSelectionRange(from, to))
@@ -2125,7 +2122,6 @@ function Workspace({ persistence, loaded }) {
     ),
     focus: () => active && toggleFocusMode(),
     newNote: () => runMenu(() => createNote(), false),
-    newFromTemplate: () => runMenu(() => setTemplatesOpen(true), false),
     insertProperties: () =>
       active &&
       runMenu(() => {
@@ -2697,7 +2693,6 @@ function Workspace({ persistence, loaded }) {
               {active && !releaseDoc && (mode === 'visual' || mode === 'reading') && (
                 <PropertiesDock
                   body={active.body}
-                  textWidth={prefs.documentWidth === 'full' ? null : contentWidth(prefs)}
                   readOnly={mode === 'reading'}
                   onApply={(body) => updateBody(body)}
                 />
@@ -2813,6 +2808,7 @@ function Workspace({ persistence, loaded }) {
                   ) : (
                     <VisualEditor
                       hideProperties
+                      starters
                       wrapLines={prefs.wrapLines !== false}
                       wrapPage={pageWrap}
                       notes={data.notes}
@@ -2829,6 +2825,7 @@ function Workspace({ persistence, loaded }) {
                       readOnly={mode === 'reading'}
                       body={active.body}
                       onChange={updateBody}
+                      onTemplateMode={changeMode}
                       onSelectionChange={captureSearchSelection}
                       onStatisticsSelection={updateSelectionStatistics}
                       onReady={(view) => {
@@ -2891,20 +2888,13 @@ function Workspace({ persistence, loaded }) {
             )}
           </div>
           <footer className="document-info">
-            {activeProfile && (
-              <button
-                className="status-profile"
-                aria-label={t('profiles.inUseLabel', { name: activeProfile.name })}
-                title={t('profiles.inUse', { name: activeProfile.name })}
-                onClick={() => {
-                  setSettingsSection('profiles')
-                  setSettingsOpen(true)
-                }}
-              >
-                <UserRound size={13} aria-hidden="true" />
-                <span>{activeProfile.name}</span>
-              </button>
-            )}
+            <SyncStatusButton
+              status={sync.status}
+              onOpen={() => {
+                setSettingsSection('sync')
+                setSettingsOpen(true)
+              }}
+            />
             <span
               className="save-status"
               role="status"
@@ -2983,30 +2973,6 @@ function Workspace({ persistence, loaded }) {
           </footer>
         </section>
       </div>
-      {templatesOpen && (
-        <TemplatePicker
-          language={prefs.language}
-          onClose={() => {
-            setTemplatesOpen(false)
-            menuButton.current?.focus()
-          }}
-          onPick={(id) => {
-            const template = templateList(prefs.language).find((item) => item.id === id)
-            setTemplatesOpen(false)
-            if (!template) return
-            const { text, cursor } = renderTemplate(template.body, { language: prefs.language })
-            // A template named by the person starts with its title selected; the others, at the marker.
-            const titleEnd = text.indexOf('\n')
-            const named = template.body.split('\n')[0].includes('{{title}}')
-            createNote(
-              undefined,
-              text,
-              undefined,
-              named ? { from: 2, to: titleEnd } : { from: cursor, to: cursor },
-            )
-          }}
-        />
-      )}
       {shortcutsOpen && (
         <ShortcutsDialog
           onClose={() => {

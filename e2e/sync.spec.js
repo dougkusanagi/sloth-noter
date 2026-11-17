@@ -55,6 +55,16 @@ test('without a vault the web build explains why sync is off', async ({ page }) 
   await expect(dialog.getByText(/só está disponível no app para desktop e Android/)).toBeVisible()
 })
 
+test('the status bar sync button opens Account and sync when not connected', async ({ page }) => {
+  await page.goto('/')
+  await page
+    .locator('.document-info')
+    .getByRole('button', { name: /Sincronização desligada/ })
+    .click()
+  const dialog = page.getByRole('dialog', { name: 'Configurações' })
+  await expect(dialog.getByText(/só está disponível no app para desktop e Android/)).toBeVisible()
+})
+
 // Real server code in memory: accounts, sessions and one data store per account.
 async function accountServer() {
   const directory = memoryDirectory()
@@ -94,11 +104,18 @@ test('first device creates an account and a second device signs in with e-mail a
   await dialog.getByLabel('Nome').fill('Ana')
   await dialog.getByLabel('E-mail').fill('Ana@Example.com')
   await dialog.getByLabel('Senha', { exact: true }).fill('curta')
+  await dialog.getByLabel('Confirme a senha').fill('curto')
+  await expect(dialog.getByText('As senhas não são iguais.', { exact: false })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Criar conta' })).toBeDisabled()
+  await dialog.getByLabel('Confirme a senha').fill('curta')
+  await dialog.getByRole('button', { name: 'Mostrar senha' }).first().click()
+  await expect(dialog.getByLabel('Senha', { exact: true })).toHaveAttribute('type', 'text')
   await dialog.getByLabel('Código de convite').fill('wrong-code')
   const create = dialog.getByRole('button', { name: 'Criar conta' })
   await create.click()
   await expect(dialog.getByRole('alert')).toContainText('pelo menos 8 caracteres')
   await dialog.getByLabel('Senha', { exact: true }).fill(PASSWORD)
+  await dialog.getByLabel('Confirme a senha').fill(PASSWORD)
   await create.click()
   await expect(dialog.getByRole('alert')).toContainText('código de convite não vale')
   await dialog.getByLabel('Código de convite').fill(INVITE.toLowerCase())
@@ -158,7 +175,10 @@ test('first device creates an account and a second device signs in with e-mail a
   await expect(library.getByRole('button', { name: /^Welcome/ })).toBeVisible()
 
   // The first device receives the phone's note with "Sincronizar agora".
-  await desktop.getByRole('button', { name: 'Sincronizar agora' }).click()
+  await desktop
+    .getByRole('dialog', { name: 'Configurações' })
+    .getByRole('button', { name: 'Sincronizar agora' })
+    .click()
   await expect(desktop.getByRole('status')).toContainText('Sincronizado às')
   await desktop.keyboard.press('Escape')
   await expect(
@@ -180,6 +200,7 @@ test('first device creates an account and a second device signs in with e-mail a
   await dialog.getByLabel('E-mail').fill('ana@example.com')
   await dialog.getByLabel('Chave de recuperação').fill(recovery)
   await dialog.getByLabel('Senha nova').fill('outra senha 2')
+  await dialog.getByLabel('Confirme a senha').fill('outra senha 2')
   await dialog.getByRole('button', { name: 'Trocar a senha e entrar' }).click()
   await expect(dialog.getByText('Nenhuma nota é apagada nesta etapa.')).toBeVisible()
   await dialog.getByRole('button', { name: 'Sincronizar', exact: true }).click()
@@ -205,6 +226,7 @@ test('an old access-key connection moves to an account', async ({ browser }) => 
   await dialog.getByLabel('Nome').fill('Ana')
   await dialog.getByLabel('E-mail').fill('ana@example.com')
   await dialog.getByLabel('Senha', { exact: true }).fill(PASSWORD)
+  await dialog.getByLabel('Confirme a senha').fill(PASSWORD)
   await dialog.getByLabel('Código de convite').fill(INVITE)
   await dialog.getByRole('button', { name: 'Criar conta' }).click()
   await dialog.getByRole('button', { name: 'Continuar' }).click()

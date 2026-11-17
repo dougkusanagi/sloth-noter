@@ -29,7 +29,7 @@ test('typed text survives a reload', async ({ page }) => {
 test('a new note is named after its first H1', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu principal' }).click()
   await page.getByRole('menuitem', { name: 'Nova nota', exact: true }).click()
-  await editor(page).click()
+  await editor(page).locator('.cm-line').first().click()
   await page.keyboard.press('Control+a')
   await page.keyboard.type('Diário')
   await expect(page.getByRole('button', { name: 'Diário.md', exact: true })).toBeVisible()

@@ -1,6 +1,14 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { addBoardTask, columnOf, moveCardToLane, parseBoard, setCardStatus } from './task-board.js'
+import {
+  addBoardTask,
+  columnOf,
+  dropCard,
+  moveCardToLane,
+  parseBoard,
+  setCardStatus,
+  setCardText,
+} from './task-board.js'
 
 const BODY = [
   '# Projeto',
@@ -83,4 +91,40 @@ test('addBoardTask puts the task at the end of the lane with the column status',
   assert.equal(flat, '# T\n\n- [ ] a\n- [/] b\n')
   const withArchive = addBoardTask('# T\n\n## Arquivo\n\n- [x] a\n', '', 'todo', 'n')
   assert.ok(withArchive.indexOf('- [ ] n') < withArchive.indexOf('## Arquivo'))
+})
+
+const card = (body, text) =>
+  parseBoard(body)
+    .lanes.flatMap((lane) => lane.cards)
+    .find((item) => item.text === text)
+
+test('dropCard places the whole block right before the target card', () => {
+  const next = dropCard(BODY, card(BODY, 'Fila').mark, { before: card(BODY, 'API').mark })
+  assert.match(
+    next,
+    /## Backend\n\n- \[-\] Fila\n- \[x\] API\n- \[\/\] Cache\n {4}- \[ \] Redis\n {4}nota\n/,
+  )
+})
+
+test('dropCard moves a card with its subtasks before a card of another lane and sets the column', () => {
+  const next = dropCard(BODY, card(BODY, 'Cache').mark, {
+    status: 'waiting',
+    before: card(BODY, 'Tela').mark,
+  })
+  assert.match(next, /## Frontend\n\n- \[>\] Cache\n {4}- \[ \] Redis\n {4}nota\n- \[ \] Tela/)
+  assert.ok(!/## Backend[^#]*Cache/.test(next))
+})
+
+test('dropCard at the end of a lane, and unknown cards, are handled', () => {
+  const next = dropCard(BODY, card(BODY, 'API').mark, { laneTitle: 'Backend' })
+  assert.match(next, /- \[-\] Fila\n- \[x\] API\n/)
+  assert.equal(dropCard(BODY, 999999, { laneTitle: 'Backend' }), BODY)
+  const same = dropCard(BODY, card(BODY, 'Fila').mark, { laneTitle: 'Backend' })
+  assert.equal(same, BODY)
+})
+
+test('setCardText keeps the marker, the box and the subtasks', () => {
+  const next = setCardText(BODY, card(BODY, 'Cache').mark, '  Cache   Redis ')
+  assert.ok(next.includes('- [/] Cache Redis\n    - [ ] Redis\n'))
+  assert.equal(setCardText(BODY, card(BODY, 'Cache').mark, '   '), BODY)
 })
