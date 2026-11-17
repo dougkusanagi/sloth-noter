@@ -135,7 +135,13 @@ for (const width of [390, 1280]) {
     await first.hover({ position: { x: 10, y: 10 } })
     const fold = page.getByRole('button', { name: 'Recolher código' })
     await expect(fold).toHaveCSS('opacity', '1')
+    const before = await fold.boundingBox()
     await fold.click()
+    const expand = page.getByRole('button', { name: 'Expandir código' })
+    await expect(expand).toHaveCSS('opacity', '1')
+    await expect
+      .poll(async () => Math.abs((await expand.boundingBox()).y - before.y))
+      .toBeLessThan(2)
     const collapsed = page.locator('.cm-code-collapsed')
     await expect(collapsed).toHaveCount(1)
     await expect(collapsed).toHaveCSS('white-space', 'pre')
@@ -151,5 +157,26 @@ for (const width of [390, 1280]) {
     await first.hover({ position: { x: 10, y: 10 } })
     await page.getByRole('button', { name: 'Expandir código' }).click()
     await expect(page.locator('.cm-line', { hasText: 'segunda linha' })).toHaveCount(1)
+  })
+}
+
+for (const mode of ['Padrão', 'Leitura']) {
+  test(`wrap button shows its active state in ${mode}`, async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    await page.locator('textarea').fill('# Nota\n\n```js\nlinha de código\noutra linha\n```')
+    await page.getByRole('radio', { name: mode, exact: true }).check({ force: true })
+    const block = page.locator('.cm-line', { hasText: 'linha de código' }).first()
+    await block.hover()
+    const button = page.getByRole('button', { name: /Quebrar linhas/i }).last()
+    await expect(button).toHaveAttribute('aria-pressed', 'true')
+    const activeColor = await button.evaluate((element) => getComputedStyle(element).color)
+    await button.click()
+    await expect(button).toHaveAttribute('aria-pressed', 'false')
+    await expect
+      .poll(() => button.evaluate((element) => getComputedStyle(element).color))
+      .not.toBe(activeColor)
+    await button.click()
+    await expect(button).toHaveAttribute('aria-pressed', 'true')
   })
 }

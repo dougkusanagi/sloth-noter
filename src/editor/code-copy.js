@@ -38,6 +38,11 @@ export const codeFold = StateField.define({
         )
           return
         if (node.position.end.line <= node.position.start.line + 1) return
+        ranges.push(
+          Decoration.line({ class: 'cm-code-collapsed-start' }).range(
+            state.doc.line(node.position.start.line).from,
+          ),
+        )
         const first = state.doc.line(node.position.start.line + 1)
         const last = state.doc.line(node.position.end.line)
         ranges.push(Decoration.line({ class: 'cm-code-collapsed' }).range(first.from))
@@ -168,6 +173,7 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
         this.inlineButton.hidden = true
       }
       this.hoverBlock = (event) => {
+        this.pointer = { x: event.clientX, y: event.clientY }
         for (const block of this.blocks) {
           const bounds = block.bounds
           const active =
@@ -181,6 +187,7 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
         }
       }
       this.leaveBlock = () => {
+        this.pointer = null
         for (const block of this.blocks) {
           block.wrap.classList.remove('is-code-hovered')
           block.fold.classList.remove('is-code-hovered')
@@ -311,9 +318,11 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
             top: start,
             bottom: end,
           },
-          top: Math.min(Math.max(start + 12, top), end - 38),
+          top: view.state.field(codeFold).includes(from)
+            ? Math.max(start + 12, top)
+            : Math.max(start, Math.min(Math.max(start + 12, top), end - 38)),
           right: window.innerWidth - Math.min(content.right, scroller.right) + 10,
-          visible: !folded && end > top + 26 && start + 38 < bottom,
+          visible: !folded && end > top && start < bottom,
           button,
           wrap,
           fold,
@@ -346,6 +355,14 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
         scrollVisible,
       } of positions) {
         block.bounds = bounds
+        const hovered =
+          this.pointer &&
+          this.pointer.x >= bounds.left &&
+          this.pointer.x <= bounds.right &&
+          this.pointer.y >= bounds.top &&
+          this.pointer.y <= bounds.bottom
+        wrap.classList.toggle('is-code-hovered', !!hovered)
+        fold.classList.toggle('is-code-hovered', !!hovered)
         button.hidden = !visible
         button.style.top = `${top}px`
         button.style.right = `${right}px`

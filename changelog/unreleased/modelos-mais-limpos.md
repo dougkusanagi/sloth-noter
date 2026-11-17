@@ -1,3 +1,0 @@
-Alterado: Os modelos de nota foram refeitos e reduzidos a três: Quadro, Reunião e Diário. Os modelos Tarefas e projeto, Decisão e Estudo e resumo foram removidos, porque repetiam a mesma estrutura. Cada modelo tem o título, uma linha com a data e poucas seções. Eles não trazem mais tarefas de exemplo nem o bloco "Como usar este modelo". Ao inserir um modelo numa nota aberta, o título e o subtítulo da nota são mantidos. Os seus próprios modelos não mudam.
-
-Alterado: O modelo Quadro abre a nota direto no modo Quadro, com as etapas Planejamento, Execução e Revisão como linhas do quadro. Use o **+** de cada coluna para criar tarefas. No celular, o Quadro aparece ao sair da edição. O modo Quadro também mostra as seções de uma nota que ainda não tem tarefas.

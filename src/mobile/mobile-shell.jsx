@@ -1290,51 +1290,92 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         )}
         {route.name === 'settings' && (
           <section className="mobile-settings" aria-label={t('menu.settings')}>
-            <label htmlFor="mobile-language">{t('settings.language')}</label>
-            <select
-              id="mobile-language"
-              value={prefs.language}
-              onChange={(event) => updatePrefs({ language: event.target.value })}
-            >
-              {Object.entries(LANGUAGES).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <label htmlFor="mobile-font-size">
-              {t('settings.fontSize')}: {prefs.fontSize}px
-            </label>
-            <input
-              id="mobile-font-size"
-              type="range"
-              min={FONT_SIZE.min}
-              max={FONT_SIZE.max}
-              value={prefs.fontSize}
-              onChange={(event) => updatePrefs({ fontSize: Number(event.target.value) })}
-            />
-            <DocumentWidthPresets prefs={prefs} onChange={updatePrefs} />
-            <div className="mobile-setting-switch">
-              <label htmlFor="mobile-wrap-lines">
-                {t('settings.wrapLines')}
-                <small>{t('settings.wrapLinesHint')}</small>
-              </label>
-              <input
-                id="mobile-wrap-lines"
-                type="checkbox"
-                role="switch"
-                className="switch"
-                checked={prefs.wrapLines !== false}
-                onChange={(event) => updatePrefs({ wrapLines: event.target.checked })}
-              />
+            <h2>{t('settings.appearance')}</h2>
+            <div className="settings-card">
+              <div className="settings-row stacked">
+                <label htmlFor="mobile-language">{t('settings.language')}</label>
+                <select
+                  id="mobile-language"
+                  value={prefs.language}
+                  onChange={(event) => updatePrefs({ language: event.target.value })}
+                >
+                  {Object.entries(LANGUAGES).map(([id, label]) => (
+                    <option key={id} value={id}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="settings-row stacked">
+                <div className="settings-row-head">
+                  <label htmlFor="mobile-font-size">{t('settings.fontSize')}</label>
+                  <output htmlFor="mobile-font-size">{prefs.fontSize}px</output>
+                </div>
+                <input
+                  id="mobile-font-size"
+                  type="range"
+                  min={FONT_SIZE.min}
+                  max={FONT_SIZE.max}
+                  value={prefs.fontSize}
+                  onChange={(event) => updatePrefs({ fontSize: Number(event.target.value) })}
+                />
+              </div>
+              <div className="settings-row stacked">
+                <span className="settings-row-title">{t('settings.contentWidth')}</span>
+                <DocumentWidthPresets prefs={prefs} onChange={updatePrefs} />
+              </div>
             </div>
-            <p>{t('mobile.backupDetails')}</p>
-            <button disabled={Boolean(transferBusy)} onClick={exportBackup}>
-              {t('mobile.backupSave')}
-            </button>
-            <button disabled={Boolean(transferBusy)} onClick={() => backupInput.current?.click()}>
-              {t('mobile.backupRestore')}
-            </button>
+            <h2>{t('settings.editor')}</h2>
+            <div className="settings-card">
+              <div className="settings-row">
+                <label htmlFor="mobile-wrap-lines">
+                  {t('settings.wrapLines')}
+                  <small>{t('settings.wrapLinesHint')}</small>
+                </label>
+                <input
+                  id="mobile-wrap-lines"
+                  type="checkbox"
+                  role="switch"
+                  className="switch"
+                  checked={prefs.wrapLines !== false}
+                  onChange={(event) => updatePrefs({ wrapLines: event.target.checked })}
+                />
+              </div>
+              <div className="settings-row">
+                <label htmlFor="mobile-task-dates">
+                  {t('settings.taskDates')}
+                  <small>{t('settings.taskDatesHint')}</small>
+                </label>
+                <input
+                  id="mobile-task-dates"
+                  type="checkbox"
+                  role="switch"
+                  className="switch"
+                  checked={prefs.taskDates !== false}
+                  onChange={(event) => updatePrefs({ taskDates: event.target.checked })}
+                />
+              </div>
+            </div>
+            <h2>{t('settings.data')}</h2>
+            <p className="settings-note">{t('mobile.backupDetails')}</p>
+            <div className="settings-card">
+              <button
+                className="settings-row settings-action"
+                disabled={Boolean(transferBusy)}
+                onClick={exportBackup}
+              >
+                <FileOutput size={20} aria-hidden="true" />
+                {t('mobile.backupSave')}
+              </button>
+              <button
+                className="settings-row settings-action"
+                disabled={Boolean(transferBusy)}
+                onClick={() => backupInput.current?.click()}
+              >
+                <FileInput size={20} aria-hidden="true" />
+                {t('mobile.backupRestore')}
+              </button>
+            </div>
             <input
               ref={backupInput}
               type="file"
@@ -1342,16 +1383,31 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               hidden
               onChange={(event) => chooseBackup(event.target.files?.[0])}
             />
-            <button onClick={() => dispatch({ type: 'push', route: { name: 'changelog' } })}>
-              {t('settings.changelog')}
-            </button>
-            <button disabled={blocked} onClick={createHelpNote}>
-              {t('menu.welcome')}
-            </button>
             <h2>{t('settings.sync')}</h2>
-            <SyncPanel sync={sync} />
+            <div className="settings-card settings-sync">
+              <SyncPanel sync={sync} />
+            </div>
             <h2>{t('settings.about')}</h2>
-            <AboutPanel />
+            <div className="settings-card">
+              <button
+                className="settings-row settings-action"
+                onClick={() => dispatch({ type: 'push', route: { name: 'changelog' } })}
+              >
+                <NotebookPen size={20} aria-hidden="true" />
+                {t('settings.changelog')}
+              </button>
+              <button
+                className="settings-row settings-action"
+                disabled={blocked}
+                onClick={createHelpNote}
+              >
+                <FileText size={20} aria-hidden="true" />
+                {t('menu.welcome')}
+              </button>
+              <div className="settings-row stacked">
+                <AboutPanel />
+              </div>
+            </div>
           </section>
         )}
         {route.name === 'changelog' && <ChangelogPanel />}

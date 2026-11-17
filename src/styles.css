@@ -819,7 +819,15 @@ textarea:focus-visible {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.visual-editor .cm-code-collapsed {
+.visual-editor .cm-code-collapsed-start {
+  display: none;
+}
+.visual-editor .cm-md-code.cm-code-collapsed {
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  padding-top: 1.7em;
+  padding-bottom: 1.7em;
+  padding-right: 200px;
   white-space: pre;
   overflow: hidden;
   overflow-wrap: normal;
@@ -1300,6 +1308,16 @@ textarea:focus-visible {
   transition:
     box-shadow var(--fast) var(--ease),
     transform var(--fast) var(--ease);
+}
+.copy-code[aria-pressed='true'] {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--paper));
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.copy-code[aria-pressed='true']:hover {
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    var(--lift-hover);
 }
 .copy-code:hover {
   box-shadow:
@@ -3125,4 +3143,10 @@ body.cm-section-dragging * {
   line-height: 0;
   box-shadow: none;
   background: transparent;
+}
+
+@media (max-width: 600px) {
+  .visual-editor .cm-md-code.cm-code-collapsed {
+    padding-right: 125px;
+  }
 }

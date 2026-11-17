@@ -1,1 +1,0 @@
-Corrigido: Digitar `---` no título de uma nota agora abre um bloco de propriedades vazio (com o painel **Propriedades**), em vez de criar um título `---` e mostrar as propriedades como títulos grandes. Notas que já ficaram assim são corrigidas ao abrir, quando as linhas até o próximo `---` são propriedades válidas.

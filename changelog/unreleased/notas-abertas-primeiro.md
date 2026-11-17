@@ -1,1 +1,0 @@
-Alterado: na lista de notas, as notas abertas agora aparecem antes das demais, qualquer que seja a ordenação escolhida. Para desligar, use o menu "Ordenar notas" e desmarque "Notas abertas primeiro". Durante uma busca, a ordem não muda.

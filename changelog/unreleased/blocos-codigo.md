@@ -1,0 +1,1 @@
+Corrigido: Blocos de código recolhidos mantêm o contorno completo, e os controles de recolher e quebra de linha continuam visíveis enquanto o ponteiro está sobre o bloco. O botão de quebra de linha indica quando a opção está ativa.

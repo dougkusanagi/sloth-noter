@@ -1,0 +1,1 @@
+Alterado: no celular, Configurações agora tem seções com título (Aparência, Editor, Dados, Conta e sincronização, Sobre), itens em cartões, valor do tamanho do texto ao lado do título, largura do documento em três botões e a opção "Data ao fechar tarefas".
