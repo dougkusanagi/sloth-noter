@@ -58,3 +58,35 @@ test('o status muda pelo menu do cartão e a escolha é lembrada por nota', asyn
   await page.getByRole('button', { name: 'Ver como nota' }).click()
   await expect(page.locator('.markdown')).toContainText('Fila')
 })
+
+test('a opção Data ao fechar tarefas vale no Quadro e na Leitura do celular', async ({ page }) => {
+  await page.getByRole('button', { name: 'Ver como quadro' }).click()
+  await page.getByRole('button', { name: 'Mover cartão: Fila' }).click()
+  await page.getByRole('menuitemradio', { name: /Feita/ }).click()
+  await page.getByRole('tab', { name: /Feita/ }).click()
+  await expect(page.locator('.board-card', { hasText: 'Fila' })).toContainText(
+    /✅ \d{4}-\d{2}-\d{2}/,
+  )
+
+  await page.getByRole('button', { name: 'Mais opções' }).click()
+  await page.getByRole('button', { name: 'Configurações' }).click()
+  await page.getByRole('switch', { name: /Data ao fechar tarefas/ }).uncheck()
+  await page.getByRole('button', { name: 'Voltar' }).click()
+  await page.getByRole('button', { name: 'Fechar' }).click()
+
+  await page.getByRole('tab', { name: /A fazer/ }).click()
+  await page.getByRole('button', { name: 'Mover cartão: Tela' }).click()
+  await page.getByRole('menuitemradio', { name: /Feita/ }).click()
+  await page.getByRole('tab', { name: /Feita/ }).click()
+  const tela = page.locator('.board-card', { hasText: 'Tela' })
+  await expect(tela).toBeVisible()
+  await expect(tela).not.toContainText('✅')
+
+  await page.getByRole('button', { name: 'Ver como nota' }).click()
+  const saved = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)).notes[0].body,
+    STORAGE_KEY,
+  )
+  expect(saved).toMatch(/- \[x\] Fila ✅ \d{4}-\d{2}-\d{2}/)
+  expect(saved).toContain('- [x] Tela\n')
+})

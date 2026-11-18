@@ -199,7 +199,8 @@ for (const width of [390, 1280]) {
     await document.hover()
     await expect
       .poll(async () => (await release.count()) || (await page.mouse.wheel(0, 800), 0), {
-        timeout: 15000,
+        intervals: [100],
+        timeout: 20000,
       })
       .toBe(1)
     await expect(document).toContainText('Versão 0.4.0')
@@ -280,6 +281,8 @@ for (const width of [390, 1280]) {
     await toolbar.getByRole('button', { name: 'Mais ações', exact: true }).click()
     await expect(toolbar.getByRole('menuitem', { name: /Copiar/ })).toBeVisible()
     await page.screenshot({ path: test.info().outputPath(`toolbar-text-${width}.png`) })
+    await page.keyboard.press('Escape')
+    await expect(toolbar.getByRole('menuitem', { name: /Copiar/ })).toHaveCount(0)
 
     await page.locator('.cm-line', { hasText: '# **aqui**' }).click()
     await page.keyboard.press('End')

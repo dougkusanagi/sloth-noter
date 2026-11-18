@@ -18,6 +18,95 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.cm-content')).toBeVisible()
 })
 
+for (const width of [390, 1280]) {
+  test(`code block spacing stays fixed as the caret moves at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    const fence = '```'
+    await source(
+      page,
+      [
+        '# Nota',
+        '',
+        'Antes do código',
+        fence + 'js',
+        'primeiro()',
+        fence,
+        fence,
+        'segundo()',
+        fence,
+        'Depois do código',
+      ].join('\n'),
+    )
+    await visual(page)
+    const placeCaret = (number) =>
+      page.evaluate(async (lineNumber) => {
+        const { EditorView } = await import('/node_modules/.vite/deps/@codemirror_view.js')
+        const view = EditorView.findFromDOM(document.querySelector('.cm-editor'))
+        view.dispatch({ selection: { anchor: view.state.doc.line(lineNumber).to } })
+        view.focus()
+      }, number)
+    const geometry = () =>
+      page.locator('.cm-md-fence').evaluateAll((lines) => {
+        const [first, firstEnd, second, secondEnd] = lines.map((line) =>
+          line.getBoundingClientRect(),
+        )
+        return [
+          firstEnd.bottom - first.top,
+          secondEnd.bottom - second.top,
+          second.top - firstEnd.bottom,
+        ]
+      })
+    await placeCaret(3)
+    await expect(page.locator('.cm-md-fence.cm-md-editing')).toHaveCount(0)
+    const idle = await geometry()
+    if (process.env.CAPTURE_CODE)
+      await page.screenshot({
+        path: `/tmp/sloth-code-${process.env.CAPTURE_CODE}-${width}-idle.png`,
+      })
+    await placeCaret(7)
+    await expect(page.locator('.cm-md-fence-start').nth(1)).toHaveClass(/cm-md-editing/)
+    const editing = await geometry()
+    if (process.env.CAPTURE_CODE)
+      await page.screenshot({
+        path: `/tmp/sloth-code-${process.env.CAPTURE_CODE}-${width}-editing.png`,
+      })
+    expect(editing).toEqual(idle)
+    expect(idle[2]).toBeGreaterThanOrEqual(20)
+  })
+
+  test(`arrow keys leave a code fence on the adjacent line at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    const fence = '```'
+    await source(
+      page,
+      ['# Nota', '', fence, 'primeiro()', fence, fence, 'segundo()', fence].join('\n'),
+    )
+    await visual(page)
+    await page.evaluate(async () => {
+      const { EditorView } = await import('/node_modules/.vite/deps/@codemirror_view.js')
+      const view = EditorView.findFromDOM(document.querySelector('.cm-editor'))
+      view.dispatch({ selection: { anchor: view.state.doc.line(3).to } })
+      view.focus()
+    })
+    const line = () =>
+      page.evaluate(async () => {
+        const { EditorView } = await import('/node_modules/.vite/deps/@codemirror_view.js')
+        const { doc, selection } = EditorView.findFromDOM(
+          document.querySelector('.cm-editor'),
+        ).state
+        return doc.lineAt(selection.main.head).number
+      })
+    for (const expected of [4, 5, 6, 7]) {
+      await page.keyboard.press('ArrowDown')
+      expect(await line()).toBe(expected)
+    }
+    for (const expected of [6, 5, 4, 3]) {
+      await page.keyboard.press('ArrowUp')
+      expect(await line()).toBe(expected)
+    }
+  })
+}
+
 for (const mode of ['visual', 'source', 'reading']) {
   test(`tab shortcuts cycle and reopen in ${mode} mode`, async ({ page }) => {
     await source(page, '# Alpha\n\nConteúdo')

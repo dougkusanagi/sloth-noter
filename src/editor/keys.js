@@ -55,12 +55,17 @@ export function continueList(view) {
 
 export function navigateToFence(view, direction) {
   if (view.state.selection.ranges.length !== 1 || !view.state.selection.main.empty) return false
-  const line = view.state.doc.lineAt(view.state.selection.main.head)
+  const { head } = view.state.selection.main
+  const line = view.state.doc.lineAt(head)
   const next = line.number + direction
   if (next < 1 || next > view.state.doc.lines) return false
   const target = view.state.doc.line(next)
-  if (!target.text.startsWith('```')) return false
-  view.dispatch({ selection: { anchor: target.from }, scrollIntoView: true })
+  const enteringFence = target.text.startsWith('```')
+  if (!enteringFence && !line.text.startsWith('```')) return false
+  // Fence markers change size and visibility with the selection. Use the
+  // adjacent document line on that boundary instead of relying on its geometry.
+  const column = enteringFence ? 0 : Math.min(head - line.from, target.length)
+  view.dispatch({ selection: { anchor: target.from + column }, scrollIntoView: true })
   return true
 }
 

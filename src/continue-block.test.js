@@ -30,3 +30,16 @@ test('task continuation leaves tilde fences and indented code unchanged', () => 
   const indented = '    - [ ] literal'
   assert.equal(continueBlock(indented, indented.length), null)
 })
+
+test('Enter in a paragraph starts a new paragraph', () => {
+  const end = continueBlock('# Nota\n\nTexto', 13)
+  assert.deepEqual(end, { from: 13, to: 13, insert: '\n\n', cursor: 15 })
+  assert.equal(continueBlock('# Nota\n\nTexto aqui', 14).insert, '\n\n')
+  assert.equal(continueBlock('# Nota\n\nUm\ndois', 15).insert, '\n\n')
+  assert.equal(continueBlock('# Nota\n\n', 8), null)
+  assert.equal(continueBlock('# Nota', 6), null)
+})
+
+test('Enter at the start of a paragraph line keeps the plain line break', () => {
+  assert.equal(continueBlock('# Título\nCorpo', 9), null)
+})

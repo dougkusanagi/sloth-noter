@@ -65,7 +65,7 @@ import {
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { currentLanguage, t } from './i18n.js'
 import { flushSync } from 'react-dom'
-import { Compartment, EditorSelection, EditorState } from '@codemirror/state'
+import { Annotation, Compartment, EditorSelection, EditorState } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, redo } from '@codemirror/commands'
 import { EditorView, keymap, drawSelection } from '@codemirror/view'
 import { activeFormats, formatSelection, selectionInCode } from './format-selection.js'
@@ -171,6 +171,8 @@ function insideCodeBlock(state, line) {
   return inside
 }
 
+const settleScrollAnnotation = Annotation.define()
+
 export function VisualEditor({
   noteId,
   scrollSnapshot,
@@ -254,7 +256,14 @@ export function VisualEditor({
 
   function positionToolbar(view) {
     const selection = view.state.selection.main
-    if (sourceModeRef.current || selection.empty || !view.hasFocus || view.state.readOnly) {
+    const toolbarEl = host.current?.querySelector('.format-toolbar')
+    const toolbarFocused = Boolean(toolbarEl?.contains(document.activeElement))
+    if (
+      sourceModeRef.current ||
+      selection.empty ||
+      (!view.hasFocus && !toolbarFocused) ||
+      view.state.readOnly
+    ) {
       setToolbar(null)
       return
     }
@@ -276,7 +285,8 @@ export function VisualEditor({
       blocks.every((block) => TURN_INTO.includes(block.kind) || block.kind === 'h6')
         ? blocks[0].kind
         : null
-    const margin = Math.min(inCode ? 60 : 150, window.innerWidth / 2)
+    const halfWidth = toolbarEl ? toolbarEl.offsetWidth / 2 + 8 : inCode ? 60 : 184
+    const margin = Math.min(halfWidth, window.innerWidth / 2)
     const x = Math.max(margin, Math.min(window.innerWidth - margin, (start.left + end.right) / 2))
     const y = start.top > 55 ? start.top - 8 : end.bottom + 8
     setToolbar({
@@ -296,6 +306,20 @@ export function VisualEditor({
     if (toolbarKey.current !== key) setToolbarMenu(null)
     toolbarKey.current = key
   }
+
+  useLayoutEffect(() => {
+    if (!toolbar) return
+    const el = host.current?.querySelector('.format-toolbar')
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    if (rect.width > window.innerWidth - 16) return
+    let dx = 0
+    if (rect.left < 8) dx = 8 - rect.left
+    else if (rect.right > window.innerWidth - 8) dx = window.innerWidth - 8 - rect.right
+    if (Math.abs(dx) > 0.5) {
+      setToolbar((current) => (current ? { ...current, x: current.x + dx } : current))
+    }
+  }, [toolbar])
 
   // The blocks the selection touches, for "Turn into".
   function selectedBlocks(view) {
@@ -939,7 +963,86 @@ export function VisualEditor({
     ]
     visualExtensionsRef.current = visualExtensions
     appliedSourceMode.current = sourceModeRef.current
-    const view = new EditorView({
+    let pendingScroll = null
+    let view
+    const scheduleSettleScroll = (token) => {
+      if (!view) return
+      view.requestMeasure({
+        key: 'record-scroll-into-view',
+        read: () => null,
+        write: () => {
+          // CodeMirror applies scrollTarget synchronously after measureRequests finish.
+          // Wait for this measure pass to return before capturing scrollY/scrollTop.
+          queueMicrotask(() => {
+            if (pendingScroll !== token || !view.dom.isConnected) return
+            token.windowY = window.scrollY
+            token.domY = view.scrollDOM.scrollTop
+            requestAnimationFrame(() => {
+              if (
+                pendingScroll !== token ||
+                !view.dom.isConnected ||
+                !view.hasFocus ||
+                view.state.selection.main.head !== token.pos ||
+                Math.abs(window.scrollY - token.windowY) > 2 ||
+                Math.abs(view.scrollDOM.scrollTop - token.domY) > 2
+              ) {
+                if (pendingScroll === token) pendingScroll = null
+                return
+              }
+              view.requestMeasure({
+                key: 'settle-scroll-into-view',
+                read: () => view.coordsAtPos(token.pos),
+                write: (coords) => {
+                  if (pendingScroll !== token) return
+                  if (
+                    Math.abs(window.scrollY - token.windowY) > 2 ||
+                    Math.abs(view.scrollDOM.scrollTop - token.domY) > 2 ||
+                    !view.hasFocus ||
+                    view.state.selection.main.head !== token.pos
+                  ) {
+                    pendingScroll = null
+                    return
+                  }
+                  const safeTop = 56
+                  const safeBottom = window.innerHeight - 40
+                  if (coords && coords.top >= safeTop && coords.bottom <= safeBottom) {
+                    pendingScroll = null
+                    positionInsert(view)
+                    return
+                  }
+                  if (token.remaining <= 0) {
+                    pendingScroll = null
+                    return
+                  }
+                  token.remaining -= 1
+                  queueMicrotask(() => {
+                    if (
+                      pendingScroll !== token ||
+                      !view.dom.isConnected ||
+                      !view.hasFocus ||
+                      view.state.selection.main.head !== token.pos ||
+                      Math.abs(window.scrollY - token.windowY) > 2 ||
+                      Math.abs(view.scrollDOM.scrollTop - token.domY) > 2
+                    ) {
+                      if (pendingScroll === token) pendingScroll = null
+                      return
+                    }
+                    token.windowY = null
+                    token.domY = null
+                    view.dispatch({
+                      effects: EditorView.scrollIntoView(token.pos, { yMargin: 48 }),
+                      annotations: settleScrollAnnotation.of(true),
+                    })
+                    scheduleSettleScroll(token)
+                  })
+                },
+              })
+            })
+          })
+        },
+      })
+    }
+    view = new EditorView({
       state: EditorState.create({
         doc: ensureTitle(body),
         selection: { anchor: 2 },
@@ -994,6 +1097,31 @@ export function VisualEditor({
               )
             )
               callbacks.current.onSelectionChange?.(update.state.selection.main)
+            if (
+              !update.state.readOnly &&
+              !sourceModeRef.current &&
+              update.transactions.some(
+                (transaction) =>
+                  transaction.scrolledIntoView && !transaction.annotation(settleScrollAnnotation),
+              )
+            ) {
+              const token = {
+                pos: update.state.selection.main.head,
+                windowY: null,
+                domY: null,
+                remaining: 8,
+              }
+              pendingScroll = token
+              scheduleSettleScroll(token)
+            } else if (
+              pendingScroll &&
+              (update.selectionSet || update.docChanged) &&
+              !update.transactions.some((transaction) =>
+                transaction.annotation(settleScrollAnnotation),
+              )
+            ) {
+              pendingScroll = null
+            }
             if (
               update.selectionSet ||
               update.docChanged ||
@@ -1057,6 +1185,14 @@ export function VisualEditor({
       view.dispatch({ selection: EditorSelection.single(position) })
     }
     const reposition = () => {
+      if (
+        pendingScroll &&
+        pendingScroll.windowY !== null &&
+        (Math.abs(window.scrollY - pendingScroll.windowY) > 2 ||
+          Math.abs(view.scrollDOM.scrollTop - pendingScroll.domY) > 2)
+      ) {
+        pendingScroll = null
+      }
       positionToolbar(view)
       positionInsert(view)
     }
@@ -1081,6 +1217,7 @@ export function VisualEditor({
     positionStarters(view)
     callbacks.current.onReady(view)
     return () => {
+      pendingScroll = null
       view.dom.removeEventListener('pointerup', capturePointerSelection)
       callbacks.current.onReady(null)
       viewRef.current = null
@@ -1223,6 +1360,14 @@ export function VisualEditor({
           style={{ left: toolbar.x, top: toolbar.y }}
           onMouseDown={(event) => {
             if (!event.target.closest('input')) event.preventDefault()
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && toolbarMenu) {
+              event.preventDefault()
+              event.stopPropagation()
+              setToolbarMenu(null)
+              viewRef.current?.focus()
+            }
           }}
         >
           {linkEditing ? (

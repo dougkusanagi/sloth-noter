@@ -414,6 +414,22 @@ test('an unchanged folder is not read again', async () => {
   assert.equal(await refresh(document), null)
 })
 
+test('a failed save can rescan the same disk state to recover a conflict', async () => {
+  const { host, persistence, document, refresh } = await opened({ 'a.md': 'Original' })
+  const edited = { ...document, notes: [{ ...document.notes[0], body: 'Edição local' }] }
+  host.files.set('a.md', 'Edição no disco')
+  await persistence.sync.scan()
+  assert.match(await persistence.save(edited), /outside Sloth Note/)
+  assert.equal(await refresh(edited), null)
+
+  const files = await persistence.sync.scan({ force: true })
+  const { conflicts } = persistence.sync.merge(edited, files)
+  assert.equal(conflicts.length, 1)
+  const resolved = persistence.sync.resolve(edited, conflicts[0], 'both')
+  assert.equal(await persistence.save(resolved), null)
+  assert.deepEqual([...host.files.values()].sort(), ['Edição local', 'Edição no disco'].sort())
+})
+
 test('outside edits to untouched notes and new files are imported', async () => {
   const { host, refresh, document } = await opened({ 'a.md': 'A' })
   host.files.set('a.md', 'A editada fora')

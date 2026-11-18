@@ -16,7 +16,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { createRoot } from 'react-dom/client'
 import { Toaster, toast } from 'sonner'
-import { createFullBackup, readBackupBundle, restoreBackupImages } from './backup.js'
+import { createBackup, createFullBackup, readBackupBundle, restoreBackupImages } from './backup.js'
 import {
   findNote,
   wikiParts,
@@ -432,7 +432,7 @@ function Workspace({ persistence, loaded }) {
               description: (
                 <ToastButtons
                   items={[
-                    [t('menu.backupDownload'), () => toastActions.current.downloadBackup()],
+                    [t('backup.downloadNotes'), () => toastActions.current.downloadNotesBackup()],
                     [
                       t('window.closeWithoutSaving'),
                       async () => {
@@ -1411,6 +1411,21 @@ function Workspace({ persistence, loaded }) {
       backupBusy.current = false
     }
   }
+  function downloadNotesBackup() {
+    try {
+      download(
+        'sloth-note-backup-notas.json',
+        createBackup(current.current),
+        'application/json;charset=utf-8',
+      )
+      toast.success(t('backup.notesDownloadStarted'), { id: 'backup-download', duration: 10000 })
+    } catch (cause) {
+      toast.error(t('backup.failed', { error: friendlyError(cause) }), {
+        id: 'backup-download',
+        duration: Infinity,
+      })
+    }
+  }
   async function restoreBackup(file) {
     if (!file) return
     setImportError('')
@@ -1766,13 +1781,16 @@ function Workspace({ persistence, loaded }) {
     if (!sync) return
     let stopped = false
     let running = false
+    let forceScan = Boolean(error)
     async function poll() {
       if (running || stopped || switching || document.visibilityState === 'hidden') return
       running = true
       try {
         await writer.current.whenIdle({ flush: false })
-        const files = await sync.scan()
+        if (stopped) return
+        const files = await sync.scan({ force: forceScan })
         if (files === null || stopped) return
+        forceScan = false
         const result = sync.merge(current.current, files)
         if (result.changed) commit(result.document, 'disco')
         setSyncConflicts(result.conflicts)
@@ -1785,6 +1803,7 @@ function Workspace({ persistence, loaded }) {
     }
     const timer = setInterval(poll, 2500)
     window.addEventListener('focus', poll)
+    if (forceScan) void poll()
     return () => {
       stopped = true
       clearInterval(timer)
@@ -1792,7 +1811,7 @@ function Workspace({ persistence, loaded }) {
     }
     // commit only touches refs and state setters, so it is stable enough to skip here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [persistence, switching])
+  }, [persistence, switching, error])
   // Files opened in place can change on disk: follow them, and ask when both sides changed.
   useEffect(() => {
     const externals = persistence.externals
@@ -1882,7 +1901,7 @@ function Workspace({ persistence, loaded }) {
         confirmLabel: t('window.closeWithoutSaving'),
         cancelLabel: t('dialog.cancel'),
       }),
-    downloadBackup,
+    downloadNotesBackup,
     retrySave: () => writer.current.write(current.current),
     downloadDamaged: () =>
       download('sloth-note-damaged.json', damaged.current, 'application/json;charset=utf-8'),
@@ -1906,7 +1925,7 @@ function Workspace({ persistence, loaded }) {
       description: (
         <ToastButtons
           items={[
-            [t('menu.backupDownload'), run('downloadBackup')],
+            [t('backup.downloadNotes'), run('downloadNotesBackup')],
             ...(!blocked ? [[t('error.retryStorage'), run('retrySave')]] : []),
             ...(blocked && damaged.current !== null
               ? [[t('error.downloadStored'), run('downloadDamaged')]]

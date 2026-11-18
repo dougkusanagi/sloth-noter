@@ -257,7 +257,7 @@ textarea {
   display: block;
   width: 100%;
   flex: 1;
-  min-height: calc(100dvh - 80px);
+  min-height: 0;
   resize: none;
   border: 0;
   background: transparent;
@@ -272,7 +272,7 @@ textarea:focus-visible {
 }
 .visual-editor {
   flex: 1;
-  min-height: calc(100dvh - 80px);
+  min-height: 0;
   min-width: 0;
   cursor: text;
 }
@@ -941,10 +941,6 @@ textarea:focus-visible {
 }
 .visual-editor .cm-md-fence {
   background: var(--paper);
-  font-size: 0.5em;
-  line-height: 2.89;
-}
-.visual-editor .cm-md-fence.cm-md-editing {
   font-size: 1em;
   line-height: 1.445;
 }
@@ -1138,6 +1134,27 @@ textarea:focus-visible {
 .markdown
   :is(p, ul, ol, li, blockquote, table, hr, h1, h2, h3, h4, h5, h6, .code-block, .md-section) {
   margin: calc(var(--gap) * var(--line)) 0 0;
+}
+/* Separate adjacent blocks even when the Markdown has no empty source line. */
+.markdown :is(p, ul, ol, blockquote, table, hr) + :is(p, ul, ol, blockquote, table, hr) {
+  margin-top: max(calc(var(--gap) * var(--line)), 0.75em);
+}
+.markdown :is(.code-block + *, * + .code-block) {
+  margin-top: max(calc(var(--gap) * var(--line)), calc(var(--editor-size) * 1.35));
+}
+.visual-editor .cm-line:not(.cm-md-blank) + .cm-md-fence-start:not(.cm-code-collapsed-start),
+.visual-editor .cm-line:not(.cm-md-blank) + .cm-code-collapsed-start + .cm-code-collapsed,
+.visual-editor :is(.cm-md-fence-end, .cm-code-collapsed)
+  + .cm-line:not(.cm-md-blank, .cm-code-collapsed-start) {
+  margin-top: calc(var(--editor-size) * 1.35);
+}
+/* The empty line that separates two blocks shows as the same gap as around code blocks. */
+.visual-editor .cm-md-blank {
+  line-height: 1.35;
+}
+.visual-editor .cm-line:not(:empty) + .cm-md-table-headrow,
+.visual-editor .cm-md-table-last + .cm-line:not(:empty) {
+  margin-top: 0.75em;
 }
 .markdown {
   color: var(--text-body);

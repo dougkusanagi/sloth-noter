@@ -1,0 +1,1 @@
+Alterado: No editor, Enter em um parágrafo cria um novo parágrafo. Os parágrafos e os outros blocos ficam separados pelo mesmo espaço usado entre blocos de código. Para quebrar a linha dentro do mesmo parágrafo, use Shift+Enter. Em listas e citações, Enter continua igual.

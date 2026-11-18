@@ -40,12 +40,14 @@ export function dataUrlBytes(src) {
   if (binary.length > 20 * 1024 * 1024) throw new Error(t('images.invalid'))
   return Array.from(binary, (character) => character.charCodeAt(0))
 }
+export const isChangelogImage = (src) => /^\/changelog\/[a-z0-9-]+\.png$/.test(src)
+
 export async function resolveImage(src) {
   src = normalizeImageSource(src)
   if (!src) return null
   if (src === WELCOME_IMAGE || src === legacyWelcomeImage) return welcomeIllustration
   // Bundled release-note illustrations are app resources, not files in the user's vault.
-  if (/^\/changelog\/[a-z0-9-]+\.png$/.test(src)) return src
+  if (isChangelogImage(src)) return src
   if (/^https?:\/\//i.test(src) || IMAGE_DATA.test(src)) return src
   if (cache.has(src)) return cache.get(src)
   const version = generation

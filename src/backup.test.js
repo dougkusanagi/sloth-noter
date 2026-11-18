@@ -76,3 +76,22 @@ test('failed image restoration cleans up files already written', async () => {
   )
   assert.equal(removed.length, 1)
 })
+
+test('full backup keeps bundled illustration references without reading them from the vault', async () => {
+  const { createFullBackup, readBackupBundle } = await import('./backup.js')
+  const document = newDocument()
+  document.notes[0].body = '![Novidade](/changelog/exemplo.png)\n\n![Foto](assets/foto.png)'
+  const bundle = readBackupBundle(
+    await createFullBackup(document, async (command, args) => {
+      if (command === 'image_list') return ['assets/foto.png']
+      assert.equal(command, 'image_read')
+      assert.equal(args.name, 'assets/foto.png')
+      return [137, 80, 78, 71]
+    }),
+  )
+  assert.deepEqual(bundle.document, document)
+  assert.deepEqual(
+    bundle.images.map((image) => image.src),
+    ['assets/foto.png'],
+  )
+})

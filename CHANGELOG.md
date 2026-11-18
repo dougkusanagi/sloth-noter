@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.25.2] — 2026-11-18
+
+Correções de rolagem, barra de seleção e datas de tarefas no celular; detalhes em [changelog/0.25.2.md](changelog/0.25.2.md).
+
 ## [0.25.1] — 2026-11-18
 
 Padronização interna de formatação; detalhes em [changelog/0.25.1.md](changelog/0.25.1.md).

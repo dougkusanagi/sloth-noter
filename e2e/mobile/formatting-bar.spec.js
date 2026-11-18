@@ -43,7 +43,8 @@ async function pressEnter(page) {
   const lines = page.locator('.cm-line')
   const before = await lines.count()
   await page.keyboard.press('Enter')
-  await expect(lines).toHaveCount(before + 1)
+  // In a paragraph, Enter also adds the empty line that separates paragraphs.
+  await expect.poll(() => lines.count()).toBeGreaterThan(before)
 }
 
 // The bar actions are async (clipboard) and the visual editor hides Markdown markers,
@@ -149,7 +150,7 @@ test('the heading group converts and clears the line', async ({ page }) => {
   await bar(page).getByRole('button', { name: 'Título 3', exact: true }).tap()
   await expect.poll(() => savedBody(page)).toContain('### Seção nova')
   await bar(page).getByRole('button', { name: 'Parágrafo' }).tap()
-  await expect.poll(() => savedBody(page)).toContain('Rascunho\nSeção nova')
+  await expect.poll(() => savedBody(page)).toContain('Rascunho\n\nSeção nova')
 })
 
 test('Desfazer reverts the last bar action and hiding the keyboard removes the bar', async ({

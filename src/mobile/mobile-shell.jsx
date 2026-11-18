@@ -61,7 +61,7 @@ import { ImageThumbnail } from '../components/image-library.jsx'
 import { TasksLibrary } from '../components/tasks-library.jsx'
 import { ChangelogPanel } from '../components/changelog-panel.jsx'
 import { TrashLibrary } from '../components/trash-library.jsx'
-import { noteTasks, syncLinkedTasks, toggleTask } from '../tasks.js'
+import { noteTasks, syncLinkedTasks, taskSettings, toggleTask } from '../tasks.js'
 import { ensureDocumentTitles } from '../title.js'
 import { welcomeNote } from '../welcome.js'
 import { LANGUAGES, t } from '../i18n.js'
@@ -202,6 +202,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const store = useNotesStore({ persistence, loaded, mode: 'visual', onHistoryWarning: setWarning })
   const { data, current, commit, writer, saving, error, blocked } = store
   const { prefs, updatePrefs: savePrefs } = usePrefs({ data, current, commit })
+  taskSettings.dates = prefs.taskDates !== false
   setOwnTemplates(data.notes, prefs.templateNotes, t('templates.own'))
   const sync = useSync({
     current,

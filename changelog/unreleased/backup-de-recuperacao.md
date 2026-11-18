@@ -1,0 +1,1 @@
+Corrigido: Quando uma gravação falha, o aviso no computador permite baixar um backup das notas sem precisar ler os arquivos de imagem. O backup completo, no menu principal, também reconhece as ilustrações incluídas no aplicativo.

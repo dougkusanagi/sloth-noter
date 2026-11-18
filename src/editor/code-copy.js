@@ -275,6 +275,11 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
         this.blocks.push(block)
       })
     }
+    rowAt(line) {
+      const node = this.view.domAtPos(Math.min(line.to, line.from + 1)).node
+      const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement
+      return element?.closest('.cm-line')
+    }
     rows(block) {
       const doc = this.view.state.doc
       const rows = []
@@ -283,10 +288,7 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
         number <= doc.lineAt(block.to).number;
         number++
       ) {
-        const line = doc.line(number)
-        const node = this.view.domAtPos(Math.min(line.to, line.from + 1)).node
-        const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement
-        const row = element?.closest('.cm-line')
+        const row = this.rowAt(doc.line(number))
         if (row) rows.push(row)
       }
       return rows
@@ -307,7 +309,16 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
         folds?.between(from, from, (a, b) => {
           if (a <= from && b > from) folded = true
         })
-        const start = view.documentTop + view.lineBlockAt(from).top
+        const collapsed = view.state.field(codeFold).includes(from)
+        const first = view.state.doc.lineAt(from)
+        const firstVisible = collapsed ? view.state.doc.line(first.number + 1) : first
+        // The height map includes the line's preceding margin; the button belongs inside the box.
+        const row =
+          view.viewport.from <= firstVisible.from && firstVisible.from <= view.viewport.to
+            ? this.rowAt(firstVisible)
+            : null
+        const start =
+          row?.getBoundingClientRect().top ?? view.documentTop + view.lineBlockAt(from).top
         const end = view.documentTop + view.lineBlockAt(to).bottom
         const noWrap = codeDoesNotWrap(view.state.field(codeWrap), from)
         return {
@@ -318,7 +329,7 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
             top: start,
             bottom: end,
           },
-          top: view.state.field(codeFold).includes(from)
+          top: collapsed
             ? Math.max(start + 12, top)
             : Math.max(start, Math.min(Math.max(start + 12, top), end - 38)),
           right: window.innerWidth - Math.min(content.right, scroller.right) + 10,

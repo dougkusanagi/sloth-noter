@@ -303,6 +303,7 @@ export const listMargin = (depth) => `margin-left:calc(${depth} * var(--editor-s
 
 export function lineAttributes(line, shape, active, listDepth = 0) {
   const classes = [shape.kind === 'paragraph' ? 'cm-md-paragraph' : `cm-md-${shape.kind}`]
+  if (shape.kind === 'paragraph' && !line.text.trim()) classes.push('cm-md-blank')
   if (active) classes.push('cm-md-editing')
   if (shape.kind === 'bullet' && listDepth) classes.push(`cm-md-depth-${Math.min(listDepth, 2)}`)
   if (shape.prefix && shape.kind !== 'fence') classes.push('cm-md-prefix')

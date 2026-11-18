@@ -20,8 +20,17 @@ test('outline visual verification', async ({ page }) => {
   }
   await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
   await page.getByRole('menuitem', { name: /Novidades/ }).click()
-  await page.locator('[data-wiki^="Em desenvolvimento"]').first().click()
-  await page.locator('.visual-editor.read-only').hover()
+  const entry = page.locator('.visual-editor.read-only')
+  const release = entry.locator('[data-wiki^="Sloth Note 0.10.0|"]').first()
+  await entry.hover()
+  await expect
+    .poll(async () => (await release.count()) || (await page.mouse.wheel(0, 800), 0), {
+      intervals: [100],
+      timeout: 20000,
+    })
+    .toBe(1)
+  await release.click()
+  await entry.hover()
   // The unreleased entry is long: scroll until each passage is drawn.
   await expect
     .poll(

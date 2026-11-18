@@ -134,3 +134,15 @@ for (const width of [768, 1280]) {
     },
   )
 }
+
+test('Enter starts a new paragraph and Shift+Enter breaks the line', async ({ page }) => {
+  await fill(page, '# Nota\n\nPrimeiro')
+  await page.locator('.cm-line', { hasText: 'Primeiro' }).click()
+  await page.keyboard.press('End')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Segundo')
+  await page.keyboard.press('Shift+Enter')
+  await page.keyboard.type('mesma')
+  await page.screenshot({ path: test.info().outputPath('paragraphs.png') })
+  await source(page, '# Nota\n\nPrimeiro\n\nSegundo\nmesma')
+})

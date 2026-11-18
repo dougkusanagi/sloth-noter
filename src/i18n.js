@@ -649,6 +649,9 @@ const messages = {
     'external.pending': '{name} ({path}): há alterações locais pendentes de gravação neste arquivo',
     'error.downloadStored': 'Baixar dados armazenados',
     'backup.preparing': 'Preparando o backup…',
+    'backup.downloadNotes': 'Baixar backup das notas',
+    'backup.notesDownloadStarted':
+      'Download iniciado. O backup guarda as notas e as referências a imagens. Arquivos de imagem separados ficam fora da cópia.',
     'backup.downloadStarted':
       'Download do backup iniciado. Confira a pasta Downloads ou o destino configurado para downloads.',
     'backup.failed': 'Não foi possível criar o backup: {error}',
@@ -1600,6 +1603,9 @@ const messages = {
     'external.pending': '{name} ({path}): local changes are waiting to be saved to this file',
     'error.downloadStored': 'Download stored data',
     'backup.preparing': 'Preparing the backup…',
+    'backup.downloadNotes': 'Download notes backup',
+    'backup.notesDownloadStarted':
+      'Download started. The backup includes your notes and image references. Separate image files are left out.',
     'backup.downloadStarted':
       'Backup download started. Check your Downloads folder or your configured download destination.',
     'backup.failed': 'Could not create the backup: {error}',

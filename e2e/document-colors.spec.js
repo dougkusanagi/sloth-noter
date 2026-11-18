@@ -158,7 +158,15 @@ for (const width of [390, 1280])
     await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
     const entry = page.locator('.visual-editor.read-only')
-    await entry.locator('[data-wiki^="Em desenvolvimento|"]').click()
+    const release = entry.locator('[data-wiki^="Sloth Note 0.10.0|"]')
+    await entry.hover()
+    await expect
+      .poll(async () => (await release.count()) || (await page.mouse.wheel(0, 800), 0), {
+        intervals: [100],
+        timeout: 20000,
+      })
+      .toBe(1)
+    await release.click()
     await reveal(page, entry, 'Cores para blocos')
     await expect(entry).toContainText('Cores para blocos')
     const image = entry.getByRole('img', {

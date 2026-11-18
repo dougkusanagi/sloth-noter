@@ -61,9 +61,9 @@ export function createVaultAdapter(invoke, path, history = null) {
     label: path,
     // Bringing outside changes in: cheap stamp check first, full read only on change.
     sync: {
-      async scan() {
+      async scan({ force = false } = {}) {
         const stamps = JSON.stringify(await invoke(VAULT_STAMPS))
-        if (stamps === lastStamps) return null
+        if (!force && stamps === lastStamps) return null
         const files = await invoke(VAULT_LIST)
         lastStamps = stamps
         return files

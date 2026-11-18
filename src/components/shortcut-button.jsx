@@ -11,13 +11,25 @@ export function ShortcutHint({ label, keys, children }) {
   const closing = useRef(null)
   useEffect(() => {
     const dismiss = () => setPosition(null)
+    const onScroll = () => {
+      if (
+        target.current &&
+        document.activeElement === target.current &&
+        target.current.isConnected
+      ) {
+        const rect = target.current.getBoundingClientRect()
+        setPosition({ left: rect.left, top: rect.bottom + 8 })
+      } else {
+        setPosition(null)
+      }
+    }
     document.addEventListener('sloth:shortcut-tooltip', dismiss)
-    window.addEventListener('scroll', dismiss, true)
+    window.addEventListener('scroll', onScroll, true)
     window.addEventListener('resize', dismiss)
     return () => {
       clearTimeout(closing.current)
       document.removeEventListener('sloth:shortcut-tooltip', dismiss)
-      window.removeEventListener('scroll', dismiss, true)
+      window.removeEventListener('scroll', onScroll, true)
       window.removeEventListener('resize', dismiss)
     }
   }, [])

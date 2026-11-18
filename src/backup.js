@@ -5,6 +5,7 @@ import {
   resolveImage,
   IMAGE_DATA,
   dataUrlBytes,
+  isChangelogImage,
   replaceDocumentImage,
 } from './images.js'
 import { validateDocument } from './storage.js'
@@ -31,7 +32,7 @@ export async function createFullBackup(document, invoke) {
       if (!entries.has(name)) entries.set(name, { name, src: name })
   const images = []
   for (const image of entries.values()) {
-    if (/^https?:/i.test(image.src)) continue
+    if (/^https?:/i.test(image.src) || isChangelogImage(image.src)) continue
     const data =
       invoke && !image.src.startsWith('data:')
         ? bytesDataUrl(await invoke('image_read', { name: image.src }), image.src)
