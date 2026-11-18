@@ -64,7 +64,8 @@ for (const mode of ['Padrão', 'Leitura']) {
       for (let step = 0; step < 12 && !(await button.isVisible()); step++) {
         await page.evaluate(() => window.scrollBy(0, 150))
       }
-      await button.scrollIntoViewIfNeeded()
+      // Centered, so the footer at the bottom of the window never covers it.
+      await button.evaluate((element) => element.scrollIntoView({ block: 'center' }))
       await expect(button).toHaveText(blocks[index][2])
       await expect(button.locator('svg')).toHaveCount(1)
       await button.click()
