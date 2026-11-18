@@ -39,9 +39,7 @@ export function cloudflareStore(db, bucket, { limits = FREE_LIMITS, now = () => 
     if (!row) throw new QuotaExceeded()
   }
   async function stored() {
-    const row = await db
-      .prepare(STORED_BYTES)
-      .first()
+    const row = await db.prepare(STORED_BYTES).first()
     return row.total
   }
   return {
