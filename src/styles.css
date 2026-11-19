@@ -1142,24 +1142,29 @@ textarea:focus-visible {
 .markdown :is(.code-block + *, * + .code-block) {
   margin-top: max(calc(var(--gap) * var(--line)), calc(var(--editor-size) * 1.35));
 }
-.visual-editor .cm-line:not(.cm-md-blank) + .cm-md-fence-start:not(.cm-code-collapsed-start),
-.visual-editor .cm-line:not(.cm-md-blank) + .cm-code-collapsed-start + .cm-code-collapsed,
+/* The standard gap between blocks. CodeMirror ignores line margins when it maps heights, so the
+   gap is padding: a margin there misplaces the caret, arrow keys and the insert tip. */
+.visual-editor .cm-content {
+  --block-gap: calc(var(--editor-size) * 1.35);
+}
+.visual-editor .cm-line:not(.cm-md-blank):has(+ .cm-md-fence-start:not(.cm-code-collapsed-start)),
+.visual-editor .cm-line:not(.cm-md-blank):has(+ .cm-code-collapsed-start + .cm-code-collapsed),
+.visual-editor .cm-line:not(.cm-md-blank, .cm-md-table-row):has(+ .cm-md-table-headrow) {
+  padding-bottom: var(--block-gap);
+}
 .visual-editor
-  :is(.cm-md-fence-end, .cm-code-collapsed)
-  + .cm-line:not(.cm-md-blank, .cm-code-collapsed-start) {
-  margin-top: calc(var(--editor-size) * 1.35);
+  :is(.cm-md-fence-end, .cm-code-collapsed, .cm-md-table-last)
+  + .cm-line:not(.cm-md-blank, .cm-code-collapsed-start, .cm-md-table-row) {
+  padding-top: max(var(--block-gap), var(--heading-pad-top, 0px));
 }
-/* The empty line that separates two blocks shows as the same gap as around code blocks. */
+/* An empty line between two blocks is only the gap; the cursor skips it (atomic range). */
 .visual-editor .cm-md-blank {
-  line-height: 1.35;
-}
-/* Only the first empty line separates blocks; the next ones are empty paragraphs made by Enter. */
-.visual-editor .cm-md-blank + .cm-md-blank {
   line-height: 1.62;
 }
-.visual-editor .cm-line:not(:empty) + .cm-md-table-headrow,
-.visual-editor .cm-md-table-last + .cm-line:not(:empty) {
-  margin-top: 0.75em;
+.visual-editor .cm-line.cm-md-gap {
+  height: var(--block-gap);
+  padding: 0;
+  line-height: 1.35;
 }
 .markdown {
   color: var(--text-body);

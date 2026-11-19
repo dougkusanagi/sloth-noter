@@ -49,10 +49,11 @@ const END = [
 const box = (page) => page.getByRole('textbox', { name: 'Editor Markdown em texto puro' })
 // The caret's visual line, read straight from the browser selection.
 const caretLine = (page) =>
-  page.evaluate(
-    () =>
-      window.getSelection()?.anchorNode?.parentElement?.closest?.('.cm-line')?.textContent ?? '',
-  )
+  page.evaluate(() => {
+    const node = window.getSelection()?.anchorNode
+    const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement
+    return element?.closest?.('.cm-line')?.textContent ?? ''
+  })
 // Clicking a line can park the caret elsewhere, so navigation goes by keys.
 const reachLine = async (page, text) => {
   await page.locator('.cm-content').click()

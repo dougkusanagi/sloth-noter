@@ -323,6 +323,22 @@ export function lineAttributes(line, shape, active, listDepth = 0) {
   return attributes
 }
 
+const gapMark = Decoration.mark({})
+const blank = (doc, number) => !doc.line(number).text.trim()
+
+/**
+ * An empty line that only separates two blocks: the first of a run of empty lines, and also the
+ * last one when the run has three or more lines. The other empty lines are empty paragraphs.
+ */
+export function isGapLine(doc, number, firstBodyLine) {
+  if (number <= firstBodyLine || number >= doc.lines || !blank(doc, number)) return false
+  if (!blank(doc, number - 1)) return true
+  if (blank(doc, number + 1)) return false
+  let start = number
+  while (start > 1 && blank(doc, start - 1)) start--
+  return number - start + 1 >= 3 && start > 1
+}
+
 export function decorationsFor(view) {
   const doc = view.state.doc,
     ranges = []
@@ -337,6 +353,7 @@ export function decorationsFor(view) {
   }
   const placeholderLine = emptyBodyLine(view.state)
   const titleLine = titleLineNumber(doc)
+  const gaps = []
   const text = doc.toString()
   const noteInfo = view.state
     .facet(taskNotes)
@@ -593,6 +610,14 @@ export function decorationsFor(view) {
       if (shape.kind === 'ordered' && indent && listDepths.has(number))
         ranges.push(Decoration.replace({}).range(line.from, line.from + indent))
       const attrs = lineAttributes(line, shape, active, listDepths.get(number))
+      if (
+        shape.kind === 'paragraph' &&
+        isGapLine(doc, number, Math.max(titleLine, placeholderLine ?? 0) + 1)
+      ) {
+        attrs.class += ' cm-md-gap'
+        // Both line breaks around it, so the cursor never lands on the gap.
+        gaps.push(gapMark.range(doc.line(number - 1).to, doc.line(number + 1).from))
+      }
       if (number === titleLine && line.text === '# ') {
         attrs.class += ' cm-empty-title'
         attrs['data-placeholder'] = t('editor.titleHint')
@@ -692,6 +717,7 @@ export function decorationsFor(view) {
       true,
     ),
     cells: Decoration.set(cells, true),
+    gaps: Decoration.set(gaps, true),
   }
 }
 
@@ -717,7 +743,9 @@ export const liveMarkdown = ViewPlugin.fromClass(
   },
   {
     decorations: (plugin) => plugin.decorations,
-    provide: (plugin) =>
+    provide: (plugin) => [
       EditorView.outerDecorations.of((view) => view.plugin(plugin)?.cells ?? Decoration.none),
+      EditorView.atomicRanges.of((view) => view.plugin(plugin)?.gaps ?? Decoration.none),
+    ],
   },
 )

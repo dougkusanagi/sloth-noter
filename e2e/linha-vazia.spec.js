@@ -1,54 +1,69 @@
 import { expect, test } from '@playwright/test'
 
-const height = async (locator) => (await locator.boundingBox()).height
-const lines = (page) =>
-  page.locator('.cm-content .cm-line').evaluateAll((elements) =>
-    elements.map((element) => ({
-      blank: element.classList.contains('cm-md-blank'),
-      top: Math.round(element.getBoundingClientRect().top),
-      height: Math.round(element.getBoundingClientRect().height),
-    })),
-  )
+// The text box, without the line padding that carries the gap between blocks.
+const box = (page, text) =>
+  page.evaluate((wanted) => {
+    const line = [...document.querySelectorAll('.cm-content > .cm-line')].find(
+      (element) => element.textContent === wanted,
+    )
+    const range = document.createRange()
+    range.selectNodeContents(line)
+    const { y, height } = range.getClientRects()[0]
+    return { y, height }
+  }, text)
+const caretLine = (page) =>
+  page.evaluate(() => {
+    const node = getSelection().anchorNode
+    return (node.nodeType === 1 ? node : node.parentElement).closest('.cm-line').textContent
+  })
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
-  await page.locator('textarea').fill('# Título\n\nabc\n\n```\ncódigo\n```\n\nfim\n')
+  await page.locator('textarea').fill('\n\n\nab\n```\nabc\n```\na\n\nbbb\n')
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
 })
 
-// Regression: every line made by Enter (without Shift) is a paragraph with the usual gap.
-test('Enter depois de parágrafo ou bloco de código cria parágrafo com espaço padrão', async ({
-  page,
-}) => {
-  const abc = page.locator('.cm-md-paragraph', { hasText: 'abc' })
-  const paragraphHeight = await height(abc)
-  const separator = await height(page.locator('.cm-md-fence-end + .cm-md-blank'))
-
-  await abc.click()
-  await page.keyboard.press('End')
-  await page.keyboard.press('Enter')
-  const afterText = page.locator('.cm-md-blank + .cm-md-blank.cm-md-editing')
-  await expect(afterText).toBeVisible()
-  expect(await height(afterText)).toBeCloseTo(paragraphHeight, 0)
-  await page.keyboard.type('def')
-  const def = page.locator('.cm-md-paragraph', { hasText: 'def' })
-  const [abcBox, defBox] = [await abc.boundingBox(), await def.boundingBox()]
-  expect(defBox.y - (abcBox.y + abcBox.height)).toBeCloseTo(separator, 0)
-
-  await page.locator('.cm-md-fence-end').click()
-  await page.keyboard.press('End')
-  await page.keyboard.press('Enter')
-  const afterCode = page.locator('.cm-md-fence-end + .cm-md-blank + .cm-md-blank.cm-md-editing')
-  await expect(afterCode).toBeVisible()
-  expect(await height(afterCode)).toBeCloseTo(paragraphHeight, 0)
+// Every block is separated by the same gap, with or without an empty source line.
+test('blocos têm o mesmo espaço, com ou sem linha vazia no texto', async ({ page }) => {
+  const ab = await box(page, 'ab')
+  const fence = await page.locator('.cm-md-fence-start').boundingBox()
+  const end = await page.locator('.cm-md-fence-end').boundingBox()
+  const a = await box(page, 'a')
+  const bbb = await box(page, 'bbb')
+  const gapAbove = fence.y - (ab.y + ab.height)
+  const gapBelow = a.y - (end.y + end.height)
+  const gapBlank = bbb.y - (a.y + a.height)
+  expect(gapAbove).toBeGreaterThan(15)
+  expect(Math.abs(gapBelow - gapAbove)).toBeLessThan(5)
+  expect(Math.abs(gapBlank - gapAbove)).toBeLessThan(5)
 })
 
-test('mover o cursor por linhas vazias não muda o layout', async ({ page }) => {
-  const before = await lines(page)
-  await page.locator('.cm-md-fence-end + .cm-md-blank').click()
+// Regression: ArrowUp from the last line jumped to the first text line.
+test('setas pulam a linha separadora e vão para o bloco vizinho', async ({ page }) => {
+  await page.locator('.cm-line', { hasText: 'bbb' }).click()
   await page.keyboard.press('ArrowUp')
+  expect(await caretLine(page)).toBe('a')
   await page.keyboard.press('ArrowDown')
-  await page.keyboard.press('ArrowDown')
-  expect(await lines(page)).toEqual(before)
+  expect(await caretLine(page)).toBe('bbb')
+})
+
+test('Enter no fim de um parágrafo cria outro parágrafo com o espaço padrão', async ({ page }) => {
+  await page.locator('.cm-line', { hasText: 'bbb' }).click()
+  await page.keyboard.press('End')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('ccc')
+  const bbb = await box(page, 'bbb')
+  const ccc = await box(page, 'ccc')
+  const a = await box(page, 'a')
+  expect(Math.abs(ccc.y - bbb.y - (bbb.y - a.y))).toBeLessThan(2)
+})
+
+test('a dica de inserir blocos fica na linha vazia do cursor', async ({ page }) => {
+  await page.locator('.cm-line', { hasText: 'bbb' }).click()
+  await page.keyboard.press('End')
+  await page.keyboard.press('Enter')
+  const line = await page.locator('.cm-md-blank.cm-md-editing').boundingBox()
+  const tip = await page.locator('.insert-trigger').boundingBox()
+  expect(Math.abs(tip.y - line.y)).toBeLessThan(4)
 })

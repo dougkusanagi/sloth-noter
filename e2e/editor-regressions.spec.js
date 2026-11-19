@@ -50,10 +50,12 @@ for (const width of [390, 1280]) {
         const [first, firstEnd, second, secondEnd] = lines.map((line) =>
           line.getBoundingClientRect(),
         )
+        // The gap below a block is padding on its last line, not part of the block.
+        const gap = parseFloat(getComputedStyle(lines[1]).paddingBottom)
         return [
-          firstEnd.bottom - first.top,
+          firstEnd.bottom - gap - first.top,
           secondEnd.bottom - second.top,
-          second.top - firstEnd.bottom,
+          second.top - firstEnd.bottom + gap,
         ]
       })
     await placeCaret(3)

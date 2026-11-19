@@ -412,7 +412,14 @@ export function VisualEditor({
     if (template.mode) onTemplateMode?.(template.mode)
   }
 
-  const lineTop = (view, line) => view.documentTop + view.lineBlockAt(line.from).top
+  // The rendered line box: the height map can lag behind styled lines.
+  const lineTop = (view, line) => {
+    const { node } = view.domAtPos(line.from)
+    const element = (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement)?.closest(
+      '.cm-line',
+    )
+    return element?.getBoundingClientRect().top ?? view.coordsAtPos(line.from)?.top ?? 0
+  }
 
   function positionInsert(view) {
     positionStarters(view)

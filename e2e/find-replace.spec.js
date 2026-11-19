@@ -228,7 +228,8 @@ for (const mode of ['Padrão', 'Código']) {
     await editor.focus()
     await editor.press('Control+End')
     await editor.press('ArrowUp')
-    await editor.press('ArrowUp')
+    // The source view stops on the empty line; the visual editor skips the gap between blocks.
+    if (mode !== 'Padrão') await editor.press('ArrowUp')
     await editor.press('Home')
     await editor.press('Shift+End')
     await expect(toggle).toBeEnabled()
