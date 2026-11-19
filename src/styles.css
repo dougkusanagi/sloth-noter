@@ -1144,12 +1144,14 @@ textarea:focus-visible {
 }
 .visual-editor .cm-line:not(.cm-md-blank) + .cm-md-fence-start:not(.cm-code-collapsed-start),
 .visual-editor .cm-line:not(.cm-md-blank) + .cm-code-collapsed-start + .cm-code-collapsed,
-.visual-editor :is(.cm-md-fence-end, .cm-code-collapsed)
-  + .cm-line:not(.cm-md-blank, .cm-code-collapsed-start) {
+.visual-editor
+  :is(.cm-md-fence-end, .cm-code-collapsed)
+  + .cm-line:not(.cm-md-blank, .cm-code-collapsed-start),
+.visual-editor :is(.cm-md-fence-end, .cm-code-collapsed) + .cm-md-blank.cm-md-editing {
   margin-top: calc(var(--editor-size) * 1.35);
 }
 /* The empty line that separates two blocks shows as the same gap as around code blocks. */
-.visual-editor .cm-md-blank {
+.visual-editor .cm-md-blank:not(.cm-md-editing) {
   line-height: 1.35;
 }
 .visual-editor .cm-line:not(:empty) + .cm-md-table-headrow,
