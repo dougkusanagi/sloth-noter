@@ -14,13 +14,7 @@ import { titleLineNumber } from './frontmatter.js'
 import { hideFrontmatter } from './editor/hide-frontmatter.js'
 import { toast } from 'sonner'
 import { Shortcut } from './components/main-menu.jsx'
-import {
-  EDITOR_SHORTCUTS,
-  blockKeys,
-  blockShortcut,
-  formatShortcut,
-  shortcutEdit,
-} from './editor-shortcuts.js'
+import { blockKeys, blockShortcut, formatShortcut, shortcutEdit } from './editor-shortcuts.js'
 import { transactionHistory } from './editor/history-log.js'
 import { searchHighlights } from './editor/search.js'
 import { clipboardImageFiles } from './clipboard.js'
@@ -53,7 +47,8 @@ import {
 } from './editor/code-copy.js'
 import { moveTable, tableAt, openTableMenu, tableUi } from './editor/table.js'
 import { sheet } from './editor/sheet.js'
-import { blockHandle } from './editor/block-handle.js'
+import { blockHandle, openBlockMenu } from './editor/block-handle.js'
+import { SHORTCUT_ACTIONS, shortcutKeys } from './shortcut-registry.js'
 import { OPEN_INSERT_EVENT } from './editor/block-actions.js'
 import {
   continueList,
@@ -119,7 +114,7 @@ const clipboardButtons = [
 const keysForLabel = (label) =>
   label === 'format.heading'
     ? blockKeys('h2')
-    : EDITOR_SHORTCUTS.find(([, key]) => key === label)?.[0]
+    : shortcutKeys(SHORTCUT_ACTIONS.find((action) => action.label === label)?.id)
 
 const blockButtons = [
   ['h2', 'block.h2'],
@@ -771,6 +766,12 @@ export function VisualEditor({
             }
           }
           const shortcut = formatShortcut(event)
+          if (shortcut === 'blockMenu') {
+            if (!openBlockMenu(view)) return false
+            event.preventDefault()
+            event.stopPropagation()
+            return true
+          }
           if (shortcut) {
             const { from, to } = view.state.selection.main
             const edit = shortcutEdit(view.state.doc.toString(), from, to, shortcut)

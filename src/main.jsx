@@ -54,6 +54,7 @@ import { ImageLibrary } from './components/image-library.jsx'
 import { readNoteFile, splitDrop } from './note-drop.js'
 import { externalNote, isExternalNote } from './external-notes.js'
 import { appShortcut } from './shortcuts.js'
+import { setShortcutOverrides, shortcutKeys } from './shortcut-registry.js'
 import { blockShortcut, formatShortcut, shortcutEdit } from './editor-shortcuts.js'
 import { blockEdit } from './insert-block.js'
 import { searchNote, replacementText } from './find.js'
@@ -328,6 +329,7 @@ function Workspace({ persistence, loaded }) {
   )
   const { prefs, updatePrefs: savePrefs } = usePrefs({ data, current, commit })
   setOwnTemplates(data.notes, prefs.templateNotes, t('templates.own'))
+  setShortcutOverrides(prefs.shortcuts)
   const pageWrap =
     active && Object.hasOwn(prefs.wrapLinesByNote ?? {}, active.id)
       ? prefs.wrapLinesByNote[active.id]
@@ -2027,36 +2029,25 @@ function Workspace({ persistence, loaded }) {
       const action = appShortcut(event)
       // In a table, F2 edits the selected cell instead of renaming the note.
       if (action === 'rename' && event.target.closest?.('.cm-sheet-input')) return
+      const sizing = {
+        smaller: () => updatePrefs({ fontSize: Math.max(FONT_SIZE.min, prefs.fontSize - 1) }),
+        larger: () => updatePrefs({ fontSize: Math.min(FONT_SIZE.max, prefs.fontSize + 1) }),
+        resetText: () => updatePrefs({ fontSize: FONT_SIZE.default }),
+        narrower: () => stepWidth(-1),
+        wider: () => stepWidth(1),
+        resetWidth: () =>
+          updatePrefs({ contentWidth: CONTENT_WIDTH.default, documentWidth: 'custom' }),
+      }
+      if (sizing[action]) {
+        event.preventDefault()
+        sizing[action]()
+        return
+      }
       if (action && menuActions[action]) {
         event.preventDefault()
         event.stopPropagation()
         menuActions[action]()
         return
-      }
-      if (modifier && event.altKey) {
-        if (event.code === 'Minus' || event.key === '-') {
-          event.preventDefault()
-          stepWidth(-1)
-        } else if (event.code === 'Equal' || event.key === '+') {
-          event.preventDefault()
-          stepWidth(1)
-        } else if (key === '0') {
-          event.preventDefault()
-          updatePrefs({ contentWidth: CONTENT_WIDTH.default, documentWidth: 'custom' })
-        }
-        return
-      }
-      if (modifier && (event.key === '+' || event.code === 'Equal')) {
-        event.preventDefault()
-        updatePrefs({ fontSize: Math.min(FONT_SIZE.max, prefs.fontSize + 1) })
-      }
-      if (modifier && (event.key === '-' || event.code === 'Minus')) {
-        event.preventDefault()
-        updatePrefs({ fontSize: Math.max(FONT_SIZE.min, prefs.fontSize - 1) })
-      }
-      if (modifier && key === '0') {
-        event.preventDefault()
-        updatePrefs({ fontSize: FONT_SIZE.default })
       }
       if (event.key === 'Escape' && palette) closePalette()
       else if (
@@ -2343,7 +2334,7 @@ function Workspace({ persistence, loaded }) {
             ref={menuButton}
             className="icon-button menu-trigger"
             label={t('menu.main')}
-            keys="F10"
+            keys={shortcutKeys('mainMenu')}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             aria-controls="main-menu"
@@ -2374,7 +2365,7 @@ function Workspace({ persistence, loaded }) {
         <ShortcutButton
           className="icon-button sidebar-toggle"
           label={t('sidebar.toggle')}
-          keys="Alt+B"
+          keys={shortcutKeys('sidebar')}
           aria-expanded={sidebarVisible}
           aria-controls="notes-sidebar"
           onClick={() => updatePrefs({ sidebarVisible: !sidebarVisible })}
@@ -2972,7 +2963,7 @@ function Workspace({ persistence, loaded }) {
                 ['reading', t('mode.reading')],
                 ['board', t('mode.board')],
               ].map(([value, label], index) => (
-                <ShortcutHint key={value} label={label} keys={`Alt+${index + 1}`}>
+                <ShortcutHint key={value} label={label} keys={shortcutKeys(value)}>
                   <label>
                     <input
                       type="radio"

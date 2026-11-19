@@ -52,7 +52,7 @@ Use `Ctrl` no Windows/Linux e `Cmd` no macOS. Atalhos como criar e fechar abas p
 | Negrito / itálico / link                     | `Ctrl+B` / `Ctrl+I` / `Ctrl+K` |
 | Configurações                                | `Ctrl+,`                       |
 
-A lista completa está em **Configurações → Atalhos** e na [documentação de recursos](docs/RECURSOS.md).
+A lista completa está em **Configurações → Atalhos**, onde também é possível alterar as combinações, e na [documentação de recursos](docs/RECURSOS.md).
 
 ## Seus dados
 

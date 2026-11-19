@@ -3931,7 +3931,7 @@ button.property-type-icon:hover {
   margin: 2px 0 6px;
 }
 .property-problem {
-  color: var(--danger, #b3261e);
+  color: var(--danger);
 }
 .property-note {
   color: var(--muted);
@@ -3999,4 +3999,46 @@ button.property-type-icon:hover {
   margin: 4px 14px;
   color: var(--text-secondary, var(--muted));
   font-size: 12px;
+}
+
+/* Editable shortcuts (Settings › Shortcuts). */
+.shortcut-edit-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 12px 0 4px;
+  color: var(--muted);
+  font: 12.5px/1.5 var(--ui);
+}
+.shortcut-edit-bar p {
+  flex: 1 1 260px;
+  margin: 0;
+}
+.settings-panel .shortcut-list > div {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.shortcut-name {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+.shortcut-message {
+  flex-basis: 100%;
+  color: var(--danger);
+  font-size: 12px;
+}
+.shortcut-keys {
+  display: flex;
+  margin-left: auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.shortcut-keys .button {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12.5px;
 }

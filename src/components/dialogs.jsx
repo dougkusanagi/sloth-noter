@@ -1,4 +1,10 @@
-import { SHORTCUTS } from '../shortcuts.js'
+import {
+  SHORTCUT_ACTIONS,
+  defaultKeys,
+  keysFor,
+  keysFromEvent,
+  shortcutConflict,
+} from '../shortcut-registry.js'
 import { Shortcut, shortcutText } from './main-menu.jsx'
 // Modal dialogs of the workspace. State lives in the parent; these only render and handle keys.
 import { Fragment, useEffect, useRef, useState } from 'react'
@@ -428,13 +434,61 @@ export function FolderDialog({ path, onChoose, onUseAppStorage, onClose }) {
   )
 }
 
-export function ShortcutList() {
+export function ShortcutList({ value, onChange }) {
   const [query, setQuery] = useState('')
+  const [recording, setRecording] = useState(null)
+  const [message, setMessage] = useState(null)
+  const editable = Boolean(onChange)
   const squash = (text) => text.toLocaleLowerCase().replace(/[\s+]/g, '')
   const needle = squash(query)
-  const shown = SHORTCUTS.filter(
-    ([keys, label]) => !needle || squash(`${t(label)} ${shortcutText(keys)}`).includes(needle),
+  // One row per action; the tab number shortcuts stay fixed and keep their own rows.
+  const shown = SHORTCUT_ACTIONS.map((action) => ({
+    ...action,
+    current: keysFor(action.id),
+  })).filter(
+    ({ label, current }) =>
+      !needle ||
+      squash(`${t(label)} ${current.map((keys) => shortcutText(keys)).join(' ')}`).includes(needle),
   )
+  const custom = value ?? {}
+  const list = useRef(null)
+  function save(next) {
+    onChange({ shortcuts: next })
+  }
+  // After recording, focus goes back to the row's Change button, as after closing a menu.
+  function finish(id) {
+    setRecording(null)
+    requestAnimationFrame(() =>
+      list.current?.querySelector(`[data-shortcut="${id}"]`)?.focus({ preventScroll: true }),
+    )
+  }
+  function record(event, action) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.key === 'Escape') {
+      finish(action.id)
+      setMessage(null)
+      return
+    }
+    if (['Tab'].includes(event.key) && !event.ctrlKey && !event.metaKey) return
+    const keys = keysFromEvent(event)
+    if (!keys) {
+      if (!['Control', 'Meta', 'Alt', 'Shift', 'AltGraph'].includes(event.key))
+        setMessage({ id: action.id, text: t('shortcuts.needsModifier') })
+      return
+    }
+    const other = shortcutConflict(action.id, keys)
+    if (other) {
+      setMessage({ id: action.id, text: t('shortcuts.conflict', { action: t(other.label) }) })
+      return
+    }
+    const next = { ...custom }
+    if (defaultKeys(action.id).includes(keys)) delete next[action.id]
+    else next[action.id] = keys
+    save(next)
+    finish(action.id)
+    setMessage(null)
+  }
   return (
     <div className="shortcuts">
       <div className="search-field">
@@ -446,11 +500,81 @@ export function ShortcutList() {
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
-      <div className="shortcut-list" role="list" tabIndex={0} aria-label={t('menu.shortcuts')}>
-        {shown.map(([keys, label]) => (
-          <div key={keys} role="listitem">
-            <span>{t(label)}</span>
-            <Shortcut keys={keys} />
+      {editable && (
+        <div className="shortcut-edit-bar">
+          <p>{t('shortcuts.hint')}</p>
+          <button
+            type="button"
+            className="button"
+            disabled={!Object.keys(custom).length}
+            onClick={() => {
+              save({})
+              setMessage(null)
+            }}
+          >
+            {t('shortcuts.resetAll')}
+          </button>
+        </div>
+      )}
+      <div
+        ref={list}
+        className="shortcut-list"
+        role="list"
+        tabIndex={0}
+        aria-label={t('menu.shortcuts')}
+      >
+        {shown.map((action) => (
+          <div key={action.id} role="listitem">
+            <span className="shortcut-name">{t(action.label)}</span>
+            <span className="shortcut-keys">
+              {recording === action.id ? (
+                <button
+                  type="button"
+                  className="button shortcut-recording"
+                  autoFocus
+                  aria-label={t('shortcuts.changeLabel', { action: t(action.label) })}
+                  onKeyDown={(event) => record(event, action)}
+                  onBlur={() => setRecording(null)}
+                >
+                  {t('shortcuts.recording')}
+                </button>
+              ) : (
+                action.current.map((keys) => <Shortcut key={keys} keys={keys} />)
+              )}
+              {editable && !action.fixed && recording !== action.id && (
+                <button
+                  type="button"
+                  className="button"
+                  data-shortcut={action.id}
+                  aria-label={t('shortcuts.changeLabel', { action: t(action.label) })}
+                  onClick={() => {
+                    setRecording(action.id)
+                    setMessage(null)
+                  }}
+                >
+                  {t('shortcuts.change')}
+                </button>
+              )}
+              {editable && custom[action.id] && recording !== action.id && (
+                <button
+                  type="button"
+                  className="button"
+                  aria-label={t('shortcuts.resetLabel', { action: t(action.label) })}
+                  onClick={() => {
+                    const next = { ...custom }
+                    delete next[action.id]
+                    save(next)
+                  }}
+                >
+                  {t('shortcuts.reset')}
+                </button>
+              )}
+            </span>
+            {message?.id === action.id && (
+              <span className="shortcut-message" role="alert">
+                {message.text}
+              </span>
+            )}
           </div>
         ))}
         {!shown.length && <p className="sidebar-empty">{t('library.noResults')}</p>}

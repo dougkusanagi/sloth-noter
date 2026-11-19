@@ -1,4 +1,5 @@
 import { t } from '../i18n.js'
+import { shortcutKeys } from '../shortcut-registry.js'
 import { useEffect, useState } from 'react'
 import { ListTree, ChevronsLeft, ChevronRight } from 'lucide-react'
 import { ShortcutButton } from './shortcut-button.jsx'
@@ -36,7 +37,7 @@ export function DocumentOutline({
       }}
     >
       <ShortcutButton
-        keys="Alt+T"
+        keys={shortcutKeys('outline')}
         type="button"
         label={t(open ? 'outline.close' : 'outline.open')}
         aria-expanded={open}

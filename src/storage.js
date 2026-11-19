@@ -166,6 +166,16 @@ export function validateDocument(value) {
   )
     throw new Error('Invalid note line wrapping preferences')
   if (
+    prefs?.shortcuts !== undefined &&
+    (!prefs.shortcuts ||
+      Array.isArray(prefs.shortcuts) ||
+      typeof prefs.shortcuts !== 'object' ||
+      Object.values(prefs.shortcuts).some(
+        (keys) => typeof keys !== 'string' || !keys || keys.length > 40,
+      ))
+  )
+    throw new Error('Invalid shortcut preferences')
+  if (
     !prefs ||
     typeof prefs.tabsVisible !== 'boolean' ||
     !['system', 'light', 'dark'].includes(prefs.theme) ||

@@ -41,6 +41,7 @@ import {
   ListTree,
 } from 'lucide-react'
 import { t, LANGUAGES } from './i18n.js'
+import { shortcutKeys } from './shortcut-registry.js'
 
 /**
  * Every action the app can run. The main menu shows only the `inMenu` ones: frequent actions
@@ -48,7 +49,19 @@ import { t, LANGUAGES } from './i18n.js'
  * all, so the rest stays one search away.
  * Entries: [id, label key or text, icon, shortcut, disabled, inMenu].
  */
-export function buildCommands({ active, activePinned, prefs, trashCount, desktop, mode }) {
+export function buildCommands(options) {
+  // Shortcuts come from the registry, so the ones changed in Settings show here too.
+  return commandGroups(options).map(([group, entries]) => [
+    group,
+    entries.map((entry) =>
+      entry[3]
+        ? [entry[0], entry[1], entry[2], shortcutKeys(entry[0]) ?? entry[3], ...entry.slice(4)]
+        : entry,
+    ),
+  ])
+}
+
+function commandGroups({ active, activePinned, prefs, trashCount, desktop, mode }) {
   const noFold = !active || mode === 'source'
   const language = LANGUAGES[prefs.language] ?? LANGUAGES['pt-BR']
   return [

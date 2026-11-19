@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom'
+import { shortcutKeys } from '../shortcut-registry.js'
 import { useEffect, useRef, useState } from 'react'
 import { Pin, Plus, X } from 'lucide-react'
 import { moveTab, togglePinnedTab } from '../tabs.js'
@@ -257,7 +258,7 @@ export function useTabs({
                   <ShortcutButton
                     className="tab-close"
                     label={`${t('tabs.close')}: ${note.name}`}
-                    keys={id === data.activeId ? 'W' : undefined}
+                    keys={id === data.activeId ? shortcutKeys('closeTab') : undefined}
                     onClick={() => close(id)}
                   >
                     <X size={13} />
@@ -271,7 +272,7 @@ export function useTabs({
       <ShortcutButton
         className="tab-new"
         label={t('menu.newNote')}
-        keys="T"
+        keys={shortcutKeys('newNote')}
         onClick={() => create()}
       >
         <Plus size={15} aria-hidden="true" />
@@ -350,7 +351,7 @@ export function useTabs({
           onClick={() => runTabMenu('close')}
         >
           <span>{t('tabs.close')}</span>
-          <Shortcut keys="W" />
+          <Shortcut keys={shortcutKeys('closeTab')} />
         </button>
         <div className="table-context-menu-separator" />
         {(() => {

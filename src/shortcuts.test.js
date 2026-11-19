@@ -2,15 +2,21 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { SHORTCUTS, appShortcut } from './shortcuts.js'
 import {
-  BLOCK_SHORTCUTS,
-  blockKeys,
-  blockShortcut,
-  formatShortcut,
-  shortcutEdit,
-} from './editor-shortcuts.js'
+  SHORTCUT_ACTIONS,
+  keysFor,
+  keysFromEvent,
+  setShortcutOverrides,
+  shortcutConflict,
+} from './shortcut-registry.js'
+import { blockKeys, blockShortcut, formatShortcut, shortcutEdit } from './editor-shortcuts.js'
 
 test('block shortcuts respect composition and modifiers and use physical shifted keys', () => {
-  for (const [keys, , action] of BLOCK_SHORTCUTS) {
+  const blocks = SHORTCUT_ACTIONS.filter((item) => item.scope === 'block').map((item) => [
+    item.keys[0],
+    item.label,
+    item.action,
+  ])
+  for (const [keys, , action] of blocks) {
     const key = keys.slice('Shift+'.length)
     const event = {
       ctrlKey: true,
@@ -165,4 +171,48 @@ test('the outline shortcut uses the shared app action', () => {
     appShortcut({ key: 't', code: 'KeyT', ctrlKey: true, altKey: true, shiftKey: true }),
     null,
   )
+})
+
+test('changed shortcuts replace the defaults and can be restored', () => {
+  setShortcutOverrides({ newNote: 'Alt+N', blockMenu: 'Shift+K' })
+  try {
+    assert.equal(appShortcut({ key: 'n', code: 'KeyN', ctrlKey: true, altKey: true }), 'newNote')
+    assert.equal(appShortcut({ key: 't', code: 'KeyT', ctrlKey: true }), null)
+    assert.equal(
+      formatShortcut({ key: 'K', code: 'KeyK', ctrlKey: true, shiftKey: true }),
+      'blockMenu',
+    )
+    assert.equal(formatShortcut({ key: '/', code: 'Slash', ctrlKey: true }), null)
+    assert.deepEqual(keysFor('newNote'), ['Alt+N'])
+  } finally {
+    setShortcutOverrides({})
+  }
+  assert.equal(appShortcut({ key: 't', code: 'KeyT', ctrlKey: true }), 'newNote')
+  // The tab number shortcuts are fixed.
+  setShortcutOverrides({ tab1: 'Alt+9' })
+  assert.deepEqual(keysFor('tab1'), ['1'])
+  setShortcutOverrides({})
+})
+
+test('the block actions menu has its own shortcut, Ctrl+/', () => {
+  assert.equal(formatShortcut({ key: '/', code: 'Slash', ctrlKey: true }), 'blockMenu')
+  // On ABNT keyboards the / key has another code.
+  assert.equal(formatShortcut({ key: '/', code: 'IntlRo', ctrlKey: true }), 'blockMenu')
+  assert.equal(formatShortcut({ key: '?', code: 'Slash', ctrlKey: true, shiftKey: true }), null)
+  assert.equal(appShortcut({ key: '?', code: 'Slash', ctrlKey: true, shiftKey: true }), 'shortcuts')
+})
+
+test('recording a shortcut reads the physical key and needs a modifier', () => {
+  assert.equal(keysFromEvent({ key: 'n', code: 'KeyN', ctrlKey: true, altKey: true }), 'Alt+N')
+  assert.equal(keysFromEvent({ key: 'N', code: 'KeyN', ctrlKey: true, shiftKey: true }), 'Shift+N')
+  assert.equal(keysFromEvent({ key: 'F4', code: 'F4' }), 'F4')
+  assert.equal(keysFromEvent({ key: 'n', code: 'KeyN' }), null)
+  assert.equal(keysFromEvent({ key: 'Control', code: 'ControlLeft', ctrlKey: true }), null)
+})
+
+test('a shortcut already in use is reported as a conflict', () => {
+  assert.equal(shortcutConflict('newNote', 'P').id, 'findNote')
+  assert.equal(shortcutConflict('newNote', 'B').id, 'bold')
+  assert.equal(shortcutConflict('newNote', 'Alt+N'), null)
+  assert.equal(shortcutConflict('newNote', 'T'), null)
 })

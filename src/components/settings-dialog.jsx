@@ -274,7 +274,7 @@ export function SettingsDialog({
               <p className="setting-empty">{t('history.desktopOnly')}</p>
             ))}
           {section === 'sync' && <SyncPanel sync={sync} />}
-          {section === 'shortcuts' && <ShortcutList />}
+          {section === 'shortcuts' && <ShortcutList value={prefs.shortcuts} onChange={onChange} />}
           {section === 'about' && <AboutPanel />}
         </div>
       </div>

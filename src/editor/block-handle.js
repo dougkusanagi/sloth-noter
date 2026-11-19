@@ -10,6 +10,52 @@ import { blockIconMarkup, gripMarkup } from './block-icons.js'
 import { openPopupMenu } from './popup-menu.js'
 import { TURN_INTO, addBlockBelow, copyBlock, deleteBlock, turnBlockInto } from './block-actions.js'
 import { listIndentChanges } from '../list-indent.js'
+import { isBareKeys, parseKeys, shortcutKeys } from '../shortcut-registry.js'
+
+const KEY_LABELS = { Shift: '⇧', Delete: 'Del' }
+
+/** The app's shortcut tooltip (see ShortcutHint), for a handle drawn outside React. */
+function showTooltip(anchor, label, keys) {
+  document.dispatchEvent(new Event('sloth:shortcut-tooltip'))
+  const tooltip = document.createElement('span')
+  tooltip.className = 'shortcut-tooltip'
+  tooltip.setAttribute('role', 'tooltip')
+  tooltip.id = 'cm-block-handle-tooltip'
+  const text = document.createElement('span')
+  text.textContent = label
+  tooltip.append(text)
+  if (keys) {
+    const { key, alt, shift } = parseKeys(keys)
+    const mod = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
+    const parts = [
+      ...(isBareKeys(keys) ? [] : [mod]),
+      ...(alt ? ['Alt'] : []),
+      ...(shift ? ['Shift'] : []),
+      key,
+    ]
+    const group = document.createElement('span')
+    group.className = 'menu-shortcut'
+    for (const part of parts) {
+      const kbd = document.createElement('kbd')
+      kbd.textContent = KEY_LABELS[part] ?? part
+      group.append(kbd)
+    }
+    tooltip.append(group)
+  }
+  document.body.append(tooltip)
+  const rect = anchor.getBoundingClientRect()
+  const { width, height } = tooltip.getBoundingClientRect()
+  tooltip.style.left = `${Math.max(8, Math.min(innerWidth - width - 8, rect.left + rect.width / 2 - width / 2))}px`
+  tooltip.style.top = `${Math.max(8, rect.top >= height + 8 ? rect.top - height - 8 : rect.bottom + 8)}px`
+  anchor.setAttribute('aria-describedby', tooltip.id)
+  const remove = () => {
+    tooltip.remove()
+    anchor.removeAttribute('aria-describedby')
+    document.removeEventListener('sloth:shortcut-tooltip', remove)
+  }
+  document.addEventListener('sloth:shortcut-tooltip', remove)
+  return remove
+}
 
 const blocksByDoc = new WeakMap()
 function blocksOf(doc) {
@@ -150,6 +196,24 @@ export const blockHandle = ViewPlugin.fromClass(
           this.openMenu()
         }
       })
+      const tip = () => {
+        this.untip?.()
+        if (!this.block || this.menuOpen || this.dragging) return
+        this.untip = showTooltip(
+          this.handle,
+          t('block.handle', { block: t(`block.${this.block.kind}`) }),
+          shortcutKeys('blockMenu'),
+        )
+      }
+      const untip = () => {
+        this.untip?.()
+        this.untip = null
+      }
+      this.handle.addEventListener('mouseenter', tip)
+      this.handle.addEventListener('focus', tip)
+      this.handle.addEventListener('mouseleave', untip)
+      this.handle.addEventListener('blur', untip)
+      this.handle.addEventListener('pointerdown', untip)
       view.dom.addEventListener('mousemove', this.move)
       view.dom.addEventListener('mouseleave', this.leave)
       view.contentDOM.addEventListener('keydown', this.keydown)
@@ -214,7 +278,7 @@ export const blockHandle = ViewPlugin.fromClass(
       this.handle.innerHTML = `<span class="cm-block-handle-type">${blockIconMarkup[block.kind] ?? blockIconMarkup.other}</span>${gripMarkup}`
       const label = t('block.handle', { block: t(`block.${block.kind}`) })
       this.handle.setAttribute('aria-label', label)
-      this.handle.title = label
+      this.handle.removeAttribute('title')
       this.handle.dataset.kind = block.kind
       this.handle.style.left = `${left}px`
       this.handle.style.top = `${coords.top - host.top + (lineHeight - 26) / 2}px`
@@ -242,13 +306,29 @@ export const blockHandle = ViewPlugin.fromClass(
     }
     hide() {
       clearTimeout(this.hideTimer)
+      this.untip?.()
+      this.untip = null
       this.handle.hidden = true
       this.block = null
       this.revealFold(null)
     }
+    /** Opens the actions of the block holding the cursor (keyboard shortcut). */
+    openMenuAtCursor() {
+      const { view } = this
+      if (view.state.readOnly) return false
+      const line = view.state.doc.lineAt(view.state.selection.main.head).number
+      const block = blocksOf(view.state.doc).find((item) => line >= item.first && line <= item.last)
+      if (!block || block.kind === 'table') return false
+      this.show(block)
+      if (this.handle.hidden) return false
+      this.openMenu()
+      return true
+    }
     openMenu() {
       const block = this.block
       if (!block) return
+      this.untip?.()
+      this.untip = null
       this.menuOpen = true
       this.handle.classList.add('is-active')
       blockMenu(this.view, block, this.handle, () => {
@@ -358,6 +438,7 @@ export const blockHandle = ViewPlugin.fromClass(
     }
     destroy() {
       clearTimeout(this.hideTimer)
+      this.untip?.()
       this.handle.remove()
       this.view.dom.removeEventListener('mousemove', this.move)
       this.view.dom.removeEventListener('mouseleave', this.leave)
@@ -365,3 +446,8 @@ export const blockHandle = ViewPlugin.fromClass(
     }
   },
 )
+
+/** Opens the block actions menu for the block holding the cursor. */
+export function openBlockMenu(view) {
+  return view.plugin(blockHandle)?.openMenuAtCursor() ?? false
+}

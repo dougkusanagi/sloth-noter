@@ -1,4 +1,5 @@
 import { DocumentWidthPresets } from './document-width-presets.jsx'
+import { shortcutKeys } from '../shortcut-registry.js'
 import { useEffect, useRef, useState } from 'react'
 import {
   Minus,
@@ -96,7 +97,7 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
             >
               <Focus size={16} aria-hidden="true" />
               <span>{t('focus.toggle')}</span>
-              <Shortcut keys="Alt+F" />
+              <Shortcut keys={shortcutKeys('focus')} />
             </button>
             <div className="menu-heading" role="presentation">
               {t('settings.theme')}
@@ -119,7 +120,15 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
               ))}
             </div>
             {[
-              ['fontSize', t('settings.fontSize'), Type, prefs.fontSize, FONT_SIZE, 1, ''],
+              [
+                'fontSize',
+                t('settings.fontSize'),
+                Type,
+                prefs.fontSize,
+                FONT_SIZE,
+                1,
+                ['smaller', 'resetText', 'larger'],
+              ],
               [
                 'contentWidth',
                 t('settings.contentWidth'),
@@ -127,9 +136,9 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
                 contentWidth(prefs),
                 CONTENT_WIDTH,
                 CONTENT_WIDTH.step,
-                'Alt+',
+                ['narrower', 'resetWidth', 'wider'],
               ],
-            ].map(([key, label, Icon, value, range, step, modifier]) => (
+            ].map(([key, label, Icon, value, range, step, [decrease, reset, increase]]) => (
               <div className="menu-adjustment" key={key} role="group" aria-label={label}>
                 <span className="adjustment-label">
                   <Icon size={14} aria-hidden="true" />
@@ -154,7 +163,7 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
                   <ShortcutButton
                     role="menuitem"
                     label={`${label}: ${t('adjust.decrease')}`}
-                    keys={`${modifier}-`}
+                    keys={shortcutKeys(decrease)}
                     disabled={value <= range.min}
                     onClick={() =>
                       onChange({
@@ -164,12 +173,12 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
                     }
                   >
                     <Minus size={13} />
-                    <Shortcut keys={`${modifier}-`} />
+                    <Shortcut keys={shortcutKeys(decrease)} />
                   </ShortcutButton>
                   <ShortcutButton
                     role="menuitem"
                     label={`${label}: ${t('settings.fontReset')}`}
-                    keys={`${modifier}0`}
+                    keys={shortcutKeys(reset)}
                     disabled={
                       value === range.default &&
                       !(key === 'contentWidth' && prefs.documentWidth === 'full')
@@ -182,12 +191,12 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
                     }
                   >
                     <RotateCcw size={13} />
-                    <Shortcut keys={`${modifier}0`} />
+                    <Shortcut keys={shortcutKeys(reset)} />
                   </ShortcutButton>
                   <ShortcutButton
                     role="menuitem"
                     label={`${label}: ${t('adjust.increase')}`}
-                    keys={`${modifier}+`}
+                    keys={shortcutKeys(increase)}
                     disabled={value >= range.max}
                     onClick={() =>
                       onChange({
@@ -197,7 +206,7 @@ export function DisplayMenu({ prefs, onChange, focusMode, onToggleFocus }) {
                     }
                   >
                     <Plus size={13} />
-                    <Shortcut keys={`${modifier}+`} />
+                    <Shortcut keys={shortcutKeys(increase)} />
                   </ShortcutButton>
                 </div>
               </div>

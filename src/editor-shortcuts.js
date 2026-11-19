@@ -1,65 +1,26 @@
 import { formatSelection } from './format-selection.js'
+import { SHORTCUT_ACTIONS, keysFor, shortcutAction } from './shortcut-registry.js'
 
-/**
- * Formatting shortcuts shared with other Markdown editors (Obsidian, Typora, Google Docs).
- * They only act inside the text editor, so they never compete with the app shortcuts.
- * Entries: [keys, label key] in the shape of the SHORTCUTS list.
- */
-export const EDITOR_SHORTCUTS = [
-  ['B', 'format.bold'],
-  ['I', 'format.italic'],
-  ['`', 'format.code'],
-  ['Shift+X', 'format.strike'],
-  ['K', 'format.link'],
-  ['Shift+8', 'format.list'],
-  ['Shift+.', 'format.quote'],
-]
-
-export const BLOCK_SHORTCUTS = [
-  ['Shift+2', 'block.h2', 'h2'],
-  ['Shift+3', 'block.h3', 'h3'],
-  ['Shift+4', 'block.h4', 'h4'],
-  ['Shift+5', 'block.table', 'table'],
-  ['Shift+6', 'block.image', 'image'],
-  ['Shift+7', 'block.numbered', 'numbered'],
-  ['Shift+`', 'block.code', 'code'],
-]
+/** Default block shortcuts as `[keys, label, block]`. */
+export const BLOCK_SHORTCUTS = SHORTCUT_ACTIONS.filter((item) => item.scope === 'block').map(
+  (item) => [item.keys[0], item.label, item.action],
+)
 
 const isMac = () => /Mac|iPhone|iPad/.test(globalThis.navigator?.platform ?? '')
 
+/** The keys of a block or of the list and quote formats, as shown in menus. */
 export function blockKeys(action, mac = isMac()) {
-  if (['list', 'quote'].includes(action))
-    return EDITOR_SHORTCUTS.find(([, label]) => label === `format.${action}`)?.[0]
-  const keys = BLOCK_SHORTCUTS.find(([, , block]) => block === action)?.[0]
-  return keys && mac ? `Alt+${keys}` : keys
+  if (['list', 'quote'].includes(action)) return keysFor(action, mac)[0]
+  return keysFor(`block:${action}`, mac)[0]
 }
 
-export function blockShortcut(event, mac = isMac()) {
-  if (event.isComposing || !(event.ctrlKey || event.metaKey) || !event.shiftKey) return null
-  // Command+Shift+digits belongs to macOS screenshots; Option keeps those combinations free.
-  if (Boolean(event.altKey) !== Boolean(mac && event.metaKey && !event.ctrlKey)) return null
-  // Physical digits still work when Shift changes the character, including on ABNT keyboards.
-  const key = /^Digit[2-7]$/.test(event.code ?? '')
-    ? event.code.slice(-1)
-    : event.code === 'Backquote' || event.key === '~'
-      ? '`'
-      : event.key
-  return BLOCK_SHORTCUTS.find(([keys]) => keys === `Shift+${key}`)?.[2] ?? null
-}
+/** The block a keydown turns the current line into (`h2`, `code`…), or null. */
+export const blockShortcut = (event, mac = isMac()) =>
+  shortcutAction(event, 'block', mac)?.action ?? null
 
-/** Maps a keydown to a formatting action, or null. */
+/** Maps a keydown to an editor action (`bold`, `blockMenu`…), or null. */
 export function formatShortcut(event) {
-  if (event.isComposing || !(event.ctrlKey || event.metaKey) || event.altKey) return null
-  const key = event.key.toLowerCase()
-  if (!event.shiftKey)
-    return (
-      { b: 'bold', i: 'italic', k: 'link', '`': 'code' }[key] ??
-      (event.code === 'Backquote' ? 'code' : null)
-    )
-  if (event.code === 'Digit8' || key === '*') return 'list'
-  if (event.code === 'Period' || key === '>') return 'quote'
-  if (key === 'x') return 'strike'
-  return null
+  return shortcutAction(event, 'editor')?.id ?? null
 }
 
 const PAIRS = { bold: ['**', '**'], italic: ['*', '*'], code: ['`', '`'], strike: ['~~', '~~'] }
@@ -74,6 +35,7 @@ export function shortcutEdit(text, from, to, action) {
 }
 
 function rawEdit(text, from, to, action) {
+  if (!['bold', 'italic', 'code', 'strike', 'link', 'list', 'quote'].includes(action)) return null
   if (action === 'list' || action === 'quote') {
     // Block marks apply to the current line even when nothing is selected.
     const end = Math.max(to, from + (from === to ? 1 : 0))

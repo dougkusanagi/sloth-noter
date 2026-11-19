@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { shortcutKeys } from '../shortcut-registry.js'
 import {
   ArrowDownAZ,
   ArrowUpDown,
@@ -53,7 +54,7 @@ export function NewMenu({ onNote, onFolder }) {
       <ShortcutButton
         className="button sidebar-add split-main"
         label={t('menu.newNote')}
-        keys="T"
+        keys={shortcutKeys('newNote')}
         onClick={onNote}
       >
         <FilePlus size={15} aria-hidden="true" />
