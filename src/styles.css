@@ -1161,6 +1161,11 @@ textarea:focus-visible {
 .visual-editor .cm-md-blank {
   line-height: 1.62;
 }
+.visual-editor .cm-line.cm-md-paragraph.cm-md-trailing {
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+}
 .visual-editor .cm-line.cm-md-gap {
   height: var(--block-gap);
   padding: 0;

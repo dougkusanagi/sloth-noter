@@ -67,3 +67,16 @@ test('a dica de inserir blocos fica na linha vazia do cursor', async ({ page }) 
   const tip = await page.locator('.insert-trigger').boundingBox()
   expect(Math.abs(tip.y - line.y)).toBeLessThan(4)
 })
+
+// Regression: with the file's final line break, Enter showed an extra empty line below.
+test('Enter no último parágrafo não mostra linha vazia a mais', async ({ page }) => {
+  await page.locator('.cm-line', { hasText: 'bbb' }).click()
+  await page.keyboard.press('End')
+  await page.keyboard.press('Enter')
+  const heights = await page
+    .locator('.cm-content > .cm-line')
+    .evaluateAll((lines) => lines.slice(-3).map((line) => line.getBoundingClientRect().height))
+  expect(heights[0]).toBeLessThan(25) // gap
+  expect(heights[1]).toBeGreaterThan(25) // new paragraph with the cursor
+  expect(heights[2]).toBe(0) // the file's final line break
+})

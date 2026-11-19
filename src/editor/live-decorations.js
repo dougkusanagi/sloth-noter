@@ -618,6 +618,15 @@ export function decorationsFor(view) {
         // Both line breaks around it, so the cursor never lands on the gap.
         gaps.push(gapMark.range(doc.line(number - 1).to, doc.line(number + 1).from))
       }
+      // The file's final line break is not an empty paragraph until the cursor goes there.
+      else if (
+        shape.kind === 'paragraph' &&
+        number === doc.lines &&
+        number > Math.max(titleLine, placeholderLine ?? 0) + 1 &&
+        !line.text.trim() &&
+        !active
+      )
+        attrs.class += ' cm-md-trailing'
       if (number === titleLine && line.text === '# ') {
         attrs.class += ' cm-empty-title'
         attrs['data-placeholder'] = t('editor.titleHint')

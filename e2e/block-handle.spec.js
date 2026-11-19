@@ -87,7 +87,9 @@ test('empty lines offer an insert button and fold arrows reveal on direct hover'
   const arrow = page.locator('.cm-fold-toggle:not(.cm-level-badge)').first()
   await arrow.hover()
   await expect(arrow).toHaveCSS('opacity', '1')
-  await page.locator('.cm-line').last().click()
+  // The file's final empty line has no height until the cursor reaches it.
+  await page.locator('.cm-line', { hasText: 'Texto' }).click()
+  await page.keyboard.press('Control+End')
   await page.getByRole('button', { name: 'Inserir bloco', exact: true }).click()
   await expect(page.locator('.block-menu')).toBeVisible()
 })
