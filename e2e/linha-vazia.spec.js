@@ -26,6 +26,15 @@ test.beforeEach(async ({ page }) => {
 
 // Every block is separated by the same gap, with or without an empty source line.
 test('blocos têm o mesmo espaço, com ou sem linha vazia no texto', async ({ page }) => {
+  // Wait for the fonts, so the boxes are measured after the final layout.
+  await page.evaluate(() => document.fonts.ready)
+  await expect
+    .poll(async () => {
+      const ab = await box(page, 'ab')
+      const fence = await page.locator('.cm-md-fence-start').boundingBox()
+      return fence.y - (ab.y + ab.height)
+    })
+    .toBeGreaterThan(15)
   const ab = await box(page, 'ab')
   const fence = await page.locator('.cm-md-fence-start').boundingBox()
   const end = await page.locator('.cm-md-fence-end').boundingBox()
@@ -124,4 +133,19 @@ test('uma seleção posta dentro do espaço vai para o bloco vizinho', async ({ 
     return doc.lineAt(view.state.selection.main.head).text
   })
   expect(['a', 'bbb']).toContain(line)
+})
+
+// Regression: Shift+Enter at the end of a two-line paragraph jumped into the paragraph below.
+test('Shift+Enter acrescenta uma linha ao mesmo parágrafo', async ({ page }) => {
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page.locator('textarea').fill('# T\n\naaa\nfg\n\nggggg\n')
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  await page.locator('.cm-line', { hasText: 'fg' }).click()
+  await page.keyboard.press('End')
+  await page.keyboard.press('Shift+Enter')
+  await page.keyboard.type('hh')
+  await page.keyboard.press('ArrowDown')
+  expect(await caretLine(page)).toBe('ggggg')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await expect(page.locator('textarea')).toHaveValue('# T\n\naaa\nfg\nhh\n\nggggg\n')
 })

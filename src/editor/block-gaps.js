@@ -3,23 +3,26 @@ import { Decoration, EditorView, WidgetType } from '@codemirror/view'
 import { markdownTree, walk } from '../markdown-model.js'
 import { titleLineNumber } from '../frontmatter.js'
 
-const blank = (doc, number) => !doc.line(number).text.trim()
+// The empty line holding the cursor is text being written (a Shift+Enter line break, for example),
+// never a gap; it counts as a line with text.
+const blank = (doc, number, cursorLine) => number !== cursorLine && !doc.line(number).text.trim()
 
 /**
  * An empty line that only separates two blocks: the first of a run of empty lines, and also the
  * last one when the run has three or more lines. The other empty lines are empty paragraphs.
  */
-export function isGapLine(doc, number, firstBodyLine) {
-  if (number <= firstBodyLine || number >= doc.lines || !blank(doc, number)) return false
-  if (!blank(doc, number - 1)) return true
-  if (blank(doc, number + 1)) return false
+export function isGapLine(doc, number, firstBodyLine, cursorLine = 0) {
+  if (number <= firstBodyLine || number >= doc.lines || !blank(doc, number, cursorLine))
+    return false
+  if (!blank(doc, number - 1, cursorLine)) return true
+  if (blank(doc, number + 1, cursorLine)) return false
   let start = number
-  while (start > 1 && blank(doc, start - 1)) start--
+  while (start > 1 && blank(doc, start - 1, cursorLine)) start--
   return number - start + 1 >= 3 && start > 1
 }
 
 /** Gap lines outside code, keyed by line number. */
-export function gapLines(doc, boxes) {
+export function gapLines(doc, boxes, cursorLine = 0) {
   const text = doc.toString()
   const code = []
   walk(markdownTree(text), (node) => {
@@ -40,7 +43,7 @@ export function gapLines(doc, boxes) {
   }
   const gaps = new Set()
   for (let number = first + 1; number < doc.lines; number++)
-    if (isGapLine(doc, number, first) && !inCode(number)) gaps.add(number)
+    if (isGapLine(doc, number, first, cursorLine) && !inCode(number)) gaps.add(number)
   return gaps
 }
 
@@ -79,9 +82,10 @@ class GapWidget extends WidgetType {
  * The editor shows no empty line between two blocks: the separating line (kept in the Markdown)
  * is drawn as the standard gap, and the cursor skips it.
  */
-function build(doc) {
+function build(state, cursorLine) {
+  const doc = state.doc
   const boxes = { starts: new Set(), ends: new Set() }
-  const lines = gapLines(doc, boxes)
+  const lines = gapLines(doc, boxes, cursorLine)
   const hidden = [],
     atomic = []
   // Two code blocks or tables written with no empty line between them still get the gap.
@@ -105,9 +109,19 @@ function build(doc) {
   return { lines, hidden: Decoration.set(hidden, true), atomic: Decoration.set(atomic) }
 }
 
+const cursorLineOf = (state) => state.doc.lineAt(state.selection.main.head).number
+
 export const blockGaps = StateField.define({
-  create: (state) => build(state.doc),
-  update: (value, transaction) => (transaction.docChanged ? build(transaction.state.doc) : value),
+  // `writing` is the line just edited while the cursor stays on it; moving away releases it, so the
+  // arrow keys still skip gaps.
+  create: (state) => ({ ...build(state, 0), writing: 0 }),
+  update: (value, transaction) => {
+    const line = cursorLineOf(transaction.state)
+    if (transaction.docChanged) return { ...build(transaction.state, line), writing: line }
+    if (value.writing && value.writing !== line)
+      return { ...build(transaction.state, 0), writing: 0 }
+    return value
+  },
   provide: (field) => [
     EditorView.decorations.from(field, (value) => value.hidden),
     EditorView.atomicRanges.of((view) => view.state.field(field).atomic),
