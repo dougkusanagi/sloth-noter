@@ -15,16 +15,24 @@ export function continueBlock(text, position) {
   if (paragraph && position > lineStart && text.slice(lineStart, lineEnd).trim())
     return { from: position, to: position, insert: '\n\n', cursor: position + 2 }
   if (position !== lineEnd) return null
-  let inCode = false
+  let code = null
   walk(tree, (node) => {
     if (
       node.type === 'code' &&
       position >= node.position.start.offset &&
       position <= node.position.end.offset
     )
-      inCode = true
+      code = node
   })
-  if (inCode) return null
+  // Enter after a closing fence starts a new paragraph below the block, like in a paragraph.
+  if (
+    code &&
+    position === code.position.end.offset &&
+    lineStart > code.position.start.offset &&
+    /^\s*(`{3,}|~{3,})\s*$/.test(text.slice(lineStart, lineEnd))
+  )
+    return { from: position, to: position, insert: '\n\n', cursor: position + 2 }
+  if (code) return null
   const line = text.slice(lineStart, lineEnd)
   const list = line.match(/^(\s*)([-*+] |\d+[.)] )(.*)$/)
   const quote = list ? null : line.match(/^(\s*)(> )(.*)$/)

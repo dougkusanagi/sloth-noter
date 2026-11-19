@@ -1146,13 +1146,16 @@ textarea:focus-visible {
 .visual-editor .cm-line:not(.cm-md-blank) + .cm-code-collapsed-start + .cm-code-collapsed,
 .visual-editor
   :is(.cm-md-fence-end, .cm-code-collapsed)
-  + .cm-line:not(.cm-md-blank, .cm-code-collapsed-start),
-.visual-editor :is(.cm-md-fence-end, .cm-code-collapsed) + .cm-md-blank.cm-md-editing {
+  + .cm-line:not(.cm-md-blank, .cm-code-collapsed-start) {
   margin-top: calc(var(--editor-size) * 1.35);
 }
 /* The empty line that separates two blocks shows as the same gap as around code blocks. */
-.visual-editor .cm-md-blank:not(.cm-md-editing) {
+.visual-editor .cm-md-blank {
   line-height: 1.35;
+}
+/* Only the first empty line separates blocks; the next ones are empty paragraphs made by Enter. */
+.visual-editor .cm-md-blank + .cm-md-blank {
+  line-height: 1.62;
 }
 .visual-editor .cm-line:not(:empty) + .cm-md-table-headrow,
 .visual-editor .cm-md-table-last + .cm-line:not(:empty) {

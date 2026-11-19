@@ -412,6 +412,8 @@ export function VisualEditor({
     if (template.mode) onTemplateMode?.(template.mode)
   }
 
+  const lineTop = (view, line) => view.documentTop + view.lineBlockAt(line.from).top
+
   function positionInsert(view) {
     positionStarters(view)
     if (sourceModeRef.current || blockMenuRef.current) return
@@ -446,7 +448,9 @@ export function VisualEditor({
             from: view.state.doc.line(2).from,
             x: x + 4,
             // Exactly where the next line starts, so Enter does not move the tip.
-            y: subtitle.top + view.lineBlockAt(view.state.doc.line(2).from).height,
+            y:
+              lineTop(view, view.state.doc.line(2)) +
+              view.lineBlockAt(view.state.doc.line(2).from).height,
             emptyNote: true,
           }
         }
@@ -456,7 +460,8 @@ export function VisualEditor({
         if (line.number === emptyBodyLine(view.state)) return null
         const coords = view.coordsAtPos(line.from)
         if (!coords || coords.top < 46 || coords.top > window.innerHeight) return null
-        return { from: line.from, x: coords.left + 4, y: coords.top }
+        // The line top, not the caret top, so taller empty paragraphs keep the tip in place.
+        return { from: line.from, x: coords.left + 4, y: lineTop(view, line) }
       },
       write: (position) => {
         if (blockMenuRef.current) return
@@ -475,7 +480,7 @@ export function VisualEditor({
     setInsertAt({
       from: line.from,
       x: coords.left + 4,
-      y: coords.top,
+      y: lineTop(view, line),
       hasBodyPlaceholder: line.number === emptyBodyLine(view.state),
     })
     setBlockMenu(true)

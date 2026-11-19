@@ -43,3 +43,16 @@ test('Enter in a paragraph starts a new paragraph', () => {
 test('Enter at the start of a paragraph line keeps the plain line break', () => {
   assert.equal(continueBlock('# Título\nCorpo', 9), null)
 })
+
+test('Enter after a closing fence starts a new paragraph below the code block', () => {
+  const text = '```js\nx\n```'
+  assert.deepEqual(continueBlock(text, text.length), {
+    from: text.length,
+    to: text.length,
+    insert: '\n\n',
+    cursor: text.length + 2,
+  })
+  assert.equal(continueBlock('~~~\nx\n~~~\n\nabc', 9).insert, '\n\n')
+  assert.equal(continueBlock('```', 3), null)
+  assert.equal(continueBlock('```\nx', 5), null)
+})
