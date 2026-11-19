@@ -1,4 +1,4 @@
-import { StateField } from '@codemirror/state'
+import { EditorSelection, EditorState, StateField } from '@codemirror/state'
 import { Decoration, EditorView, WidgetType } from '@codemirror/view'
 import { markdownTree, walk } from '../markdown-model.js'
 import { titleLineNumber } from '../frontmatter.js'
@@ -63,9 +63,10 @@ class GapWidget extends WidgetType {
     // A click on the gap goes to the start of the block below it.
     gap.addEventListener('mousedown', (event) => {
       event.preventDefault()
+      event.stopPropagation()
       const line = view.state.doc.line(Math.min(this.next, view.state.doc.lines))
-      view.dispatch({ selection: { anchor: line.from } })
       view.focus()
+      view.dispatch({ selection: { anchor: line.from }, userEvent: 'select.pointer' })
     })
     return gap
   }
@@ -110,5 +111,33 @@ export const blockGaps = StateField.define({
   provide: (field) => [
     EditorView.decorations.from(field, (value) => value.hidden),
     EditorView.atomicRanges.of((view) => view.state.field(field).atomic),
+    // Atomic ranges only steer CodeMirror's own commands. A selection that comes from the
+    // browser (WebKit moves it natively with the arrow keys) can still land inside the gap, so
+    // push it to the block on the side it was moving to.
+    EditorState.transactionFilter.of((transaction) => {
+      if (!transaction.selection) return transaction
+      const { atomic } = transaction.state.field(field)
+      const previous = transaction.startState.selection.main.head
+      let moved = false
+      const ranges = transaction.selection.ranges.map((range) => {
+        let head = range.head
+        atomic.between(head, head, (from, to) => {
+          if (head <= from || head >= to) return
+          head = head >= previous ? to : from
+          moved = true
+          return false
+        })
+        return range.empty ? EditorSelection.cursor(head) : range
+      })
+      if (!moved) return transaction
+      return [
+        transaction,
+        {
+          selection: EditorSelection.create(ranges, transaction.selection.mainIndex),
+          // The positions are in the changed document.
+          sequential: true,
+        },
+      ]
+    }),
   ],
 })

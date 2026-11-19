@@ -107,3 +107,21 @@ test('um clique no espaço entre blocos leva ao bloco de baixo', async ({ page }
   await page.locator('.cm-block-gap').last().click()
   expect(await caretLine(page)).toBe('bbb')
 })
+
+// Regression: in WebKit the arrow keys moved the browser selection into the gap, and the caret
+// and the insert tip showed at the edge of the editor.
+test('uma seleção posta dentro do espaço vai para o bloco vizinho', async ({ page }) => {
+  await page.locator('.cm-line', { hasText: 'bbb' }).click()
+  const line = await page.evaluate(async () => {
+    const { EditorView } = await import('/node_modules/.vite/deps/@codemirror_view.js')
+    const view = EditorView.findFromDOM(document.querySelector('.cm-editor'))
+    const doc = view.state.doc
+    const bbb = doc.line(
+      [...Array(doc.lines)].findIndex((_, i) => doc.line(i + 1).text === 'bbb') + 1,
+    )
+    // The empty line above bbb is the gap; a native selection lands on its start.
+    view.dispatch({ selection: { anchor: bbb.from - 1 } })
+    return doc.lineAt(view.state.selection.main.head).text
+  })
+  expect(['a', 'bbb']).toContain(line)
+})
