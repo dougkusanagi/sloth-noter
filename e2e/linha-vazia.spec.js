@@ -8,8 +8,8 @@ const box = (page, text) =>
     )
     const range = document.createRange()
     range.selectNodeContents(line)
-    const { y, height } = range.getClientRects()[0]
-    return { y, height }
+    const { x, y, height } = range.getClientRects()[0]
+    return { x, y, height }
   }, text)
 const caretLine = (page) =>
   page.evaluate(() => {
@@ -63,9 +63,11 @@ test('a dica de inserir blocos fica na linha vazia do cursor', async ({ page }) 
   await page.locator('.cm-line', { hasText: 'bbb' }).click()
   await page.keyboard.press('End')
   await page.keyboard.press('Enter')
-  const line = await page.locator('.cm-md-blank.cm-md-editing').boundingBox()
-  const tip = await page.locator('.insert-trigger').boundingBox()
-  expect(Math.abs(tip.y - line.y)).toBeLessThan(4)
+  const line = page.locator('.cm-md-blank.cm-md-editing')
+  const tip = page.locator('.insert-trigger')
+  await expect
+    .poll(async () => Math.abs((await tip.boundingBox()).y - (await line.boundingBox()).y))
+    .toBeLessThan(4)
 })
 
 // Regression: with the file's final line break, Enter showed an extra empty line below.
@@ -73,10 +75,35 @@ test('Enter no último parágrafo não mostra linha vazia a mais', async ({ page
   await page.locator('.cm-line', { hasText: 'bbb' }).click()
   await page.keyboard.press('End')
   await page.keyboard.press('Enter')
-  const heights = await page
-    .locator('.cm-content > .cm-line')
-    .evaluateAll((lines) => lines.slice(-3).map((line) => line.getBoundingClientRect().height))
-  expect(heights[0]).toBeLessThan(25) // gap
-  expect(heights[1]).toBeGreaterThan(25) // new paragraph with the cursor
-  expect(heights[2]).toBe(0) // the file's final line break
+  const rows = await page.locator('.cm-content > *').evaluateAll((elements) =>
+    elements.slice(-4).map((element) => ({
+      kind: element.classList.contains('cm-block-gap') ? 'gap' : element.textContent,
+      height: Math.round(element.getBoundingClientRect().height),
+    })),
+  )
+  // bbb, the standard gap (not a line), the new paragraph, the file's final line break.
+  expect(rows.map((row) => row.kind)).toEqual(['bbb', 'gap', '', ''])
+  expect(rows[2].height).toBeGreaterThan(25)
+  expect(rows[3].height).toBe(0)
+})
+
+// Regression: the gap line could be clicked and then looked like an empty line.
+test('não há linha vazia clicável entre dois parágrafos', async ({ page }) => {
+  await page.locator('.cm-line', { hasText: 'bbb' }).click()
+  await page.keyboard.press('End')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('ccc')
+  const gaps = await page
+    .locator('.cm-md-gap')
+    .evaluateAll((lines) => lines.map((line) => line.getBoundingClientRect().height))
+  expect(gaps.every((height) => height === 0)).toBe(true)
+  const bbb = await box(page, 'bbb')
+  const ccc = await box(page, 'ccc')
+  await page.mouse.click(bbb.x + 5, (bbb.y + bbb.height + ccc.y) / 2)
+  expect(['bbb', 'ccc']).toContain(await caretLine(page))
+})
+
+test('um clique no espaço entre blocos leva ao bloco de baixo', async ({ page }) => {
+  await page.locator('.cm-block-gap').last().click()
+  expect(await caretLine(page)).toBe('bbb')
 })

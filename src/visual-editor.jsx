@@ -99,6 +99,7 @@ import {
 import { documentBlocks } from './block-move.js'
 import { blockIconMarkup } from './editor/block-icons.js'
 import { TURN_INTO, turnBlocksInto } from './editor/block-actions.js'
+import { blockGaps } from './editor/block-gaps.js'
 
 /* eslint-disable react/jsx-key -- static tuples, rendered with explicit keys below */
 
@@ -414,9 +415,8 @@ export function VisualEditor({
 
   // The rendered line box: the height map can lag behind styled lines.
   const lineTop = (view, line) => {
-    const { node } = view.domAtPos(line.from)
-    const element = (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement)?.closest(
-      '.cm-line',
+    const element = [...view.contentDOM.children].find(
+      (child) => child.classList.contains('cm-line') && view.posAtDOM(child) === line.from,
     )
     return element?.getBoundingClientRect().top ?? view.coordsAtPos(line.from)?.top ?? 0
   }
@@ -969,6 +969,7 @@ export function VisualEditor({
       tableUi,
       sheet,
       blockHandle,
+      blockGaps,
       liveMarkdown,
       stickyCodeCopy,
       codeCopyHandler.of((source) => callbacks.current.onCopy?.(source)),

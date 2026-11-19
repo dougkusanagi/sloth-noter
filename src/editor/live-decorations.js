@@ -31,6 +31,7 @@ import { onLongPress, openTaskMenu } from './task-menu.js'
 import { unarchiveTask } from '../task-archive.js'
 import { documentChanges } from '../search-scope.js'
 import { hideFrontmatter } from './hide-frontmatter.js'
+import { blockGaps } from './block-gaps.js'
 import { readProperties, titleLineNumber } from '../frontmatter.js'
 import { lineVariables, resolveVariable } from '../variables.js'
 
@@ -323,22 +324,6 @@ export function lineAttributes(line, shape, active, listDepth = 0) {
   return attributes
 }
 
-const gapMark = Decoration.mark({})
-const blank = (doc, number) => !doc.line(number).text.trim()
-
-/**
- * An empty line that only separates two blocks: the first of a run of empty lines, and also the
- * last one when the run has three or more lines. The other empty lines are empty paragraphs.
- */
-export function isGapLine(doc, number, firstBodyLine) {
-  if (number <= firstBodyLine || number >= doc.lines || !blank(doc, number)) return false
-  if (!blank(doc, number - 1)) return true
-  if (blank(doc, number + 1)) return false
-  let start = number
-  while (start > 1 && blank(doc, start - 1)) start--
-  return number - start + 1 >= 3 && start > 1
-}
-
 export function decorationsFor(view) {
   const doc = view.state.doc,
     ranges = []
@@ -352,8 +337,8 @@ export function decorationsFor(view) {
     for (let number = first; number <= last; number++) editing.add(number)
   }
   const placeholderLine = emptyBodyLine(view.state)
+  const gapLines = view.state.field(blockGaps, false)?.lines ?? new Set()
   const titleLine = titleLineNumber(doc)
-  const gaps = []
   const text = doc.toString()
   const noteInfo = view.state
     .facet(taskNotes)
@@ -531,6 +516,8 @@ export function decorationsFor(view) {
         tableDecorations(ranges, view, line, number, table)
         continue
       }
+      // The separating empty line is drawn by blockGaps as the gap between blocks.
+      if (gapLines.has(number)) continue
       const active = editing.has(number)
       const task = line.text.match(/^(\s*(?:[-*+]|\d+[.)])\s+)\[([ xX]|[^\w\s[\]])\](?:\s+|$)/)
       if (task) {
@@ -610,16 +597,8 @@ export function decorationsFor(view) {
       if (shape.kind === 'ordered' && indent && listDepths.has(number))
         ranges.push(Decoration.replace({}).range(line.from, line.from + indent))
       const attrs = lineAttributes(line, shape, active, listDepths.get(number))
-      if (
-        shape.kind === 'paragraph' &&
-        isGapLine(doc, number, Math.max(titleLine, placeholderLine ?? 0) + 1)
-      ) {
-        attrs.class += ' cm-md-gap'
-        // Both line breaks around it, so the cursor never lands on the gap.
-        gaps.push(gapMark.range(doc.line(number - 1).to, doc.line(number + 1).from))
-      }
       // The file's final line break is not an empty paragraph until the cursor goes there.
-      else if (
+      if (
         shape.kind === 'paragraph' &&
         number === doc.lines &&
         number > Math.max(titleLine, placeholderLine ?? 0) + 1 &&
@@ -726,7 +705,6 @@ export function decorationsFor(view) {
       true,
     ),
     cells: Decoration.set(cells, true),
-    gaps: Decoration.set(gaps, true),
   }
 }
 

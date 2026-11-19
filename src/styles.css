@@ -1142,34 +1142,50 @@ textarea:focus-visible {
 .markdown :is(.code-block + *, * + .code-block) {
   margin-top: max(calc(var(--gap) * var(--line)), calc(var(--editor-size) * 1.35));
 }
-/* The standard gap between blocks. CodeMirror ignores line margins when it maps heights, so the
-   gap is padding: a margin there misplaces the caret, arrow keys and the insert tip. */
+/* The standard gap between blocks. An empty source line between them is drawn as the gap
+   (block-gaps.js). Without one, code blocks and tables get it as padding on the line next to them
+   (CodeMirror ignores line margins when it maps heights, which misplaced the caret). */
 .visual-editor .cm-content {
   --block-gap: calc(var(--editor-size) * 1.35);
 }
-.visual-editor .cm-line:not(.cm-md-blank):has(+ .cm-md-fence-start:not(.cm-code-collapsed-start)),
-.visual-editor .cm-line:not(.cm-md-blank):has(+ .cm-code-collapsed-start + .cm-code-collapsed),
-.visual-editor .cm-line:not(.cm-md-blank, .cm-md-table-row):has(+ .cm-md-table-headrow) {
-  padding-bottom: var(--block-gap);
+.visual-editor .cm-line {
+  padding-top: var(--gap-before, 0px);
+  padding-bottom: var(--gap-after, 0px);
 }
+/* Before a code block or table: on the line above. */
+.visual-editor
+  .cm-line:not(.cm-md-blank, .cm-md-fence, .cm-md-code, .cm-code-collapsed, .cm-md-table-row):is(
+    :has(+ .cm-md-fence-start),
+    :has(+ .cm-code-collapsed-start),
+    :has(+ .cm-md-table-row)
+  ) {
+  --gap-after: var(--block-gap);
+}
+/* Below a code block or table. */
 .visual-editor
   :is(.cm-md-fence-end, .cm-code-collapsed, .cm-md-table-last)
-  + .cm-line:not(.cm-md-blank, .cm-code-collapsed-start, .cm-md-table-row) {
-  padding-top: max(var(--block-gap), var(--heading-pad-top, 0px));
+  + .cm-line:not(
+    .cm-md-blank,
+    .cm-md-fence,
+    .cm-md-code,
+    .cm-code-collapsed-start,
+    .cm-code-collapsed,
+    .cm-md-table-row
+  ) {
+  --gap-before: var(--block-gap);
 }
-/* An empty line between two blocks is only the gap; the cursor skips it (atomic range). */
 .visual-editor .cm-md-blank {
   line-height: 1.62;
 }
+/* The file's final line break takes no room until the cursor goes there. */
 .visual-editor .cm-line.cm-md-paragraph.cm-md-trailing {
   height: 0;
   padding: 0;
   overflow: hidden;
 }
-.visual-editor .cm-line.cm-md-gap {
+/* The empty line between two blocks, drawn as the standard gap (see block-gaps.js). */
+.visual-editor .cm-block-gap {
   height: var(--block-gap);
-  padding: 0;
-  line-height: 1.35;
 }
 .markdown {
   color: var(--text-body);
@@ -2461,7 +2477,7 @@ body.cm-section-dragging * {
   opacity: 1;
 }
 .visual-editor .cm-line.cm-md-paragraph {
-  padding-bottom: 0.18em;
+  padding-bottom: calc(0.18em + var(--gap-after, 0px));
 }
 /* More space above a heading than below, so it reads as part of the text that follows. */
 .visual-editor .cm-line:is(.cm-md-h2, .cm-md-h3, .cm-md-h4, .cm-md-h5, .cm-md-h6) {
@@ -2470,8 +2486,8 @@ body.cm-section-dragging * {
   line-height: 1.3;
   --heading-pad-top: 0.86em;
   --heading-pad-bottom: 0.36em;
-  padding-top: var(--heading-pad-top);
-  padding-bottom: var(--heading-pad-bottom);
+  padding-top: calc(var(--heading-pad-top) + var(--gap-before, 0px));
+  padding-bottom: calc(var(--heading-pad-bottom) + var(--gap-after, 0px));
 }
 .visual-editor .cm-line.cm-md-h2 {
   --heading-pad-top: 1.56em;
@@ -2503,7 +2519,14 @@ body.cm-section-dragging * {
 /* The heading has more padding above than below; center its arrow on the text. */
 .visual-editor:not(.read-only) .cm-fold-toggle {
   font-size: inherit;
-  top: calc(50% + (var(--heading-pad-top, 0.8em) - var(--heading-pad-bottom, 0.35em)) / 2);
+  top: calc(
+    50% +
+      (
+        var(--heading-pad-top, 0.8em) + var(--gap-before, 0px) - var(--heading-pad-bottom, 0.35em) -
+          var(--gap-after, 0px)
+      ) /
+      2
+  );
 }
 
 .visual-editor .cm-md-table-row,
