@@ -38,6 +38,7 @@ import { blockGaps } from './block-gaps.js'
 import { readProperties, titleLineNumber } from '../frontmatter.js'
 import { lineVariables, resolveVariable } from '../variables.js'
 
+const TASK_PREFIX = /^(\s*(?:[-*+]|\d+[.)])\s+)\[([ xX]|[^\w\s[\]])\](?:\s+|$)/
 const highlightedBlocks = new WeakMap()
 
 export function selectionLineSignature(state) {
@@ -46,7 +47,10 @@ export function selectionLineSignature(state) {
       const line = state.doc.lineAt(range.head)
       const parsed = parseTableLine(line.text)
       const column = parsed ? tableSelectionColumn({ state }, line, parsed) : -1
-      return `${state.doc.lineAt(range.from).number}:${state.doc.lineAt(range.to).number}:${range.empty}:${column}`
+      const startLine = state.doc.lineAt(range.from)
+      const prefix = TASK_PREFIX.exec(startLine.text)
+      const inTaskMarker = prefix && range.from < startLine.from + prefix[0].length
+      return `${startLine.number}:${state.doc.lineAt(range.to).number}:${range.empty}:${Boolean(inTaskMarker)}:${column}`
     })
     .join(',')
 }
@@ -549,7 +553,7 @@ export function decorationsFor(view) {
       // The separating empty line is drawn by blockGaps as the gap between blocks.
       if (gapLines.has(number)) continue
       const active = editing.has(number)
-      const task = line.text.match(/^(\s*(?:[-*+]|\d+[.)])\s+)\[([ xX]|[^\w\s[\]])\](?:\s+|$)/)
+      const task = TASK_PREFIX.exec(line.text)
       if (task) {
         ranges.push(
           Decoration.line({
@@ -559,7 +563,13 @@ export function decorationsFor(view) {
             },
           }).range(line.from),
         )
-        if (active) {
+        const markerEnd = line.from + task[0].length
+        const showMarker =
+          active &&
+          view.state.selection.ranges.some(
+            (selection) => selection.from < markerEnd && selection.to >= line.from,
+          )
+        if (showMarker) {
           ranges.push(
             Decoration.mark({ class: 'cm-task-source-marker' }).range(
               line.from,

@@ -450,6 +450,9 @@ for (const width of [1280, 390]) {
         view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf(word) } })
         view.focus()
       }, word)
+      await expect(page.locator('.cm-md-task.cm-md-editing .cm-task-checkbox')).toHaveCount(1)
+      expect(await measure()).toEqual(before)
+      await page.keyboard.press('Home')
       await expect(page.locator('.cm-task-source-marker')).toHaveCount(1)
       expect(await measure()).toEqual(before)
       const gap = await page.locator('.cm-task-source-marker').evaluate((marker) => {
@@ -463,6 +466,9 @@ for (const width of [1280, 390]) {
       expect(gap).toBeCloseTo(0, 0)
     }
     await page.screenshot({ path: `/tmp/task-marker-${width}.png` })
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('End')
+    await page.keyboard.press('Control+ArrowLeft')
     await page.keyboard.type('Nova ')
     await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
     await expect(page.locator('textarea')).toHaveValue(

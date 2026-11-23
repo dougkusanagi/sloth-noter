@@ -17,7 +17,7 @@ test('Tab on task items nests them in Padrão once the cursor leaves, with no vi
   await page.locator('.cm-line', { hasText: /^b$/ }).click()
   await page.keyboard.press('Tab')
   // While the item is being edited its spaces are not drawn either: nothing jumps afterwards.
-  await expect(page.locator('.cm-line.cm-md-editing')).toHaveText('- [ ] b')
+  await expect(page.locator('.cm-line.cm-md-editing')).toHaveText('b')
   await page.locator('.cm-line', { hasText: 'dois' }).click()
   await page.keyboard.press('Tab')
   await expect(page.locator('.cm-line.cm-md-editing')).toHaveText('1. dois')

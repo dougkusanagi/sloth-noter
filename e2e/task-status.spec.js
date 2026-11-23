@@ -28,9 +28,13 @@ test.beforeEach(async ({ page }) => {
 test('Alt+2…5 mudam o status da linha e a data acompanha concluir e reabrir', async ({ page }) => {
   await page.locator('.cm-line', { hasText: 'Escrever' }).click()
   await page.keyboard.press('Alt+2')
-  await expect(page.locator('.cm-line', { hasText: 'Escrever' })).toContainText('[/]')
+  await expect(
+    page.locator('.cm-line', { hasText: 'Escrever' }).getByRole('checkbox'),
+  ).toHaveAttribute('data-status', 'doing')
   await page.keyboard.press('Alt+3')
-  await expect(page.locator('.cm-line', { hasText: 'Escrever' })).toContainText('[>]')
+  await expect(
+    page.locator('.cm-line', { hasText: 'Escrever' }).getByRole('checkbox'),
+  ).toHaveAttribute('data-status', 'waiting')
   await page.keyboard.press('Alt+4')
   await mode(page, 'Código')
   await expect(page.locator('textarea')).toHaveValue(
@@ -113,3 +117,31 @@ test('desfazer reverte o arquivamento inteiro de uma vez e o Arquivo abre recolh
   await mode(page, 'Código')
   await expect(page.locator('textarea')).toHaveValue(original)
 })
+
+for (const width of [390, 1280]) {
+  test(`clicking the checkbox keeps the caret in the active task at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 })
+    if (width === 390) await page.locator('.sidebar-toggle').click()
+    const line = page.locator('.cm-line', { hasText: 'Escrever' })
+    await line.click()
+    await page.keyboard.press('End')
+    const checkbox = line.getByRole('checkbox')
+    await expect(checkbox).toBeVisible()
+    await checkbox.click()
+    await expect(checkbox).toBeChecked()
+    await expect(page.locator('.cm-content')).toBeFocused()
+    await page.screenshot({ path: `/tmp/sloth-checkbox-ativa-${width}.png` })
+    await checkbox.click()
+    await page.keyboard.type(' agora')
+    await mode(page, 'Código')
+    await expect(page.locator('textarea')).toHaveValue(body.replace('Escrever', 'Escrever agora'))
+    await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
+    const news = page.locator('.visual-editor.read-only')
+    await expect(news).toContainText('Marque tarefas enquanto edita.')
+    await news.locator('[data-wiki^="Sloth Note 0.31.1"]').click()
+    await expect(news).toContainText('a caixa de seleção fica disponível')
+  })
+}

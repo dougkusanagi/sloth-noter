@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.31.1] — 2026-11-23
+
+Caixa de seleção disponível durante a edição da tarefa. Veja os [detalhes da versão](changelog/0.31.1.md).
+
 ## [0.31.0] — 2026-11-23
 
 Datas de conclusão em formato brasileiro na edição visual e na leitura. Veja os [detalhes da versão](changelog/0.31.0.md).
