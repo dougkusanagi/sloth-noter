@@ -87,7 +87,10 @@ test('sidebar layout updates rails and insert control, and short notes do not sc
   const status = await bounds('.document-info')
   expect(mode.top).toBeGreaterThanOrEqual(status.top)
   expect(mode.bottom).toBeLessThanOrEqual(status.bottom)
-  expect(Math.abs(mode.right - (1400 - 8))).toBeLessThan(2)
+  expect(Math.abs(mode.left - (status.left + 16))).toBeLessThan(2)
+  const sync = await bounds('.status-sync')
+  expect(sync.left).toBeGreaterThan(mode.right)
+  expect(Math.abs(sync.right - (status.right - 8))).toBeLessThan(2)
   await page.screenshot({ path: 'test-results/layout-refinements.png' })
 })
 

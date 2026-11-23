@@ -57,10 +57,13 @@ test('without a vault the web build explains why sync is off', async ({ page }) 
 
 test('the status bar sync button opens Account and sync when not connected', async ({ page }) => {
   await page.goto('/')
-  await page
+  const sync = page
     .locator('.document-info')
     .getByRole('button', { name: /Sincronização desligada/ })
-    .click()
+  await expect(sync).toHaveAttribute('title', 'Sincronização desligada')
+  await expect(sync).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(sync).toHaveCSS('border-top-width', '0px')
+  await sync.click()
   const dialog = page.getByRole('dialog', { name: 'Configurações' })
   await expect(dialog.getByText(/só está disponível no app para desktop e Android/)).toBeVisible()
 })

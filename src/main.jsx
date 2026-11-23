@@ -2906,13 +2906,31 @@ function Workspace({ persistence, loaded }) {
             )}
           </div>
           <footer className="document-info">
-            <SyncStatusButton
-              status={sync.status}
-              onOpen={() => {
-                setSettingsSection('sync')
-                setSettingsOpen(true)
-              }}
-            />
+            <fieldset className="mode-switch">
+              <legend className="sr-only">{t('mode.legend')}</legend>
+              {[
+                ['visual', t('mode.visual')],
+                ['source', t('mode.source')],
+                ['reading', t('mode.reading')],
+                ['board', t('mode.board')],
+              ].map(([value, label], index) => (
+                <ShortcutHint key={value} label={label} keys={shortcutKeys(value)}>
+                  <label>
+                    <input
+                      type="radio"
+                      name="editor-mode"
+                      value={value}
+                      aria-label={label}
+                      aria-description={shortcutText(`Alt+${index + 1}`)}
+                      checked={mode === value}
+                      onChange={() => changeMode(value)}
+                    />
+                    <ModeIcon mode={value} />
+                    <span className="mode-label">{label}</span>
+                  </label>
+                </ShortcutHint>
+              ))}
+            </fieldset>
             <span
               className="save-status"
               role="status"
@@ -2963,31 +2981,13 @@ function Workspace({ persistence, loaded }) {
                 )}
               </>
             )}
-            <fieldset className="mode-switch">
-              <legend className="sr-only">{t('mode.legend')}</legend>
-              {[
-                ['visual', t('mode.visual')],
-                ['source', t('mode.source')],
-                ['reading', t('mode.reading')],
-                ['board', t('mode.board')],
-              ].map(([value, label], index) => (
-                <ShortcutHint key={value} label={label} keys={shortcutKeys(value)}>
-                  <label>
-                    <input
-                      type="radio"
-                      name="editor-mode"
-                      value={value}
-                      aria-label={label}
-                      aria-description={shortcutText(`Alt+${index + 1}`)}
-                      checked={mode === value}
-                      onChange={() => changeMode(value)}
-                    />
-                    <ModeIcon mode={value} />
-                    <span className="mode-label">{label}</span>
-                  </label>
-                </ShortcutHint>
-              ))}
-            </fieldset>
+            <SyncStatusButton
+              status={sync.status}
+              onOpen={() => {
+                setSettingsSection('sync')
+                setSettingsOpen(true)
+              }}
+            />
           </footer>
         </section>
       </div>

@@ -1,0 +1,1 @@
+Alterado: Na barra de status, os botões de modo (Padrão, Código, Leitura e Quadro) ficam à esquerda, e a sincronização virou um ícone discreto à direita, junto da contagem de palavras. Passe o mouse sobre o ícone para ver o estado; clique nele para abrir Conta e sincronização.

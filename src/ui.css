@@ -1897,8 +1897,10 @@ html:has(
   cursor: default;
 }
 .document-info .save-status {
-  margin: 0 auto 0 0;
   font: inherit;
+}
+.document-info .mode-switch {
+  margin-right: auto;
 }
 .mode-switch {
   display: flex;
@@ -3263,20 +3265,29 @@ html:has(
   font: 14px var(--ui);
 }
 .status-sync {
-  min-width: 0;
-  margin-right: auto;
-  gap: 6px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.status-sync:hover {
+  color: var(--ink);
+}
+.status-sync:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 .status-sync[data-state='error'] {
   color: var(--danger);
 }
 .status-sync[data-state='syncing'] svg {
   animation: spin 1s linear infinite;
-}
-.status-sync span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .password-input {
   position: relative;

@@ -7,7 +7,7 @@ const time = (at) =>
   }).format(at)
 
 /**
- * Sync state in the note's status bar. A click always opens Settings → Account and sync,
+ * Sync state as an icon in the note's status bar. A click always opens Settings → Account and sync,
  * where the person can sign in, sync now or see what went wrong.
  */
 export function SyncStatusButton({ status, onOpen }) {
@@ -27,13 +27,16 @@ export function SyncStatusButton({ status, onOpen }) {
   return (
     <button
       type="button"
-      className="button small status-sync"
+      className="status-sync"
       data-state={state}
       aria-label={t('sync.statusLabel', { status: text })}
+      title={text}
       onClick={onOpen}
     >
       <Icon size={14} aria-hidden="true" />
-      <span aria-live="polite">{text}</span>
+      <span className="sr-only" aria-live="polite">
+        {text}
+      </span>
     </button>
   )
 }
