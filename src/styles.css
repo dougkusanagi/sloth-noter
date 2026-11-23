@@ -3227,3 +3227,14 @@ body.cm-section-dragging * {
   line-height: 1.5;
   user-select: none;
 }
+
+.cm-task-move-hint {
+  margin-inline-start: 0.75em;
+  color: var(--muted);
+  font: 0.75em var(--font-sans, sans-serif);
+  white-space: nowrap;
+}
+
+.cm-editor:not(.cm-focused) .cm-task-move-hint {
+  display: none;
+}

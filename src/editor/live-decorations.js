@@ -1,3 +1,5 @@
+import { moveListItems } from '../list-move.js'
+import { platform } from '../platform.js'
 import { sheetField } from './sheet.js'
 import { isolateHistory } from '@codemirror/commands'
 import { markdownTree, walk, imageReferences } from '../markdown-model.js'
@@ -43,7 +45,7 @@ export function selectionLineSignature(state) {
       const line = state.doc.lineAt(range.head)
       const parsed = parseTableLine(line.text)
       const column = parsed ? tableSelectionColumn({ state }, line, parsed) : -1
-      return `${state.doc.lineAt(range.from).number}:${state.doc.lineAt(range.to).number}:${column}`
+      return `${state.doc.lineAt(range.from).number}:${state.doc.lineAt(range.to).number}:${range.empty}:${column}`
     })
     .join(',')
 }
@@ -181,6 +183,16 @@ class SectionChecklistWidget extends WidgetType {
   }
   ignoreEvent() {
     return true
+  }
+}
+
+class TaskMoveHint extends WidgetType {
+  toDOM() {
+    const hint = document.createElement('kbd')
+    hint.className = 'cm-task-move-hint'
+    hint.textContent = 'Ctrl+Shift+↑/↓'
+    hint.setAttribute('aria-label', t('task.moveHint'))
+    return hint
   }
 }
 
@@ -549,6 +561,19 @@ export function decorationsFor(view) {
               ),
             }).range(line.from, line.from + task[0].length),
           )
+        const { main, ranges: selections } = view.state.selection
+        if (
+          platform === 'desktop' &&
+          active &&
+          selections.length === 1 &&
+          main.empty &&
+          tasks.has(number) &&
+          [-1, 1].some(
+            (direction) => moveListItems(text, line.from, line.from, direction)?.changes.length,
+          )
+        ) {
+          ranges.push(Decoration.widget({ widget: new TaskMoveHint(), side: 1 }).range(line.to))
+        }
         const linked = tasks.get(number)?.progress
         if (linked)
           ranges.push(

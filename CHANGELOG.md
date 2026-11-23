@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.30.3] — 2026-11-23
+
+Dica para reordenar tarefas no editor. Veja os [detalhes da versão](changelog/0.30.3.md).
+
 ## [0.25.2] — 2026-11-18
 
 Correções de rolagem, barra de seleção e datas de tarefas no celular; detalhes em [changelog/0.25.2.md](changelog/0.25.2.md).
