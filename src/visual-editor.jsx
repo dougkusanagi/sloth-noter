@@ -183,6 +183,7 @@ export function VisualEditor({
   onTemplateMode,
   onReady,
   onSelectionChange,
+  onSelectOccurrence,
   onStatisticsSelection,
   onOpenWiki,
   onImageFiles,
@@ -234,6 +235,7 @@ export function VisualEditor({
     onChange,
     onReady,
     onSelectionChange,
+    onSelectOccurrence,
     onStatisticsSelection,
     onOpenWiki,
     onImageFiles,
@@ -246,6 +248,7 @@ export function VisualEditor({
     onChange,
     onReady,
     onSelectionChange,
+    onSelectOccurrence,
     onStatisticsSelection,
     onOpenWiki,
     onImageFiles,
@@ -722,6 +725,12 @@ export function VisualEditor({
               const word = view.state.wordAt(main.head)
               if (!word) return false
               view.dispatch({ selection: EditorSelection.single(word.from, word.to) })
+              if (!view.state.readOnly) {
+                callbacks.current.onSelectOccurrence?.(
+                  view.state.sliceDoc(word.from, word.to),
+                  word.from,
+                )
+              }
               return true
             }
             const text = view.state.sliceDoc(main.from, main.to)
@@ -739,6 +748,7 @@ export function VisualEditor({
                     occupied.length,
                   ),
                 })
+                if (!view.state.readOnly) callbacks.current.onSelectOccurrence?.(text, found)
                 return true
               }
               from = found + 1

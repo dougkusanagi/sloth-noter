@@ -45,7 +45,7 @@ Use `Ctrl` no Windows/Linux e `Cmd` no macOS. Atalhos como criar e fechar abas p
 | Encontrar nota pelo nome                     | `Ctrl+P`                       |
 | Buscar no conteúdo de todas as notas         | `Ctrl+Shift+F`                 |
 | Buscar / substituir na nota atual            | `Ctrl+F` / `Ctrl+H`            |
-| Selecionar próxima ocorrência no modo Padrão | `Ctrl+D`                       |
+| Selecionar ocorrência e abrir busca (Padrão) | `Ctrl+D`                       |
 | Paleta de comandos                           | `Ctrl+Shift+P`                 |
 | Padrão / Código / Leitura                    | `Ctrl+Alt+1` / `2` / `3`       |
 | Modo de foco                                 | `Ctrl+Alt+F`                   |

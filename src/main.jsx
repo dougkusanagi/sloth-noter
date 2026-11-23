@@ -283,6 +283,7 @@ function Workspace({ persistence, loaded }) {
   const findInput = useRef(null)
   const replaceInput = useRef(null)
   const findNavigation = useRef(null)
+  const preserveFindSelection = useRef(false)
   const pendingSearchChanges = useRef(null)
   const editorRef = useRef(null)
   const visualRef = useRef(null)
@@ -1571,6 +1572,24 @@ function Workspace({ persistence, loaded }) {
     setReplaceOpen(false)
     setFindOpen(true)
   }
+  function findSelectedOccurrence(text, from) {
+    const options = {
+      caseSensitive: true,
+      wholeWord: false,
+      regex: false,
+      preserveCase: false,
+      selectionOnly: false,
+      scope: null,
+    }
+    const index = searchNote(active.body, text, options).matches.findIndex(
+      (match) => match.start === from,
+    )
+    preserveFindSelection.current = true
+    setFindQuery(text)
+    setFindOptions(options)
+    setFindIndex(Math.max(0, index))
+    setFindOpen(true)
+  }
   function openFind(replace = false) {
     setReplaceOpen(replace)
     const columnSelection =
@@ -1706,7 +1725,8 @@ function Workspace({ persistence, loaded }) {
       mode,
       active?.id,
     ])
-    const navigate = navigationKey !== findNavigation.current
+    const navigate = !preserveFindSelection.current && navigationKey !== findNavigation.current
+    preserveFindSelection.current = false
     findNavigation.current = navigationKey
     if (view) {
       setColumnHighlights(view, {
@@ -2845,6 +2865,7 @@ function Workspace({ persistence, loaded }) {
                         changeMode(next)
                       }}
                       onSelectionChange={captureSearchSelection}
+                      onSelectOccurrence={findSelectedOccurrence}
                       onStatisticsSelection={updateSelectionStatistics}
                       onReady={(view) => {
                         visualRef.current = view

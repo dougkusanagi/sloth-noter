@@ -264,3 +264,28 @@ for (const mode of ['Padrão', 'Código']) {
     await expect(page.locator('.find-count')).toHaveText('1 / 2')
   })
 }
+
+for (const width of [390, 1280]) {
+  test(`Ctrl+D opens search without taking focus at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto('/')
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    await page.locator('textarea').fill('# Compras\n\nComprar café e separar café')
+    await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+    const editor = page.locator('.cm-content')
+    await editor.focus()
+    await page.keyboard.press('Control+End')
+    await page.keyboard.press('Control+ArrowLeft')
+    await page.keyboard.press('Control+d')
+    const find = page.getByRole('dialog', { name: 'Buscar na nota' })
+    await expect(find.getByRole('textbox', { name: 'Texto a buscar' })).toHaveValue('café')
+    await expect(editor).toBeFocused()
+    await find.getByRole('button', { name: 'Mostrar ou ocultar substituição' }).click()
+    await expect(find.getByRole('textbox', { name: 'Substituir por…' })).toBeVisible()
+    await page.screenshot({ path: `/tmp/sloth-ctrl-d-${width}.png` })
+    await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
+    const news = page.locator('.visual-editor.read-only')
+    await expect(news).toContainText('A seleção de ocorrências agora abre a busca.')
+  })
+}

@@ -18,7 +18,7 @@ Os controles do cabeçalho, das abas, do seletor de modos e do menu de inserir b
 
 Ao selecionar texto no modo Padrão, uma barra discreta oferece negrito, itálico, código em linha, link, título H2, citação e lista. O botão de link pede o endereço na própria barra. Novas instalações começam com `Welcome.md`, a página de ajuda (veja abaixo); notas já salvas continuam intactas.
 
-A barra marca os estilos presentes na seleção; clicar em um botão ativo remove o estilo. Com o editor focado e o cursor de digitação em uma linha vazia, digite `/` para buscar e inserir títulos H1–H4, citação, listas, tabela, imagem, link e bloco de código. No modo Padrão, Ctrl+D seleciona a próxima ocorrência igual para edição simultânea. O menu principal mostra os atalhos das ações de criar e buscar notas.
+A barra marca os estilos presentes na seleção; clicar em um botão ativo remove o estilo. Com o editor focado e o cursor de digitação em uma linha vazia, digite `/` para buscar e inserir títulos H1–H4, citação, listas, tabela, imagem, link e bloco de código. No modo Padrão, Ctrl+D seleciona a próxima ocorrência igual para edição simultânea e abre a barra de busca sem tirar o foco do texto. O menu principal mostra os atalhos das ações de criar e buscar notas.
 
 No modo Padrão, tabelas aparecem como células até o cursor entrar nelas. Entrar em um bloco de código revela as duas cercas Markdown para edição. Blocos com linguagem conhecida recebem realce de sintaxe também na Leitura. Trechos como `normal *itálico*` são Markdown válido; estilos separados e aninhados são renderizados fora da linha ativa.
 

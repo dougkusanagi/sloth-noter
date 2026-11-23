@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.31.3] — 2026-11-23
+
+Ctrl+D integrado à busca na nota. Veja os [detalhes da versão](changelog/0.31.3.md).
+
 ## [0.31.2] — 2026-11-23
 
 Ícone próprio para Encontrar notas no menu das imagens. Veja os [detalhes da versão](changelog/0.31.2.md).
