@@ -203,6 +203,14 @@ for (const width of [390, 1280]) {
     )
     await expect(document).toContainText('Alertas em Markdown e capas opcionais para notas')
     const latest = document.locator('[data-wiki^="Sloth Note 0.34.0"]')
+    // The editor draws only the lines near the screen: scroll until the link exists.
+    await document.hover()
+    await expect
+      .poll(async () => (await latest.count()) || (await page.mouse.wheel(0, 300), 0), {
+        intervals: [100],
+        timeout: 10000,
+      })
+      .toBe(1)
     await latest.click()
     await expect(document).toContainText('Nota, Dica, Importante, Aviso ou Cuidado')
     const illustration = document.getByRole('img', { name: 'Alertas Dica e Aviso em uma nota' })

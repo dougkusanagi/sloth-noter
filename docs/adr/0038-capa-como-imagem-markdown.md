@@ -1,6 +1,6 @@
 # 0038 — Capa como imagem Markdown
 
-- Status: Aceito
+- Status: Substituído por 0039
 - Data: 2026-11-23
 
 ## Contexto
