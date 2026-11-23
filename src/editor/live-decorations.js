@@ -360,30 +360,19 @@ export function lineAttributes(line, shape, active, listDepth = 0) {
   return attributes
 }
 
-export function decorationsFor(view) {
-  const doc = view.state.doc,
-    ranges = []
-  const editing = new Set(),
-    selectedLines = []
-  // Read-only preview never reveals Markdown syntax, so the layout matches an idle editor.
-  for (const selection of view.state.readOnly ? [] : view.state.selection.ranges) {
-    const first = doc.lineAt(selection.from).number,
-      last = doc.lineAt(selection.to).number
-    selectedLines.push({ first, last })
-    for (let number = first; number <= last; number++) editing.add(number)
-  }
-  const placeholderLine = emptyBodyLine(view.state)
-  const gapLines = view.state.field(blockGaps, false)?.lines ?? new Set()
-  const titleLine = titleLineNumber(doc)
+// Scrolling changes the visible ranges, but the document-wide Markdown analysis
+// only changes with the document, task notes or folded sections.
+const markdownByView = new WeakMap()
+
+function documentDecorations(view) {
+  const { state } = view
+  const doc = state.doc
+  const notes = state.facet(taskNotes)
+  const folds = state.field(foldField)
+  const cached = markdownByView.get(view)
+  if (cached?.doc === doc && cached.notes === notes && cached.folds === folds) return cached
+
   const text = doc.toString()
-  const noteInfo = view.state
-    .facet(taskNotes)
-    .find((note) => note.id === view.state.facet(activeNoteId))
-  const variableContext = () => ({
-    body: text,
-    modifiedAt: noteInfo?.modifiedAt,
-    language: currentLanguage(),
-  })
   const tree = markdownTree(text)
   const foldable = new Map()
   const headingLevels = new Map()
@@ -419,7 +408,7 @@ export function decorationsFor(view) {
   })
   const definitionText = definitions.join('\n')
   const imageByLine = new Map(
-    imageReferences(doc.toString()).map((image) => [
+    imageReferences(text).map((image) => [
       (image.occurrence ?? image.node).position.start.line,
       image,
     ]),
@@ -442,6 +431,8 @@ export function decorationsFor(view) {
     fenceEnds = new Set()
   const codeBlocks = new Map()
   const codeRangesByLine = new Map()
+  const codeAtFence = new Map()
+  const setextPairs = new Map()
   walk(tree, (node) => {
     if (
       node.type === 'break' &&
@@ -498,20 +489,89 @@ export function decorationsFor(view) {
         codeBlocks.set(first, { source: node.value, language: node.lang ?? '' })
       }
       if (closing) fenceEnds.add(last)
-      if (selectedLines.some((range) => range.first <= last && range.last >= first)) {
-        editing.add(first)
-        if (closing) editing.add(last)
-      }
+      if (opening) codeAtFence.set(first, { first, last })
+      if (closing) codeAtFence.set(last, { first, last })
     }
     if (node.type === 'heading' && node.position.end.line > node.position.start.line) {
-      blockShapes.set(node.position.start.line, { kind: 'h' + node.depth, prefix: 0 })
+      const first = node.position.start.line
       const last = node.position.end.line
+      blockShapes.set(first, { kind: 'h' + node.depth, prefix: 0 })
       blockShapes.set(last, { kind: 'setext-marker', prefix: doc.line(last).length })
-      if (editing.has(node.position.start.line) || editing.has(last)) {
-        editing.add(node.position.start.line)
-        editing.add(last)
-      }
+      setextPairs.set(first, last)
+      setextPairs.set(last, first)
     }
+  })
+  const result = {
+    doc,
+    notes,
+    folds,
+    text,
+    foldable,
+    headingLevels,
+    accordionLines,
+    tasks,
+    progress,
+    checklists,
+    definitionText,
+    imageByLine,
+    breakMarks,
+    listDepths,
+    continuations,
+    blockShapes,
+    fenceStarts,
+    fenceEnds,
+    codeBlocks,
+    codeRangesByLine,
+    codeAtFence,
+    setextPairs,
+  }
+  markdownByView.set(view, result)
+  return result
+}
+
+export function decorationsFor(view) {
+  const doc = view.state.doc,
+    ranges = []
+  const editing = new Set(),
+    selectedLines = []
+  // Read-only preview never reveals Markdown syntax, so the layout matches an idle editor.
+  for (const selection of view.state.readOnly ? [] : view.state.selection.ranges) {
+    const first = doc.lineAt(selection.from).number,
+      last = doc.lineAt(selection.to).number
+    selectedLines.push({ first, last })
+    for (let number = first; number <= last; number++) editing.add(number)
+  }
+  const placeholderLine = emptyBodyLine(view.state)
+  const gapLines = view.state.field(blockGaps, false)?.lines ?? new Set()
+  const titleLine = titleLineNumber(doc)
+  const {
+    text,
+    foldable,
+    headingLevels,
+    accordionLines,
+    tasks,
+    progress,
+    checklists,
+    definitionText,
+    imageByLine,
+    breakMarks,
+    listDepths,
+    continuations,
+    blockShapes,
+    fenceStarts,
+    fenceEnds,
+    codeBlocks,
+    codeRangesByLine,
+    codeAtFence,
+    setextPairs,
+  } = documentDecorations(view)
+  const noteInfo = view.state
+    .facet(taskNotes)
+    .find((note) => note.id === view.state.facet(activeNoteId))
+  const variableContext = () => ({
+    body: text,
+    modifiedAt: noteInfo?.modifiedAt,
+    language: currentLanguage(),
   })
   for (const visible of view.visibleRanges) {
     const first = doc.lineAt(visible.from).number,
@@ -562,7 +622,12 @@ export function decorationsFor(view) {
       }
       // The separating empty line is drawn by blockGaps as the gap between blocks.
       if (gapLines.has(number)) continue
-      const active = editing.has(number)
+      const fence = codeAtFence.get(number)
+      const active =
+        editing.has(number) ||
+        editing.has(setextPairs.get(number)) ||
+        (fence &&
+          selectedLines.some(({ first, last }) => first <= fence.last && last >= fence.first))
       const accordion = accordionLines.get(number)
       if (accordion) {
         if (number === accordion.titleEnd) {

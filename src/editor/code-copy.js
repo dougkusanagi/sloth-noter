@@ -174,7 +174,7 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
       }
       this.hoverBlock = (event) => {
         this.pointer = { x: event.clientX, y: event.clientY }
-        for (const block of this.blocks) {
+        for (const block of this.visibleBlocks) {
           const bounds = block.bounds
           const active =
             bounds &&
@@ -188,7 +188,7 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
       }
       this.leaveBlock = () => {
         this.pointer = null
-        for (const block of this.blocks) {
+        for (const block of this.visibleBlocks) {
           block.wrap.classList.remove('is-code-hovered')
           block.fold.classList.remove('is-code-hovered')
         }
@@ -202,6 +202,7 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
     }
     build() {
       this.blocks = []
+      this.visibleBlocks = new Set()
       this.layer.replaceChildren(this.inlineButton)
       this.inlineButton.hidden = true
       this.inlineNodes = []
@@ -303,12 +304,26 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
       const footerTop = document.querySelector('.document-info')?.getBoundingClientRect().top
       const bottom = Math.min(window.innerHeight, scroller.bottom, footerTop ?? Infinity)
       const folds = view.state.field(foldField, false)
-      return this.blocks.map((block) => {
-        const { from, to, button, wrap, fold, scrollbar, track } = block
+      const { from: viewportFrom, to: viewportTo } = view.viewport
+      // Fenced code blocks are ordered and don't overlap. Find the first one
+      // intersecting the viewport, including blocks that started above it.
+      let firstBlock = 0
+      let limit = this.blocks.length
+      while (firstBlock < limit) {
+        const middle = Math.floor((firstBlock + limit) / 2)
+        if (this.blocks[middle].to < viewportFrom) firstBlock = middle + 1
+        else limit = middle
+      }
+      const positions = []
+      for (let index = firstBlock; index < this.blocks.length; index++) {
+        const block = this.blocks[index]
+        const { from, to } = block
+        if (from > viewportTo) break
         let folded = false
         folds?.between(from, from, (a, b) => {
           if (a <= from && b > from) folded = true
         })
+        if (folded) continue
         const collapsed = view.state.field(codeFold).includes(from)
         const first = view.state.doc.lineAt(from)
         const firstVisible = collapsed ? view.state.doc.line(first.number + 1) : first
@@ -320,8 +335,9 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
         const start =
           row?.getBoundingClientRect().top ?? view.documentTop + view.lineBlockAt(from).top
         const end = view.documentTop + view.lineBlockAt(to).bottom
+        if (end <= top || start >= bottom) continue
         const noWrap = codeDoesNotWrap(view.state.field(codeWrap), from)
-        return {
+        positions.push({
           block,
           bounds: {
             left: Math.max(content.left, scroller.left),
@@ -333,38 +349,32 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
             ? Math.max(start + 12, top)
             : Math.max(start, Math.min(Math.max(start + 12, top), end - 38)),
           right: window.innerWidth - Math.min(content.right, scroller.right) + 10,
-          visible: !folded && end > top && start < bottom,
-          button,
-          wrap,
-          fold,
-          scrollbar,
-          track,
           scrollWidth: noWrap ? Math.max(0, ...this.rows(block).map((row) => row.scrollWidth)) : 0,
           width: Math.min(content.right, scroller.right) - Math.max(content.left, scroller.left),
           left: Math.max(content.left, scroller.left),
           scrollTop: Math.min(end - 12, bottom - 12),
-          scrollVisible: !folded && noWrap && end > top && start < bottom,
-        }
-      })
+          scrollVisible: noWrap,
+        })
+      }
+      return positions
     }
     position(positions) {
+      const previouslyVisible = this.visibleBlocks
+      this.visibleBlocks = new Set()
       for (const {
         block,
         bounds,
-        button,
-        wrap,
-        fold,
-        scrollbar,
-        track,
         top,
         right,
-        visible,
         scrollWidth,
         width,
         left,
         scrollTop,
         scrollVisible,
       } of positions) {
+        previouslyVisible.delete(block)
+        this.visibleBlocks.add(block)
+        const { button, wrap, fold, scrollbar, track } = block
         block.bounds = bounds
         const hovered =
           this.pointer &&
@@ -374,13 +384,13 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
           this.pointer.y <= bounds.bottom
         wrap.classList.toggle('is-code-hovered', !!hovered)
         fold.classList.toggle('is-code-hovered', !!hovered)
-        button.hidden = !visible
+        button.hidden = false
         button.style.top = `${top}px`
         button.style.right = `${right}px`
-        wrap.hidden = !visible
+        wrap.hidden = false
         wrap.style.top = `${top}px`
         wrap.style.right = `${right + button.offsetWidth + 8}px`
-        fold.hidden = !visible
+        fold.hidden = false
         fold.style.top = `${top}px`
         fold.style.right = `${right + button.offsetWidth + wrap.offsetWidth + 16}px`
         scrollbar.hidden = !scrollVisible || scrollWidth <= width
@@ -388,6 +398,11 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
         scrollbar.style.top = `${scrollTop}px`
         scrollbar.style.width = `${width}px`
         track.style.width = `${scrollWidth}px`
+      }
+      for (const { button, wrap, fold, scrollbar } of previouslyVisible) {
+        button.hidden = wrap.hidden = fold.hidden = scrollbar.hidden = true
+        wrap.classList.remove('is-code-hovered')
+        fold.classList.remove('is-code-hovered')
       }
     }
     update(update) {

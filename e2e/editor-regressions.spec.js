@@ -534,3 +534,30 @@ for (const width of [390, 1280]) {
     }
   })
 }
+
+for (const width of [390, 1280]) {
+  test(`long Markdown notes keep advancing when scrolled at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    await source(
+      page,
+      '# Nota longa\n\n' +
+        Array.from(
+          { length: 350 },
+          (_, index) =>
+            `## Seção ${index + 1}\n\nParágrafo com **destaque** e texto que pode quebrar em telas estreitas.\n\n\`\`\`js\nconsole.log(${index})\n\`\`\`\n\n`,
+        ).join(''),
+    )
+    await visual(page)
+    await page.mouse.move(width / 2, 440)
+    const scroll = () => page.evaluate(() => window.scrollY)
+    for (let step = 0; step < 12; step++) {
+      const before = await scroll()
+      await page.mouse.wheel(0, 620)
+      await expect.poll(scroll).toBeGreaterThan(before + 150)
+    }
+    const after = await scroll()
+    await page.mouse.wheel(0, -620)
+    await expect.poll(scroll).toBeLessThan(after - 150)
+    await expect(page.locator('.cm-md-h2').first()).toBeAttached()
+  })
+}

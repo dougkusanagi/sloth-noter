@@ -195,6 +195,11 @@ for (const width of [390, 1280]) {
     if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/sloth-changelog-${width}.png` })
     await expect(page.locator('.cm-content')).toHaveAttribute('aria-readonly', 'true')
     await page.context().setOffline(true)
+    await expect(document).toContainText('Rolagem mais fluida em notas longas')
+    const latest = document.locator('[data-wiki^="Sloth Note 0.33.1"]')
+    await latest.click()
+    await expect(document).toContainText('reutiliza a análise do Markdown')
+    await document.locator('[data-wiki^="Novidades"]').click()
     const release = document.locator('[data-wiki^="Sloth Note 0.4.0"]')
     await document.hover()
     await expect

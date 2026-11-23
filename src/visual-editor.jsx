@@ -1063,7 +1063,10 @@ export function VisualEditor({
               }
               view.requestMeasure({
                 key: 'settle-scroll-into-view',
-                read: () => view.coordsAtPos(token.pos),
+                read: () =>
+                  pendingScroll === token && view.state.selection.main.head === token.pos
+                    ? view.coordsAtPos(token.pos)
+                    : null,
                 write: (coords) => {
                   if (pendingScroll !== token) return
                   if (
