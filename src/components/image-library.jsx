@@ -1,6 +1,14 @@
 import { createPortal } from 'react-dom'
 import { useEffect, useRef, useState } from 'react'
-import { Image as ImageIcon, Plus, Pencil, Trash2, Download, ArrowLeft } from 'lucide-react'
+import {
+  Image as ImageIcon,
+  Plus,
+  Pencil,
+  Trash2,
+  Download,
+  ArrowLeft,
+  FileSearch,
+} from 'lucide-react'
 import { resolveImage } from '../images.js'
 import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
@@ -317,7 +325,7 @@ export function ImageLibrary({
               ['images.manage', ImageIcon, () => onSelect(menuImage.src), busy],
               [
                 'images.findNotes',
-                ImageIcon,
+                FileSearch,
                 () => onFindNotes(menuImage),
                 busy || !menuImage.noteIds.length,
               ],
