@@ -137,6 +137,22 @@ for (const width of [768, 1280]) {
   )
 }
 
+test('a task dragged below the last item stays in the list, without extra space', async ({
+  page,
+}) => {
+  await fill(page, '# Nota\n\n- [ ] um\n- [ ] dois\n- [ ] tres\n\nfim\n')
+  await page.locator('.cm-line', { hasText: 'dois' }).hover()
+  const handle = page.locator('.cm-block-handle')
+  await expect(handle).toBeVisible()
+  const box = await handle.boundingBox()
+  const last = await page.locator('.cm-line', { hasText: 'tres' }).boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(last.x + 20, last.y + last.height - 3, { steps: 10 })
+  await page.mouse.up()
+  await source(page, '# Nota\n\n- [ ] um\n- [ ] tres\n- [ ] dois\n\nfim\n')
+})
+
 test('Enter starts a new paragraph and Shift+Enter breaks the line', async ({ page }) => {
   await fill(page, '# Nota\n\nPrimeiro')
   await page.locator('.cm-line', { hasText: 'Primeiro' }).click()

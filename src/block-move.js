@@ -51,6 +51,18 @@ export function documentBlocks(text) {
   return blocks
 }
 
+/** The last line of the list that ends right above `before` (blank lines apart), or 0. */
+function listEndAbove(text, before) {
+  const lines = text.split('\n')
+  let line = before - 1
+  if (line < 1 || lines[line - 1].trim()) return 0
+  while (line >= 1 && !lines[line - 1].trim()) line--
+  const block = documentBlocks(text).find((item) => item.last === line)
+  return block && ['list', 'task', 'numbered'].includes(block.kind) ? line : 0
+}
+
+const outside = (line, first, last) => line > 0 && (line < first || line > last)
+
 function lineAt(text, number) {
   return text.split('\n')[number - 1] ?? ''
 }
@@ -112,6 +124,13 @@ export function moveBlockChanges(text, first, last, before) {
     insertAt = offset(previous) + lines[previous - 1].length
     insert = (tight ? '\n' : '\n\n') + chunk
     lead = tight ? 1 : 2
+  } else if (chunkIsList && outside(listEndAbove(text, before), first, last)) {
+    // Dropped right below a list (the blank line after it): the item joins that list instead of
+    // starting a new one, which would add a gap between the items.
+    const previous = listEndAbove(text, before)
+    insertAt = offset(previous) + lines[previous - 1].length
+    insert = '\n' + chunk
+    lead = 1
   } else {
     const previous = before - 1
     const tightBefore = (chunkIsList && listItem(previous)) || tightRuleBefore(previous)

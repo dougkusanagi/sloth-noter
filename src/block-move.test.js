@@ -116,3 +116,15 @@ test('moving a rule below tasks does not insert an empty line', () => {
   assert.equal(move(down, 6, 6, 4), original)
   assert.equal(documentBlocks(down).filter((block) => block.kind === 'task').length, 2)
 })
+
+test('a list item dropped right below its list joins it, without a blank line', () => {
+  const text = ['# N', '', '- [ ] um', '- [ ] dois', '- [ ] tres', '', 'fim'].join('\n')
+  // "dois" (line 4) dropped between the list and "fim" (line 7).
+  assert.equal(
+    move(text, 4, 4, 7),
+    ['# N', '', '- [ ] um', '- [ ] tres', '- [ ] dois', '', 'fim'].join('\n'),
+  )
+  // A list item from elsewhere also joins the list above the drop point.
+  const apart = ['# N', '', '- a', '- b', '', 'texto', '', '- c'].join('\n')
+  assert.equal(move(apart, 8, 8, 6), ['# N', '', '- a', '- b', '- c', '', 'texto'].join('\n'))
+})
