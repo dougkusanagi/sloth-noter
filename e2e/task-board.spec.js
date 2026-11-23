@@ -82,7 +82,7 @@ test('o Quadro é lembrado por nota e uma nota sem tarefas mostra as colunas vaz
   await mode(page, 'Quadro')
   // Without tasks the board still shows its columns, each ready to take the first task.
   await expect(page.locator('.board-column')).toHaveCount(4)
-  await page.getByRole('button', { name: 'Adicionar tarefa em A fazer' }).click()
+  await page.getByRole('button', { name: 'Adicionar tarefa em Fazer' }).click()
   await page.getByLabel('Nova tarefa').fill('Primeira')
   await page.keyboard.press('Enter')
   await expect(page.locator('[data-column="todo"]')).toContainText('Primeira')

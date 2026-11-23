@@ -191,7 +191,7 @@ export function TaskBoard({
               data-column={column}
               onClick={() => setTab(column)}
             >
-              {t(`task.status.${column}`)}
+              {t(`board.column.${column}`)}
               <span className="count">{columnCount(column)}</span>
             </button>
           ))}
@@ -237,12 +237,12 @@ export function TaskBoard({
                   }}
                 >
                   <header className="board-column-header">
-                    <span>{t(`task.status.${column}`)}</span>
+                    <span>{t(`board.column.${column}`)}</span>
                     <span className="count">{cards.length}</span>
                     <button
                       type="button"
                       className="board-add"
-                      aria-label={t('board.addIn', { column: t(`task.status.${column}`) })}
+                      aria-label={t('board.addIn', { column: t(`board.column.${column}`) })}
                       title={t('board.add')}
                       onClick={() =>
                         setAdding({

@@ -26,7 +26,7 @@ test.beforeEach(async ({ page }) => {
 test('o Quadro no celular mostra uma coluna por vez, com abas por status', async ({ page }) => {
   await page.getByRole('button', { name: 'Ver como quadro' }).click()
   const board = page.getByRole('region', { name: 'Quadro de tarefas' })
-  await expect(board.getByRole('tab', { name: /A fazer/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(board.getByRole('tab', { name: /Fazer/ })).toHaveAttribute('aria-selected', 'true')
   await expect(board.getByText('Fila')).toBeVisible()
   await expect(board.getByText('Cache')).toHaveCount(0)
   await board.getByRole('tab', { name: /Fazendo/ }).click()
@@ -63,7 +63,7 @@ test('a opção Data ao fechar tarefas vale no Quadro e na Leitura do celular', 
   await page.getByRole('button', { name: 'Ver como quadro' }).click()
   await page.getByRole('button', { name: 'Mover cartão: Fila' }).click()
   await page.getByRole('menuitemradio', { name: /Feita/ }).click()
-  await page.getByRole('tab', { name: /Feita/ }).click()
+  await page.getByRole('tab', { name: /Feito/ }).click()
   await expect(page.locator('.board-card', { hasText: 'Fila' })).toContainText(
     /✅ \d{4}-\d{2}-\d{2}/,
   )
@@ -74,10 +74,10 @@ test('a opção Data ao fechar tarefas vale no Quadro e na Leitura do celular', 
   await page.getByRole('button', { name: 'Voltar' }).click()
   await page.getByRole('button', { name: 'Fechar' }).click()
 
-  await page.getByRole('tab', { name: /A fazer/ }).click()
+  await page.getByRole('tab', { name: /Fazer/ }).click()
   await page.getByRole('button', { name: 'Mover cartão: Tela' }).click()
   await page.getByRole('menuitemradio', { name: /Feita/ }).click()
-  await page.getByRole('tab', { name: /Feita/ }).click()
+  await page.getByRole('tab', { name: /Feito/ }).click()
   const tela = page.locator('.board-card', { hasText: 'Tela' })
   await expect(tela).toBeVisible()
   await expect(tela).not.toContainText('✅')
