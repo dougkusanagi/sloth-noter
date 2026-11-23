@@ -44,6 +44,7 @@ import { TasksLibrary } from './components/tasks-library.jsx'
 import { resolvedTasks, taskSettings } from './tasks.js'
 import { archiveClosedTasks } from './task-archive.js'
 import { TaskBoard } from './components/task-board.jsx'
+import { makeTaskNote } from './task-note.js'
 import { displayName } from './note-title.js'
 import { useTabs } from './components/tabs.jsx'
 import { NoteViewport } from './components/note-viewport.jsx'
@@ -81,7 +82,7 @@ import {
   PromptDialog,
   SyncConflictDialog,
 } from './components/dialogs.jsx'
-import { t } from './i18n.js'
+import { currentLanguage, t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
 import { welcomeNote } from './welcome.js'
 import { frontmatterEnd, titleEnd as noteTitleEnd } from './frontmatter.js'
@@ -1752,6 +1753,12 @@ function Workspace({ persistence, loaded }) {
         })
     })
   }
+  // The task template marks the note it was applied to as a task note (ADR 0033).
+  function markTaskNote() {
+    const note = current.current.notes.find((item) => item.id === current.current.activeId)
+    const next = note && makeTaskNote(note.body, { language: currentLanguage() })
+    if (next && next !== note.body) updateBody(next, undefined, undefined, note.id)
+  }
   // "Quadro" is remembered per note (prefs.boardNotes); the other modes stay global.
   const lastTextMode = useRef('visual')
   function changeMode(next) {
@@ -2740,8 +2747,6 @@ function Workspace({ persistence, loaded }) {
                   <TaskBoard
                     key={active.id}
                     body={active.body}
-                    grouped={prefs.boardGrouped !== false}
-                    onGroupedChange={(boardGrouped) => updatePrefs({ boardGrouped })}
                     onChange={(next) => updateBody(next)}
                   />
                 </div>
@@ -2835,7 +2840,10 @@ function Workspace({ persistence, loaded }) {
                       readOnly={mode === 'reading'}
                       body={active.body}
                       onChange={updateBody}
-                      onTemplateMode={changeMode}
+                      onTemplateMode={(next) => {
+                        if (next === 'board') markTaskNote()
+                        changeMode(next)
+                      }}
                       onSelectionChange={captureSearchSelection}
                       onStatisticsSelection={updateSelectionStatistics}
                       onReady={(view) => {

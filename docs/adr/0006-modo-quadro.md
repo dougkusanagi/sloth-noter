@@ -1,6 +1,6 @@
 # 0006 — Modo Quadro (kanban) para notas com tarefas
 
-- Estado: aceito
+- Estado: substituído por [0033](0033-notas-de-tarefas-com-colunas-por-secao.md)
 - Data: 2026-11-03
 
 ## Contexto

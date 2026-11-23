@@ -147,7 +147,9 @@ export function dropCard(body, mark, { status, laneTitle, before = null } = {}) 
     if (lane?.title === laneTitle && lane.cards.at(-1).line === moved.line) return next
     return moveCardToLane(next, moved.mark, laneTitle)
   }
-  const target = allCards(next).find((item) => item.mark === before)
+  // Marks are offsets and the status change can shift them; lines stay put.
+  const line = allCards(body).find((item) => item.mark === before)?.line
+  const target = allCards(next).find((item) => item.line === line)
   if (!target || target.line === moved.line) return next
   const lines = next.split('\n')
   const block = trimBlank(lines.slice(moved.line, moved.last + 1))

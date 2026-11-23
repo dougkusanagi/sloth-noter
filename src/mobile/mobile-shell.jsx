@@ -64,7 +64,8 @@ import { TrashLibrary } from '../components/trash-library.jsx'
 import { noteTasks, syncLinkedTasks, taskSettings, toggleTask } from '../tasks.js'
 import { ensureDocumentTitles } from '../title.js'
 import { welcomeNote } from '../welcome.js'
-import { LANGUAGES, t } from '../i18n.js'
+import { LANGUAGES, currentLanguage, t } from '../i18n.js'
+import { makeTaskNote } from '../task-note.js'
 import { setOwnTemplates, setTemplateProfile } from '../templates.js'
 import { FONT_SIZE } from '../storage.js'
 import { useInsets, useKeyboardOpen } from './use-insets.js'
@@ -1134,7 +1135,14 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 key={active.id}
                 noteId={active.id}
                 starters
-                onTemplateMode={(mode) => mode === 'board' && setBoardView(active.id, true)}
+                onTemplateMode={(mode) => {
+                  if (mode !== 'board') return
+                  // The task template marks the note as a task note (ADR 0033).
+                  const note = current.current.notes.find((item) => item.id === active.id)
+                  const next = note && makeTaskNote(note.body, { language: currentLanguage() })
+                  if (next && next !== note.body) updateBody(next)
+                  setBoardView(active.id, true)
+                }}
                 sourceMode={sourceMode}
                 outline={false}
                 notes={data.notes}
@@ -1166,8 +1174,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   compact
                   readOnly={blocked}
                   body={active.body}
-                  grouped={prefs.boardGrouped !== false}
-                  onGroupedChange={(boardGrouped) => updatePrefs({ boardGrouped })}
                   onChange={blocked ? () => {} : updateBody}
                 />
               </div>

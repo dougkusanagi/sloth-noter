@@ -8,33 +8,39 @@ const CURSOR = '{{cursor}}'
  */
 const templates = {
   board: {
-    // Opens the note in Board mode once applied: the sections become rows of a kanban.
+    // A task note (ADR 0033), opened in Board mode once applied: each section is a column.
     mode: 'board',
     'pt-BR': {
-      label: 'Quadro',
-      description: 'Tarefas por etapa, para o modo Quadro.',
+      label: 'Tarefas',
+      description: 'Nota de tarefas com quadro: Fazer, Fazendo, Esperando e Feito.',
       body: [
         '# {{title}}',
-        'Quadro criado em {{date}}',
         '',
-        '## Planejamento',
-        '{{cursor}}',
-        '## Execução',
-        '## Revisão',
+        '## Fazer',
+        '- [ ] {{cursor}}',
+        '',
+        '## Fazendo',
+        '',
+        '## Esperando',
+        '',
+        '## Feito',
         '',
       ],
     },
     en: {
-      label: 'Board',
-      description: 'Tasks by stage, for Board mode.',
+      label: 'Tasks',
+      description: 'Task note with a board: To do, Doing, Waiting and Done.',
       body: [
         '# {{title}}',
-        'Board created on {{date}}',
         '',
-        '## Planning',
-        '{{cursor}}',
+        '## To do',
+        '- [ ] {{cursor}}',
+        '',
         '## Doing',
-        '## Review',
+        '',
+        '## Waiting',
+        '',
+        '## Done',
         '',
       ],
     },

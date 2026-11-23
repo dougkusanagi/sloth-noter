@@ -68,8 +68,8 @@ test('templateInsertEdit drops the title line, separates blocks and places the c
   assert.equal(edit.selectionFrom, text.length + edit.insert.indexOf('- [ ] ') + 6)
   assert.equal(templateInsertEdit(text, 0, 0, 'nope'), null)
   const board = templateInsertEdit(text, 6, 6, 'board', 'pt-BR', now)
-  assert.ok(!board.insert.includes('Quadro criado em'))
-  assert.ok(board.insert.startsWith('\n\n## Planejamento'))
+  assert.ok(board.insert.startsWith('\n\n## Fazer\n- [ ] '))
+  assert.match(board.insert, /## Fazendo\n\n## Esperando\n\n## Feito\n/)
 })
 
 test('renderTemplate fills the profile name and leaves it empty without one', () => {

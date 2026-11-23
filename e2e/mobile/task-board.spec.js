@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { newDocument, STORAGE_KEY } from '../../src/storage.js'
 
 const body =
-  '# Projeto\n\n## Backend\n\n- [x] API\n- [/] Cache com um texto bem longo que precisa quebrar em várias linhas no celular\n- [ ] Fila\n\n## Frontend\n\n- [ ] Tela\n'
+  '---\ntipo: tarefas\n---\n# Projeto\n\n## Fazer\n\n- [ ] Fila\n- [ ] Tela\n\n## Fazendo\n\n- [/] Cache com um texto bem longo que precisa quebrar em várias linhas no celular\n\n## Esperando\n\n## Feito\n\n- [x] API\n'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(
@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => {
   await page.locator('[data-note-id="a"]').click()
 })
 
-test('o Quadro no celular mostra uma coluna por vez, com abas por status', async ({ page }) => {
+test('o Quadro no celular mostra uma coluna por vez, com abas por seção', async ({ page }) => {
   await page.getByRole('button', { name: 'Ver como quadro' }).click()
   const board = page.getByRole('region', { name: 'Quadro de tarefas' })
   await expect(board.getByRole('tab', { name: /Fazer/ })).toHaveAttribute('aria-selected', 'true')
@@ -32,7 +32,7 @@ test('o Quadro no celular mostra uma coluna por vez, com abas por status', async
   await board.getByRole('tab', { name: /Fazendo/ }).click()
   await expect(board.getByText('Cache com um texto')).toBeVisible()
   await expect(board.getByText('Fila')).toHaveCount(0)
-  await page.screenshot({ path: 'test-results/mobile-board.png' })
+  await page.screenshot({ path: test.info().outputPath('mobile-board.png') })
   // Every touch target is at least 44 px.
   for (const target of [
     board.getByRole('tab').first(),
@@ -43,10 +43,10 @@ test('o Quadro no celular mostra uma coluna por vez, com abas por status', async
   }
 })
 
-test('o status muda pelo menu do cartão e a escolha é lembrada por nota', async ({ page }) => {
+test('o cartão muda de seção pelo menu e a escolha é lembrada por nota', async ({ page }) => {
   await page.getByRole('button', { name: 'Ver como quadro' }).click()
   await page.getByRole('button', { name: 'Mover cartão: Fila' }).click()
-  await page.getByRole('menuitemradio', { name: /Esperando/ }).click()
+  await page.getByRole('menuitem', { name: 'Mover para Esperando' }).click()
   await expect(page.getByText('Fila')).toHaveCount(0)
   await page.getByRole('tab', { name: /Esperando/ }).click()
   await expect(page.getByText('Fila')).toBeVisible()
@@ -62,7 +62,7 @@ test('o status muda pelo menu do cartão e a escolha é lembrada por nota', asyn
 test('a opção Data ao fechar tarefas vale no Quadro e na Leitura do celular', async ({ page }) => {
   await page.getByRole('button', { name: 'Ver como quadro' }).click()
   await page.getByRole('button', { name: 'Mover cartão: Fila' }).click()
-  await page.getByRole('menuitemradio', { name: /Feita/ }).click()
+  await page.getByRole('menuitem', { name: 'Mover para Feito' }).click()
   await page.getByRole('tab', { name: /Feito/ }).click()
   await expect(page.locator('.board-card', { hasText: 'Fila' })).toContainText(
     /✅ \d{4}-\d{2}-\d{2}/,
@@ -76,7 +76,7 @@ test('a opção Data ao fechar tarefas vale no Quadro e na Leitura do celular', 
 
   await page.getByRole('tab', { name: /Fazer/ }).click()
   await page.getByRole('button', { name: 'Mover cartão: Tela' }).click()
-  await page.getByRole('menuitemradio', { name: /Feita/ }).click()
+  await page.getByRole('menuitem', { name: 'Mover para Feito' }).click()
   await page.getByRole('tab', { name: /Feito/ }).click()
   const tela = page.locator('.board-card', { hasText: 'Tela' })
   await expect(tela).toBeVisible()

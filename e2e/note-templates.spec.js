@@ -127,14 +127,16 @@ test('a note marked as a template appears first among the starters and can be un
   await expect(palette(page).getByRole('option')).toHaveCount(0)
 })
 
-test('the board template opens the note in Board mode', async ({ page }) => {
+test('the Tasks template creates a task note open in Board mode', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.goto('/')
   const starters = await newNote(page)
-  await starters.getByRole('button', { name: /^Quadro/ }).click()
+  await starters.getByRole('button', { name: /^Tarefas/ }).click()
   await expect(page.getByRole('radio', { name: 'Quadro', exact: true })).toBeChecked()
-  await expect(page.getByText('Planejamento').first()).toBeVisible()
-  await page.screenshot({
-    path: '/tmp/claude-1000/-home-servidor-dev-sloth-noter/deb3e673-78de-4db9-b83c-5aa600c6c1aa/scratchpad/board.png',
-  })
+  await expect(page.locator('.board-column-title')).toHaveText([
+    'Fazer',
+    'Fazendo',
+    'Esperando',
+    'Feito',
+  ])
 })

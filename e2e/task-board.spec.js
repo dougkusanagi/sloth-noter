@@ -1,9 +1,14 @@
 import { expect, test } from '@playwright/test'
 
+// A task note (ADR 0033): each H2 section is a column.
 const body =
-  '# Projeto\n\n## Backend\n\n- [x] API\n- [/] Cache\n    - [ ] Redis\n- [ ] Fila\n\n## Frontend\n\n- [ ] Tela\n'
+  '---\ntipo: tarefas\n---\n# Projeto\n\n## Fazer\n\n- [ ] Fila\n- [ ] Tela\n\n## Fazendo\n\n- [/] Cache\n    - [ ] Redis\n\n## Revisão\n\n## Feito\n\n- [x] API\n'
 const mode = (page, name) => page.getByRole('radio', { name, exact: true }).check({ force: true })
 const source = (page) => page.locator('textarea')
+const column = (page, title) =>
+  page.locator('.board-column').filter({
+    has: page.locator('.board-column-title', { hasText: new RegExp(`^${title}$`) }),
+  })
 
 /** Drags with the mouse; the last small move lets the browser see the drop slot that opened. */
 async function drag(page, from, to, dy = 0) {
@@ -17,6 +22,7 @@ async function drag(page, from, to, dy = 0) {
 }
 
 test.beforeEach(async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
   await page.addInitScript((body) => {
     if (localStorage.getItem('sloth-note:v3')) return
     localStorage.setItem(
@@ -26,6 +32,12 @@ test.beforeEach(async ({ page }) => {
         notes: [
           { id: 'a', name: 'Projeto.md', body, revision: 0 },
           { id: 'b', name: 'Outra.md', body: '# Outra\n\ntexto', revision: 0 },
+          {
+            id: 'c',
+            name: 'Etapa.md',
+            body: '---\ntipo: tarefas\n---\n# Etapa\n\n## Etapa\n\n- [ ] Um\n- [ ] Dois\n- [ ] Três\n',
+            revision: 0,
+          },
         ],
         trash: [],
         openIds: ['a', 'b'],
@@ -38,102 +50,135 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.cm-content')).toBeVisible()
 })
 
-test('o Quadro mostra colunas por status e raias por seção', async ({ page }) => {
+test('as colunas do Quadro são as seções da nota de tarefas', async ({ page }) => {
   await mode(page, 'Quadro')
-  const board = page.getByRole('region', { name: 'Quadro de tarefas' })
-  await expect(board.getByRole('heading', { name: /Backend/ })).toBeVisible()
-  await expect(board.getByRole('heading', { name: /Frontend/ })).toBeVisible()
-  const first = board.locator('.board-lane').first()
-  await expect(first.locator('[data-column="doing"]')).toContainText('Cache')
-  await expect(first.locator('[data-column="done"]')).toContainText('API')
-  await board.getByLabel('Agrupar por seção').uncheck()
-  await expect(board.getByRole('heading', { name: /Backend/ })).toHaveCount(0)
-  await expect(board.locator('.board-lane')).toHaveCount(1)
+  await expect(page.locator('.board-column-title')).toHaveText([
+    'Fazer',
+    'Fazendo',
+    'Revisão',
+    'Feito',
+  ])
+  await expect(column(page, 'Fazendo')).toContainText('Cache')
+  await expect(column(page, 'Feito')).toContainText('API')
+  await expect(column(page, 'Revisão')).toContainText('Nenhuma tarefa')
+  // The toolbar stays in view even when the columns need to scroll.
+  await expect(page.getByRole('button', { name: 'Desfazer' })).toBeInViewport({ ratio: 1 })
+  await page.screenshot({ path: test.info().outputPath('board.png') })
 })
 
-test('mover pelo menu muda o status e a seção no texto', async ({ page }) => {
+test('mover pelo menu leva a tarefa para a seção e acerta o status', async ({ page }) => {
   await mode(page, 'Quadro')
   await page.getByRole('button', { name: 'Mover cartão: Fila' }).click()
-  await page.getByRole('menuitemradio', { name: /Esperando/ }).click()
+  await page.getByRole('menuitem', { name: 'Mover para Feito' }).click()
   await page.getByRole('button', { name: 'Mover cartão: Tela' }).click()
-  await page.getByRole('menuitem', { name: 'Mover para a seção: Backend' }).click()
+  await page.getByRole('menuitem', { name: 'Mover para Revisão' }).click()
+  // Changing only the status keeps the card in its column.
+  await page.getByRole('button', { name: 'Mover cartão: Cache' }).click()
+  await page.getByRole('menuitemradio', { name: /Esperando/ }).click()
+  await expect(column(page, 'Fazendo')).toContainText('Cache')
   await mode(page, 'Código')
   const text = await source(page).inputValue()
-  expect(text).toContain('- [>] Fila')
-  expect(text).toMatch(/## Backend[\s\S]*- \[ \] Tela[\s\S]*## Frontend/)
+  expect(text).toMatch(/## Revisão\n\n- \[ \] Tela\n/)
+  expect(text).toMatch(/## Feito\n\n- \[x\] API\n- \[x\] Fila/)
+  expect(text).toContain('- [>] Cache')
 })
 
 test('o botão + cria a tarefa na coluna e o desfazer do Quadro a remove', async ({ page }) => {
   await mode(page, 'Quadro')
-  await page.getByRole('button', { name: 'Adicionar tarefa em Fazendo' }).first().click()
+  await page.getByRole('button', { name: 'Adicionar tarefa em Fazendo' }).click()
   await page.getByLabel('Nova tarefa').fill('Escrever testes')
   await page.keyboard.press('Enter')
-  await expect(page.locator('[data-column="doing"]').first()).toContainText('Escrever testes')
+  await expect(column(page, 'Fazendo')).toContainText('Escrever testes')
   await page.getByRole('button', { name: 'Desfazer' }).click()
   await expect(page.getByText('Escrever testes')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Adicionar tarefa em Fazendo' }).click()
+  await page.getByLabel('Nova tarefa').fill('Escrever testes')
+  await page.keyboard.press('Enter')
+  await mode(page, 'Código')
+  expect(await source(page).inputValue()).toContain('- [/] Escrever testes')
 })
 
-test('o Quadro é lembrado por nota e uma nota sem tarefas mostra as colunas vazias', async ({
+test('uma nota comum vira nota de tarefas pelo Quadro, que é lembrado por nota', async ({
   page,
 }) => {
   await mode(page, 'Quadro')
   await page.getByRole('button', { name: 'Outra.md', exact: true }).click()
   await expect(page.getByRole('radio', { name: 'Padrão', exact: true })).toBeChecked()
   await mode(page, 'Quadro')
-  // Without tasks the board still shows its columns, each ready to take the first task.
-  await expect(page.locator('.board-column')).toHaveCount(4)
+  await expect(page.getByText('O Quadro mostra notas de tarefas')).toBeVisible()
+  await page.screenshot({ path: test.info().outputPath('board-convert.png') })
+  await page.getByRole('button', { name: 'Transformar em nota de tarefas' }).click()
+  await expect(page.locator('.board-column-title')).toHaveText([
+    'Fazer',
+    'Fazendo',
+    'Esperando',
+    'Feito',
+  ])
   await page.getByRole('button', { name: 'Adicionar tarefa em Fazer' }).click()
   await page.getByLabel('Nova tarefa').fill('Primeira')
   await page.keyboard.press('Enter')
-  await expect(page.locator('[data-column="todo"]')).toContainText('Primeira')
+  await expect(column(page, 'Fazer')).toContainText('Primeira')
+  await mode(page, 'Código')
+  expect(await source(page).inputValue()).toMatch(
+    /^---\ntipo: tarefas\ncriada: \d{4}-\d{2}-\d{2}\n---\n# Outra\n\ntexto\n\n## Fazer\n\n- \[ \] Primeira\n/,
+  )
+  await mode(page, 'Quadro')
   await page.getByRole('button', { name: 'Projeto.md', exact: true }).click()
   await expect(page.getByRole('radio', { name: 'Quadro', exact: true })).toBeChecked()
   await page.reload()
   await expect(page.getByRole('radio', { name: 'Quadro', exact: true })).toBeChecked()
 })
 
-test('arrastar um cartão entre colunas e raias muda o status e move a linha', async ({ page }) => {
+test('arrastar um cartão para outra coluna move a linha e acerta o status', async ({ page }) => {
   await mode(page, 'Quadro')
-  const lanes = page.locator('.board-lane')
   await drag(
     page,
-    lanes.first().locator('.board-card', { hasText: 'Fila' }),
-    lanes.first().locator('[data-column="waiting"]'),
+    column(page, 'Fazendo').locator('.board-card', { hasText: 'Cache' }),
+    column(page, 'Feito'),
+    // Below the last card: the end of the column.
+    (await column(page, 'Feito').boundingBox()).height - 6,
   )
-  await expect(lanes.first().locator('[data-column="waiting"]')).toContainText('Fila')
+  await expect(column(page, 'Feito')).toContainText('Cache')
   await drag(
     page,
-    lanes.first().locator('.board-card', { hasText: 'Cache' }),
-    lanes.nth(1).locator('[data-column="done"]'),
+    column(page, 'Fazer').locator('.board-card', { hasText: 'Fila' }),
+    column(page, 'Revisão'),
   )
-  await expect(lanes.nth(1).locator('[data-column="done"]')).toContainText('Cache')
+  await expect(column(page, 'Revisão')).toContainText('Fila')
   await mode(page, 'Código')
   const text = await source(page).inputValue()
-  expect(text).toContain('- [>] Fila')
-  expect(text).toMatch(/## Frontend[\s\S]*- \[x\] Cache[^\n]*\n\s+- \[ \] Redis/)
+  expect(text).toMatch(/## Revisão\n\n- \[ \] Fila\n/)
+  expect(text).toMatch(/## Feito\n\n- \[x\] API\n- \[x\] Cache[^\n]*\n\s+- \[ \] Redis/)
 })
 
 test('arrastar mostra o espaço de encaixe e reordena dentro da coluna', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 800 })
-  await mode(page, 'Código')
-  await source(page).fill('# Projeto\n\n## Etapa\n\n- [ ] Um\n- [ ] Dois\n- [ ] Três\n')
+  await page.getByRole('button', { name: 'Etapa', exact: true }).first().click()
   await mode(page, 'Quadro')
-  const column = page.locator('[data-column="todo"]').first()
-  const card = (text) => column.locator('.board-card', { hasText: text })
+  const etapa = column(page, 'Etapa')
+  const card = (text) => etapa.locator('.board-card', { hasText: text })
   const from = await card('Três').boundingBox()
   const to = await card('Um').boundingBox()
   await page.mouse.move(from.x + 20, from.y + from.height / 2)
   await page.mouse.down()
   await page.mouse.move(to.x + 20, to.y + 8, { steps: 8 })
-  await expect(column.locator('.board-drop-slot')).toBeVisible()
+  await expect(etapa.locator('.board-drop-slot')).toBeVisible()
   await expect(card('Três')).toHaveAttribute('data-dragged', 'true')
-  await page.screenshot({ path: test.info().outputPath('board-drag.png') })
   await page.mouse.move(to.x + 24, to.y + 10, { steps: 2 })
   await page.mouse.up()
-  await expect(column.locator('.board-drop-slot')).toHaveCount(0)
-  await expect(column.locator('.board-card-text')).toHaveText(['Três', 'Um', 'Dois'])
+  await expect(etapa.locator('.board-drop-slot')).toHaveCount(0)
+  await expect(etapa.locator('.board-card-text')).toHaveText(['Três', 'Um', 'Dois'])
   await mode(page, 'Código')
   expect(await source(page).inputValue()).toContain('- [ ] Três\n- [ ] Um\n- [ ] Dois')
+})
+
+test('Arquivar concluídas leva as tarefas feitas para a seção Arquivo', async ({ page }) => {
+  await mode(page, 'Quadro')
+  await page.getByRole('button', { name: 'Arquivar concluídas' }).click()
+  await expect(page.getByRole('status')).toContainText('Tarefas arquivadas: 1')
+  await expect(column(page, 'Feito')).not.toContainText('API')
+  await expect(page.locator('.board-column-title')).not.toContainText(['Arquivo'])
+  await mode(page, 'Código')
+  expect(await source(page).inputValue()).toMatch(/## Arquivo\n[\s\S]*- \[x\] API/)
 })
 
 test('clicar no texto do cartão permite editá-lo', async ({ page }) => {
