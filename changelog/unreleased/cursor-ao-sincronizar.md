@@ -1,0 +1,1 @@
+Corrigido: Enquanto você escreve, o cursor não volta mais para o início da nota quando o texto muda por fora do editor, como na sincronização, na leitura da pasta de notas ou numa edição do painel de propriedades.

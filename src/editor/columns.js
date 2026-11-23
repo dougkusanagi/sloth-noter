@@ -20,6 +20,7 @@ import { taskNotes } from './live-decorations.js'
 import { openExternalLink } from '../external-links.js'
 import { toast } from 'sonner'
 import { searchHighlights, setSearchHighlights } from './search.js'
+import { documentChanges } from '../search-scope.js'
 
 export const columnImageHandler = Facet.define()
 export const columnReadServices = Facet.define()
@@ -596,7 +597,7 @@ class ColumnsWidget extends WidgetType {
         const view = context.views[index]
         const text = this.block.columns[index].text
         if (view.state.doc.toString() !== text)
-          view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } })
+          view.dispatch({ changes: documentChanges(view.state.doc.toString(), text) })
       }
     } finally {
       context.syncing = false

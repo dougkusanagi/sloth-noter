@@ -59,6 +59,7 @@ import {
 } from './editor/keys.js'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { currentLanguage, t } from './i18n.js'
+import { documentChanges } from './search-scope.js'
 import { flushSync } from 'react-dom'
 import { Annotation, Compartment, EditorSelection, EditorState } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, redo } from '@codemirror/commands'
@@ -1281,7 +1282,8 @@ export function VisualEditor({
     const view = viewRef.current
     if (!view || view.state.doc.toString() === body) return
     syncing.current = true
-    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: body } })
+    // Only the changed stretch is replaced, so the cursor stays where the user is typing.
+    view.dispatch({ changes: documentChanges(view.state.doc.toString(), body) })
     syncing.current = false
   }, [body])
 
