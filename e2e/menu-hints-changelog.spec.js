@@ -195,6 +195,9 @@ for (const width of [390, 1280]) {
     if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/sloth-changelog-${width}.png` })
     await expect(page.locator('.cm-content')).toHaveAttribute('aria-readonly', 'true')
     await expect(document).toContainText(
+      'O título fica no mesmo lugar ao alternar entre Padrão e Leitura em notas com propriedades',
+    )
+    await expect(document).toContainText(
       'Setas de seção com o mesmo visual nos modos Padrão e Leitura',
     )
     await expect(document).toContainText('Alertas em Markdown e capas opcionais para notas')

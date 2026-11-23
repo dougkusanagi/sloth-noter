@@ -170,35 +170,33 @@ function Value({ entry, readOnly, setValue, setProblem }) {
           {value.map((part, index) => (
             <li key={`${part}-${index}`} className="property-chip">
               <span>{String(part)}</span>
-              {!readOnly && (
-                <button
-                  type="button"
-                  aria-label={t('properties.itemRemove', { item: String(part) })}
-                  onClick={() => setValue(value.filter((_, at) => at !== index))}
-                >
-                  <X size={12} aria-hidden="true" />
-                </button>
-              )}
+              <button
+                type="button"
+                disabled={readOnly}
+                aria-label={t('properties.itemRemove', { item: String(part) })}
+                onClick={() => setValue(value.filter((_, at) => at !== index))}
+              >
+                <X size={12} aria-hidden="true" />
+              </button>
             </li>
           ))}
         </ul>
-        {!readOnly && (
-          <input
-            className="property-value"
-            aria-label={t('properties.itemAdd', { name: key })}
-            placeholder={value.length ? '' : t('properties.emptyValue')}
-            value={item}
-            onChange={(event) => setItem(event.target.value)}
-            onKeyDown={(event) => {
-              if ((event.key === 'Enter' || event.key === ',') && item.trim()) {
-                event.preventDefault()
-                setValue([...value, item.trim()])
-                setItem('')
-              } else if (event.key === 'Backspace' && !item && value.length)
-                setValue(value.slice(0, -1))
-            }}
-          />
-        )}
+        <input
+          disabled={readOnly}
+          className="property-value"
+          aria-label={t('properties.itemAdd', { name: key })}
+          placeholder={value.length ? '' : t('properties.emptyValue')}
+          value={item}
+          onChange={(event) => setItem(event.target.value)}
+          onKeyDown={(event) => {
+            if ((event.key === 'Enter' || event.key === ',') && item.trim()) {
+              event.preventDefault()
+              setValue([...value, item.trim()])
+              setItem('')
+            } else if (event.key === 'Backspace' && !item && value.length)
+              setValue(value.slice(0, -1))
+          }}
+        />
       </div>
     )
   const shown =
@@ -291,7 +289,7 @@ function Row({ entry, body, readOnly, onApply }) {
         }}
         onBlur={() => !readOnly && name.trim() !== key && !pending && commitName()}
         onKeyDown={(event) => {
-          if (event.key === 'Enter') commitName()
+          if (event.key === 'Enter' && !readOnly) commitName()
           if (event.key === 'Escape') reset()
         }}
       />
@@ -372,76 +370,77 @@ function NewRow({ names, onCreate, onCancel }) {
   )
 }
 
-/**
- * The note's YAML properties as a list of rows. `body` is the whole note; every edit calls
- * `onApply` with the new text, so the file keeps comments, order and the other properties.
- */
-export function PropertiesPanel({ body, readOnly = false, onApply }) {
-  const read = useMemo(() => readProperties(body), [body])
-  const [adding, setAdding] = useState(false)
-  if (!read.hasBlock) return null
-  if (!read.ok)
-    return (
-      <p className="property-problem" role="alert">
-        {t('properties.invalid', {
-          line: read.error.line,
-          reason: t(`properties.error.${read.error.code}`),
-        })}
-      </p>
-    )
-  return (
-    <>
-      <ul className="property-rows">
-        {read.entries.map((entry) => (
-          <Row key={entry.key} entry={entry} body={body} readOnly={readOnly} onApply={onApply} />
-        ))}
-        {adding && (
-          <NewRow
-            names={read.entries.map((entry) => entry.key)}
-            onCancel={() => setAdding(false)}
-            onCreate={(key) => {
-              setAdding(false)
-              const result = writeProperty(body, key, '')
-              if (result !== null) onApply(result)
-            }}
-          />
-        )}
-      </ul>
-      {!readOnly && !adding && (
-        <button type="button" className="property-add" onClick={() => setAdding(true)}>
-          <Plus size={15} aria-hidden="true" />
-          {t('properties.add')}
-        </button>
-      )}
-    </>
-  )
-}
-
 export const propertyCount = (body) => {
   const read = readProperties(body)
   return read.ok ? read.entries.length : 0
 }
 
-/**
- * The properties above the note, aligned with the text, like Obsidian: a "Properties" heading
- * that collapses the rows. Nothing shows without a YAML block.
- */
+/** The note's collapsible YAML properties, aligned with the document. */
 export function PropertiesDock({ body, readOnly, onApply }) {
+  const read = useMemo(() => readProperties(body), [body])
   const [open, setOpen] = useState(true)
-  const hasBlock = useMemo(() => readProperties(body).hasBlock, [body])
-  if (!hasBlock) return null
+  const [adding, setAdding] = useState(false)
+  if (!read.hasBlock) return null
   return (
     <section className="properties" aria-label={t('properties.title')}>
-      <button
-        type="button"
-        className="properties-heading"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <ChevronRight size={14} aria-hidden="true" />
-        {t('properties.title')}
-      </button>
-      {open && <PropertiesPanel body={body} readOnly={readOnly} onApply={onApply} />}
+      <div className="properties-toolbar">
+        <button
+          type="button"
+          className="properties-heading"
+          aria-expanded={open}
+          onClick={() => {
+            setOpen(!open)
+            if (open) setAdding(false)
+          }}
+        >
+          <ChevronRight size={14} aria-hidden="true" />
+          {t('properties.title')}
+        </button>
+        {open && read.ok && !readOnly && !adding && (
+          <button
+            type="button"
+            className="property-add"
+            aria-label={t('properties.add')}
+            title={t('properties.add')}
+            onClick={() => setAdding(true)}
+          >
+            <Plus size={15} aria-hidden="true" />
+            <span>{t('properties.add')}</span>
+          </button>
+        )}
+      </div>
+      {open &&
+        (read.ok ? (
+          <ul className="property-rows">
+            {read.entries.map((entry) => (
+              <Row
+                key={entry.key}
+                entry={entry}
+                body={body}
+                readOnly={readOnly}
+                onApply={onApply}
+              />
+            ))}
+            {adding && !readOnly && (
+              <NewRow
+                names={read.entries.map((entry) => entry.key)}
+                onCancel={() => setAdding(false)}
+                onCreate={(key) => {
+                  setAdding(false)
+                  const result = writeProperty(body, key, '')
+                  if (result !== null) onApply(result)
+                }}
+              />
+            )}
+          </ul>
+        ) : (
+          <p className="property-problem" role="alert">
+            {t('properties.invalid', {
+              line: read.error.line,
+              reason: t(`properties.error.${read.error.code}`),
+            })}
+          </p>
+        ))}
     </section>
   )
 }

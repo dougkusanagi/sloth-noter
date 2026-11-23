@@ -147,3 +147,37 @@ test('invalid YAML shows the error and keeps the lines as text', async ({ page }
     /mono|Mono|monospace/,
   )
 })
+
+for (const width of [390, 1280]) {
+  test(`switching note modes keeps the properties and title in place at ${width}px`, async ({
+    page,
+  }) => {
+    const text = body.replace(
+      '  - a\n',
+      '  - planejamento\n  - entregas\n  - revisão\n  - documentação\n  - acompanhamento\n',
+    )
+    await open(page, text, width)
+    const section = panel(page)
+    const title = page.locator('.cm-md-h1')
+    const geometry = async () => ({
+      panel: await section.boundingBox(),
+      title: await title.boundingBox(),
+    })
+    const capture = async (mode) => {
+      if (process.env.CAPTURE_PROPERTIES)
+        await page.screenshot({
+          path: `/tmp/sloth-properties-${process.env.CAPTURE_PROPERTIES}-${mode}-${width}.png`,
+        })
+    }
+    await expect(section.getByRole('button', { name: 'Adicionar propriedade' })).toBeVisible()
+    const editing = await geometry()
+    await capture('padrao')
+    await page
+      .getByRole('radio', { name: 'Leitura', exact: true })
+      .evaluate((radio) => radio.click())
+    await expect(page.locator('.visual-editor.read-only')).toBeVisible()
+    await expect(section.getByRole('button', { name: 'Adicionar propriedade' })).toHaveCount(0)
+    await capture('leitura')
+    expect(await geometry()).toEqual(editing)
+  })
+}

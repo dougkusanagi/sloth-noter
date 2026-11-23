@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.34.2] — 2026-11-23
+
+O título fica no mesmo lugar ao alternar entre Padrão e Leitura em notas com propriedades. Veja os [detalhes da versão](changelog/0.34.2.md).
+
 ## [0.34.1] — 2026-11-23
 
 Setas de seção com o mesmo visual nos modos Padrão e Leitura. Veja os [detalhes da versão](changelog/0.34.1.md).

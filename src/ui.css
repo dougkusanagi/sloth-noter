@@ -3828,6 +3828,11 @@ html:has(
   font: 13.5px/1.4 var(--ui);
   color: var(--ink);
 }
+.properties-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .properties-heading,
 .property-add {
   display: inline-flex;
@@ -3969,6 +3974,10 @@ button.property-type-icon:hover {
   color: var(--accent-ink);
   overflow-wrap: anywhere;
 }
+/* Keep the same chip wrapping when the editing affordances are hidden. */
+.property-list :disabled {
+  visibility: hidden;
+}
 .property-chip button {
   display: inline-flex;
   min-width: 22px;
@@ -4054,6 +4063,9 @@ button.property-type-icon:hover {
 @media (max-width: 600px) {
   .properties {
     margin-inline: 40px 16px;
+  }
+  .property-add span {
+    display: none;
   }
   .property-row {
     grid-template-columns: 28px minmax(70px, 34%) minmax(0, 1fr);
