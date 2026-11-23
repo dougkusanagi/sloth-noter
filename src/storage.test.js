@@ -133,7 +133,7 @@ test('reports failed writes while retaining the in-memory document', () => {
   assert.match(loadDocument(storage).error, /quota exceeded/)
   const document = newDocument()
   assert.match(saveDocument(storage, document), /quota exceeded/)
-  assert.equal(document.notes[0].body.includes('Welcome'), true)
+  assert.equal(document.notes[0].body.includes('Rascunho'), true)
 })
 
 test('blocks writes when existing storage cannot be read', () => {
@@ -176,12 +176,12 @@ test('restoring a deleted note resolves name conflicts; permanent deletion remov
   const deleted = moveToTrash(newDocument(), 'welcome', 1234)
   const conflicting = {
     ...deleted,
-    notes: [{ id: 'other', name: 'welcome.md', body: '', revision: 0 }],
+    notes: [{ id: 'other', name: 'rascunho.md', body: '', revision: 0 }],
     openIds: ['other'],
     activeId: 'other',
   }
   const restored = restoreFromTrash(conflicting, 'welcome')
-  assert.equal(restored.notes.find((note) => note.id === 'welcome').name, 'Welcome (2).md')
+  assert.equal(restored.notes.find((note) => note.id === 'welcome').name, 'Rascunho (2).md')
   assert.equal(purgeFromTrash(deleted, 'welcome').trash.length, 0)
 })
 

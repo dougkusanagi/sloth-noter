@@ -28,7 +28,7 @@ test('wiki aliases open existing notes and missing targets can be created', asyn
 })
 test('live wiki links open notes and task Enter continues unchecked', async ({ page }) => {
   await page.keyboard.press('Control+t')
-  await source(page, '# Origem\n\n[[Welcome|Bem-vindo]]\n\n- [x] Concluído')
+  await source(page, '# Origem\n\n[[Rascunho|Bem-vindo]]\n\n- [x] Concluído')
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   await page.locator('.cm-content').click()
   await page.keyboard.press('Control+End')
@@ -37,7 +37,7 @@ test('live wiki links open notes and task Enter continues unchecked', async ({ p
   await expect(page.locator('textarea')).toHaveValue(/- \[x\] Concluído\n- \[ \] $/)
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   await page.locator('[data-wiki]').click()
-  await expect(page.locator('.tab.active')).toHaveText('Welcome')
+  await expect(page.locator('.tab.active')).toHaveText('Rascunho')
 })
 test('image insertion respects the cursor and undo retains an unused manageable asset', async ({
   page,

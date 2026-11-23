@@ -32,7 +32,7 @@ O aplicativo desktop usa **Tauri 2**. O fluxo de release prepara instaladores pa
 
 No desktop, você também pode associar `.md`, `.markdown` e `.txt` ao Sloth Note e abri-los pelo sistema. Arquivos abertos pelo sistema ou soltados na janela são editados no próprio local, mesmo fora da pasta de notas. Para que os arquivos de uma pasta sejam notas do app, escolha-a em **Configurações → Dados**. Solte um arquivo sobre o texto e o app pergunta se você quer editar o original ou importar uma cópia.
 
-A página Welcome pode ser excluída. Para gerar uma cópia atualizada, abra a paleta com `Ctrl+Shift+P` e escolha **Recriar página de ajuda**.
+Abra **Docs** na biblioteca para ler a documentação e os exemplos. Você pode recolher a pasta. A opção **Documentação** no menu abre a página Bem-vindo.
 
 ### Atalhos para começar
 

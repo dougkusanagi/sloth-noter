@@ -4072,3 +4072,26 @@ button.property-type-icon:hover {
   padding: 0 10px;
   font-size: 12.5px;
 }
+
+.guide-folder {
+  margin-inline: 0;
+}
+
+.guide-folder .guide-folder,
+.guide-folder .guide-entry {
+  margin-inline-start: 1rem;
+}
+
+.guide-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  text-align: start;
+  min-height: 2rem;
+  white-space: normal;
+}
+
+[data-platform='mobile'] .guide-folder summary,
+[data-platform='mobile'] .guide-entry {
+  min-height: 44px;
+}

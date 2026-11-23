@@ -152,7 +152,7 @@ for (const { label, create } of implementations) {
     assert.match(loaded.error, /read denied/)
     assert.equal(loaded.blocked, true)
     assert.equal(loaded.raw, null)
-    assert.equal(loaded.document.notes[0].body.includes('Listas'), true)
+    assert.equal(loaded.document.notes[0].body.includes('Rascunho'), true)
     assert.equal(backing.read(), previous)
   })
 

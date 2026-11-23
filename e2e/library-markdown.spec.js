@@ -51,11 +51,11 @@ test('visual tables hide trailing delimiters without adding grid rows and remain
 
 test('closed notes remain in the searchable library and visibility persists', async ({ page }) => {
   await page
-    .getByRole('button', { name: 'Fechar aba: Welcome.md', exact: true })
+    .getByRole('button', { name: 'Fechar aba: Rascunho.md', exact: true })
     .click({ force: true })
   await expect(page.locator('.tabs')).toBeHidden()
-  await page.getByRole('button', { name: 'Welcome', exact: true }).click()
-  await expect(page.locator('.tab')).toContainText('Welcome')
+  await page.getByRole('button', { name: 'Rascunho', exact: true }).click()
+  await expect(page.locator('.tab')).toContainText('Rascunho')
   await page.getByRole('button', { name: 'Mostrar/ocultar biblioteca' }).click()
   await page.reload()
   await expect(page.locator('.notes-sidebar')).toBeHidden()
@@ -160,7 +160,7 @@ test('a narrow viewport starts with the library hidden and note selection closes
   await expect(page.locator('.notes-sidebar')).toBeHidden()
   await page.getByRole('button', { name: 'Mostrar/ocultar biblioteca' }).click()
   await expect(page.locator('.notes-sidebar')).toBeVisible()
-  await page.getByRole('button', { name: 'Welcome', exact: true }).click()
+  await page.getByRole('button', { name: 'Rascunho', exact: true }).click()
   await expect(page.locator('.notes-sidebar')).toBeHidden()
 })
 

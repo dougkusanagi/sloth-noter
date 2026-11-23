@@ -105,5 +105,5 @@ test('Inserir propriedades (YAML) adds a block with an example the title stays b
   await expect(page.locator('.cm-md-frontmatter')).toHaveCount(3)
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   const text = await page.locator('textarea').inputValue()
-  expect(text.startsWith('---\npropriedade: valor\n---\n# Welcome')).toBe(true)
+  expect(text.startsWith('---\npropriedade: valor\n---\n# Rascunho')).toBe(true)
 })

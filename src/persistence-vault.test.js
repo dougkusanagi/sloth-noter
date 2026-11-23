@@ -130,11 +130,11 @@ test('a missing external file preserves pending text and does not block vault no
   assert.equal(loaded.document.notes.find((note) => note.id === 'outside').body, 'pending')
 })
 
-test('an empty new folder starts with the welcome note as a real file', async () => {
+test('an empty new folder starts with a draft as a real file', async () => {
   const host = fakeHost()
   const loaded = await start(host).load()
   assert.equal(loaded.error, null)
-  assert.equal(host.files.get('Welcome.md'), newDocument().notes[0].body)
+  assert.equal(host.files.get('Rascunho.md'), newDocument().notes[0].body)
 })
 
 test('the files are the notes and unicode, blank lines and unsupported text survive', async () => {
@@ -376,7 +376,7 @@ test('connecting an empty folder offers to copy the current notes, only once acc
   let asked = 0
   await connectVault(accepted.invoke, (count) => (asked = count) > 0)
   assert.equal(asked, 1)
-  assert.equal(accepted.files.get('Welcome.md'), newDocument().notes[0].body)
+  assert.equal(accepted.files.get('Rascunho.md'), newDocument().notes[0].body)
 })
 
 test('opening an existing folder keeps its notes without copying', async () => {
@@ -534,13 +534,13 @@ test('an asynchronous decline is awaited before activation', async () => {
 test('copying uses the current workspace and retains the old folder on conflict', async () => {
   const document = newDocument()
   document.notes[0].body = 'Latest text from the current vault'
-  const host = fakeHost({ files: { 'Welcome.md': 'Existing text' }, chosen: '/new' })
+  const host = fakeHost({ files: { 'Rascunho.md': 'Existing text' }, chosen: '/new' })
   await assert.rejects(
     connectVault(host.invoke, async () => true, document),
     /different file/,
   )
   assert.equal(host.vault, '/notes')
-  assert.equal(host.files.get('Welcome.md'), 'Existing text')
+  assert.equal(host.files.get('Rascunho.md'), 'Existing text')
 })
 
 test('cancelling the copy choice leaves the active folder untouched', async () => {

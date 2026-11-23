@@ -9,6 +9,9 @@ flowchart TD
   platform --> mobile[MobileShell Android]
   desktop --> store[useNotesStore e fila de gravação]
   mobile --> store
+  desktop --> guide[Documentação embutida em leitura]
+  mobile --> guide
+  guide --> editor
   mobile --> navigation[useNavigation e nav-stack]
   navigation --> browser[Histórico do WebView e sessionStorage]
   desktop --> updates[Consulta de atualizações desktop]
@@ -46,6 +49,7 @@ flowchart TD
 - `src/main.jsx`: inicialização e interface desktop, além da seleção da casca.
 - `src/mobile/`: casca, adaptação dos insets, navegação serializável e ações mobile de notas.
 - `src/hooks/use-notes-store.js`: documento em memória, gravações serializadas e histórico.
+- `src/components/guide-library.jsx`: árvore Docs e páginas distribuídas com o app, fora da persistência de notas.
 - `src/visual-editor.jsx` e `src/markdown.jsx`: edição e leitura compartilhadas.
 - `src/persistence-runtime.js`: escolhe navegador, arquivo interno Tauri ou vault configurado.
 - `server/`: servidor de sincronização (ADR 0018), um Cloudflare Worker com D1 e R2. A API em

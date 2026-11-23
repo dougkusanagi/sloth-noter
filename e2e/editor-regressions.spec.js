@@ -192,7 +192,7 @@ test('internal links have plain text styling and no click action on the active l
   page,
 }) => {
   await page.keyboard.press('Control+t')
-  await source(page, '# Links\n\n[[Welcome|Link Interno]]\n\nOutro texto')
+  await source(page, '# Links\n\n[[Rascunho|Link Interno]]\n\nOutro texto')
   await visual(page)
   await page
     .locator('.cm-line')
@@ -213,7 +213,7 @@ test('internal links have plain text styling and no click action on the active l
   await page.locator('.cm-line').filter({ hasText: 'Outro texto' }).click()
   await expect(page.locator('[data-wiki]')).toHaveCSS('text-decoration-line', 'underline')
   await page.locator('[data-wiki]').click()
-  await expect(page.locator('.tab.active')).toHaveText('Welcome')
+  await expect(page.locator('.tab.active')).toHaveText('Rascunho')
 })
 
 test('clipboard protection preserves paste into the link address form', async ({ page }) => {
@@ -486,10 +486,13 @@ test('welcome art loads from the app for new and legacy notes without GitHub acc
     return route.abort()
   })
   await page.reload()
+  await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Documentação', exact: true }).click()
   const image = page.locator('.cm-image-preview').first()
   await expect(image).toBeVisible()
   await expect.poll(() => image.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true)
   await expect(image).toHaveAttribute('src', /\/src\/assets\/welcome-sloth\.png/)
+  await page.getByRole('button', { name: 'Fechar documentação' }).click()
   await source(
     page,
     '# Welcome antigo\n\n![Preguiça](https://raw.githubusercontent.com/dougkusanagi/sloth-noter/main/motion/assets/sloth-hero.png)',

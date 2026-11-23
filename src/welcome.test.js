@@ -114,12 +114,12 @@ test('both languages have the same structure', () => {
   assert.deepEqual(shape('en'), shape('pt-BR'))
 })
 
-test('an unknown language falls back to Portuguese and a new document opens the help page', () => {
+test('an unknown language falls back to Portuguese and a new document opens a draft', () => {
   assert.equal(welcomeBody('fr'), WELCOME_BODIES['pt-BR'])
   assert.equal(welcomeBody(), WELCOME_BODIES['pt-BR'])
   const document = validateDocument(newDocument())
-  assert.equal(document.notes[0].name, WELCOME_NAME)
-  assert.equal(document.notes[0].body, WELCOME_BODIES['pt-BR'])
+  assert.equal(document.notes[0].name, 'Rascunho.md')
+  assert.equal(document.notes[0].body, '# Rascunho\n\n')
   assert.equal(document.activeId, 'welcome')
 })
 

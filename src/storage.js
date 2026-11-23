@@ -1,5 +1,4 @@
 import { DEFAULT_LANGUAGE, isLanguage } from './i18n.js'
-import { WELCOME_NAME, welcomeBody } from './welcome.js'
 
 /** Editor text size in px. 16 keeps a page dense, closer to a plain-text editor. */
 export const FONT_SIZE = { min: 12, max: 24, default: 16 }
@@ -22,8 +21,8 @@ export function newDocument() {
     notes: [
       {
         id: 'welcome',
-        name: WELCOME_NAME,
-        body: welcomeBody(DEFAULT_LANGUAGE),
+        name: 'Rascunho.md',
+        body: '# Rascunho\n\n',
         revision: 0,
         modifiedAt: Date.now(),
       },

@@ -84,7 +84,7 @@ import {
 } from './components/dialogs.jsx'
 import { currentLanguage, t } from './i18n.js'
 import { wrapSelection } from './wrap-selection.js'
-import { welcomeNote } from './welcome.js'
+import { GuideLibrary, guideDocument, guideTarget } from './components/guide-library.jsx'
 import { frontmatterEnd, titleEnd as noteTitleEnd } from './frontmatter.js'
 import { setOwnTemplates, setTemplateProfile } from './templates.js'
 import { SyncStatusButton } from './components/sync-status-button.jsx'
@@ -194,6 +194,7 @@ function Workspace({ persistence, loaded }) {
   const [mode, setMode] = useState('visual')
   const [splitId, setSplitId] = useState(null)
   const [releaseDoc, setReleaseDoc] = useState(null)
+  const guideId = releaseDoc?.startsWith('guide:') ? releaseDoc.slice(6) : null
   const [importError, setImportError] = useState('')
   const {
     data,
@@ -382,6 +383,7 @@ function Workspace({ persistence, loaded }) {
     tabsVisible: prefs.tabsVisible,
     previewId,
     open: (id) => {
+      setReleaseDoc(null)
       if (id === splitId && active) setSplitId(active.id)
       openNote(id)
     },
@@ -2116,7 +2118,7 @@ function Workspace({ persistence, loaded }) {
   }
 
   function archiveTasks() {
-    if (!active) return
+    if (!active || guideId) return
     const { body, count } = archiveClosedTasks(active.body, t('tasks.archiveTitle'))
     if (!count) return toast(t('tasks.archiveNone'))
     replaceActiveBody(body)
@@ -2160,6 +2162,7 @@ function Workspace({ persistence, loaded }) {
     focus: () => active && toggleFocusMode(),
     newNote: () => runMenu(() => createNote(), false),
     insertProperties: () =>
+      !guideId &&
       active &&
       runMenu(() => {
         const start = frontmatterEnd(active.body)
@@ -2176,6 +2179,7 @@ function Workspace({ persistence, loaded }) {
         requestAnimationFrame(() => requestAnimationFrame(place))
       }, false),
     toggleTemplate: () =>
+      !guideId &&
       active &&
       runMenu(() => {
         const templateNotes = { ...prefs.templateNotes }
@@ -2187,15 +2191,15 @@ function Workspace({ persistence, loaded }) {
       }, false),
     findNote: () => runMenu(openPalette, false),
     searchAllNotes: () => runMenu(searchAllNotes, false),
-    findInNote: () => active && runMenu(openFind, false),
-    replaceInNote: () => active && runMenu(() => openFind(true), false),
-    rename: () => active && runMenu(renameNote, false),
+    findInNote: () => !guideId && active && runMenu(openFind, false),
+    replaceInNote: () => !guideId && active && runMenu(() => openFind(true), false),
+    rename: () => !guideId && active && runMenu(renameNote, false),
     copyToNotes: () => active?.external && runMenu(() => copyExternalToNotes(), false),
     reopenTab: () => runMenu(reopenTab, false),
     previousTab: () => runMenu(() => selectAdjacentTab(-1), false),
     nextTab: () => runMenu(() => selectAdjacentTab(1), false),
-    closeTab: () => active && runMenu(() => closeTab(active.id)),
-    trashMove: () => active && runMenu(deleteNote, false),
+    closeTab: () => (guideId ? setReleaseDoc(null) : active && runMenu(() => closeTab(active.id))),
+    trashMove: () => !guideId && active && runMenu(deleteNote, false),
     undoDelete: () =>
       data.trash.length && runMenu(() => restoreNote(data.trash.at(-1).note.id), false),
     images: () => runMenu(showImages, false),
@@ -2247,11 +2251,7 @@ function Workspace({ persistence, loaded }) {
     archiveTasks: () => active && runMenu(archiveTasks, false),
     foldAll: () => active && runMenu(() => foldSections(true), false),
     unfoldAll: () => active && runMenu(() => foldSections(false), false),
-    welcome: () =>
-      runMenu(() => {
-        const welcome = welcomeNote(prefs.language)
-        createNote(welcome.name, welcome.body)
-      }, false),
+    welcome: () => runMenu(() => setReleaseDoc('guide:start'), false),
     updates: () => runMenu(() => appUpdates.check(), false),
     changelog: () => runMenu(() => setReleaseDoc('hub'), false),
     history: () =>
@@ -2378,7 +2378,7 @@ function Workspace({ persistence, loaded }) {
           {menuOpen && (
             <MainMenu
               firstRef={menuFirst}
-              active={active}
+              active={guideId ? null : active}
               activePinned={data.pinnedIds?.includes(data.activeId)}
               prefs={prefs}
               sidebarVisible={sidebarVisible}
@@ -2543,6 +2543,9 @@ function Workspace({ persistence, loaded }) {
                       {t('images.clearNoteFilter', { name: imageNoteFilter.name })}
                     </button>
                   )}
+                  {!sidebarQuery.trim() && !imageNoteFilter && (
+                    <GuideLibrary onOpen={(id) => setReleaseDoc(`guide:${id}`)} />
+                  )}
                   <NoteList
                     notes={data.notes.filter((note) =>
                       imageNoteFilter
@@ -2556,6 +2559,7 @@ function Workspace({ persistence, loaded }) {
                     activeId={active?.id}
                     openIds={data.openIds}
                     onOpen={(id) => {
+                      setReleaseDoc(null)
                       if (id === splitId && active) setSplitId(active.id)
                       previewNote(id)
                     }}
@@ -2738,22 +2742,33 @@ function Workspace({ persistence, loaded }) {
                 <div className="release-doc">
                   <div className="external-bar">
                     <span className="external-path">
-                      {t('settings.changelog')} · {t('changelog.readOnly')}
+                      {t(guideId ? 'menu.welcome' : 'settings.changelog')} ·{' '}
+                      {t('changelog.readOnly')}
                     </span>
                     <button type="button" onClick={() => setReleaseDoc(null)}>
-                      {t('changelog.close')}
+                      {t(guideId ? 'guide.close' : 'changelog.close')}
                     </button>
                   </div>
                   <VisualEditor
                     key={`changelog:${releaseDoc}:${prefs.language}`}
                     noteId={`changelog:${releaseDoc}`}
                     notes={data.notes}
-                    body={changelogDocument(releaseDoc === 'hub' ? null : releaseDoc)}
+                    body={
+                      guideId
+                        ? guideDocument(guideId)
+                        : changelogDocument(releaseDoc === 'hub' ? null : releaseDoc)
+                    }
                     readOnly
+                    bundled
                     wrapLines
                     wrapPage
                     onCopy={copyCode}
                     onOpenWiki={(target) => {
+                      if (guideId) {
+                        const next = guideTarget(target)
+                        if (next) setReleaseDoc(`guide:${next}`)
+                        return
+                      }
                       const next = changelogTarget(target)
                       if (next) setReleaseDoc(next)
                       else openWiki(target)
@@ -3023,7 +3038,7 @@ function Workspace({ persistence, loaded }) {
       {commandsOpen && (
         <CommandPalette
           commands={buildCommands({
-            active,
+            active: guideId ? null : active,
             activePinned: data.pinnedIds?.includes(data.activeId),
             prefs,
             trashCount: data.trash.length,
@@ -3052,7 +3067,7 @@ function Workspace({ persistence, loaded }) {
           sidebarVisible={sidebarVisible}
           folder={persistence.kind === 'vault' ? persistence.label : ''}
           desktop={Boolean(persistence.invoke)}
-          note={active}
+          note={guideId ? null : active}
           history={noteHistory}
           sync={sync}
           initialSection={settingsSection}

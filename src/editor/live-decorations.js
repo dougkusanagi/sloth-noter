@@ -65,6 +65,7 @@ function frontmatterReadable(block) {
   return lastReadable
 }
 
+export const staticDocument = Facet.define({ combine: (values) => values[0] ?? false })
 export const taskNotes = Facet.define({ combine: (values) => values[0] ?? [] })
 /** Id of the note shown, so variables such as `{{updated}}` can read its data. */
 export const activeNoteId = Facet.define({ combine: (values) => values[0] ?? null })
@@ -583,7 +584,7 @@ export function decorationsFor(view) {
                 tasks.get(number)?.done ?? false,
                 line.from + task[1].length + 1,
                 tasks.get(number)?.partial,
-                Boolean(tasks.get(number)?.progress),
+                view.state.facet(staticDocument) || Boolean(tasks.get(number)?.progress),
                 tasks.get(number)?.status,
                 tasks.get(number)?.archived,
               ),
@@ -697,7 +698,7 @@ export function decorationsFor(view) {
         if (fenceStarts.has(number)) attrs.class += ' cm-md-fence-start'
         if (fenceEnds.has(number)) attrs.class += ' cm-md-fence-end'
       }
-      const checklist = checklists.get(number)
+      const checklist = !view.state.facet(staticDocument) && checklists.get(number)
       if (checklist)
         ranges.push(
           Decoration.widget({

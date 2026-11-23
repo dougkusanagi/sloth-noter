@@ -28,6 +28,7 @@ import {
   emptyBodyLine,
   emptyNoteBody,
   liveMarkdown,
+  staticDocument,
   taskNotes,
 } from './editor/live-decorations.js'
 import { foldArchive, foldField } from './editor/folding.js'
@@ -192,6 +193,7 @@ export function VisualEditor({
   onPaste,
   imageBusy,
   readOnly = false,
+  bundled = false,
   wrapLines = true,
   wrapPage = wrapLines,
   sourceMode = false,
@@ -1120,10 +1122,11 @@ export function VisualEditor({
             transaction.docChanged &&
             transaction.startState.readOnly &&
             !syncing.current &&
-            !transaction.isUserEvent('tarefa')
+            (transaction.startState.facet(staticDocument) || !transaction.isUserEvent('tarefa'))
               ? []
               : transaction,
           ),
+          staticDocument.of(bundled),
           mandatoryTitle,
           autoPairs,
           history(),

@@ -1,7 +1,16 @@
 // Serializable navigation state. Note text stays in the notes store, never in history/storage.
 export const NAV_SESSION_KEY = 'sloth.mobile.navigation.v1'
 const roots = new Set(['notes', 'tasks', 'images'])
-const details = new Set(['note', 'trash', 'settings', 'changelog', 'history', 'table', 'image'])
+const details = new Set([
+  'note',
+  'trash',
+  'settings',
+  'changelog',
+  'guide',
+  'history',
+  'table',
+  'image',
+])
 const layers = new Set(['sheet', 'dialog', 'find', 'insert'])
 
 export function initialNavigation(tab = 'notes') {

@@ -16,7 +16,7 @@ const BODY = [
   '',
   'Texto **forte**, *ênfase*, ***ambos***, ~~riscado~~, `código` e \\*literal\\*.',
   '',
-  'Links: https://example.com e <https://example.org> e [texto](https://example.net) e [ref][site] e [[Welcome|Início]] e #etiqueta',
+  'Links: https://example.com e <https://example.org> e [texto](https://example.net) e [ref][site] e [[Rascunho|Início]] e #etiqueta',
   '',
   'Primeira linha\\',
   'segunda linha',

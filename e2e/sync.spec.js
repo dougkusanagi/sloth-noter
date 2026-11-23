@@ -175,7 +175,7 @@ test('first device creates an account and a second device signs in with e-mail a
   await phone.keyboard.press('Escape')
   const library = phone.getByRole('complementary', { name: 'Biblioteca' })
   await expect(library.getByRole('button', { name: /^Celular/ })).toBeVisible()
-  await expect(library.getByRole('button', { name: /^Welcome/ })).toBeVisible()
+  await expect(library.getByRole('button', { name: /^Rascunho/ })).toBeVisible()
 
   // The first device receives the phone's note with "Sincronizar agora".
   await desktop

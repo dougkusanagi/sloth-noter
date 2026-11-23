@@ -63,7 +63,7 @@ import { ChangelogPanel } from '../components/changelog-panel.jsx'
 import { TrashLibrary } from '../components/trash-library.jsx'
 import { noteTasks, syncLinkedTasks, taskSettings, toggleTask } from '../tasks.js'
 import { ensureDocumentTitles } from '../title.js'
-import { welcomeNote } from '../welcome.js'
+import { GuideLibrary, guideDocument, guideTarget } from '../components/guide-library.jsx'
 import { LANGUAGES, currentLanguage, t } from '../i18n.js'
 import { makeTaskNote } from '../task-note.js'
 import { setOwnTemplates, setTemplateProfile } from '../templates.js'
@@ -468,12 +468,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     commit(next)
     openNote(next.activeId, true)
   }
-  function createHelpNote() {
-    if (blocked) return
-    const help = welcomeNote(prefs.language)
-    const next = newMobileNote(current.current, help.name, undefined, help.body)
-    commit(next)
-    openNote(next.activeId)
+  function openGuide(id = 'start') {
+    dispatch({ type: 'push', route: { name: 'guide', id } })
   }
   function receiveSharedText(text) {
     const clean = text.replaceAll('\r\n', '\n').trim()
@@ -630,6 +626,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             images: 'images.title',
             settings: 'menu.settings',
             changelog: 'settings.changelog',
+            guide: 'menu.welcome',
             trash: 'trash.title',
           }[route.name] ?? 'menu.notes',
         )
@@ -1037,6 +1034,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             <h2>
               {query.trim() ? t('mobile.results') : t('menu.notes')} <span>{results.length}</span>
             </h2>
+            {!query.trim() && <GuideLibrary onOpen={openGuide} />}
             {results.map(({ note, result }) => (
               <SwipeNoteRow
                 key={note.id}
@@ -1403,11 +1401,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 <NotebookPen size={20} aria-hidden="true" />
                 {t('settings.changelog')}
               </button>
-              <button
-                className="settings-row settings-action"
-                disabled={blocked}
-                onClick={createHelpNote}
-              >
+              <button className="settings-row settings-action" onClick={() => openGuide()}>
                 <FileText size={20} aria-hidden="true" />
                 {t('menu.welcome')}
               </button>
@@ -1418,6 +1412,16 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           </section>
         )}
         {route.name === 'changelog' && <ChangelogPanel />}
+        {route.name === 'guide' && (
+          <Markdown
+            text={guideDocument(route.id)}
+            onCopy={copy}
+            onOpenWiki={(target) => {
+              const next = guideTarget(target)
+              if (next && next !== route.id) openGuide(next)
+            }}
+          />
+        )}
       </div>
       {editing && !sourceMode && keyboardOpen && (
         <FormattingBar
