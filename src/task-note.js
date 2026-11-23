@@ -105,3 +105,19 @@ export function moveTasksToSection(body, from, to, title) {
   const status = isTaskNote(body) ? (columnStatus(title) ?? undefined) : undefined
   return moveTasksToLane(body, from, to, title, status)
 }
+
+/**
+ * What the summary under the title of a task note shows: the creation date (the `criada`
+ * property), the last change and the task count of each column. Null for other notes.
+ */
+export function taskSummary(body, modifiedAt) {
+  if (!isTaskNote(body)) return null
+  const created = /^(\d{4})-(\d{2})-(\d{2})$/.exec(propertyMap(body).get('criada')?.value ?? '')
+  return {
+    created: created ? new Date(+created[1], +created[2] - 1, +created[3]) : null,
+    modified: Number.isFinite(modifiedAt) ? new Date(modifiedAt) : null,
+    columns: boardColumns(body)
+      .filter((column) => column.title)
+      .map((column) => ({ title: column.title, count: column.cards.length })),
+  }
+}

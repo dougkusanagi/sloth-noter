@@ -9,6 +9,7 @@ import {
   moveCardToColumn,
   moveTasksToSection,
   sectionTitles,
+  taskSummary,
 } from './task-note.js'
 
 const NOTE = [
@@ -120,4 +121,17 @@ test('selected tasks move to another section; only a task note changes their sta
   } finally {
     taskSettings.dates = saved
   }
+})
+
+test('taskSummary gives the dates and the count of each column of a task note', () => {
+  const summary = taskSummary(NOTE.replace('tipo: tarefas', 'tipo: tarefas\ncriada: 2026-11-02'), 0)
+  assert.equal(summary.created.getDate(), 2)
+  assert.equal(summary.modified.getTime(), 0)
+  assert.deepEqual(summary.columns, [
+    { title: 'Fazer', count: 2 },
+    { title: 'Revisão', count: 0 },
+    { title: 'Feito', count: 1 },
+  ])
+  assert.equal(taskSummary(NOTE).created, null)
+  assert.equal(taskSummary('# Nota\n'), null)
 })

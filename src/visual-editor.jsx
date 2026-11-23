@@ -62,6 +62,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { currentLanguage, t } from './i18n.js'
 import { documentChanges } from './search-scope.js'
 import { openTaskMenu } from './editor/task-menu.js'
+import { taskSummaryLine } from './editor/task-summary.js'
 import { moveTasksToSection, sectionTitles } from './task-note.js'
 import { flushSync } from 'react-dom'
 import { Annotation, Compartment, EditorSelection, EditorState } from '@codemirror/state'
@@ -645,6 +646,7 @@ export function VisualEditor({
     const visualExtensions = [
       documentColors,
       skipHiddenProperties,
+      taskSummaryLine,
       keymap.of([
         ...TASK_STATUSES.map((status, index) => ({
           key: 'Alt-' + (index + 1),
