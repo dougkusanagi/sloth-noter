@@ -40,3 +40,12 @@ test('table presentation metadata stays out of the library preview', () => {
     '| Etapa | Entregas |',
   )
 })
+
+test('notePreview skips a cover whose data URL is longer than the preview slice', () => {
+  const cover = `![capa.webp](data:image/webp;base64,${'A'.repeat(2000)} "sloth:cover")`
+  assert.equal(notePreview(`# Horta\n\n${cover}\n\nPlantar alface.`), 'Plantar alface.')
+  assert.equal(
+    notePreview(`# Horta\n\n![capa](assets/c.webp "sloth:cover")\n\nPlantar.`),
+    'Plantar.',
+  )
+})

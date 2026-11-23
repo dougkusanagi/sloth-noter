@@ -4232,3 +4232,279 @@ button.property-type-icon:hover {
   overflow-wrap: anywhere;
   text-align: left;
 }
+
+/* Top of the note (Padrão and Leitura keep the same space): note menu, icon and cover buttons. */
+.note-top {
+  position: relative;
+}
+.note-header {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  margin: 6px max(44px, calc((100% - var(--content-width, 760px)) / 2)) 0;
+}
+.note-header-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-inline-start: -8px;
+}
+.note-header-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font: 13px var(--ui);
+  cursor: pointer;
+}
+.note-header-button:hover,
+.note-header-button[aria-expanded='true'] {
+  background: var(--hover);
+  color: var(--ink);
+}
+.note-header-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.note-header-more {
+  opacity: 0.7;
+}
+/* The add buttons show when the pointer is at the top of the note, or with the keyboard. */
+.note-header-hint {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.note-top:hover .note-header-hint,
+.note-header:focus-within .note-header-hint,
+.note-header[data-open] .note-header-hint {
+  opacity: 1;
+}
+@media (hover: none) {
+  .note-header-hint {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .note-header-hint {
+    transition: none;
+  }
+}
+.note-header-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: -8px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: min(540px, calc(100vw - 32px));
+  max-height: min(460px, 70vh);
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--popover);
+  box-shadow: var(--bevel, none), var(--shadow-pop);
+  font: 13px/1.4 var(--ui);
+  color: var(--ink);
+}
+.note-header-popover.is-menu {
+  width: min(280px, calc(100vw - 32px));
+  max-height: none;
+  overflow: visible;
+}
+.note-header-menu {
+  display: grid;
+  padding: 4px;
+}
+.note-header-menu hr {
+  margin: 4px 6px;
+  border: 0;
+  border-top: 1px solid var(--edge);
+}
+.note-header-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.note-header-menu button:hover,
+.note-header-menu button:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+.note-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--edge);
+}
+.note-popover-head [role='tablist'],
+.note-popover-actions {
+  display: flex;
+  gap: 2px;
+}
+.note-popover-title {
+  padding: 4px 8px;
+  color: var(--accent);
+  font-weight: 600;
+}
+.note-popover-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.note-popover-head button:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.note-popover-head [role='tab'][aria-selected='true'] {
+  color: var(--accent);
+  font-weight: 600;
+}
+.note-popover-head button:focus-visible,
+.cover-gallery button:focus-visible,
+.emoji-picker-emoji:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.note-popover-status {
+  margin: 8px 14px 0;
+  color: var(--muted);
+}
+.cover-gallery {
+  overflow-y: auto;
+  padding: 4px 14px 14px;
+}
+.cover-gallery h3 {
+  margin: 10px 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.cover-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+.cover-gallery button {
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--soft);
+  cursor: pointer;
+}
+.cover-gallery button:hover {
+  border-color: var(--accent);
+}
+.cover-gallery img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cover-upload {
+  overflow-y: auto;
+  padding: 12px 14px;
+}
+.emoji-picker {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 340px;
+}
+.emoji-picker-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 12px 6px;
+  padding: 0 10px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+}
+.emoji-picker-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+.emoji-picker-viewport {
+  flex: 1;
+  outline: none;
+}
+.emoji-picker-note {
+  display: block;
+  padding: 16px;
+  color: var(--muted);
+}
+.emoji-picker-list {
+  padding: 0 8px 8px;
+}
+.emoji-picker-category {
+  padding: 8px 6px 4px;
+  background: var(--popover-solid, var(--paper));
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.emoji-picker-emoji {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-width: 0;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+}
+.emoji-picker-emoji[data-active] {
+  background: var(--hover);
+}
+@media (max-width: 600px) {
+  .note-header {
+    margin-inline: 40px 16px;
+  }
+  .note-header-popover {
+    position: fixed;
+    top: 56px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+  .note-header-popover.is-menu {
+    right: auto;
+    width: min(280px, calc(100vw - 32px));
+  }
+}

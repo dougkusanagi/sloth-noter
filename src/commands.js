@@ -75,14 +75,7 @@ function commandGroups({ active, activePinned, prefs, trashCount, desktop, mode 
         ['replaceInNote', 'find.replace', Replace, 'H', !active],
         ...(desktop ? [['history', 'history.title', History, undefined, !active, true]] : []),
         ['rename', 'menu.rename', Pencil, 'F2', !active || Boolean(active.external)],
-        [
-          'noteCover',
-          'cover.title',
-          Image,
-          undefined,
-          !active || Boolean(active.external),
-          Boolean(active),
-        ],
+        ['noteCover', 'cover.title', Image, undefined, !active || Boolean(active.external)],
         [
           'copyToNotes',
           'external.copy',

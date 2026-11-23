@@ -93,6 +93,10 @@ import { setOwnTemplates, setTemplateProfile } from './templates.js'
 import { SyncStatusButton } from './components/sync-status-button.jsx'
 import { PropertiesDock } from './components/properties-panel.jsx'
 import { NoteCoverBanner } from './components/note-cover-banner.jsx'
+import { NoteHeader } from './components/note-header.jsx'
+import { setNoteIcon } from './note-icon.js'
+import { isTaskNote } from './task-note.js'
+import { Braces, FileOutput, FileText, History, ListTodo, Pencil, SmilePlus } from 'lucide-react'
 import { foldAll, foldArchive, unfoldAll } from './editor/folding.js'
 import { continueBlock } from './continue-block.js'
 import { applyChanges, listIndentChanges, mapPosition } from './list-indent.js'
@@ -235,6 +239,12 @@ function Workspace({ persistence, loaded }) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [coverNoteId, setCoverNoteId] = useState(null)
+  const [notePanel, setNotePanel] = useState(null)
+  const [panelKey, setPanelKey] = useState('')
+  if (panelKey !== `${data.activeId}:${mode}`) {
+    setPanelKey(`${data.activeId}:${mode}`)
+    if (notePanel) setNotePanel(null)
+  }
   setTemplateProfile(sync.status.account?.name || sync.status.account?.email)
   const [commandsOpen, setCommandsOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
@@ -699,8 +709,8 @@ function Workspace({ persistence, loaded }) {
     requestAnimationFrame(() => menuButton.current?.focus())
   }
 
-  function applyCover(image, imported) {
-    const note = current.current.notes.find((item) => item.id === coverNoteId)
+  function applyCoverTo(noteId, image, imported) {
+    const note = current.current.notes.find((item) => item.id === noteId)
     if (blocked || switching || !note || note.external) {
       toast.error(t('cover.noteUnavailable'))
       return
@@ -708,7 +718,19 @@ function Workspace({ persistence, loaded }) {
     const body = setNoteCover(note.body, image)
     if (body !== note.body)
       updateBody(body, undefined, undefined, note.id, imported ? image : undefined)
+  }
+  function applyCover(image, imported) {
+    applyCoverTo(coverNoteId, image, imported)
     closeCover()
+  }
+  function applyIcon(noteId, emoji) {
+    const note = current.current.notes.find((item) => item.id === noteId)
+    if (blocked || switching || !note || note.external) {
+      toast.error(t('cover.noteUnavailable'))
+      return
+    }
+    const body = setNoteIcon(note.body, emoji)
+    if (body !== note.body) updateBody(body, undefined, undefined, note.id)
   }
 
   function changeSource(event) {
@@ -2163,6 +2185,8 @@ function Workspace({ persistence, loaded }) {
       ),
     })
   }
+  const noteEditable =
+    Boolean(active) && mode === 'visual' && !active.external && !guideId && !blocked && !switching
   const menuActions = {
     mainMenu: toggleMainMenu,
     outline: () =>
@@ -2191,7 +2215,7 @@ function Workspace({ persistence, loaded }) {
       !guideId &&
       !blocked &&
       !switching &&
-      runMenu(() => setCoverNoteId(active.id), false),
+      runMenu(() => (mode === 'visual' ? setNotePanel('cover') : setCoverNoteId(active.id)), false),
     insertProperties: () =>
       !guideId &&
       active &&
@@ -2337,6 +2361,59 @@ function Workspace({ persistence, loaded }) {
         : null,
     [selectedText, active?.id, mode],
   )
+  // The note menu at the top of the note, in Padrão (see NoteHeader).
+  const noteActions = noteEditable
+    ? [
+        {
+          id: 'cover',
+          label: t('noteHeader.coverAction'),
+          icon: ImageIcon,
+          opensPanel: true,
+          run: () => setNotePanel('cover'),
+        },
+        {
+          id: 'icon',
+          label: t('noteHeader.iconAction'),
+          icon: SmilePlus,
+          opensPanel: true,
+          run: () => setNotePanel('icon'),
+        },
+        ...(isTaskNote(active.body)
+          ? []
+          : [
+              {
+                id: 'taskNote',
+                label: t('noteHeader.taskNote'),
+                icon: ListTodo,
+                run: markTaskNote,
+              },
+            ]),
+        ...(frontmatterEnd(active.body)
+          ? []
+          : [
+              {
+                id: 'properties',
+                label: t('menu.insertProperties'),
+                icon: Braces,
+                run: menuActions.insertProperties,
+              },
+            ]),
+        '-',
+        {
+          id: 'template',
+          label: t(prefs.templateNotes?.[active.id] ? 'menu.removeTemplate' : 'menu.useAsTemplate'),
+          icon: FileText,
+          run: menuActions.toggleTemplate,
+        },
+        { id: 'rename', label: t('menu.rename'), icon: Pencil, run: menuActions.rename },
+        ...(persistence.invoke
+          ? [{ id: 'history', label: t('history.title'), icon: History, run: menuActions.history }]
+          : []),
+        { id: 'export', label: t('menu.export'), icon: FileOutput, run: menuActions.export },
+        '-',
+        { id: 'trash', label: t('menu.trashMove'), icon: Trash2, run: menuActions.trashMove },
+      ]
+    : []
   const formatCount = (count) => count.toLocaleString(prefs.language)
   const selectedCount = (key, count) =>
     t(count === 1 ? `${key}.one` : key, { count: formatCount(count) })
@@ -2763,14 +2840,24 @@ function Workspace({ persistence, loaded }) {
                 </div>
               )}
               {active && !releaseDoc && (mode === 'visual' || mode === 'reading') && (
-                <NoteCoverBanner
-                  body={active.body}
-                  onChange={
-                    mode === 'visual' && !active.external && !guideId
-                      ? () => setCoverNoteId(active.id)
-                      : undefined
-                  }
-                />
+                <div className="note-top">
+                  <NoteCoverBanner
+                    body={active.body}
+                    onChange={noteEditable ? () => setNotePanel('cover') : undefined}
+                  />
+                  <NoteHeader
+                    key={active.id}
+                    body={active.body}
+                    readOnly={!noteEditable}
+                    images={images}
+                    invoke={persistence.invoke}
+                    panel={notePanel}
+                    onPanel={setNotePanel}
+                    actions={noteActions}
+                    onCover={(image, imported) => applyCoverTo(active.id, image, imported)}
+                    onIcon={(emoji) => applyIcon(active.id, emoji)}
+                  />
+                </div>
               )}
               {active && !releaseDoc && (mode === 'visual' || mode === 'reading') && (
                 <PropertiesDock

@@ -6,7 +6,7 @@ import { IMAGE_DATA, IMAGE_TYPES, importImage } from '../images.js'
 import { friendlyError } from '../errors.js'
 import { t } from '../i18n.js'
 
-export function CoverPicker({ images, selected, invoke, onApply, onClose }) {
+export function CoverPicker({ images, selected, invoke, onApply, onClose, hideRemove = false }) {
   const file = useRef(null)
   const upload = useRef(null)
   const mounted = useRef(false)
@@ -49,7 +49,7 @@ export function CoverPicker({ images, selected, invoke, onApply, onClose }) {
           <ImagePlus size={16} aria-hidden="true" />
           {t('cover.upload')}
         </button>
-        {selected && (
+        {selected && !hideRemove && (
           <button type="button" disabled={busy} onClick={() => onApply(null)}>
             {t('cover.remove')}
           </button>

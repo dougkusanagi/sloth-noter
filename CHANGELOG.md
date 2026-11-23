@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.36.0] — 2026-11-23
+
+Ícone e capa pelo topo da nota, com galeria de capas, seletor de emoji e o menu Ações da nota. Veja os [detalhes da versão](changelog/0.36.0.md).
+
 ## [0.35.1] — 2026-11-23
 
 Os Exemplos explicam a capa da nota e as notas de tarefas. Veja os [detalhes da versão](changelog/0.35.1.md).

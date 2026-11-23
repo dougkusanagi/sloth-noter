@@ -40,13 +40,16 @@ export function displayName(name, keepExtension = false) {
 export function notePreview(body, limit = 96) {
   const lines = body
     .slice(frontmatterEnd(body))
+    // A line with only an image (like the cover) can hold a long data URL: drop it first.
+    .replace(/^!\[[^\]\n]*\]\([^\n]*\)[ \t]*$/gm, '')
     .slice(0, 1200)
     .replace(/<!--\s*sloth:(?:table|block)\b[^>]*-->[ \t]*/g, '')
     .replace(/<span style="(?:(?:color|background-color):#[0-9a-f]{6};?){1,2}">|<\/span>/g, '')
     .split('\n')
   for (const line of lines.slice(/^#\s/.test(lines[0]) ? 1 : 0)) {
     const text = stripLeading(line)
-      .replace(/!\[[^\]]*\]\([^)]*\)|!\[\[[^\]]*\]\]/g, '')
+      // An image cut by the slice (long data URL) has no closing parenthesis.
+      .replace(/!\[[^\]]*\]\([^)]*(?:\)|$)|!\[\[[^\]]*\]\]/g, '')
       .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
       .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, label) => label ?? target)
       .replace(/[*_~`]+/g, '')
