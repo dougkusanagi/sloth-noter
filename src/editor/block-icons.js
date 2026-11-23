@@ -23,6 +23,7 @@ export const blockIconMarkup = {
   ),
   task: svg('<rect x="3.5" y="3.5" width="13" height="13" rx="2.5" /><path d="M7 10l2 2 4-4.5" />'),
   code: svg('<path d="M7 5.5 2.5 10 7 14.5M13 5.5l4.5 4.5-4.5 4.5" />'),
+  callout: svg('<path d="M4 4h12v9H8l-4 3zM10 6.5v2.7m0 1.9v.1" />'),
   quote: svg('<path d="M4 15c2-1 3-3 3-5.5V5H3.5v5H7M12.5 15c2-1 3-3 3-5.5V5H12v5h3.5" />'),
   table: svg(
     '<rect x="3" y="4" width="14" height="12" rx="1.5" /><path d="M3 8h14M3 12h14M8 8v8" />',

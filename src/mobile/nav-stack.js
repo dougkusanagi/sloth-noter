@@ -11,7 +11,7 @@ const details = new Set([
   'table',
   'image',
 ])
-const layers = new Set(['sheet', 'dialog', 'find', 'insert'])
+const layers = new Set(['sheet', 'dialog', 'find', 'insert', 'cover'])
 
 export function initialNavigation(tab = 'notes') {
   return { screens: [{ name: roots.has(tab) ? tab : 'notes' }], layers: [] }

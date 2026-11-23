@@ -1,3 +1,4 @@
+import { calloutActions, calloutTemplate } from './callout.js'
 import { accordionTemplate } from './accordion.js'
 import { t } from './i18n.js'
 import { columnsTemplate } from './columns.js'
@@ -31,6 +32,11 @@ export function blockTemplate(action) {
     const text = accordionTemplate(title)
     const from = text.indexOf('\n') + 1
     return { text, selectionFrom: from, selectionTo: from + title.length }
+  }
+  if (calloutActions.some(([id]) => id === action)) {
+    const body = t('callout.defaultBody')
+    const text = calloutTemplate(action.slice('callout-'.length), body)
+    return { text, selectionFrom: text.length - body.length, selectionTo: text.length }
   }
   if (action === 'columns') {
     const text = columnsTemplate(['', ''])
@@ -94,6 +100,25 @@ export function blockEdit(text, from, to, action) {
       insert: next.join('\n'),
       selectionFrom: map(from),
       selectionTo: map(to),
+    }
+  }
+  if (calloutActions.some(([id]) => id === action)) {
+    const previous = text.slice(0, from)
+    const next = text.slice(to)
+    const before = previous.endsWith('\n\n') ? '' : previous.endsWith('\n') ? '\n' : '\n\n'
+    const after =
+      !next.trim() || next.startsWith('\n\n') ? '' : next.startsWith('\n') ? '\n' : '\n\n'
+    const selected = text.slice(from, to)
+    const insert = selected
+      ? calloutTemplate(action.slice('callout-'.length), selected)
+      : template.text
+    const start = from + before.length
+    return {
+      from,
+      to,
+      insert: before + insert + after,
+      selectionFrom: start + template.selectionFrom,
+      selectionTo: start + insert.length,
     }
   }
   if (action === 'table') {

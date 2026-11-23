@@ -1,3 +1,4 @@
+import { calloutActions, calloutTypes } from './callout.js'
 import { autoPairs } from './editor/auto-pairs.js'
 import { selectedColors, blockColorMetadata } from './document-colors.js'
 import { ColorPalette } from './components/color-palette.jsx'
@@ -83,6 +84,7 @@ import {
   ListOrdered,
   Link,
   Quote,
+  MessageSquare,
   Table as TableIcon,
   Columns2,
   FileText,
@@ -127,6 +129,7 @@ const blockButtons = [
   ['h3', 'block.h3'],
   ['h4', 'block.h4'],
   ['quote', 'block.quote'],
+  ...calloutActions,
   ['list', 'block.list'],
   ['numbered', 'block.numbered'],
   ['table', 'block.table'],
@@ -144,6 +147,7 @@ const blockIcons = {
   h3: Heading3,
   h4: Heading4,
   quote: Quote,
+  ...Object.fromEntries(calloutTypes.map((type) => [`callout-${type}`, MessageSquare])),
   list: List,
   numbered: ListOrdered,
   table: TableIcon,

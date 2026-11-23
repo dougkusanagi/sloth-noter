@@ -1,3 +1,4 @@
+import { calloutActions } from '../callout.js'
 import { useState } from 'react'
 import { redo } from '@codemirror/commands'
 import { blockEdit } from '../insert-block.js'
@@ -17,6 +18,11 @@ const blocks = [
   ['table', 'block.table', '| A | B |'],
   ['code', 'block.code', '``` código'],
   ['quote', 'block.quote', '> Citação'],
+  ...calloutActions.map(([action, label]) => [
+    action,
+    label,
+    '> [!' + action.slice(8).toUpperCase() + ']',
+  ]),
   ['image', 'block.image', '▧'],
   ['link', 'format.link', '[texto](url)'],
   ['wiki', 'mobile.noteLink', '[[Nota]]'],

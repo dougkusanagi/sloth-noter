@@ -1,3 +1,5 @@
+import { noteCover } from '../note-cover.js'
+import { readCallout } from '../callout.js'
 import { accordionBlocks } from '../accordion.js'
 import { moveListItems } from '../list-move.js'
 import { platform } from '../platform.js'
@@ -70,6 +72,24 @@ export const staticDocument = Facet.define({ combine: (values) => values[0] ?? f
 export const taskNotes = Facet.define({ combine: (values) => values[0] ?? [] })
 /** Id of the note shown, so variables such as `{{updated}}` can read its data. */
 export const activeNoteId = Facet.define({ combine: (values) => values[0] ?? null })
+
+class CalloutTitleWidget extends WidgetType {
+  constructor(title) {
+    super()
+    this.title = title
+  }
+  eq(other) {
+    return this.title === other.title
+  }
+  toDOM() {
+    const title = document.createElement('span')
+    title.textContent = this.title
+    return title
+  }
+  ignoreEvent() {
+    return false
+  }
+}
 
 class VariableWidget extends WidgetType {
   constructor(text, raw) {
@@ -305,20 +325,53 @@ class TaskWidget extends WidgetType {
   }
 }
 class ImageWidget extends WidgetType {
-  constructor(src, alt, title = '') {
+  constructor(src, alt, title = '', cover = false) {
     super()
     this.src = src
     this.alt = alt
     this.title = title
+    this.cover = cover
   }
   eq(other) {
-    return this.src === other.src && this.alt === other.alt && this.title === other.title
+    return (
+      this.src === other.src &&
+      this.alt === other.alt &&
+      this.title === other.title &&
+      this.cover === other.cover
+    )
   }
   toDOM() {
     const image = document.createElement('img')
     image.className = 'cm-image-preview'
     image.alt = this.alt
-    resolveImage(this.src)
+    const resolve = resolveImage(this.src)
+    if (this.cover) {
+      const frame = document.createElement('span')
+      frame.className = 'note-cover'
+      const status = document.createElement('span')
+      status.className = 'image-missing'
+      const missing = () => {
+        image.remove()
+        status.textContent = t('cover.unavailable')
+      }
+      image.hidden = true
+      image.addEventListener(
+        'load',
+        () => {
+          image.hidden = false
+          status.remove()
+        },
+        { once: true },
+      )
+      image.addEventListener('error', missing, { once: true })
+      frame.append(image, status)
+      resolve.then((src) => {
+        if (src) image.src = src
+        else missing()
+      }, missing)
+      return frame
+    }
+    resolve
       .then((src) => {
         if (src) image.src = src
       })
@@ -407,6 +460,7 @@ function documentDecorations(view) {
       definitions.push(doc.sliceString(node.position.start.offset, node.position.end.offset))
   })
   const definitionText = definitions.join('\n')
+  const coverOffset = noteCover(text, tree)?.position.start.offset
   const imageByLine = new Map(
     imageReferences(text).map((image) => [
       (image.occurrence ?? image.node).position.start.line,
@@ -433,7 +487,11 @@ function documentDecorations(view) {
   const codeRangesByLine = new Map()
   const codeAtFence = new Map()
   const setextPairs = new Map()
+  const calloutLines = new Map()
   walk(tree, (node) => {
+    const callout = readCallout(text, node)
+    if (callout)
+      for (let line = callout.first; line <= callout.last; line++) calloutLines.set(line, callout)
     if (
       node.type === 'break' &&
       doc.sliceString(node.position.start.offset, node.position.start.offset + 1) === '\\'
@@ -514,6 +572,7 @@ function documentDecorations(view) {
     checklists,
     definitionText,
     imageByLine,
+    coverOffset,
     breakMarks,
     listDepths,
     continuations,
@@ -524,6 +583,7 @@ function documentDecorations(view) {
     codeRangesByLine,
     codeAtFence,
     setextPairs,
+    calloutLines,
   }
   markdownByView.set(view, result)
   return result
@@ -554,6 +614,7 @@ export function decorationsFor(view) {
     checklists,
     definitionText,
     imageByLine,
+    coverOffset,
     breakMarks,
     listDepths,
     continuations,
@@ -564,6 +625,7 @@ export function decorationsFor(view) {
     codeRangesByLine,
     codeAtFence,
     setextPairs,
+    calloutLines,
   } = documentDecorations(view)
   const noteInfo = view.state
     .facet(taskNotes)
@@ -628,6 +690,29 @@ export function decorationsFor(view) {
         editing.has(setextPairs.get(number)) ||
         (fence &&
           selectedLines.some(({ first, last }) => first <= fence.last && last >= fence.first))
+      const callout = calloutLines.get(number)
+      const calloutClass = callout
+        ? `cm-md-callout${number === callout.first ? ' callout-title' : ''}${number === callout.last ? ' cm-md-callout-last' : ''}`
+        : ''
+      if (callout?.first === number) {
+        ranges.push(
+          Decoration.line({
+            attributes: { class: calloutClass, 'data-callout': callout.type },
+          }).range(line.from),
+        )
+        if (!active) {
+          const widget = callout.title
+            ? undefined
+            : new CalloutTitleWidget(t(`callout.${callout.type}`))
+          ranges.push(
+            Decoration.replace({ widget }).range(
+              line.from,
+              callout.title ? line.from + callout.prefix : line.to,
+            ),
+          )
+        }
+        continue
+      }
       const accordion = accordionLines.get(number)
       if (accordion) {
         if (number === accordion.titleEnd) {
@@ -722,13 +807,12 @@ export function decorationsFor(view) {
         image &&
         (image.occurrence ?? image.node).position.start.offset === line.from &&
         (image.occurrence ?? image.node).position.end.offset === line.to &&
-        !active
+        (!active || coverOffset === line.from)
       ) {
         ranges.push(
-          Decoration.replace({ widget: new ImageWidget(image.src, image.name, image.title) }).range(
-            line.from,
-            line.to,
-          ),
+          Decoration.replace({
+            widget: new ImageWidget(image.src, image.name, image.title, coverOffset === line.from),
+          }).range(line.from, line.to),
         )
         continue
       }
@@ -754,6 +838,10 @@ export function decorationsFor(view) {
       if (shape.kind === 'ordered' && indent && listDepths.has(number))
         ranges.push(Decoration.replace({}).range(line.from, line.from + indent))
       const attrs = lineAttributes(line, shape, active, listDepths.get(number))
+      if (callout) {
+        attrs.class += ` ${calloutClass}`
+        attrs['data-callout'] = callout.type
+      }
       // The file's final line break is not an empty paragraph until the cursor goes there.
       if (
         shape.kind === 'paragraph' &&

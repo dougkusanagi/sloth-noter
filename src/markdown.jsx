@@ -1,3 +1,5 @@
+import { noteCover } from './note-cover.js'
+import { remarkCallouts } from './callout.js'
 import { remarkDocumentColors } from './document-colors.js'
 import { applyChanges } from './list-indent.js'
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
@@ -41,17 +43,24 @@ export function safeHref(value) {
   if (/^(https?:|mailto:)/i.test(href) || /^(#|\/|\.\/|\.\.\/)/.test(href)) return href
   return null
 }
-function Image({ src, alt, title }) {
+function Image({ src, alt, title, node }) {
+  const { coverOffset } = useContext(MarkdownContext)
+  const cover = coverOffset !== undefined && coverOffset === node?.position?.start.offset
+  const [failed, setFailed] = useState(false)
   const [resolved, setResolved] = useState(null)
   useEffect(() => {
     let cancelled = false
     setResolved(null)
+    setFailed(false)
     resolveImage(src)
       .then((url) => {
-        if (!cancelled) setResolved(url)
+        if (!cancelled) {
+          setResolved(url)
+          setFailed(!url)
+        }
       })
       .catch(() => {
-        if (!cancelled) setResolved(null)
+        if (!cancelled) setFailed(true)
       })
     return () => {
       cancelled = true
@@ -61,11 +70,22 @@ function Image({ src, alt, title }) {
     <img
       src={resolved}
       alt={alt ?? ''}
-      title={title}
+      title={cover ? undefined : title}
       loading="lazy"
-      onError={() => setResolved(null)}
+      onError={() => {
+        setResolved(null)
+        setFailed(true)
+      }}
     />
   )
+  if (cover)
+    return (
+      <span className="note-cover">
+        {resolved
+          ? image
+          : failed && <span className="image-missing">{t('cover.unavailable')}</span>}
+      </span>
+    )
   return resolved ? (
     title ? (
       <span className="image-figure">
@@ -372,6 +392,7 @@ export function Markdown({
   wrapLines = true,
   wrapPage = wrapLines,
 }) {
+  const coverOffset = useMemo(() => noteCover(text)?.position.start.offset, [text])
   const tasks = useMemo(
     () => new Map(resolvedTasks(text, notes).map((task) => [task.line, task])),
     [text, notes],
@@ -385,6 +406,7 @@ export function Markdown({
     <MarkdownContext.Provider
       value={{
         text,
+        coverOffset,
         focusableTables,
         wrapLines,
         onCopy,
@@ -404,6 +426,7 @@ export function Markdown({
             remarkColumns,
             remarkAccordions,
             remarkGfm,
+            remarkCallouts,
             remarkDocumentColors,
             remarkWikiLinks,
             remarkPartialTasks,

@@ -1,3 +1,4 @@
+import { noteCover, setNoteCover } from './note-cover.js'
 import { desktopInvoke } from './persistence-desktop.js'
 import {
   noteReferences,
@@ -142,6 +143,9 @@ export function replaceDocumentImage(document, source, target) {
 export function removeDocumentImage(document, source) {
   const remove = (note) => {
     let body = note.body
+    const cover = noteCover(body)
+    if (cover && normalizeImageSource(cover.url) === normalizeImageSource(source))
+      body = setNoteCover(body, null)
     const references = imageReferences(body).filter(
       (entry) => normalizeImageSource(entry.src) === normalizeImageSource(source),
     )

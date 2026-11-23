@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.34.0] — 2026-11-23
+
+Alertas em Markdown e capas opcionais para notas. Veja os [detalhes da versão](changelog/0.34.0.md).
+
 ## [0.33.2] — 2026-11-23
 
 Controles de tabela e alças de bloco sem sobreposição. Veja os [detalhes da versão](changelog/0.33.2.md).

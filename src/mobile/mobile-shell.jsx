@@ -1,3 +1,5 @@
+import { CoverPicker } from '../components/cover-picker.jsx'
+import { noteCover, setNoteCover } from '../note-cover.js'
 import { DocumentWidthPresets } from '../components/document-width-presets.jsx'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
@@ -492,6 +494,25 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     if (editor.current && editing)
       dispatch({ type: 'position', position: { cursor: editor.current.state.selection.main.head } })
   }
+  function applyCover(image, imported) {
+    const document = current.current
+    const note = document.notes.find((item) => item.id === layer?.id)
+    if (blocked || !note || note.external) {
+      toast.error(t('cover.noteUnavailable'))
+      return
+    }
+    const body = setNoteCover(note.body, image)
+    if (body !== note.body)
+      commit(
+        updateMobileNote(
+          imported ? { ...document, assets: [...(document.assets ?? []), image] } : document,
+          note.id,
+          body,
+        ),
+      )
+    back()
+  }
+
   function insertImageMarkdown(text, point, noteId) {
     const note = current.current.notes.find((item) => item.id === noteId)
     if (!note) return point
@@ -1493,9 +1514,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             aria-label={
               layer.name === 'insert'
                 ? t('mobile.insert')
-                : actionsNote
-                  ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
-                  : t('mobile.more')
+                : layer.name === 'cover'
+                  ? t('cover.title')
+                  : actionsNote
+                    ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
+                    : t('mobile.more')
             }
           >
             <div
@@ -1522,9 +1545,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               <h2 className="mobile-sheet-title">
                 {layer.name === 'insert'
                   ? t('mobile.insert')
-                  : actionsNote
-                    ? displayName(actionsNote.name)
-                    : 'Sloth Note'}
+                  : layer.name === 'cover'
+                    ? t('cover.title')
+                    : actionsNote
+                      ? displayName(actionsNote.name)
+                      : 'Sloth Note'}
               </h2>
               <button className="mobile-icon" aria-label={t('dialog.close')} onClick={back}>
                 <X size={22} />
@@ -1540,6 +1565,13 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   back()
                   imageInput.current?.click()
                 }}
+              />
+            ) : layer.name === 'cover' && actionsNote ? (
+              <CoverPicker
+                images={libraryImages(data)}
+                selected={noteCover(actionsNote.body)?.url}
+                invoke={persistence.invoke}
+                onApply={applyCover}
               />
             ) : layer.name === 'dialog' && route.name === 'settings' && backupCandidate ? (
               <>
@@ -1650,6 +1682,15 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 >
                   <WrapText size={20} />
                   {t('menu.wrapPage')}
+                </button>
+                <button
+                  disabled={blocked || Boolean(actionsNote.external)}
+                  onClick={() =>
+                    dispatch({ type: 'layer', route: { name: 'cover', id: actionsNote.id } })
+                  }
+                >
+                  <ImageIcon size={20} aria-hidden="true" />
+                  {t('cover.title')}
                 </button>
                 <button
                   data-rename-trigger

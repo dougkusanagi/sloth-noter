@@ -3344,3 +3344,73 @@ body.cm-section-dragging * {
   min-block-size: 44px;
   padding-block: 0.45rem;
 }
+
+[data-callout='note'] {
+  --callout-color: #4b7aa0;
+}
+[data-callout='tip'] {
+  --callout-color: var(--ok);
+}
+[data-callout='important'] {
+  --callout-color: #8a65ad;
+}
+[data-callout='warning'] {
+  --callout-color: #b37a26;
+}
+[data-callout='caution'] {
+  --callout-color: #b85850;
+}
+.visual-editor .cm-line.cm-md-callout,
+.markdown blockquote[data-callout] {
+  padding-inline: 1em;
+  border-inline: 1px solid color-mix(in srgb, var(--callout-color) 44%, var(--paper));
+  background: color-mix(in srgb, var(--callout-color) 9%, var(--paper));
+  color: var(--text-body);
+  overflow-wrap: anywhere;
+}
+.visual-editor .cm-line.cm-md-callout.callout-title,
+.markdown blockquote[data-callout] {
+  padding-top: 0.55em;
+  border-top: 1px solid color-mix(in srgb, var(--callout-color) 44%, var(--paper));
+  border-start-start-radius: var(--radius);
+  border-start-end-radius: var(--radius);
+}
+.visual-editor .cm-line.cm-md-callout-last,
+.markdown blockquote[data-callout] {
+  padding-bottom: 0.55em;
+  border-bottom: 1px solid color-mix(in srgb, var(--callout-color) 44%, var(--paper));
+  border-end-start-radius: var(--radius);
+  border-end-end-radius: var(--radius);
+}
+.callout-title {
+  font-weight: 650;
+}
+
+/* A fixed cover frame keeps the title and body still while the image loads. */
+.note-cover {
+  height: clamp(128px, 17vw, 200px);
+  width: 100%;
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--soft);
+  vertical-align: top;
+}
+.visual-editor .note-cover img,
+.markdown .note-cover img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+}
+.note-cover img[hidden] {
+  display: none;
+}
+@media (max-width: 600px) {
+  .note-cover {
+    height: clamp(96px, 28vw, 128px);
+  }
+}

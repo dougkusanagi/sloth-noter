@@ -219,6 +219,16 @@ test('table group adds a column and exposes alignment actions', async ({ page })
   await expect.poll(() => savedBody(page)).toContain(':---:')
 })
 
+test('the insert sheet saves a callout as Markdown', async ({ page }) => {
+  await editNote(page)
+  await page.keyboard.press('ControlOrMeta+End')
+  await openKeyboard(page)
+  await bar(page).getByRole('button', { name: 'Inserir', exact: true }).tap()
+  await page.getByRole('button', { name: 'Alerta — Aviso', exact: true }).tap()
+  await page.keyboard.type('Confira os anexos.')
+  await expect.poll(() => savedBody(page)).toContain('> [!WARNING]\n> Confira os anexos.')
+})
+
 test('code group indents and selects the fence language', async ({ page }) => {
   await editNote(page)
   await page.keyboard.press('ControlOrMeta+End')

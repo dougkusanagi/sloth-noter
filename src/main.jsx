@@ -1,3 +1,5 @@
+import { CoverPicker } from './components/cover-picker.jsx'
+import { noteCover, setNoteCover } from './note-cover.js'
 import { saveBeforeUpdate } from './app-updates.js'
 import { useAppUpdates, UpdateButton } from './components/app-updates.jsx'
 import { changelogDocument, changelogTarget } from './components/changelog-panel.jsx'
@@ -79,6 +81,7 @@ import {
   FolderDialog,
   ShortcutsDialog,
   PaletteDialog,
+  Modal,
   PromptDialog,
   SyncConflictDialog,
 } from './components/dialogs.jsx'
@@ -230,6 +233,7 @@ function Workspace({ persistence, loaded }) {
   const [selectedImage, setSelectedImage] = useState(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [coverNoteId, setCoverNoteId] = useState(null)
   setTemplateProfile(sync.status.account?.name || sync.status.account?.email)
   const [commandsOpen, setCommandsOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
@@ -614,6 +618,7 @@ function Workspace({ persistence, loaded }) {
     editorChanges,
     readTransactions = () => [],
     noteId = current.current.activeId,
+    newAsset,
   ) {
     const old = current.current
     // A file opened in place keeps its own first line.
@@ -666,6 +671,7 @@ function Workspace({ persistence, loaded }) {
       )
     commit({
       ...old,
+      ...(newAsset ? { assets: [...(old.assets ?? []), newAsset] } : {}),
       notes: old.notes.map(rewrite),
       trash: old.trash.map((entry) => ({ ...entry, note: rewrite(entry.note) })),
     })
@@ -687,6 +693,23 @@ function Workspace({ persistence, loaded }) {
       document.removeEventListener('selectionchange', clampSelection)
     }
   }, [mode, active?.id])
+  function closeCover() {
+    setCoverNoteId(null)
+    requestAnimationFrame(() => menuButton.current?.focus())
+  }
+
+  function applyCover(image, imported) {
+    const note = current.current.notes.find((item) => item.id === coverNoteId)
+    if (blocked || switching || !note || note.external) {
+      toast.error(t('cover.noteUnavailable'))
+      return
+    }
+    const body = setNoteCover(note.body, image)
+    if (body !== note.body)
+      updateBody(body, undefined, undefined, note.id, imported ? image : undefined)
+    closeCover()
+  }
+
   function changeSource(event) {
     const field = event.target
     const raw = field.value
@@ -2161,6 +2184,13 @@ function Workspace({ persistence, loaded }) {
     ),
     focus: () => active && toggleFocusMode(),
     newNote: () => runMenu(() => createNote(), false),
+    noteCover: () =>
+      active &&
+      !active.external &&
+      !guideId &&
+      !blocked &&
+      !switching &&
+      runMenu(() => setCoverNoteId(active.id), false),
     insertProperties: () =>
       !guideId &&
       active &&
@@ -3027,6 +3057,28 @@ function Workspace({ persistence, loaded }) {
           </footer>
         </section>
       </div>
+      {coverNoteId && (
+        <Modal
+          label={t('cover.title')}
+          className="cover-picker"
+          backdropClose={closeCover}
+          onEscape={closeCover}
+          focusables={(dialog) => [
+            ...dialog.querySelectorAll('button:not(:disabled), input[type="search"]'),
+          ]}
+        >
+          <h2>{t('cover.title')}</h2>
+          <CoverPicker
+            images={images}
+            selected={
+              noteCover(data.notes.find((note) => note.id === coverNoteId)?.body ?? '')?.url
+            }
+            invoke={persistence.invoke}
+            onApply={applyCover}
+            onClose={closeCover}
+          />
+        </Modal>
+      )}
       {shortcutsOpen && (
         <ShortcutsDialog
           onClose={() => {

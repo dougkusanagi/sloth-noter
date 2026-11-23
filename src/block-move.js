@@ -1,3 +1,4 @@
+import { readCallout } from './callout.js'
 import { accordionBlocks } from './accordion.js'
 import { blockColorMetadata } from './document-colors.js'
 import { markdownTree } from './markdown-model.js'
@@ -45,7 +46,12 @@ export function documentBlocks(text) {
       const first = item.position.start.line
       const last = item.position.end.line
       if (first === 1 && item.type === 'heading' && item.depth === 1) continue
-      blocks.push({ first, last, kind: kindOf(item, node), depth: item.depth ?? 0 })
+      blocks.push({
+        first,
+        last,
+        kind: readCallout(text, item) ? 'callout' : kindOf(item, node),
+        depth: item.depth ?? 0,
+      })
     }
   }
   // A table's header comment belongs to the table.
