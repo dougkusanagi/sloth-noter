@@ -61,6 +61,8 @@ import {
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { currentLanguage, t } from './i18n.js'
 import { documentChanges } from './search-scope.js'
+import { openTaskMenu } from './editor/task-menu.js'
+import { moveTasksToSection, sectionTitles } from './task-note.js'
 import { flushSync } from 'react-dom'
 import { Annotation, Compartment, EditorSelection, EditorState } from '@codemirror/state'
 import { defaultKeymap, history } from '@codemirror/commands'
@@ -655,6 +657,44 @@ export function VisualEditor({
             return true
           },
         })),
+        {
+          // Moves the selected tasks to another H2 section, picked in a small menu.
+          key: 'Mod-Shift-m',
+          preventDefault: true,
+          run: (view) => {
+            const { from, to } = view.state.selection.main
+            const first = view.state.doc.lineAt(from).number - 1
+            const last = view.state.doc.lineAt(to).number - 1
+            const text = view.state.doc.toString()
+            const lines = text.split('\n').slice(first, last + 1)
+            // Not on a task: the keys are left to the browser and the other shortcuts.
+            if (!lines.some((line) => /^\s*(?:[-*+]|\d+[.)])\s+\[.\]/.test(line))) return false
+            const sections = sectionTitles(text)
+            const coords = view.coordsAtPos(from) ?? { left: 0, bottom: 0 }
+            openTaskMenu({
+              x: coords.left,
+              y: coords.bottom + 4,
+              statuses: false,
+              label: t('task.moveMenu'),
+              restoreFocus: () => view.focus(),
+              extra: sections.length
+                ? sections.map((section) => ({
+                    label: t('task.moveTo', { section }),
+                    onSelect: () => {
+                      const current = view.state.doc.toString()
+                      const next = moveTasksToSection(current, first, last, section).body
+                      if (next !== current)
+                        view.dispatch({
+                          changes: documentChanges(current, next),
+                          userEvent: 'tarefa',
+                        })
+                    },
+                  }))
+                : [{ label: t('task.noSections'), onSelect: () => {} }],
+            })
+            return true
+          },
+        },
         {
           key: 'Shift-Home',
           run: (view) => {

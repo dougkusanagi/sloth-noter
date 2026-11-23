@@ -7,6 +7,8 @@ import {
   isTaskNote,
   makeTaskNote,
   moveCardToColumn,
+  moveTasksToSection,
+  sectionTitles,
 } from './task-note.js'
 
 const NOTE = [
@@ -99,4 +101,23 @@ test('makeTaskNote marks the note and adds the default columns when it has no se
   const marked = makeTaskNote('---\ncriada: 2026-01-02\n---\n# P\n\n## Etapa\n', { now })
   assert.equal(marked, '---\ncriada: 2026-01-02\ntipo: tarefas\n---\n# P\n\n## Etapa\n')
   assert.equal(makeTaskNote(marked, { now }), marked)
+})
+
+test('selected tasks move to another section; only a task note changes their status', () => {
+  const saved = taskSettings.dates
+  taskSettings.dates = false
+  try {
+    assert.deepEqual(sectionTitles(NOTE), ['Fazer', 'Revisão', 'Feito'])
+    // Line 7 is the subtask of "Tela", so the selection takes "Tela" whole, then "API".
+    const { body, count } = moveTasksToSection(NOTE, 7, 8, 'Feito')
+    assert.equal(count, 2)
+    assert.match(body, /## Fazer\n\n## Revisão/)
+    assert.match(body, /## Feito\n- \[x\] Login\n- \[x\] Tela\n {4}- \[ \] Botão\n- \[x\] API\n/)
+    const plain = NOTE.replace('tipo: tarefas', 'tipo: nota')
+    const moved = moveTasksToSection(plain, 6, 6, 'Feito').body
+    assert.match(moved, /## Feito\n- \[x\] Login\n- \[ \] Tela\n {4}- \[ \] Botão\n/)
+    assert.equal(moveTasksToSection(NOTE, 3, 3, 'Feito').count, 0)
+  } finally {
+    taskSettings.dates = saved
+  }
 })

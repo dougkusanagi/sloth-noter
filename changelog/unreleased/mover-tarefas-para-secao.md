@@ -1,0 +1,1 @@
+Adicionado: No modo Padrão, Ctrl+Shift+M (Cmd+Shift+M no Mac) move a tarefa do cursor, ou todas as tarefas selecionadas, para o fim de outra seção `##`, escolhida num menu. As subtarefas vão junto. Numa nota de tarefas, as seções Fazer, Fazendo, Esperando e Feito também mudam a caixa das tarefas, como no Quadro.

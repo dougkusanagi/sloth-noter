@@ -1,5 +1,5 @@
 import { propertyMap, writeProperty } from './frontmatter.js'
-import { dropCard, parseBoard } from './task-board.js'
+import { dropCard, moveTasksToLane, parseBoard } from './task-board.js'
 import { headingsOf, isBlank } from './task-archive.js'
 import { isArchiveTitle } from './tasks.js'
 
@@ -92,4 +92,16 @@ export function boardColumns(body) {
 export function moveCardToColumn(body, mark, column, before = null) {
   const status = columnStatus(column) ?? undefined
   return dropCard(body, mark, { status, laneTitle: column, before })
+}
+
+/** The H2 sections tasks can move to (the archive is not one), in file order. */
+export const sectionTitles = (body) => columnHeadings(body).map((heading) => heading.title)
+
+/**
+ * Moves the tasks on lines `from`..`to` to the end of section `title`. In a task note, a section
+ * with a known name also sets their status.
+ */
+export function moveTasksToSection(body, from, to, title) {
+  const status = isTaskNote(body) ? (columnStatus(title) ?? undefined) : undefined
+  return moveTasksToLane(body, from, to, title, status)
 }

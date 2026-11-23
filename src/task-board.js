@@ -183,3 +183,29 @@ export function addBoardTask(body, laneTitle, status, text) {
 }
 
 export { indentOf }
+
+/**
+ * Moves the tasks touched by lines `from`..`to` (top-level tasks with their subtasks) to the end
+ * of the H2 section `laneTitle`, in their order. With `status`, their boxes take it too.
+ * Returns the new body and how many tasks moved.
+ */
+export function moveTasksToLane(body, from, to, laneTitle, status) {
+  const cards = allCards(body).filter((card) => card.line <= to && card.last >= from)
+  if (!cards.length) return { body, count: 0 }
+  let next = body
+  // From the bottom up: a status change shifts the marks after it, never the ones before.
+  if (status)
+    for (const card of [...cards].reverse())
+      if (columnOf(card.status) !== status) next = applyStatus(next, card.mark, status)
+  const lines = next.split('\n')
+  const inside = (index) => cards.some((card) => index >= card.line && index <= card.last)
+  const block = cards.flatMap((card) => trimBlank(lines.slice(card.line, card.last + 1)))
+  const placed = place(
+    lines.filter((_, index) => !inside(index)),
+    laneTitle,
+    block,
+  )
+  return placed
+    ? { body: finish(placed, next.endsWith('\n')), count: cards.length }
+    : { body, count: 0 }
+}
