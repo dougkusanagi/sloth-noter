@@ -26,3 +26,24 @@ test('mobile reading opens and closes an accordion without modifying the note', 
   await accordion.locator('summary').click()
   await expect(accordion.getByText('Informação interna')).toBeVisible()
 })
+
+test('mobile reading shows a touch arrow only for headings with content', async ({ page }) => {
+  const document = newDocument()
+  document.notes[0].body = '# Rascunho\n\n## Planejamento\n\nInformação interna\n\n## Vazia'
+  await page.addInitScript(
+    ({ key, document }) => localStorage.setItem(key, JSON.stringify(document)),
+    { key: STORAGE_KEY, document },
+  )
+  await page.goto('/?platform=mobile')
+  await page.locator('[data-note-id="welcome"]').tap()
+  const heading = page.getByRole('heading', { name: /Planejamento/ })
+  const button = heading.getByRole('button', { name: 'Recolher seção' })
+  expect((await button.boundingBox()).width).toBe(48)
+  await expect(page.getByRole('heading', { name: 'Vazia' }).locator('.fold-toggle')).toHaveCount(0)
+  await button.tap()
+  await expect(page.getByText('Informação interna')).toBeHidden()
+  await expect(heading.getByRole('button', { name: 'Expandir seção' })).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  )
+})

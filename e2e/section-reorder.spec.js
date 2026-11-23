@@ -233,14 +233,17 @@ test('a click on the handle opens the block menu without moving anything', async
   await source(page, NOTE)
 })
 
-test('the handle sits next to the fold arrow of a heading', async ({ page }) => {
+test('the handle and fold arrow have separate positions in the heading gutter', async ({
+  page,
+}) => {
   const heading = page.locator('.cm-line', { hasText: 'Primeira' })
   const handle = await handleOf(page, 'Primeira')
   const fold = await heading.locator('.cm-fold-toggle').boundingBox()
   const box = await handle.boundingBox()
   const gap = fold.x - (box.x + box.width)
-  expect(gap).toBeGreaterThanOrEqual(1)
-  expect(gap).toBeLessThanOrEqual(8)
+  // The block handle ends at the shared 48px inset, while the 24px arrow
+  // sits 6px from the text.
+  expect(gap).toBeCloseTo(48 - 24 - 6, 0)
   expect(box.height).toBeGreaterThanOrEqual(24)
 })
 

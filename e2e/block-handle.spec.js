@@ -84,7 +84,7 @@ test('empty lines offer an insert button and fold arrows reveal on direct hover'
   page,
 }) => {
   await fill(page, '# Nota\n\n## Seção\n\nTexto\n\n')
-  const arrow = page.locator('.cm-fold-toggle:not(.cm-level-badge)').first()
+  const arrow = page.locator('.cm-fold-toggle').first()
   await arrow.hover()
   await expect(arrow).toHaveCSS('opacity', '1')
   // The file's final empty line has no height until the cursor reaches it.

@@ -836,25 +836,14 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   translate: none;
   float: left;
   width: 48px;
-  min-width: 48px;
   height: 48px;
-  margin: -10px 4px -10px -12px;
+  margin: -10px 4px -10px -8px;
   padding: 0;
   opacity: 1;
 }
 [data-platform='mobile'] .markdown .fold-toggle svg {
   width: 20px;
   height: 20px;
-  transition: rotate 0.12s;
-}
-[data-platform='mobile'] .markdown .fold-toggle[aria-expanded='false'] svg {
-  rotate: -90deg;
-}
-[data-platform='mobile'] .markdown .fold-toggle::before {
-  display: none;
-}
-[data-platform='mobile'] .markdown .fold-toggle {
-  margin-left: -8px;
 }
 
 /* Wide tables scroll inside their own box; the first column stays visible. */

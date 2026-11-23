@@ -297,7 +297,7 @@ export const blockHandle = ViewPlugin.fromClass(
       const { node } = this.view.domAtPos(pos)
       const toggle = (node.nodeType === 1 ? node : node.parentElement)
         ?.closest('.cm-line')
-        ?.querySelector('.cm-fold-toggle:not(.cm-level-badge)')
+        ?.querySelector('.cm-fold-toggle')
       if (!toggle) return
       toggle.classList.add('is-line-hover')
       this.foldToggle = toggle

@@ -323,28 +323,22 @@ function SectionChecklist({ line, checklist }) {
 }
 function Heading({ node, children, ...props }) {
   const Tag = node.tagName
-  const level = Number(Tag.slice(1))
   const section = useContext(SectionContext)
   const { onToggleFold, progress, checklists, onChange } = useContext(MarkdownContext)
   const tasks = section && progress.get(section.line)
   return (
     <Tag {...props} data-source-line={node.position?.start.line}>
-      {(section?.hasContent && onToggleFold) || level > 1 ? (
-        section?.hasContent && onToggleFold ? (
-          <button
-            type="button"
-            className="fold-toggle"
-            data-level={level}
-            aria-expanded={!section.collapsed}
-            aria-label={t(section.collapsed ? 'fold.expand' : 'fold.collapse')}
-            onClick={() => onToggleFold(section.line)}
-          >
-            <ChevronDown aria-hidden="true" />
-          </button>
-        ) : (
-          <span className="fold-toggle level-badge" data-level={level} aria-hidden="true" />
-        )
-      ) : null}
+      {section?.hasContent && onToggleFold && (
+        <button
+          type="button"
+          className="fold-toggle"
+          aria-expanded={!section.collapsed}
+          aria-label={t(section.collapsed ? 'fold.expand' : 'fold.collapse')}
+          onClick={() => onToggleFold(section.line)}
+        >
+          <ChevronDown aria-hidden="true" />
+        </button>
+      )}
       {onChange && checklists.get(section?.line) && (
         <SectionChecklist line={section.line} checklist={checklists.get(section.line)} />
       )}

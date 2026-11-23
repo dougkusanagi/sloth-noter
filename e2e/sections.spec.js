@@ -174,16 +174,51 @@ test('Leitura task checkboxes inside a section keep working', async ({ page }) =
   await expect(box(page)).toHaveValue(`# T\n\n## A\n\n- [x] item ✅ ${localToday()}`)
 })
 
-test('headings show their level as a pill without changing the heading text', async ({ page }) => {
-  await mode(page, 'Leitura')
-  await expect(page.locator('.cm-md-h3 .cm-fold-toggle')).toHaveAttribute('data-level', '3')
-  await expect(page.locator('.cm-md-h3')).toHaveText('Sub um')
-  const pill = await page
-    .locator('.cm-md-h3 .cm-fold-toggle')
-    .evaluate((el) => getComputedStyle(el, '::before').content)
-  expect(pill).toBe('"H3"')
-  await expect(page.locator('.cm-md-h1 button.cm-fold-toggle')).toHaveCount(0)
-})
+for (const width of [390, 1280]) {
+  test(`Leitura uses the same section arrow as Padrão at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    const heading = page.locator('.cm-md-h2', { hasText: 'Seção um' })
+    const button = heading.getByRole('button', { name: 'Recolher seção' })
+    const geometry = async () => {
+      await heading.hover()
+      return button.evaluate((element) => {
+        const arrow = element.getBoundingClientRect()
+        const row = element.closest('.cm-line').getBoundingClientRect()
+        return {
+          width: arrow.width,
+          height: arrow.height,
+          offset: row.left - arrow.right,
+          top: arrow.top - row.top,
+        }
+      })
+    }
+    await page
+      .getByRole('radio', { name: 'Padrão', exact: true })
+      .evaluate((radio) => radio.click())
+    const editing = await geometry()
+    await page
+      .getByRole('radio', { name: 'Leitura', exact: true })
+      .evaluate((radio) => radio.click())
+    const reading = await geometry()
+    if (process.env.CAPTURE_FOLD)
+      await page.screenshot({ path: `/tmp/sloth-fold-${process.env.CAPTURE_FOLD}-${width}.png` })
+    expect(reading).toEqual(editing)
+    await expect(button.locator('svg')).toHaveCSS('width', '14px')
+    expect(await button.evaluate((element) => getComputedStyle(element, '::before').content)).toBe(
+      'none',
+    )
+    await expect(
+      page.locator('.cm-md-h2', { hasText: 'Vazia' }).locator('.cm-fold-toggle'),
+    ).toHaveCount(0)
+    await expect(page.locator('.cm-md-h1 button.cm-fold-toggle')).toHaveCount(0)
+    await button.focus()
+    await page.keyboard.press('Enter')
+    await expect(heading.getByRole('button', { name: 'Expandir seção' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+  })
+}
 
 test('headings keep the same spacing with or without an empty line between them', async ({
   page,

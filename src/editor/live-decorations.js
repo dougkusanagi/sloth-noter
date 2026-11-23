@@ -428,10 +428,7 @@ function documentDecorations(view) {
   const text = doc.toString()
   const tree = markdownTree(text)
   const foldable = new Map()
-  const headingLevels = new Map()
   for (const heading of headingSections(text, tree)) {
-    // Level 0 is the H1 title; level 1 is H2.
-    if (heading.level > 0) headingLevels.set(heading.line, heading.level + 1)
     const range = heading.level > 0 && foldRange(view.state, heading)
     if (range) foldable.set(heading.line, isFolded(view.state, range.from))
   }
@@ -565,7 +562,6 @@ function documentDecorations(view) {
     folds,
     text,
     foldable,
-    headingLevels,
     accordionLines,
     tasks,
     progress,
@@ -607,7 +603,6 @@ export function decorationsFor(view) {
   const {
     text,
     foldable,
-    headingLevels,
     accordionLines,
     tasks,
     progress,
@@ -720,7 +715,7 @@ export function decorationsFor(view) {
           ranges.push(
             Decoration.line({ attributes: { class: 'cm-md-accordion-title' } }).range(line.from),
             Decoration.widget({
-              widget: new FoldToggleWidget(accordion.line, folded, 0, true, true),
+              widget: new FoldToggleWidget(accordion.line, folded, true),
               side: -2,
             }).range(line.from),
           )
@@ -820,15 +815,10 @@ export function decorationsFor(view) {
         ranges.push(
           Decoration.replace({}).range(breakMarks.get(number), breakMarks.get(number) + 1),
         )
-      if (headingLevels.has(number)) {
+      if (foldable.has(number)) {
         ranges.push(
           Decoration.widget({
-            widget: new FoldToggleWidget(
-              number,
-              foldable.get(number) ?? false,
-              headingLevels.get(number),
-              foldable.has(number),
-            ),
+            widget: new FoldToggleWidget(number, foldable.get(number)),
             side: -2,
           }).range(line.from),
         )

@@ -17,31 +17,18 @@ export const unfoldSection = StateEffect.define({
 })
 
 export class FoldToggleWidget extends WidgetType {
-  constructor(line, folded, level, foldable = true, accordion = false) {
+  constructor(line, folded, accordion = false) {
     super()
     this.line = line
     this.folded = folded
-    this.level = level
-    this.foldable = foldable
     this.accordion = accordion
   }
   eq(other) {
     return (
-      this.line === other.line &&
-      this.folded === other.folded &&
-      this.level === other.level &&
-      this.foldable === other.foldable &&
-      this.accordion === other.accordion
+      this.line === other.line && this.folded === other.folded && this.accordion === other.accordion
     )
   }
   toDOM(view) {
-    if (!this.foldable) {
-      const badge = document.createElement('span')
-      badge.className = 'cm-fold-toggle cm-level-badge'
-      badge.setAttribute('aria-hidden', 'true')
-      badge.dataset.level = String(this.level)
-      return badge
-    }
     const button = document.createElement('button')
     button.type = 'button'
     button.className = `cm-fold-toggle${this.accordion ? ' cm-accordion-toggle' : ''}${this.folded ? ' folded' : ''}`
@@ -58,7 +45,6 @@ export class FoldToggleWidget extends WidgetType {
       ),
     )
     button.setAttribute('aria-expanded', String(!this.folded))
-    button.dataset.level = String(this.level)
     button.innerHTML = chevron
     button.addEventListener('mousedown', (event) => event.preventDefault())
     button.addEventListener('click', () => toggleFold(view, this.line))

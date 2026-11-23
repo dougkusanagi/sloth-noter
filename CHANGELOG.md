@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.34.1] — 2026-11-23
+
+Setas de seção com o mesmo visual nos modos Padrão e Leitura. Veja os [detalhes da versão](changelog/0.34.1.md).
+
 ## [0.34.0] — 2026-11-23
 
 Alertas em Markdown e capas opcionais para notas. Veja os [detalhes da versão](changelog/0.34.0.md).
