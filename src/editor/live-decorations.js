@@ -24,6 +24,7 @@ import {
   resolvedTasks,
   sectionChecklists,
   sectionTaskChanges,
+  taskCompletionDate,
   taskSettings,
   taskStatusChanges,
 } from '../tasks.js'
@@ -183,6 +184,23 @@ class SectionChecklistWidget extends WidgetType {
   }
   ignoreEvent() {
     return true
+  }
+}
+
+class TaskCompletionDate extends WidgetType {
+  constructor(date) {
+    super()
+    this.date = date
+  }
+  eq(other) {
+    return this.date.iso === other.date.iso
+  }
+  toDOM() {
+    const time = document.createElement('time')
+    time.className = 'task-completion-date'
+    time.dateTime = this.date.iso
+    time.textContent = this.date.label
+    return time
   }
 }
 
@@ -573,6 +591,15 @@ export function decorationsFor(view) {
           )
         ) {
           ranges.push(Decoration.widget({ widget: new TaskMoveHint(), side: 1 }).range(line.to))
+        }
+        const completion = !active && /^[xX]$/.test(task[2]) && taskCompletionDate(line.text)
+        if (completion) {
+          ranges.push(
+            Decoration.replace({ widget: new TaskCompletionDate(completion) }).range(
+              line.from + completion.from,
+              line.to,
+            ),
+          )
         }
         const linked = tasks.get(number)?.progress
         if (linked)

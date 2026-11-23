@@ -37,3 +37,28 @@ test('task checkboxes stay inside the scroll area without line wrapping', async 
     await page.screenshot({ path: `/tmp/sloth-checkbox-${width}.png` })
   }
 })
+
+test('reading mode shows a completion date as a Brazilian date', async ({ page }) => {
+  await page.addInitScript(({ key, doc }) => localStorage.setItem(key, JSON.stringify(doc)), {
+    key: STORAGE_KEY,
+    doc: {
+      ...newDocument(),
+      notes: [
+        {
+          id: 'a',
+          name: 'Compras.md',
+          body: '# Compras\n\n- [x] Comprar **café** ✅ 2026-11-23',
+          revision: 0,
+        },
+      ],
+      openIds: ['a'],
+      activeId: 'a',
+    },
+  })
+  await page.goto('/?platform=mobile')
+  await page.locator('[data-note-id="a"]').click()
+  const date = page.locator('.markdown time.task-completion-date')
+  await expect(date).toHaveText('23/11/2026')
+  await expect(date).toHaveAttribute('datetime', '2026-11-23')
+  await page.screenshot({ path: '/tmp/sloth-task-completion-date-mobile.png' })
+})

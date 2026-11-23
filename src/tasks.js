@@ -325,6 +325,37 @@ export function remarkPartialTasks() {
     })
 }
 
+const COMPLETION_DATE = /[ \t]+✅[ \t]+(\d{4})-(\d{2})-(\d{2})[ \t]*$/u
+
+export function taskCompletionDate(line) {
+  const match = COMPLETION_DATE.exec(line)
+  if (!match) return null
+  const [, year, month, day] = match
+  return { from: match.index, iso: `${year}-${month}-${day}`, label: `${day}/${month}/${year}` }
+}
+
+export function remarkTaskCompletionDates() {
+  return (tree) =>
+    walk(tree, (node) => {
+      if (node.type !== 'listItem' || node.checked !== true) return
+      const paragraph = node.children[0]
+      const last = paragraph?.children?.at(-1)
+      if (paragraph?.type !== 'paragraph' || last?.type !== 'text') return
+      if (last.position?.end.line !== node.position?.start.line) return
+      const date = taskCompletionDate(last.value)
+      if (!date) return
+      last.value = last.value.slice(0, date.from)
+      paragraph.children.push({
+        type: 'emphasis',
+        children: [{ type: 'text', value: date.label }],
+        data: {
+          hName: 'time',
+          hProperties: { className: 'task-completion-date', dateTime: date.iso },
+        },
+      })
+    })
+}
+
 const localDate = (date = new Date()) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 

@@ -25,3 +25,14 @@ test('title-only and empty queries still find notes; regex characters are litera
   assert.equal(noteSearchResult(note, '[ ]').snippet.hit, '[ ]')
   assert.equal(matchesNote(note, '.*'), false)
 })
+
+test('finds a completion date by its Brazilian display format', () => {
+  const note = {
+    name: 'Compras',
+    body: '# Compras\n\n- [x] Café ✅ 2026-11-23\n\n2026-11-23\n\n```md\n- [x] Pão ✅ 2026-11-23\n```',
+  }
+  const result = noteSearchResult(note, '23/11/2026')
+  assert.deepEqual(result.matches, [{ start: 24, end: 34 }])
+  assert.equal(result.snippet.hit, '2026-11-23')
+  assert.equal(noteSearchResult(note, '2026-11-23').matches.length, 3)
+})

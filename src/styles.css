@@ -3238,3 +3238,14 @@ body.cm-section-dragging * {
 .cm-editor:not(.cm-focused) .cm-task-move-hint {
   display: none;
 }
+
+.task-completion-date {
+  display: inline-block;
+  margin-inline-start: 0.5em;
+  padding-inline: 0.5em;
+  border-radius: 0.35em;
+  background: var(--hover);
+  color: var(--muted);
+  font-size: 0.8em;
+  white-space: nowrap;
+}

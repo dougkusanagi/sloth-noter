@@ -1,9 +1,22 @@
 import { searchNote } from './find.js'
+import { noteTasks, taskCompletionDate } from './tasks.js'
 
 export function noteSearchResult(note, query) {
   const needle = query.trim()
   if (!needle) return { matches: [], titleMatches: [], snippet: null }
   const matches = searchNote(note.body, needle).matches
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(needle)) {
+    for (const task of noteTasks(note.body)) {
+      if (!task.done) continue
+      const end = note.body.indexOf('\n', task.offset)
+      const line = note.body.slice(task.offset, end < 0 ? undefined : end)
+      const date = taskCompletionDate(line)
+      if (date?.label !== needle) continue
+      const start = task.offset + line.lastIndexOf(date.iso)
+      matches.push({ start, end: start + date.iso.length })
+    }
+    matches.sort((a, b) => a.start - b.start)
+  }
   const titleMatches = searchNote(note.name, needle).matches
   const first = matches[0]
   const start = first
