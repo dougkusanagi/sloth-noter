@@ -81,7 +81,6 @@ const TEXT_KINDS = new Set([
   'quote',
   'code',
 ])
-const HANDLE_WIDTH = 44
 
 /** A heading's folded section moves with it; an open heading moves alone. */
 function dragRange(state, block) {
@@ -271,10 +270,11 @@ export const blockHandle = ViewPlugin.fromClass(
       if (!coords) return this.hide()
       const host = view.dom.getBoundingClientRect()
       const content = view.contentDOM.getBoundingClientRect()
-      const folded = block.kind.startsWith('h') && block.kind !== 'h1'
-      // Headings keep room for their fold arrow between the handle and the text.
-      const right = content.left - host.left - (folded ? 34 : 8)
-      const left = right - HANDLE_WIDTH
+      const style = getComputedStyle(view.dom)
+      const offset = Number.parseFloat(style.getPropertyValue('--block-handle-offset'))
+      const width = Number.parseFloat(style.getPropertyValue('--block-handle-width'))
+      const height = Number.parseFloat(style.getPropertyValue('--block-handle-height'))
+      const left = content.left - host.left - offset - width
       if (left < 0) return this.hide()
       const lineHeight = coords.bottom - coords.top
       this.block = block
@@ -284,7 +284,7 @@ export const blockHandle = ViewPlugin.fromClass(
       this.handle.removeAttribute('title')
       this.handle.dataset.kind = block.kind
       this.handle.style.left = `${left}px`
-      this.handle.style.top = `${coords.top - host.top + (lineHeight - 26) / 2}px`
+      this.handle.style.top = `${coords.top - host.top + (lineHeight - height) / 2}px`
       this.handle.hidden = false
       this.revealFold(line.from)
     }

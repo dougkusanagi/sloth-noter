@@ -277,3 +277,57 @@ test('the header row stays in view while a long table scrolls', async ({ page })
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
   await expect(page.locator('style', { hasText: 'translateY' })).toHaveCount(0)
 })
+
+for (const width of [390, 640, 1280]) {
+  test(`table controls fit after a heading and divider at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto('/')
+    await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+    await page
+      .locator('textarea')
+      .fill(
+        [
+          '# Catálogo',
+          '',
+          '## Modelos e referências',
+          '---',
+          '',
+          '| SKU pai | Modelo | Referências antigas |',
+          '|---|---|:---|',
+          '| `SKI01` | Calça Skinny | 101, 103, 106, 112, 113, 116, 118, 122, 124, 129, 131 |',
+          '| `WSR01` | Calça Wide Bolso Saco com Recorte | 105, 114 |',
+        ].join('\n'),
+      )
+    await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+    const head = page.locator('.cm-md-table-head')
+    await head.locator('.cm-md-table-cell').first().click()
+    const handle = page.getByRole('button', { name: 'Ações da tabela', exact: true })
+    const column = head.locator('.cm-table-column-segment').first()
+    const heading = page.locator('.cm-md-h2')
+    const rule = page.locator('.cm-md-rule')
+    const block = page.locator('.cm-block-handle')
+    await heading.hover()
+    if (process.env.CAPTURE_TABLE_LAYOUT)
+      await page.screenshot({
+        path: `/tmp/sloth-table-${process.env.CAPTURE_TABLE_LAYOUT}-${width}.png`,
+      })
+    const divider = await rule.boundingBox()
+    const letters = await column.boundingBox()
+    const table = await head.boundingBox()
+    const tableHandle = await handle.boundingBox()
+    expect(letters.y).toBeGreaterThanOrEqual(divider.y + divider.height)
+    expect(letters.y + letters.height).toBeLessThanOrEqual(table.y)
+    expect(tableHandle.x).toBeGreaterThanOrEqual(0)
+    if (width > 600) {
+      for (const line of [heading, rule]) {
+        await line.hover()
+        await expect(block).toBeVisible()
+        const box = await block.boundingBox()
+        expect(box.x).toBeCloseTo(tableHandle.x, 0)
+        expect(box.y + box.height).toBeLessThanOrEqual(tableHandle.y)
+      }
+    } else expect(tableHandle.x + tableHandle.width).toBeLessThanOrEqual(letters.x)
+    await handle.click()
+    await expect(page.getByRole('menu', { name: 'Ações da tabela' })).toBeVisible()
+  })
+}
