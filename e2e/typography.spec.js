@@ -18,7 +18,7 @@ test('Padrão shows a different bullet for each list level', async ({ page }) =>
   expect(marks).toEqual(['"•"', '"◦"', '"▪"'])
 })
 
-test('Leitura shows the same bullet shapes and the same short separator', async ({ page }) => {
+test('Leitura shows the same bullet shapes and the same full-width separator', async ({ page }) => {
   await page.getByRole('radio', { name: 'Leitura', exact: true }).check({ force: true })
   const marks = await page
     .locator('.visual-editor.read-only .cm-md-bullet')
@@ -26,7 +26,7 @@ test('Leitura shows the same bullet shapes and the same short separator', async 
   expect(marks).toEqual(['"•"', '"◦"', '"▪"'])
   await expect(page.locator('.visual-editor.read-only .cm-md-rule')).toHaveCSS(
     'background-size',
-    '30% 1px',
+    '100% 1px',
   )
 })
 

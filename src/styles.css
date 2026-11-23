@@ -1285,7 +1285,7 @@ textarea:focus-visible {
 .markdown hr {
   height: var(--line);
   border: 0;
-  background: linear-gradient(var(--edge-strong), var(--edge-strong)) center / 30% 1px no-repeat;
+  background: linear-gradient(var(--edge-strong), var(--edge-strong)) center / 100% 1px no-repeat;
 }
 .markdown pre {
   background: var(--paper);
@@ -1551,7 +1551,7 @@ textarea:focus-visible {
   color: var(--muted);
 }
 .visual-editor .cm-md-rule:not(.cm-md-editing) {
-  background: linear-gradient(var(--edge-strong), var(--edge-strong)) center / 30% 1px no-repeat;
+  background: linear-gradient(var(--edge-strong), var(--edge-strong)) center / 100% 1px no-repeat;
 }
 .visual-editor .cm-md-setext-marker:not(.cm-md-editing) {
   font-size: 0;

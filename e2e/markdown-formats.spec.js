@@ -190,7 +190,7 @@ test('Padrão alternates a separator between its source and rendered line', asyn
   await page.keyboard.press('Control+End')
   const rule = page.locator('.cm-md-rule')
   await expect(rule).not.toContainText('---')
-  await expect(rule).toHaveCSS('background-size', '30% 1px')
+  await expect(rule).toHaveCSS('background-size', '100% 1px')
   await expect(rule).toHaveCSS('background-position', '50% 50%')
   const rendered = await rule.boundingBox()
   const following = await rule.evaluate((line) => line.nextElementSibling.getBoundingClientRect().y)
@@ -205,7 +205,7 @@ test('Padrão alternates a separator between its source and rendered line', asyn
   )
   await page.keyboard.press('ArrowDown')
   await expect(rule).not.toContainText('---')
-  await expect(rule).toHaveCSS('background-size', '30% 1px')
+  await expect(rule).toHaveCSS('background-size', '100% 1px')
   await expect(rule).toHaveCSS('background-position', '50% 50%')
 })
 
