@@ -797,6 +797,13 @@ export function decorationsFor(view) {
         addInlineDecorations(ranges, line, { prefix: task[0].length }, active)
         continue
       }
+      // The note pane shows the cover above the note: its line takes no space and no caret.
+      if (coverOffset === line.from && view.state.facet(hideFrontmatter)) {
+        ranges.push(
+          Decoration.line({ attributes: { class: 'cm-md-frontmatter-hidden' } }).range(line.from),
+        )
+        continue
+      }
       const image = imageByLine.get(number)
       if (
         image &&

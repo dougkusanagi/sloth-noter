@@ -19,12 +19,13 @@ function titleLine(doc) {
 }
 
 class SummaryWidget extends WidgetType {
-  constructor(parts) {
+  constructor(summary) {
     super()
-    this.parts = parts
+    this.summary = summary
+    this.key = JSON.stringify(summary)
   }
   eq(other) {
-    return other.parts.join('\n') === this.parts.join('\n')
+    return other.key === this.key
   }
   toDOM() {
     const box = document.createElement('div')
@@ -32,11 +33,33 @@ class SummaryWidget extends WidgetType {
     box.setAttribute('role', 'note')
     box.setAttribute('aria-label', t('taskSummary.label'))
     box.contentEditable = 'false'
-    for (const part of this.parts) {
-      const item = document.createElement('span')
-      item.textContent = part
-      box.append(item)
+    const group = (className, items) => {
+      if (!items.length) return
+      const element = document.createElement('div')
+      element.className = className
+      element.append(...items)
+      box.append(element)
     }
+    group(
+      'cm-task-summary-dates',
+      this.summary.dates.map((text) => {
+        const item = document.createElement('span')
+        item.textContent = text
+        return item
+      }),
+    )
+    group(
+      'cm-task-summary-counts',
+      this.summary.counts.map(({ title, count }) => {
+        const chip = document.createElement('span')
+        chip.className = 'cm-task-summary-chip'
+        if (!count) chip.dataset.empty = ''
+        const number = document.createElement('b')
+        number.textContent = String(count)
+        chip.append(number, ' ', title)
+        return chip
+      }),
+    )
     return box
   }
   ignoreEvent() {
@@ -50,11 +73,13 @@ function summaryParts(summary) {
     dateStyle: 'medium',
     timeStyle: 'short',
   })
-  return [
-    summary.created && t('taskSummary.created', { date: date.format(summary.created) }),
-    summary.modified && t('taskSummary.modified', { date: time.format(summary.modified) }),
-    ...summary.columns.map((column) => `${column.title}: ${column.count}`),
-  ].filter(Boolean)
+  return {
+    dates: [
+      summary.created && t('taskSummary.created', { date: date.format(summary.created) }),
+      summary.modified && t('taskSummary.modified', { date: time.format(summary.modified) }),
+    ].filter(Boolean),
+    counts: summary.columns.map((column) => ({ title: column.title, count: column.count })),
+  }
 }
 
 /** A task note (ADR 0033) shows under its title when it was created, changed and its counts. */

@@ -13,6 +13,7 @@ import { renderTemplate, templateInsertEdit, templateList } from './templates.js
 import { TemplateStarters } from './components/template-starters.jsx'
 import { titleLineNumber } from './frontmatter.js'
 import { hideFrontmatter } from './editor/hide-frontmatter.js'
+import { hiddenCover } from './editor/hidden-cover.js'
 import { toast } from 'sonner'
 import { Shortcut } from './components/main-menu.jsx'
 import { blockKeys, blockShortcut, formatShortcut, shortcutEdit } from './editor-shortcuts.js'
@@ -659,6 +660,7 @@ export function VisualEditor({
     const visualExtensions = [
       documentColors,
       skipHiddenProperties,
+      hiddenCover,
       taskSummaryLine,
       keymap.of([
         ...TASK_STATUSES.map((status, index) => ({

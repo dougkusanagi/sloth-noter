@@ -92,6 +92,7 @@ import { frontmatterEnd, titleEnd as noteTitleEnd } from './frontmatter.js'
 import { setOwnTemplates, setTemplateProfile } from './templates.js'
 import { SyncStatusButton } from './components/sync-status-button.jsx'
 import { PropertiesDock } from './components/properties-panel.jsx'
+import { NoteCoverBanner } from './components/note-cover-banner.jsx'
 import { foldAll, foldArchive, unfoldAll } from './editor/folding.js'
 import { continueBlock } from './continue-block.js'
 import { applyChanges, listIndentChanges, mapPosition } from './list-indent.js'
@@ -2760,6 +2761,16 @@ function Workspace({ persistence, loaded }) {
                     {t('external.copy')}
                   </button>
                 </div>
+              )}
+              {active && !releaseDoc && (mode === 'visual' || mode === 'reading') && (
+                <NoteCoverBanner
+                  body={active.body}
+                  onChange={
+                    mode === 'visual' && !active.external && !guideId
+                      ? () => setCoverNoteId(active.id)
+                      : undefined
+                  }
+                />
               )}
               {active && !releaseDoc && (mode === 'visual' || mode === 'reading') && (
                 <PropertiesDock

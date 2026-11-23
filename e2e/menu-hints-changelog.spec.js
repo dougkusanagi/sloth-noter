@@ -194,6 +194,7 @@ for (const width of [390, 1280]) {
     expect(await document.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
     if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/sloth-changelog-${width}.png` })
     await expect(page.locator('.cm-content')).toHaveAttribute('aria-readonly', 'true')
+    await expect(document).toContainText('A capa da nota fica no topo, de ponta a ponta')
     await expect(document).toContainText(
       'O título fica no mesmo lugar ao alternar entre Padrão e Leitura em notas com propriedades',
     )

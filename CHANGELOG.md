@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.35.0] — 2026-11-23
+
+A capa da nota fica no topo, de ponta a ponta, e o resumo das notas de tarefas ficou mais organizado. Veja os [detalhes da versão](changelog/0.35.0.md).
+
 ## [0.34.2] — 2026-11-23
 
 O título fica no mesmo lugar ao alternar entre Padrão e Leitura em notas com propriedades. Veja os [detalhes da versão](changelog/0.34.2.md).

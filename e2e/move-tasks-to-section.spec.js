@@ -53,13 +53,13 @@ test('a nota de tarefas mostra o resumo abaixo do título', async ({ page }) => 
   await open(page, taskNote.replace('tipo: tarefas', 'tipo: tarefas\ncriada: 2026-11-02'))
   const summary = page.getByRole('note', { name: 'Resumo da nota de tarefas' })
   await expect(summary).toContainText('Criada em 2 de nov. de 2026')
-  await expect(summary).toContainText('Fazer: 3')
-  await expect(summary).toContainText('Feito: 1')
+  await expect(summary).toContainText('3 Fazer')
+  await expect(summary).toContainText('1 Feito')
   await page.locator('.cm-line', { hasText: /^Três$/ }).click()
   await page.keyboard.press('Control+Shift+M')
   await page.getByRole('menuitem', { name: 'Mover para Feito' }).click()
-  await expect(summary).toContainText('Fazer: 2')
-  await expect(summary).toContainText('Feito: 2')
+  await expect(summary).toContainText('2 Fazer')
+  await expect(summary).toContainText('2 Feito')
   await page.screenshot({
     path: test.info().outputPath('summary.png'),
     clip: { x: 0, y: 0, width: 1280, height: 400 },
