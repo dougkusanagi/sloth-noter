@@ -1354,18 +1354,21 @@ export function VisualEditor({
       ref={host}
     >
       {outline && !sourceMode && (
-        <DocumentOutline
-          body={body}
-          onNavigate={(anchor) => {
-            const view = viewRef.current
-            if (!view) return
-            view.dispatch({
-              selection: { anchor },
-              effects: EditorView.scrollIntoView(anchor, { y: 'start', yMargin: 80 }),
-            })
-            view.focus()
-          }}
-        />
+        // The dock sticks below the header, so the outline stays in view while the note scrolls.
+        <div className="document-outline-dock">
+          <DocumentOutline
+            body={body}
+            onNavigate={(anchor) => {
+              const view = viewRef.current
+              if (!view) return
+              view.dispatch({
+                selection: { anchor },
+                effects: EditorView.scrollIntoView(anchor, { y: 'start', yMargin: 80 }),
+              })
+              view.focus()
+            }}
+          />
+        </div>
       )}
       {toolbar && (
         <div

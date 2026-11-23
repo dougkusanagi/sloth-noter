@@ -52,3 +52,22 @@ for (const width of [390, 1280]) {
     await page.screenshot({ path: `/tmp/sloth-release-0126-${width}.png` })
   })
 }
+
+// The outline sticks below the header, so it stays in view while a long note scrolls.
+for (const width of [390, 1280]) {
+  test(`the outline stays in view while the note scrolls at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 700 })
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Mostrar/ocultar biblioteca', exact: true }).click()
+    const toggle = page.getByRole('button', { name: 'Expandir sumário', exact: true })
+    const before = await toggle.boundingBox()
+    await page.mouse.move(width / 2, 400)
+    await page.mouse.wheel(0, 3000)
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(1000)
+    await expect(toggle).toBeInViewport()
+    const header = await page.locator('.app-header').boundingBox()
+    const after = await toggle.boundingBox()
+    expect(after.y).toBeGreaterThanOrEqual(header.y + header.height)
+    expect(Math.abs(after.x - before.x)).toBeLessThan(1)
+  })
+}

@@ -2393,7 +2393,14 @@ body.cm-section-dragging * {
   height: 16px;
 }
 
-/* Document navigation stays outside the writing measure. */
+/* Document navigation stays outside the writing measure. The dock takes no room and sticks
+   below the header, so the outline stays in view while the note scrolls. */
+.document-outline-dock {
+  position: sticky;
+  top: 46px;
+  z-index: 4;
+  height: 0;
+}
 .document-outline {
   position: absolute;
   left: 12px;
@@ -3204,4 +3211,7 @@ body.cm-section-dragging * {
   .visual-editor .cm-md-code.cm-code-collapsed {
     padding-right: 125px;
   }
+}
+.focus-mode .document-outline-dock {
+  top: 0;
 }
