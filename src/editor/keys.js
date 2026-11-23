@@ -1,4 +1,5 @@
 import { EditorSelection } from '@codemirror/state'
+import { historyKeymap, redo } from '@codemirror/commands'
 import { wrapSelection } from '../wrap-selection.js'
 import { continueBlock } from '../continue-block.js'
 import { listIndentChanges } from '../list-indent.js'
@@ -6,6 +7,12 @@ import { moveListItems } from '../list-move.js'
 import { moveSectionBy } from '../section-move.js'
 import { foldRange, isFolded, refoldAfterMove } from './folding.js'
 import { headingSections } from '../sections.js'
+
+// CodeMirror binds Ctrl+Shift+Z to redo only on Linux and macOS; every editor accepts it here.
+export const historyKeys = [
+  ...historyKeymap,
+  { key: 'Mod-Shift-z', run: redo, preventDefault: true },
+]
 
 export function wrapSelectedText(event, view) {
   if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return false

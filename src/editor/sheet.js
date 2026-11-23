@@ -18,7 +18,8 @@ import {
   drawSelection,
   keymap,
 } from '@codemirror/view'
-import { defaultKeymap, history, historyKeymap, redo, undo } from '@codemirror/commands'
+import { defaultKeymap, history, redo, undo } from '@codemirror/commands'
+import { historyKeys } from './keys.js'
 import { parseTableLine, tableCellAtColumn, tableCellAtOffset } from '../markdown-table.js'
 import { tableAddRow, tableCellRange, tableLineIndex } from '../table-navigation.js'
 import {
@@ -964,7 +965,7 @@ export class SheetEditor extends WidgetType {
               },
             ]),
           ),
-          keymap.of([...historyKeymap, ...defaultKeymap]),
+          keymap.of([...historyKeys, ...defaultKeymap]),
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !nested.sheetClosed)
               syncCell(parent, update.state.doc.toString())

@@ -363,3 +363,21 @@ test('formula suggestions can be filtered and inserted with the keyboard', async
   await page.keyboard.press('Enter')
   await expect(cell).toHaveText('3')
 })
+
+// Regression: on Windows, CodeMirror binds redo only to Ctrl+Y, so Ctrl+Shift+Z did nothing
+// while a cell was being edited.
+test('Ctrl+Shift+Z redoes in a cell being edited on Windows', async ({ page }) => {
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, 'platform', { get: () => 'Win32' }),
+  )
+  await setup(page)
+  await rows(page).nth(1).locator('.cm-md-table-cell').nth(1).dblclick()
+  await page.keyboard.press('End')
+  await page.keyboard.type('XYZ')
+  const editing = page.locator('.cm-sheet-editing')
+  await expect(editing).toContainText('AbcXYZ')
+  await page.keyboard.press('Control+z')
+  await expect(editing).not.toContainText('XYZ')
+  await page.keyboard.press('Control+Shift+z')
+  await expect(editing).toContainText('AbcXYZ')
+})

@@ -52,6 +52,7 @@ import { SHORTCUT_ACTIONS, shortcutKeys } from './shortcut-registry.js'
 import { OPEN_INSERT_EVENT } from './editor/block-actions.js'
 import {
   continueList,
+  historyKeys,
   indentList,
   moveList,
   navigateToFence,
@@ -62,7 +63,7 @@ import { currentLanguage, t } from './i18n.js'
 import { documentChanges } from './search-scope.js'
 import { flushSync } from 'react-dom'
 import { Annotation, Compartment, EditorSelection, EditorState } from '@codemirror/state'
-import { defaultKeymap, history, historyKeymap, redo } from '@codemirror/commands'
+import { defaultKeymap, history } from '@codemirror/commands'
 import { EditorView, keymap, drawSelection } from '@codemirror/view'
 import { activeFormats, formatSelection, selectionInCode } from './format-selection.js'
 import { blockEdit } from './insert-block.js'
@@ -629,7 +630,7 @@ export function VisualEditor({
 
   function sourceExtensions() {
     return [
-      keymap.of([...defaultKeymap, ...historyKeymap, { key: 'Mod-Shift-z', run: redo }]),
+      keymap.of([...defaultKeymap, ...historyKeys]),
       EditorView.contentAttributes.of({
         'aria-label': t('mode.sourceEditor'),
         spellcheck: 'false',
@@ -727,9 +728,7 @@ export function VisualEditor({
         { key: 'ArrowUp', run: (view) => navigateToFence(view, -1) },
         // Ctrl+I is italic here, not "select parent syntax".
         ...defaultKeymap.filter((binding) => binding.key !== 'Mod-i'),
-        ...historyKeymap,
-        // CodeMirror binds Ctrl+Shift+Z only on Linux.
-        { key: 'Mod-Shift-z', run: redo, preventDefault: true },
+        ...historyKeys,
       ]),
       EditorView.contentAttributes.of({
         'aria-label': t('editor.visual'),
