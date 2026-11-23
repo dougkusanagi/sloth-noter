@@ -42,6 +42,23 @@ test('Enter in a paragraph starts a new paragraph', () => {
 
 test('Enter at the start of a paragraph line keeps the plain line break', () => {
   assert.equal(continueBlock('# Título\nCorpo', 9), null)
+  assert.equal(continueBlock('# Título\n\nCorpo', 10), null)
+})
+
+test('Enter at the start of a paragraph adds an empty paragraph above it', () => {
+  const text = '# Nota\n\n## Seção\nteste'
+  const position = text.indexOf('teste')
+  assert.deepEqual(continueBlock(text, position), {
+    from: position,
+    to: position,
+    insert: '\n\n\n',
+    cursor: position + 3,
+  })
+  // With the empty line already there, two more breaks: gap, empty paragraph, gap.
+  const apart = '# Nota\n\n## Seção\n\nteste'
+  assert.equal(continueBlock(apart, apart.indexOf('teste')).insert, '\n\n')
+  // A line inside the paragraph is split as usual, with a plain line break.
+  assert.equal(continueBlock('# Nota\n\nUm\ndois', 11), null)
 })
 
 test('Enter after a closing fence starts a new paragraph below the code block', () => {

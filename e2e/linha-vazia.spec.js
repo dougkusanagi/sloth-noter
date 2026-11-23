@@ -149,3 +149,22 @@ test('Shift+Enter acrescenta uma linha ao mesmo parágrafo', async ({ page }) =>
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(page.locator('textarea')).toHaveValue('# T\n\naaa\nfg\nhh\n\nggggg\n')
 })
+
+// Regression: right below a heading, Enter at the start of the text only added the separator,
+// drawn as the gap, so the new empty line could not take the cursor.
+test('Enter no início do texto logo abaixo de um título cria uma linha vazia com cursor', async ({
+  page,
+}) => {
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page.locator('textarea').fill('# Nota\n\n## Seção\nteste\n\nfim\n')
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  await page.locator('.cm-line', { hasText: 'teste' }).click()
+  await page.keyboard.press('Home')
+  await page.keyboard.press('Enter')
+  expect(await caretLine(page)).toBe('teste')
+  await page.keyboard.press('ArrowUp')
+  expect(await caretLine(page)).toBe('')
+  await page.keyboard.type('nova')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await expect(page.locator('textarea')).toHaveValue('# Nota\n\n## Seção\n\nnova\n\nteste\n\nfim\n')
+})

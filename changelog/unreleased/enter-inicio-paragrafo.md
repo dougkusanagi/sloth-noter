@@ -1,0 +1,1 @@
+Corrigido: Enter no início de um parágrafo cria uma linha vazia acima dele, onde o cursor pode entrar com clique ou setas, também logo abaixo de um título. Antes, a linha criada virava só o espaço entre os blocos e não aceitava o cursor.

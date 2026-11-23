@@ -14,6 +14,22 @@ export function continueBlock(text, position) {
   // At the start of a line, a plain line break already leaves an empty line before the text.
   if (paragraph && position > lineStart && text.slice(lineStart, lineEnd).trim())
     return { from: position, to: position, insert: '\n\n', cursor: position + 2 }
+  // At the start of a paragraph, Enter leaves an empty paragraph above it, kept apart from both
+  // neighbours by the standard gap, so text typed there is a paragraph of its own. Below the note
+  // title, the plain line break is kept: that line is the subtitle.
+  if (paragraph && position === lineStart && position === paragraph.position.start.offset) {
+    const above = tree.children.filter(
+      (node) => node.position.end.line < paragraph.position.start.line,
+    )
+    const previous = above.at(-1)
+    if (previous && !(previous.type === 'heading' && previous.depth === 1)) {
+      const blankAbove = !text
+        .slice(text.lastIndexOf('\n', lineStart - 2) + 1, lineStart - 1)
+        .trim()
+      const insert = blankAbove ? '\n\n' : '\n\n\n'
+      return { from: position, to: position, insert, cursor: position + insert.length }
+    }
+  }
   if (position !== lineEnd) return null
   let code = null
   walk(tree, (node) => {
