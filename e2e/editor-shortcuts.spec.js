@@ -74,7 +74,8 @@ test('Ctrl+Shift+F searches every note and Ctrl+Alt+F toggles focus mode', async
   await expect(page.locator('.cm-content')).toBeVisible()
   await page.keyboard.press('Control+Shift+f')
   await expect(page.getByRole('textbox', { name: 'Buscar em todas as notas…' })).toBeFocused()
-  await page.locator('.cm-content').click()
+  // The empty draft shows the template starters in the middle of the editor.
+  await page.locator('.cm-line').first().click()
   await page.keyboard.press('Control+Alt+f')
   await expect(page.locator('.app')).toHaveClass('app focus-mode')
   await page.keyboard.press('Escape')

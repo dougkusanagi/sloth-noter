@@ -184,3 +184,34 @@ test('headings show their level as a pill without changing the heading text', as
   expect(pill).toBe('"H3"')
   await expect(page.locator('.cm-md-h1 button.cm-fold-toggle')).toHaveCount(0)
 })
+
+test('headings keep the same spacing with or without an empty line between them', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page
+    .locator('textarea')
+    .fill('# À Fazer\nPlanejamento\n## Um\n\n## Dois\n## Três\n## Quatro\n\n## Cinco\n')
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  const tops = await page
+    .locator('.cm-md-h2')
+    .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top))
+  const steps = tops.slice(1).map((top, index) => top - tops[index])
+  for (const step of steps) expect(Math.abs(step - steps[0])).toBeLessThan(1)
+})
+
+test('a rule right under a heading stays with the heading and its content', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page
+    .locator('textarea')
+    .fill('# Site\n\n## Versão mobile\n---\n\n- [x] Remover a modelo\n- [ ] Usar a logo\n')
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  const box = (locator) => locator.evaluate((element) => element.getBoundingClientRect())
+  const heading = await box(page.locator('.cm-md-h2'))
+  const rule = await box(page.locator('.cm-md-rule'))
+  const task = await box(page.locator('.cm-line', { hasText: 'Remover a modelo' }))
+  expect(Math.abs(rule.top - heading.bottom)).toBeLessThan(1)
+  expect(Math.abs(task.top - rule.bottom)).toBeLessThan(1)
+})

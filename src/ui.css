@@ -1259,8 +1259,11 @@ html:has(
 .note-group > summary::-webkit-details-marker {
   display: none;
 }
-.note-group > summary:hover {
-  background: var(--hover);
+/* Touch screens keep :hover after a tap; only a pointer highlights the folder. */
+@media (hover: hover) {
+  .note-group > summary:hover {
+    background: var(--hover);
+  }
 }
 .note-group > summary .folder-name {
   flex: 1;
@@ -1287,13 +1290,72 @@ html:has(
 .note-group[open] > summary .folder-chevron {
   transform: rotate(90deg);
 }
-.note-group > .note-list-row {
-  margin-left: 14px;
-  padding-left: 6px;
-  border-left: 1px solid var(--line);
+/* Folder contents as a tree: a branch (├) to each item and a corner (└) on the last one. */
+.note-group {
+  --branch-y: 16px;
 }
-.note-group > .note-list-row:last-child {
+/* The trunk sits under the center of the folder's chevron: 8px of padding + 6px of a 13px icon. */
+.note-group > :not(summary) {
+  position: relative;
+  margin-left: 14px;
+  padding-left: 12px;
+}
+.note-group > :not(summary)::before,
+.note-group > :not(summary)::after {
+  content: '';
+  position: absolute;
+  /* Offsets start inside the item's border; buttons have a transparent 1px one. */
+  left: calc(0px - var(--item-border, 0px));
+  border: 0 solid color-mix(in srgb, var(--ink) 18%, transparent);
+  pointer-events: none;
+}
+/* The trunk runs past every item but the last; the pieces meet edge to edge. */
+.note-group > :not(summary)::before {
+  top: calc(0px - var(--item-border, 0px));
+  bottom: calc(0px - var(--item-border, 0px));
+  border-left-width: 1px;
+}
+.note-group > :not(summary)::after {
+  top: calc(var(--branch-y) - var(--item-border, 0px));
+  width: 9px;
+  border-top-width: 1px;
+}
+.note-group > :not(summary):last-child::before {
+  bottom: auto;
+  width: 9px;
+  height: var(--branch-y);
+  border-bottom-width: 1px;
+}
+.note-group > :not(summary):last-child::after {
+  display: none;
+}
+.note-group > :not(summary):last-child {
   margin-bottom: 4px;
+}
+/* A folder inside another is a branch of the tree, not a second card. */
+.note-group .note-group {
+  margin-block: 0;
+  padding: 0 0 0 12px;
+  background: none;
+  box-shadow: none;
+}
+.note-group .note-group > :not(summary):last-child {
+  margin-bottom: 0;
+}
+.note-group .note-group > summary {
+  padding-left: 4px;
+}
+.note-group .note-group > :not(summary) {
+  margin-left: 10px;
+}
+/* Notes: the branch points at the title line, close to its text. */
+.note-group > .note-list-row {
+  --branch-y: 19px;
+  /* Keeps the note's bottom margin inside the row, so the trunk covers it. */
+  display: flow-root;
+}
+.note-group > .note-list-row .note-item {
+  padding-left: 8px;
 }
 .note-list-row {
   position: relative;
@@ -2494,6 +2556,9 @@ html:has(
     z-index: 4;
     width: min(312px, 88vw);
     box-shadow: var(--shadow-pop);
+  }
+  .notes-sidebar + .editor-shell .document-outline-dock {
+    visibility: hidden;
   }
   .backlinks-popover {
     left: 0;
@@ -4077,15 +4142,13 @@ button.property-type-icon:hover {
   margin-inline: 0;
 }
 
-.guide-folder .guide-folder,
-.guide-folder .guide-entry {
-  margin-inline-start: 1rem;
-}
-
 .guide-entry {
+  --item-border: 1px;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.45rem;
+  width: 100%;
   text-align: start;
   min-height: 2rem;
   white-space: normal;
@@ -4094,4 +4157,7 @@ button.property-type-icon:hover {
 [data-platform='mobile'] .guide-folder summary,
 [data-platform='mobile'] .guide-entry {
   min-height: 44px;
+}
+[data-platform='mobile'] .guide-folder {
+  --branch-y: 22px;
 }

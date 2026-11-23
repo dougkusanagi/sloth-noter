@@ -282,7 +282,6 @@ const messages = {
       'A atualização foi instalada, mas não foi possível reiniciar. Use Reiniciar aplicativo ou feche e abra o app.',
     'changelog.intro':
       'Um resumo de cada versão do Sloth Note. Abra uma versão para ler os detalhes. Este registro acompanha o app e funciona offline.',
-    'changelog.pending': 'Em desenvolvimento',
     'changelog.read': 'Ver detalhes →',
     'changelog.back': '← Todas as versões',
     'changelog.readOnly': 'Somente leitura',
@@ -1274,7 +1273,6 @@ const messages = {
       'The update was installed, but the app could not restart. Choose Restart app or close and reopen the app.',
     'changelog.intro':
       'A summary of each Sloth Note version. Open a version to read the details. This log ships with the app and works offline. Entries are written in Portuguese.',
-    'changelog.pending': 'In development',
     'changelog.read': 'See details →',
     'changelog.back': '← All versions',
     'changelog.readOnly': 'Read only',

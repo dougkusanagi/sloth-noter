@@ -1,0 +1,1 @@
+Alterado: As pastas da biblioteca mostram o conteúdo como uma árvore, com uma linha ligando cada nota à sua pasta. Uma pasta dentro de outra, como Exemplos em Docs, não fica mais numa caixa separada, e as páginas de Docs ocupam a largura toda da linha.

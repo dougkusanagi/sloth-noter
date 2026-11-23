@@ -15,8 +15,6 @@ const PLURAL = {
   Corrigido: ['correção', 'correções'],
   Segurança: ['ajuste de segurança', 'ajustes de segurança'],
 }
-export const PENDING = 'pendente'
-
 const versionOf = (path) => path.match(/(\d+\.\d+\.\d+)\.md$/)?.[1]
 const compare = (a, b) => b.localeCompare(a, undefined, { numeric: true })
 
@@ -55,7 +53,7 @@ const DATE = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'UTC',
 })
 
-export function releaseList(files, archive, fragments = {}) {
+export function releaseList(files, archive) {
   const dates = Object.fromEntries(
     [...archive.matchAll(/^## \[(\d+\.\d+\.\d+)\] — (\d{4}-\d{2}-\d{2})/gm)].map((m) => [
       m[1],
@@ -73,40 +71,22 @@ export function releaseList(files, archive, fragments = {}) {
       summary: summaryOf(text),
       counts: countEntries(text),
     }))
-  const pending = Object.values(fragments)
-    .map((text) => text.trim())
-    .filter(Boolean)
-  if (!pending.length) return releases
-  const text = TYPES.flatMap((type) => {
-    const entries = pending.filter((entry) => entry.startsWith(`${type}:`))
-    return entries.length
-      ? [`## ${type}`, ...entries.map((entry) => entry.slice(type.length + 1).trim())]
-      : []
-  }).join('\n\n')
-  return [
-    { version: PENDING, text, date: '', summary: '', counts: countEntries(text) },
-    ...releases,
-  ]
+  return releases
 }
 
-export const releaseTitle = (version, pendingLabel) =>
-  version === PENDING ? pendingLabel : `Sloth Note ${version}`
+export const releaseTitle = (version) => `Sloth Note ${version}`
 
 /** Markdown of the hub: one card-like section per version with summary, counts and a link. */
-export function hubMarkdown(releases, { title, intro, pendingLabel, readLabel, link }) {
+export function hubMarkdown(releases, { title, intro, readLabel, link }) {
   return (
     [
       `# ${title}`,
       intro,
       ...releases.map((release) => {
-        const name = releaseTitle(release.version, pendingLabel)
+        const name = releaseTitle(release.version)
         const meta = [release.date, countText(release.counts)].filter(Boolean).join(' · ')
         const details = [meta && `*${meta}*`, link(name, readLabel)].filter(Boolean).join(' · ')
-        return [
-          `## ${release.version === PENDING ? pendingLabel : `Versão ${release.version}`}`,
-          release.summary,
-          details,
-        ]
+        return [`## Versão ${release.version}`, release.summary, details]
           .filter(Boolean)
           .join('\n\n')
       }),
@@ -114,9 +94,7 @@ export function hubMarkdown(releases, { title, intro, pendingLabel, readLabel, l
   )
 }
 
-export function releaseMarkdown(release, { pendingLabel, hubTitle, backLabel, link }) {
-  const text =
-    release.version === PENDING ? `# ${pendingLabel}\n\n${release.text}` : release.text.trim()
-  const [title, ...body] = text.split('\n')
+export function releaseMarkdown(release, { hubTitle, backLabel, link }) {
+  const [title, ...body] = release.text.trim().split('\n')
   return [title, link(hubTitle, backLabel), body.join('\n').trim()].join('\n\n') + '\n'
 }

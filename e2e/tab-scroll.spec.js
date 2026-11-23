@@ -46,11 +46,19 @@ for (const mode of ['Padrão', 'Código', 'Leitura']) {
     async function restored(saved) {
       if (mode !== 'Código') {
         // Virtualized blocks can have different estimated heights after mounting.
-        // Verify the same section within one text line; measuring virtualized blocks
-        // after remounting can shift their estimated height.
-        await expect.poll(async () => (await position()).heading).toBe(saved.heading)
+        // Follow the saved heading itself within one text line: a few pixels of drift
+        // near the header must not count as a different section.
         await expect
-          .poll(async () => Math.abs((await position()).headingTop - saved.headingTop))
+          .poll(async () => {
+            const top = await page.evaluate(
+              (text) =>
+                [...document.querySelectorAll('.cm-line')]
+                  .find((element) => element.textContent === text)
+                  ?.getBoundingClientRect().top ?? null,
+              saved.heading,
+            )
+            return top === null ? Infinity : Math.abs(top - saved.headingTop)
+          })
           .toBeLessThan(24)
       } else {
         await expect

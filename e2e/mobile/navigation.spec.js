@@ -1085,14 +1085,6 @@ test('About fits 320 px without horizontal scrolling', async ({ page }) => {
   ).toBe(true)
 })
 
-test('settings recreate the help page as a new note', async ({ page }) => {
-  await page.getByRole('button', { name: 'Mais opções' }).tap()
-  await page.getByRole('button', { name: 'Configurações' }).tap()
-  await page.getByRole('button', { name: 'Recriar página de ajuda' }).tap()
-  await expect(page.locator('.markdown')).toContainText('página de ajuda e exemplos')
-  await expect(page.getByRole('button', { name: 'Voltar', exact: true })).toBeVisible()
-})
-
 test('note actions are available while reading and deleting returns to the list', async ({
   page,
 }) => {

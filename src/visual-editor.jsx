@@ -316,7 +316,9 @@ export function VisualEditor({
   }
 
   useLayoutEffect(() => {
-    if (!toolbar) return
+    // One correction per computed position: if CSS keeps the toolbar from moving,
+    // retrying would loop forever.
+    if (!toolbar || toolbar.nudged) return
     const el = host.current?.querySelector('.format-toolbar')
     if (!el) return
     const rect = el.getBoundingClientRect()
@@ -325,7 +327,7 @@ export function VisualEditor({
     if (rect.left < 8) dx = 8 - rect.left
     else if (rect.right > window.innerWidth - 8) dx = window.innerWidth - 8 - rect.right
     if (Math.abs(dx) > 0.5) {
-      setToolbar((current) => (current ? { ...current, x: current.x + dx } : current))
+      setToolbar((current) => (current ? { ...current, x: current.x + dx, nudged: true } : current))
     }
   }, [toolbar])
 
@@ -1173,7 +1175,7 @@ export function VisualEditor({
               !sourceModeRef.current &&
               update.transactions.some(
                 (transaction) =>
-                  transaction.scrolledIntoView && !transaction.annotation(settleScrollAnnotation),
+                  transaction.scrollIntoView && !transaction.annotation(settleScrollAnnotation),
               )
             ) {
               const token = {

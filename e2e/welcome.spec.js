@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { openRelease } from './changelog-helpers.js'
 import { newDocument, STORAGE_KEY } from '../src/storage.js'
 
 const docs = (page) => page.locator('.visual-editor.read-only .cm-content')
@@ -44,8 +45,7 @@ for (const width of [390, 1280]) {
     await expect(docs(page)).toHaveCount(0)
     await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
-    await expect(docs(page)).toContainText('A biblioteca ganhou uma pasta de documentação.')
-    await docs(page).locator('[data-wiki^="Sloth Note 0.32.0"]').click()
+    await openRelease(page, docs(page), 'A biblioteca ganhou uma pasta de documentação.', '0.32.0')
     const image = docs(page).getByRole('img', {
       name: 'Pasta Docs com Bem-vindo e a subpasta Exemplos na biblioteca',
     })

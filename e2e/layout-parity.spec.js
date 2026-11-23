@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { welcomeBody } from '../src/welcome.js'
 
 // Padrão and Leitura must lay a note out identically, so switching modes moves nothing.
 // Only the Código mode (raw text) is allowed to differ.
@@ -300,15 +301,18 @@ test('Padrão and Leitura lay out the help page identically, heading by heading'
   page,
 }) => {
   await page.setViewportSize({ width: 1200, height: 5200 })
-  await page.route(/sloth-hero\.png$/, (route) =>
+  await page.route(/welcome-sloth\.png$/, (route) =>
     route.fulfill({
       contentType: 'image/svg+xml',
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1200"><rect width="2000" height="1200" fill="#000"/></svg>',
     }),
   )
   await page.goto('/')
-  await expect(page.locator('.cm-content')).toBeVisible()
-  await page.locator('.cm-content').click()
+  // The help page is a read-only guide now; an ordinary note with its text keeps both modes.
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page.locator('textarea').fill(welcomeBody())
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  await page.locator('.cm-line').first().click()
   await page.keyboard.press('Control+End')
   await expect(page.locator('.cm-image-preview')).toHaveJSProperty('complete', true)
   await page.waitForTimeout(300)

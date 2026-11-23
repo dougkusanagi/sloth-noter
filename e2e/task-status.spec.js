@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { openRelease } from './changelog-helpers.js'
 
 const body = '# Projeto\n\n- [ ] Escrever\n- [ ] Revisar\n\nFim'
 const mode = (page, name) => page.getByRole('radio', { name, exact: true }).check({ force: true })
@@ -140,8 +141,7 @@ for (const width of [390, 1280]) {
     await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
     const news = page.locator('.visual-editor.read-only')
-    await expect(news).toContainText('Marque tarefas enquanto edita.')
-    await news.locator('[data-wiki^="Sloth Note 0.31.1"]').click()
+    await openRelease(page, news, 'Marque tarefas enquanto edita.', '0.31.1')
     await expect(news).toContainText('a caixa de seleção fica disponível')
   })
 }

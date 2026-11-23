@@ -65,7 +65,9 @@ for (const mode of ['Padrão', 'Leitura']) {
         await page.evaluate(() => window.scrollBy(0, 150))
       }
       // Centered, so the footer at the bottom of the window never covers it.
-      await button.evaluate((element) => element.scrollIntoView({ block: 'center' }))
+      await button.evaluate((element) =>
+        window.scrollBy(0, element.getBoundingClientRect().top - window.innerHeight / 2),
+      )
       await expect(button).toHaveText(blocks[index][2])
       await expect(button.locator('svg')).toHaveCount(1)
       await button.click()

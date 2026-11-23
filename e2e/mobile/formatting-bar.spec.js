@@ -80,9 +80,9 @@ test('Lista converts the current line and the list group manages the task', asyn
   // now on a list item: the task toggle, and the cursor stays in the list group
   await expect(bar(page).getByRole('button', { name: 'Desrecuar' })).toBeVisible()
   await bar(page).getByRole('button', { name: 'Alternar tarefa' }).tap()
-  await expect(page.locator('.cm-content')).toContainText('- [ ] Texto comum')
+  await expect.poll(() => savedBody(page)).toContain('\n- [ ] Texto comum\n')
   await bar(page).getByRole('button', { name: 'Alternar tarefa' }).tap()
-  await expect(page.locator('.cm-content')).toContainText('- [x] Texto comum')
+  await expect.poll(() => savedBody(page)).toContain('\n- [x] Texto comum\n')
 })
 
 test('Desrecuar removes one nesting level from a nested item', async ({ page }) => {

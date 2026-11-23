@@ -31,7 +31,7 @@ test('outline visual verification', async ({ page }) => {
     .toBe(1)
   await release.click()
   await entry.hover()
-  // The unreleased entry is long: scroll until each passage is drawn.
+  // The release entry is long: scroll until each passage is drawn.
   await expect
     .poll(
       async () => {

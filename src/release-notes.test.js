@@ -20,7 +20,6 @@ const labels = {
   title: 'Novidades',
   hubTitle: 'Novidades',
   intro: 'Intro',
-  pendingLabel: 'Em desenvolvimento',
   readLabel: 'Ler',
   backLabel: 'Voltar',
   link,
@@ -32,17 +31,16 @@ test('counts entries in both changelog formats', () => {
 })
 
 test('hub lists versions newest first with date, summary, counts and link', () => {
-  const releases = releaseList(files, archive, { 'a.md': 'Alterado: pendente' })
+  const releases = releaseList(files, archive)
   assert.deepEqual(
     releases.map((r) => r.version),
-    ['pendente', '0.2.0', '0.1.0'],
+    ['0.2.0', '0.1.0'],
   )
   const hub = hubMarkdown(releases, labels)
   assert.match(
     hub,
     /## Versão 0\.2\.0\n\nSegunda\.\n\n\*6 de novembro de 2026 · 1 adição · 2 correções\* · \[\[Sloth Note 0\.2\.0\|Ler\]\]/,
   )
-  assert.ok(hub.indexOf('Em desenvolvimento') < hub.indexOf('0.2.0'))
   assert.ok(!hub.includes('- a'))
 })
 

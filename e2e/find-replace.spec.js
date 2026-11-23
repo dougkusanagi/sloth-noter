@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { scrollNewsTo } from './changelog-helpers.js'
 
 async function note(page, body, mode = 'Padrão') {
   await page.goto('/')
@@ -286,6 +287,6 @@ for (const width of [390, 1280]) {
     await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
     const news = page.locator('.visual-editor.read-only')
-    await expect(news).toContainText('A seleção de ocorrências agora abre a busca.')
+    await scrollNewsTo(page, news.getByText('A seleção de ocorrências agora abre a busca.'))
   })
 }

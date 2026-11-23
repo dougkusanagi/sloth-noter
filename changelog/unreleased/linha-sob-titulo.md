@@ -1,0 +1,1 @@
+Corrigido: Uma linha horizontal (`---`) logo abaixo de um título fica junto dele, como um sublinhado, e o conteúdo da seção começa logo depois da linha, sem espaços extras. Vale para a edição e para a leitura no celular.

@@ -41,7 +41,7 @@ Em ambos os sistemas, use `bun run desktop:update --dry-run` para conferir os ca
 
 ## Release
 
-Toda alteração de comportamento do app deve criar ou atualizar um fragmento em `changelog/unreleased/` no mesmo commit, descrevendo o efeito para o usuário. Novidades e o documento Markdown aberto pelo app leem essas fontes e `CHANGELOG.md`. Mudanças de planejamento também devem atualizar o roteiro e ser identificadas como futuras, sem serem apresentadas como recursos disponíveis.
+Toda alteração de comportamento do app deve criar ou atualizar um fragmento em `changelog/unreleased/` no mesmo commit, descrevendo o efeito para o usuário. Novidades e o documento Markdown aberto pelo app leem `CHANGELOG.md` e `changelog/X.Y.Z.md`; os fragmentos só aparecem depois de consolidados numa versão. Mudanças de planejamento também devem atualizar o roteiro e ser identificadas como futuras, sem serem apresentadas como recursos disponíveis.
 
 A versão fica em `package.json` (o `tauri.conf.json` a lê de lá) e deve coincidir com `src-tauri/Cargo.toml`; `bun run version:check` confere.
 

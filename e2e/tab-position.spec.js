@@ -106,6 +106,20 @@ for (const runtime of ['web', 'desktop']) {
         await page.keyboard.press('Control+End')
         // The last line is short so Shift+Home selects all of it even where long lines wrap.
         await page.keyboard.press('Shift+Home')
+        // Let the jump to the cursor finish: the editor may adjust the scroll for a few frames.
+        await expect
+          .poll(() =>
+            page.evaluate(
+              () =>
+                new Promise((resolve) => {
+                  const before = window.scrollY
+                  requestAnimationFrame(() =>
+                    requestAnimationFrame(() => resolve(before === window.scrollY)),
+                  )
+                }),
+            ),
+          )
+          .toBe(true)
         // Scroll away from the selected cursor: restoring just the cursor is insufficient.
         await page.evaluate(() => {
           if (document.querySelector('textarea'))

@@ -43,6 +43,18 @@ export function gapLines(doc, boxes, cursorLine = 0) {
       if (number === 1 || !/^\s*\|/.test(doc.line(number - 1).text)) boxes.starts.add(number)
       if (number === doc.lines || !/^\s*\|/.test(doc.line(number + 1).text)) boxes.ends.add(number)
     }
+    // A heading touching another block with no empty line is still a separate block in
+    // Markdown, so it gets the same gap; the spacing must not depend on that blank line.
+    for (let index = 1; index < tree.children.length; index++) {
+      const above = tree.children[index - 1].position
+      const below = tree.children[index].position
+      if (!above || !below || above.end.line <= first || below.start.line !== above.end.line + 1)
+        continue
+      const types = [tree.children[index - 1].type, tree.children[index].type]
+      // A rule is already a boundary; right under a heading it underlines it.
+      if (types.includes('heading') && !types.includes('thematicBreak'))
+        boxes.joins.add(above.end.line)
+    }
   }
   const gaps = new Set()
   for (let number = first + 1; number < doc.lines; number++)
@@ -92,13 +104,14 @@ class GapWidget extends WidgetType {
  */
 function build(state, cursorLine) {
   const doc = state.doc
-  const boxes = { starts: new Set(), ends: new Set() }
+  const boxes = { starts: new Set(), ends: new Set(), joins: new Set() }
   const lines = gapLines(doc, boxes, cursorLine)
   const hidden = [],
     atomic = []
-  // Two code blocks or tables written with no empty line between them still get the gap.
-  for (const number of boxes.ends)
-    if (boxes.starts.has(number + 1))
+  // Two code blocks or tables, or a heading and another block, written with no empty line
+  // between them still get the gap.
+  for (const number of new Set([...boxes.joins, ...boxes.ends]))
+    if (boxes.joins.has(number) || boxes.starts.has(number + 1))
       hidden.push(
         Decoration.widget({ widget: new GapWidget(number + 1), block: true, side: 1 }).range(
           doc.line(number).to,

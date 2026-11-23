@@ -5,23 +5,17 @@ import { t } from '../i18n.js'
 import { hubMarkdown, releaseList, releaseMarkdown, releaseTitle } from '../release-notes.js'
 
 // The same committed files feed the app and the release process; no second log to maintain.
-const fragments = import.meta.glob('../../changelog/unreleased/*.md', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-})
 const files = import.meta.glob('../../changelog/*.md', {
   query: '?raw',
   import: 'default',
   eager: true,
 })
-const releases = releaseList(files, archive, fragments)
+const releases = releaseList(files, archive)
 const wiki = (name, label) => `[[${name}|${label}]]`
 const labels = () => ({
   title: t('settings.changelog'),
   hubTitle: t('settings.changelog'),
   intro: t('changelog.intro'),
-  pendingLabel: t('changelog.pending'),
   readLabel: t('changelog.read'),
   backLabel: t('changelog.back'),
 })
@@ -38,10 +32,7 @@ export function changelogDocument(version = null) {
 export function changelogTarget(target) {
   const name = target.split('|')[0].split('#')[0].trim()
   if (name === t('settings.changelog')) return 'hub'
-  return (
-    releases.find((release) => releaseTitle(release.version, t('changelog.pending')) === name)
-      ?.version ?? null
-  )
+  return releases.find((release) => releaseTitle(release.version) === name)?.version ?? null
 }
 
 /** Mobile: the same documents, rendered as Markdown with in-page links. */

@@ -1,0 +1,1 @@
+Corrigido: Títulos seguidos mantêm o mesmo espaço entre si, com ou sem linha vazia no texto. Notas cujas seções foram reordenadas em versões anteriores voltam a ter espaçamento uniforme sem precisar de edição.

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { openRelease } from './changelog-helpers.js'
 
 for (const width of [390, 1280]) {
   test(`shows the task reorder shortcut next to the caret at ${width}px`, async ({ page }) => {
@@ -20,8 +21,7 @@ for (const width of [390, 1280]) {
     await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
     const news = page.locator('.visual-editor.read-only')
-    await expect(news).toContainText('Dica de teclado ao editar uma tarefa.')
-    await news.locator('[data-wiki^="Sloth Note 0.30.3"]').click()
+    await openRelease(page, news, 'Dica de teclado ao editar uma tarefa.', '0.30.3')
     await expect(news).toContainText('quando pode ser movida dentro da lista')
   })
 }
