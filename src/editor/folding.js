@@ -1,5 +1,6 @@
 import { StateEffect, StateField } from '@codemirror/state'
 import { Decoration, EditorView, WidgetType } from '@codemirror/view'
+import { accordionBlocks } from '../accordion.js'
 import { headingSections } from '../sections.js'
 import { t } from '../i18n.js'
 import { isArchiveTitle } from '../tasks.js'
@@ -16,19 +17,21 @@ export const unfoldSection = StateEffect.define({
 })
 
 export class FoldToggleWidget extends WidgetType {
-  constructor(line, folded, level, foldable = true) {
+  constructor(line, folded, level, foldable = true, accordion = false) {
     super()
     this.line = line
     this.folded = folded
     this.level = level
     this.foldable = foldable
+    this.accordion = accordion
   }
   eq(other) {
     return (
       this.line === other.line &&
       this.folded === other.folded &&
       this.level === other.level &&
-      this.foldable === other.foldable
+      this.foldable === other.foldable &&
+      this.accordion === other.accordion
     )
   }
   toDOM(view) {
@@ -41,8 +44,19 @@ export class FoldToggleWidget extends WidgetType {
     }
     const button = document.createElement('button')
     button.type = 'button'
-    button.className = `cm-fold-toggle${this.folded ? ' folded' : ''}`
-    button.setAttribute('aria-label', t(this.folded ? 'fold.expand' : 'fold.collapse'))
+    button.className = `cm-fold-toggle${this.accordion ? ' cm-accordion-toggle' : ''}${this.folded ? ' folded' : ''}`
+    button.setAttribute(
+      'aria-label',
+      t(
+        this.accordion
+          ? this.folded
+            ? 'accordion.expand'
+            : 'accordion.collapse'
+          : this.folded
+            ? 'fold.expand'
+            : 'fold.collapse',
+      ),
+    )
     button.setAttribute('aria-expanded', String(!this.folded))
     button.dataset.level = String(this.level)
     button.innerHTML = chevron
@@ -64,10 +78,13 @@ export function foldRange(state, heading) {
   return { from: doc.line(heading.titleEnd).to, to: doc.line(last).to }
 }
 
+function foldTargets(state) {
+  const text = state.doc.toString()
+  return [...headingSections(text), ...accordionBlocks(text)]
+}
+
 export function foldableHeadings(state) {
-  return headingSections(state.doc.toString()).filter(
-    (heading) => heading.level > 0 && foldRange(state, heading),
-  )
+  return foldTargets(state).filter((heading) => heading.level > 0 && foldRange(state, heading))
 }
 
 function hasFold(folds, from) {
@@ -88,7 +105,7 @@ export const foldField = StateField.define({
     if (transaction.docChanged && folds.size) {
       // Keep a fold only while its heading line is still a heading.
       const anchors = new Set(
-        headingSections(state.doc.toString())
+        foldTargets(state)
           .filter((heading) => heading.level > 0)
           .map((heading) => state.doc.line(heading.titleEnd).to),
       )
@@ -123,7 +140,7 @@ export const foldField = StateField.define({
 export function refoldAfterMove(view, anchor) {
   const { state } = view
   const line = state.doc.lineAt(anchor).number
-  const heading = headingSections(state.doc.toString()).find((item) => item.line === line)
+  const heading = foldTargets(state).find((item) => item.line === line)
   const range = heading && foldRange(state, heading)
   if (range) view.dispatch({ effects: foldSection.of(range) })
 }

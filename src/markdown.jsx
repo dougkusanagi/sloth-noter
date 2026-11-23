@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { t } from './i18n.js'
+import { remarkAccordions } from './accordion.js'
 import { remarkColumns } from './columns.js'
 import { codeTokens, codeLanguageName } from './syntax-highlight.js'
 import { ChevronDown, Copy, WrapText } from 'lucide-react'
@@ -401,6 +402,7 @@ export function Markdown({
         <ReactMarkdown
           remarkPlugins={[
             remarkColumns,
+            remarkAccordions,
             remarkGfm,
             remarkDocumentColors,
             remarkWikiLinks,

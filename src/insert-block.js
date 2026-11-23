@@ -1,3 +1,5 @@
+import { accordionTemplate } from './accordion.js'
+import { t } from './i18n.js'
 import { columnsTemplate } from './columns.js'
 import { titleEnd as noteTitleEnd } from './frontmatter.js'
 
@@ -24,6 +26,12 @@ export function blockTemplate(action) {
   }
   // An empty paragraph clears the block prefix of the current line.
   if (action === 'p') return { text: '', selectionFrom: 0, selectionTo: 0 }
+  if (action === 'accordion') {
+    const title = t('accordion.defaultTitle')
+    const text = accordionTemplate(title)
+    const from = text.indexOf('\n') + 1
+    return { text, selectionFrom: from, selectionTo: from + title.length }
+  }
   if (action === 'columns') {
     const text = columnsTemplate(['', ''])
     const start = text.indexOf('<!-- sloth:column -->') + '<!-- sloth:column -->\n\n'.length
@@ -95,13 +103,15 @@ export function blockEdit(text, from, to, action) {
   }
   const before = text[from - 1] === '\n' ? '' : '\n\n'
   const after = to < text.length && text[to] !== '\n' ? '\n\n' : ''
-  const selected = ['code', 'columns'].includes(action) ? text.slice(from, to) : ''
+  const selected = ['code', 'columns', 'accordion'].includes(action) ? text.slice(from, to) : ''
   const insert =
     action === 'code' && selected
       ? `\`\`\`\n${selected}\n\`\`\``
       : action === 'columns' && selected
         ? columnsTemplate([selected, ''])
-        : template.text
+        : action === 'accordion' && selected
+          ? accordionTemplate(t('accordion.defaultTitle'), selected)
+          : template.text
   return {
     from,
     to,

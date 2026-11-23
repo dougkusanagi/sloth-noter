@@ -1,3 +1,4 @@
+import { accordionBlocks } from './accordion.js'
 import { blockColorMetadata } from './document-colors.js'
 import { markdownTree } from './markdown-model.js'
 
@@ -22,8 +23,23 @@ function kindOf(node, list) {
  */
 export function documentBlocks(text) {
   const blocks = []
-  for (const node of markdownTree(text).children) {
+  const tree = markdownTree(text)
+  const accordions = accordionBlocks(text, tree)
+  for (const node of tree.children) {
     if (!node.position) continue
+    const line = node.position.start.line
+    const accordion = accordions.findLast((block) => line >= block.line && line <= block.end)
+    if (accordion) {
+      if (line === accordion.line)
+        blocks.push({
+          first: line,
+          last: accordion.end,
+          anchor: accordion.titleEnd,
+          kind: 'accordion',
+          depth: 0,
+        })
+      continue
+    }
     const items = node.type === 'list' ? node.children : [node]
     for (const item of items) {
       const first = item.position.start.line

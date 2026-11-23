@@ -1,3 +1,4 @@
+import { accordionBlocks } from '../accordion.js'
 import { moveListItems } from '../list-move.js'
 import { platform } from '../platform.js'
 import { sheetField } from './sheet.js'
@@ -392,6 +393,14 @@ export function decorationsFor(view) {
     const range = heading.level > 0 && foldRange(view.state, heading)
     if (range) foldable.set(heading.line, isFolded(view.state, range.from))
   }
+  const accordionLines = new Map()
+  for (const accordion of accordionBlocks(text, tree)) {
+    accordionLines.set(accordion.line, accordion)
+    accordionLines.set(accordion.titleEnd, accordion)
+    accordionLines.set(accordion.end, accordion)
+    if (accordion.end - 1 > accordion.titleEnd && !doc.line(accordion.end - 1).text.trim())
+      accordionLines.set(accordion.end - 1, accordion)
+  }
   const collapsed = new Set([...foldable].filter(([, folded]) => folded).map(([line]) => line))
   const tasks = new Map(
     resolvedTasks(text, view.state.facet(taskNotes)).map((task) => [task.line, task]),
@@ -554,6 +563,26 @@ export function decorationsFor(view) {
       // The separating empty line is drawn by blockGaps as the gap between blocks.
       if (gapLines.has(number)) continue
       const active = editing.has(number)
+      const accordion = accordionLines.get(number)
+      if (accordion) {
+        if (number === accordion.titleEnd) {
+          const folded = isFolded(view.state, line.to)
+          ranges.push(
+            Decoration.line({ attributes: { class: 'cm-md-accordion-title' } }).range(line.from),
+            Decoration.widget({
+              widget: new FoldToggleWidget(accordion.line, folded, 0, true, true),
+              side: -2,
+            }).range(line.from),
+          )
+          addInlineDecorations(ranges, line, { prefix: 0 }, active)
+        } else if (!active) {
+          ranges.push(
+            Decoration.line({ attributes: { class: 'cm-md-accordion-meta' } }).range(line.from),
+          )
+          if (line.length) ranges.push(Decoration.replace({}).range(line.from, line.to))
+        }
+        continue
+      }
       const task = TASK_PREFIX.exec(line.text)
       if (task) {
         ranges.push(

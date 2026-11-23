@@ -23,6 +23,7 @@ const blocks = [
   ['divider', 'mobile.divider', '───'],
   ['date', 'mobile.today', 'dd/mm/aaaa'],
   ['columns', 'block.columns', 'A  |  B'],
+  ['accordion', 'block.accordion', '▸'],
   ['template', 'block.template', '▤'],
 ]
 

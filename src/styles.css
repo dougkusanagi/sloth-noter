@@ -882,7 +882,8 @@ textarea:focus-visible {
 .visual-editor .cm-md-table-headrow {
   z-index: 2;
 }
-.visual-editor .cm-md-table-meta {
+.visual-editor .cm-md-table-meta,
+.visual-editor .cm-md-accordion-meta {
   display: none;
 }
 .visual-editor .cm-md-table-row.cm-md-table-last {
@@ -3248,4 +3249,34 @@ body.cm-section-dragging * {
   color: var(--muted);
   font-size: 0.8em;
   white-space: nowrap;
+}
+
+.visual-editor .cm-md-accordion-title,
+.markdown-accordion > summary {
+  font-weight: 600;
+}
+
+.visual-editor .cm-fold-toggle.cm-accordion-toggle {
+  position: static;
+  translate: none;
+  opacity: 1;
+  vertical-align: middle;
+  margin-inline-end: 0.35em;
+}
+
+.visual-editor .cm-accordion-toggle::before {
+  content: none;
+}
+
+.visual-editor .cm-accordion-toggle svg {
+  opacity: 1;
+}
+
+.markdown-accordion > summary {
+  cursor: pointer;
+}
+
+[data-platform='mobile'] .markdown-accordion > summary {
+  min-block-size: 44px;
+  padding-block: 0.45rem;
 }

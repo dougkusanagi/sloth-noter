@@ -262,7 +262,10 @@ export const blockHandle = ViewPlugin.fromClass(
     show(block) {
       const { view } = this
       const line = view.state.doc.line(
-        blockColorMetadata(view.state.doc.line(block.first).text) ? block.first + 2 : block.first,
+        block.anchor ??
+          (blockColorMetadata(view.state.doc.line(block.first).text)
+            ? block.first + 2
+            : block.first),
       )
       const coords = view.coordsAtPos(line.from, 1)
       if (!coords) return this.hide()
@@ -413,7 +416,7 @@ export const blockHandle = ViewPlugin.fromClass(
       )
       if (!blocks.length) return null
       const box = (block) => ({
-        top: view.coordsAtPos(doc.line(block.first).from, 1)?.top ?? 0,
+        top: view.coordsAtPos(doc.line(block.anchor ?? block.first).from, 1)?.top ?? 0,
         bottom: view.coordsAtPos(doc.line(block.last).to, -1)?.bottom ?? 0,
       })
       let before = doc.lines + 1

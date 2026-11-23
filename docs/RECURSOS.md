@@ -44,6 +44,10 @@ As seções não recuam o texto nem recebem linhas; só as sublistas ganham uma 
 
 Mudar entre Padrão e Leitura não move nada: o espaço antes de cada bloco é o número de linhas em branco do Markdown, cada quebra de linha é uma quebra de linha e fontes, entrelinhas, listas aninhadas, tarefas, citações, tabelas, blocos de código e imagens têm as mesmas medidas nos dois modos (um teste E2E compara as posições). Só o modo Código, com o texto cru, difere. A Leitura passa a mostrar quebras simples de linha como quebras, em vez de juntá-las num parágrafo.
 
+### Blocos recolhíveis
+
+No editor visual, digite `/` numa linha vazia e escolha **Bloco recolhível**. No celular, use **Inserir bloco** na barra de edição. Digite o título e escreva o conteúdo após a linha em branco. Use a seta para mostrar ou ocultar o conteúdo. A dobra não altera o Markdown, e outros leitores continuam mostrando título e conteúdo. O formato está descrito no [ADR 0036](adr/0036-blocos-recolhiveis-com-delimitadores.md).
+
 ### Documentação
 
 Na biblioteca, abra **Docs** para ler **Bem-vindo**, **Markdown na prática** e **Listas, tarefas e ligações**. Recolha a pasta para ocultar as páginas da lista. No desktop, o menu principal também abre **Documentação**. No celular, use **Configurações → Sobre → Documentação**. As páginas funcionam offline, são somente leitura e acompanham a versão do aplicativo. Cópias de `Welcome.md` já salvas na biblioteca continuam disponíveis como notas comuns.

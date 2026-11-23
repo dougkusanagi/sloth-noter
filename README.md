@@ -21,6 +21,7 @@ Um bloco de notas com Markdown para escrever, organizar ideias e fechar a janela
 - **Colunas:** digite `/` e escolha Colunas; use + para acrescentar colunas e arraste uma seleção com o mouse ou use recortar e colar para mover texto. A edição mostra Markdown; na leitura ele aparece formatado. Remover o layout mantém o conteúdo. As notas usam comentários HTML para delimitar as colunas e permanecem legíveis em sequência em outros leitores Markdown.
 - **Imagens junto das ideias:** cole ou arraste arquivos, reutilize imagens da biblioteca e encontre as notas que as utilizam.
 - **Um espaço para se concentrar:** modo de foco, temas claro e escuro, fonte, tamanho do texto e largura do documento ajustáveis. Interface em português do Brasil ou inglês.
+- **Blocos recolhíveis:** título com seta para mostrar ou ocultar um trecho da nota.
 
 ## Primeiros passos
 

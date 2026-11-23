@@ -1,3 +1,4 @@
+import { accordionBlocks } from './accordion.js'
 import { markdownTree } from './markdown-model.js'
 
 /**
@@ -30,7 +31,14 @@ export function headingSections(text, tree = markdownTree(text)) {
     }
   }
   for (const heading of open) heading.end = lineCount
-  for (const heading of headings) if (heading.depth === 1) heading.end = heading.titleEnd
+  const accordions = accordionBlocks(text, tree)
+  for (const heading of headings) {
+    if (heading.depth === 1) heading.end = heading.titleEnd
+    for (const block of accordions) {
+      if (heading.line > block.titleEnd && heading.line < block.end)
+        heading.end = Math.min(heading.end, block.end - 1)
+    }
+  }
   return headings
 }
 

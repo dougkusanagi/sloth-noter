@@ -1,3 +1,4 @@
+import { accordionBlocks } from '../accordion.js'
 import { EditorSelection, EditorState, StateField } from '@codemirror/state'
 import { Decoration, EditorView, WidgetType } from '@codemirror/view'
 import { markdownTree, walk } from '../markdown-model.js'
@@ -24,8 +25,10 @@ export function isGapLine(doc, number, firstBodyLine, cursorLine = 0) {
 /** Gap lines outside code, keyed by line number. */
 export function gapLines(doc, boxes, cursorLine = 0) {
   const text = doc.toString()
+  const tree = markdownTree(text)
+  const accordionPadding = new Set(accordionBlocks(text, tree).map((block) => block.end - 1))
   const code = []
-  walk(markdownTree(text), (node) => {
+  walk(tree, (node) => {
     if (node.type === 'code') code.push([node.position.start.line, node.position.end.line])
   })
   const inCode = (number) => code.some(([from, to]) => number >= from && number <= to)
@@ -43,7 +46,12 @@ export function gapLines(doc, boxes, cursorLine = 0) {
   }
   const gaps = new Set()
   for (let number = first + 1; number < doc.lines; number++)
-    if (isGapLine(doc, number, first, cursorLine) && !inCode(number)) gaps.add(number)
+    if (
+      !accordionPadding.has(number) &&
+      isGapLine(doc, number, first, cursorLine) &&
+      !inCode(number)
+    )
+      gaps.add(number)
   return gaps
 }
 

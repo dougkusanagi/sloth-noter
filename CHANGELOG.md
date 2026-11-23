@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.33.0] — 2026-11-23
+
+Blocos recolhíveis dentro da nota. Veja os [detalhes da versão](changelog/0.33.0.md).
+
 ## [0.32.1] — 2026-11-23
 
 Registro de manutenção da documentação do projeto. Veja os [detalhes da versão](changelog/0.32.1.md).
