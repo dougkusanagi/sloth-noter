@@ -691,7 +691,7 @@ dependencies = [
 
 [[package]]
 name = "cssparser"
-version = "0.36.1"
+version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dae61cf9c0abb83bd659dab65b7e4e38d8236824c85f0f804f173567bda257d2"
 dependencies = [
@@ -3900,7 +3900,7 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
 name = "sloth-note"
-version = "0.37.1"
+version = "0.37.2"
 dependencies = [
  "arboard",
  "flate2",
