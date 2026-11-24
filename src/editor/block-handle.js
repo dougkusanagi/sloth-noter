@@ -536,16 +536,14 @@ export const blockHandle = ViewPlugin.fromClass(
       }
       const cell = view === parent ? null : view.dom.closest('.cm-column-editor')
       const area = cell?.getBoundingClientRect() ?? content
-      // Use the right half of a standalone block. In an existing column, keep the middle
-      // available for moving blocks into it and use its edges to add a column.
-      const leftEdge = cell ? Math.min(28, area.width * 0.15) : Math.min(64, area.width * 0.2)
-      const rightEdge = cell ? leftEdge : area.width / 2
+      // Leave the center for vertical moves and the middle of an existing column for insertion.
+      const edge = cell ? Math.min(28, area.width * 0.15) : Math.max(0, area.width / 2 - 2)
       const side =
         dragged.kind === 'columns'
           ? null
-          : clientX > area.right - rightEdge
+          : clientX > area.right - edge
             ? 'right'
-            : clientX >= area.left && clientX < area.left + leftEdge
+            : clientX >= area.left && clientX < area.left + edge
               ? 'left'
               : null
       if (side) {

@@ -345,7 +345,7 @@ test('a block dragged beside another makes columns, and back out ends them', asy
   // turns back into an ordinary block.
   const end = await page.locator('.cm-line', { hasText: 'Fim' }).boundingBox()
   await dragBlock(page, second.locator('.cm-line').first(), {
-    x: end.x + 4,
+    x: end.x + end.width / 2,
     y: end.y + end.height + 12,
   })
   await expect(page.locator('.cm-columns')).toHaveCount(0)
@@ -356,55 +356,60 @@ test('a block dragged beside another makes columns, and back out ends them', asy
   expect(await noteSource(page)).toBe('# Nota\n\nPrimeiro\n\nFim\n\n## Segundo')
 })
 
-test('soltar na metade direita cria uma coluna a partir da alça de um bloco de código', async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1280, height: 844 })
-  await page.goto('/')
-  const fence = '```'
-  const target = `${fence}\nprimeiro()\n${fence}`
-  const moved = `${fence}\nsegundo()\n${fence}`
-  const source = `# Nota\n\n${target}\n\n${moved}\n\nFim`
-  await fillNote(page, source)
-  const library = page.getByRole('button', { name: 'Mostrar/ocultar biblioteca' })
-  if (process.env.CAPTURE_BLOCK_FIX) {
-    await page.setViewportSize({ width: 390, height: 844 })
-    await library.click()
-    await page.screenshot({ path: '/tmp/sloth-colunas-antes-390.png' })
-    await page.setViewportSize({ width: 1280, height: 844 })
-    await library.click()
-  }
-  const first = await page.locator('.cm-md-code', { hasText: 'primeiro()' }).boundingBox()
-  await dragBlock(
+for (const side of ['esquerda', 'direita']) {
+  test(`soltar na metade ${side} cria uma coluna a partir da alça de um bloco de código`, async ({
     page,
-    page.locator('.cm-md-code', { hasText: 'segundo()' }),
-    { x: first.x + first.width * 0.6, y: first.y + first.height / 2 },
-    async () => {
-      if (process.env.CAPTURE_BLOCK_FIX)
-        await page.screenshot({
-          path: `/tmp/sloth-colunas-${process.env.CAPTURE_BLOCK_FIX}-arrasto.png`,
-        })
-      await expect(page.locator('.cm-section-drop.is-side')).toBeVisible()
-    },
-  )
-  if (process.env.CAPTURE_BLOCK_FIX)
-    await page.screenshot({ path: `/tmp/sloth-colunas-${process.env.CAPTURE_BLOCK_FIX}-1280.png` })
-  const left = page.getByRole('textbox', { name: 'Coluna 1' })
-  const right = page.getByRole('textbox', { name: 'Coluna 2' })
-  await expect(left).toContainText('primeiro()')
-  await expect(right).toContainText('segundo()')
-  expect((await right.boundingBox()).x).toBeGreaterThan((await left.boundingBox()).x)
-  await page.setViewportSize({ width: 390, height: 844 })
-  expect((await right.boundingBox()).y).toBeGreaterThan((await left.boundingBox()).y)
-  if (process.env.CAPTURE_BLOCK_FIX) {
-    await library.click()
-    await page.screenshot({ path: '/tmp/sloth-colunas-depois-390.png' })
-    await page.locator('.cm-content').first().focus()
-  }
-  await page.setViewportSize({ width: 1280, height: 844 })
-  await page.keyboard.press('Control+z')
-  expect(await noteSource(page)).toBe(source)
-})
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 844 })
+    await page.goto('/')
+    const fence = '```'
+    const target = `${fence}\nprimeiro()\n${fence}`
+    const moved = `${fence}\nsegundo()\n${fence}`
+    const source = `# Nota\n\n${target}\n\n${moved}\n\nFim`
+    await fillNote(page, source)
+    const capture = side === 'direita' && process.env.CAPTURE_BLOCK_FIX
+    const library = page.getByRole('button', { name: 'Mostrar/ocultar biblioteca' })
+    if (capture) {
+      await page.setViewportSize({ width: 390, height: 844 })
+      await library.click()
+      await page.screenshot({ path: '/tmp/sloth-colunas-antes-390.png' })
+      await page.setViewportSize({ width: 1280, height: 844 })
+      await library.click()
+    }
+    const first = await page.locator('.cm-md-code', { hasText: 'primeiro()' }).boundingBox()
+    await dragBlock(
+      page,
+      page.locator('.cm-md-code', { hasText: 'segundo()' }),
+      {
+        x: first.x + first.width * (side === 'esquerda' ? 0.4 : 0.6),
+        y: first.y + first.height / 2,
+      },
+      async () => {
+        if (capture)
+          await page.screenshot({
+            path: `/tmp/sloth-colunas-${capture}-arrasto.png`,
+          })
+        await expect(page.locator('.cm-section-drop.is-side')).toBeVisible()
+      },
+    )
+    if (capture) await page.screenshot({ path: `/tmp/sloth-colunas-${capture}-1280.png` })
+    const left = page.getByRole('textbox', { name: 'Coluna 1' })
+    const right = page.getByRole('textbox', { name: 'Coluna 2' })
+    await expect(left).toContainText(side === 'esquerda' ? 'segundo()' : 'primeiro()')
+    await expect(right).toContainText(side === 'esquerda' ? 'primeiro()' : 'segundo()')
+    expect((await right.boundingBox()).x).toBeGreaterThan((await left.boundingBox()).x)
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect((await right.boundingBox()).y).toBeGreaterThan((await left.boundingBox()).y)
+    if (capture) {
+      await library.click()
+      await page.screenshot({ path: '/tmp/sloth-colunas-depois-390.png' })
+      await page.locator('.cm-content').first().focus()
+    }
+    await page.setViewportSize({ width: 1280, height: 844 })
+    await page.keyboard.press('Control+z')
+    expect(await noteSource(page)).toBe(source)
+  })
+}
 
 test('the arrow keys go in and out of columns, and Backspace removes an empty one', async ({
   page,
