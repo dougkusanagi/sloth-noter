@@ -809,7 +809,7 @@ html:has(
   z-index: 7;
   width: 290px;
   max-width: calc(100vw - 16px);
-  max-height: min(350px, 60vh);
+  max-height: min(420px, 60vh);
   overflow: auto;
 }
 .table-context-menu {
@@ -4507,4 +4507,74 @@ button.property-type-icon:hover {
     right: auto;
     width: min(280px, calc(100vw - 32px));
   }
+}
+
+/* ---------- Grouped block menus ("/", Transformar em, block handle) ---------- */
+.block-menu-caption,
+.editor-popup-caption {
+  padding: 8px 10px 4px;
+  color: var(--muted);
+  font: 600 11px var(--ui);
+  letter-spacing: 0.02em;
+}
+.block-menu-group + .block-menu-group {
+  margin-top: 2px;
+  padding-top: 2px;
+  border-top: 1px solid var(--line);
+}
+.editor-popup-section .editor-popup-caption {
+  padding: 4px 6px 2px;
+}
+.editor-popup-section .editor-popup-grid {
+  grid-template-columns: repeat(8, 30px);
+}
+.table-context-menu .editor-popup-section .editor-popup-icon {
+  width: 30px;
+}
+/* An entry with variants (heading level, alert type) beside it, on the same row. */
+.menu-variant-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.menu-variant-row > button:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.menu-variants {
+  display: flex;
+  flex: none;
+  gap: 1px;
+  padding-right: 4px;
+}
+.block-menu .menu-variant,
+.format-toolbar .format-dropdown .menu-variant {
+  display: grid;
+  place-items: center;
+  width: auto;
+  min-width: 28px;
+  min-height: 28px;
+  height: 28px;
+  padding: 0 5px;
+  color: var(--muted);
+  font: 600 11px var(--ui);
+  border-radius: 6px;
+}
+.block-menu .menu-variant:hover,
+.format-toolbar .format-dropdown .menu-variant:hover {
+  color: var(--ink);
+}
+.format-toolbar .format-dropdown .menu-variant[aria-checked='true'] {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.menu-variant-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--callout-color);
+}
+[data-platform='mobile'] .block-menu .menu-variant {
+  min-width: 36px;
+  min-height: 36px;
 }

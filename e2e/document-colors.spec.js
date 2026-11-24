@@ -137,7 +137,7 @@ test('block color survives conversion and undo while preserving Markdown', async
   await page.keyboard.press('Escape')
   await page.locator('.cm-line', { hasText: 'Texto do bloco' }).hover()
   await page.locator('.cm-block-handle').click()
-  await page.getByRole('menuitemradio', { name: 'Título 2', exact: true }).click()
+  await page.getByRole('menuitemradio', { name: 'Título', exact: true }).click()
   await expect(page.locator('.cm-md-h2.cm-colored-block')).toContainText('Texto do bloco')
   await page.keyboard.press('Control+z')
   await expect(page.locator('.cm-md-paragraph.cm-colored-block')).toContainText('Texto do bloco')

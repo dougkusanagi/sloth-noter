@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { scrollNewsTo } from './changelog-helpers.js'
 
 async function sample(page, text = '# Exemplo\n\nTexto para formatar\n\n') {
   await page.goto('/')
@@ -152,7 +153,10 @@ for (const width of [390, 1280]) {
     await expect(menu.getByRole('button', { name: /Lista/ }).first().locator('kbd')).toHaveCount(3)
     await expect(menu.locator('[title]')).toHaveCount(0)
     await menu.getByRole('button', { name: 'Título 4', exact: true }).hover()
-    for (const item of (await menu.getByRole('button').all()).slice(0, 3)) {
+    // The entries show their own shortcut; a variant beside an entry shows it only in its hint.
+    await menu.getByRole('button', { name: 'Título 3', exact: true }).hover()
+    await expect(page.getByRole('tooltip').locator('kbd')).not.toHaveCount(0)
+    for (const item of (await menu.locator('.block-menu-entry').all()).slice(1, 4)) {
       await item.hover()
       const hint = page.getByRole('tooltip')
       await expect(hint).toHaveCount(1)
@@ -195,19 +199,14 @@ for (const width of [390, 1280]) {
     if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/sloth-changelog-${width}.png` })
     await expect(page.locator('.cm-content')).toHaveAttribute('aria-readonly', 'true')
     // Only the newest entries are drawn before scrolling; older ones are reached below.
-    await expect(document).toContainText(
-      'Página de ajuda mais completa e tabelas mais leves durante a edição',
+    await scrollNewsTo(
+      page,
+      document.getByText('Página de ajuda mais completa e tabelas mais leves durante a edição'),
     )
-    await expect(document).toContainText('A capa da nota fica no topo, de ponta a ponta')
+    await scrollNewsTo(page, document.getByText('A capa da nota fica no topo, de ponta a ponta'))
     const latest = document.locator('[data-wiki^="Sloth Note 0.34.0"]')
     // The editor draws only the lines near the screen: scroll until the link exists.
-    await document.hover()
-    await expect
-      .poll(async () => (await latest.count()) || (await page.mouse.wheel(0, 300), 0), {
-        intervals: [100],
-        timeout: 10000,
-      })
-      .toBe(1)
+    await scrollNewsTo(page, latest)
     await latest.click()
     await expect(document).toContainText('Nota, Dica, Importante, Aviso ou Cuidado')
     const illustration = document.getByRole('img', { name: 'Alertas Dica e Aviso em uma nota' })

@@ -1,20 +1,45 @@
 import { blockColorMetadata } from '../document-colors.js'
 import { EditorSelection } from '@codemirror/state'
 import { codeCopyHandler } from './code-copy.js'
+import { calloutTemplate, calloutTypes } from '../callout.js'
 
+export const HEADING_LEVELS = ['h1', 'h2', 'h3', 'h4', 'h5']
+
+/**
+ * The block types the menus offer, in order. The headings share one entry ('heading'), with the
+ * level picked beside it; the alert has one entry too, and its type is chosen in the block menu.
+ */
+export const TURN_INTO_MENU = [
+  'p',
+  'heading',
+  'list',
+  'numbered',
+  'task',
+  'quote',
+  'callout',
+  'code',
+]
+
+/** Every kind a block can be turned into (and from). */
 export const TURN_INTO = [
   'p',
-  'h1',
-  'h2',
-  'h3',
-  'h4',
-  'h5',
-  'numbered',
+  ...HEADING_LEVELS,
   'list',
+  'numbered',
   'task',
-  'code',
   'quote',
+  'callout',
+  'code',
 ]
+
+/** The kind a menu entry stands for: the heading entry keeps the current level, else level 2. */
+export function menuKind(entry, current) {
+  if (entry !== 'heading') return entry
+  return HEADING_LEVELS.includes(current) ? current : 'h2'
+}
+
+export const isMenuEntryCurrent = (entry, current) =>
+  entry === 'heading' ? /^h[1-6]$/.test(current ?? '') : entry === current
 
 const PREFIX = {
   p: '',
@@ -44,7 +69,13 @@ function blockContent(doc, block) {
   for (let number = block.first; number <= block.last; number++) lines.push(doc.line(number).text)
   if (block.kind === 'code')
     return lines.slice(1, /^\s*(`{3,}|~{3,})/.test(lines.at(-1)) ? -1 : undefined)
-  return lines.map((line) => line.trimStart().replace(MARKER, ''))
+  const content = lines.map((line) => line.trimStart().replace(MARKER, ''))
+  // An alert's first line holds its type; a title written after it stays as text.
+  if (block.kind === 'callout') {
+    const title = content[0].replace(/^\[![A-Za-z]+\]\s*/, '')
+    return title ? [title, ...content.slice(1)] : content.slice(1)
+  }
+  return content
 }
 
 /** The edit that turns a block into another kind, or null when it already is one. */
@@ -58,6 +89,7 @@ export function turnIntoChange(doc, block, target) {
   let insert
   if (target === 'code') insert = ['```', ...content, '```'].join('\n')
   else if (target === 'quote') insert = content.map((line) => PREFIX.quote + line).join('\n')
+  else if (target === 'callout') insert = calloutTemplate('note', content.join('\n'))
   // Headings and list items take one line, so the lines of a paragraph join.
   else if (target === 'p') insert = content.join('\n')
   else insert = indent + PREFIX[target] + content.map((line) => line.trim()).join(' ')
@@ -85,6 +117,34 @@ export function turnBlocksInto(view, blocks, target) {
 
 export function turnBlockInto(view, block, target) {
   return turnBlocksInto(view, [block], target)
+}
+
+/** The line of an alert that holds its type, after the block's color line when there is one. */
+function calloutLine(doc, block) {
+  return doc.line(blockColorMetadata(doc.line(block.first).text) ? block.first + 2 : block.first)
+}
+
+/** The current type of an alert block (`note`, `tip`…), or null. */
+export function calloutTypeOf(doc, block) {
+  if (block.kind !== 'callout') return null
+  return /\[!([A-Za-z]+)\]/.exec(calloutLine(doc, block).text)?.[1].toLowerCase() ?? null
+}
+
+/** The edit that changes an alert's type, or null when it already has it. */
+export function calloutTypeChange(doc, block, type) {
+  if (block.kind !== 'callout' || !calloutTypes.includes(type)) return null
+  const line = calloutLine(doc, block)
+  const match = /\[!([A-Za-z]+)\]/.exec(line.text)
+  if (!match || match[1].toLowerCase() === type) return null
+  const from = line.from + match.index + 2
+  return { from, to: from + match[1].length, insert: type.toUpperCase() }
+}
+
+export function setCalloutType(view, block, type) {
+  const change = calloutTypeChange(view.state.doc, block, type)
+  if (change) view.dispatch({ changes: change, userEvent: 'bloco' })
+  view.focus()
+  return Boolean(change)
 }
 
 export function blockText(doc, block) {

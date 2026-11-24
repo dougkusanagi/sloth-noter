@@ -8,7 +8,19 @@ import { headingSections } from '../sections.js'
 import { foldRange, isFolded, refoldAfterMove } from './folding.js'
 import { blockIconMarkup, gripMarkup } from './block-icons.js'
 import { openPopupMenu } from './popup-menu.js'
-import { TURN_INTO, addBlockBelow, copyBlock, deleteBlock, turnBlockInto } from './block-actions.js'
+import {
+  HEADING_LEVELS,
+  TURN_INTO_MENU,
+  addBlockBelow,
+  calloutTypeOf,
+  copyBlock,
+  deleteBlock,
+  isMenuEntryCurrent,
+  menuKind,
+  setCalloutType,
+  turnBlockInto,
+} from './block-actions.js'
+import { calloutTypes } from '../callout.js'
 import { listIndentChanges } from '../list-indent.js'
 import { isBareKeys, parseKeys, shortcutKeys } from '../shortcut-registry.js'
 
@@ -79,8 +91,13 @@ const TEXT_KINDS = new Set([
   'numbered',
   'task',
   'quote',
+  'callout',
   'code',
 ])
+
+// A colored dot for each alert type, drawn with the alert's own color.
+const calloutDot = (type) =>
+  `<svg viewBox="0 0 20 20" aria-hidden="true" data-callout="${type}"><circle cx="10" cy="10" r="5" fill="var(--callout-color)" /></svg>`
 
 /** A heading's folded section moves with it; an open heading moves alone. */
 function dragRange(state, block) {
@@ -101,6 +118,57 @@ function blockMenu(view, block, anchor, onClose) {
     className: 'block-handle-menu',
     onClose,
     build: (menu, { item, iconButton, grid, separator, close, submenu }) => {
+      // The options every text block has: the block type first, then what is particular to this
+      // block (heading level, alert type), then colors, indentation and the clipboard.
+      if (TEXT_KINDS.has(block.kind)) {
+        menu.append(
+          grid(
+            t('block.turnInto'),
+            TURN_INTO_MENU.map((entry) =>
+              iconButton(
+                blockIconMarkup[menuKind(entry, block.kind)],
+                t(`block.${entry}`),
+                () => turnBlockInto(view, block, menuKind(entry, block.kind)),
+                { current: isMenuEntryCurrent(entry, block.kind) },
+              ),
+            ),
+            { caption: true },
+          ),
+        )
+        if (/^h[1-6]$/.test(block.kind))
+          menu.append(
+            grid(
+              t('block.headingLevel'),
+              HEADING_LEVELS.map((level) =>
+                iconButton(
+                  blockIconMarkup[level],
+                  t(`block.${level}`),
+                  () => turnBlockInto(view, block, level),
+                  { current: level === block.kind },
+                ),
+              ),
+              { caption: true },
+            ),
+          )
+        if (block.kind === 'callout') {
+          const current = calloutTypeOf(view.state.doc, block)
+          menu.append(
+            grid(
+              t('callout.type'),
+              calloutTypes.map((type) =>
+                iconButton(
+                  calloutDot(type),
+                  t(`callout.${type}`),
+                  () => setCalloutType(view, block, type),
+                  { current: type === current },
+                ),
+              ),
+              { caption: true },
+            ),
+          )
+        }
+        menu.append(separator())
+      }
       menu.append(
         submenu(blockIconMarkup.palette, t('colors.title'), (panel) =>
           panel.append(
@@ -117,24 +185,8 @@ function blockMenu(view, block, anchor, onClose) {
             }),
           ),
         ),
+        separator(),
       )
-      if (TEXT_KINDS.has(block.kind))
-        menu.append(
-          grid(
-            t('block.turnInto'),
-            TURN_INTO.map((kind) =>
-              iconButton(
-                blockIconMarkup[kind],
-                t(`block.${kind}`),
-                () => turnBlockInto(view, block, kind),
-                {
-                  current: kind === block.kind,
-                },
-              ),
-            ),
-          ),
-          separator(),
-        )
       if (isList) {
         const indent = (outdent) => () => {
           const doc = view.state.doc

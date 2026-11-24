@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { scrollNewsTo } from './changelog-helpers.js'
 import { accordionTemplate } from '../src/accordion.js'
 
 for (const width of [390, 1280]) {
@@ -30,7 +31,9 @@ for (const width of [390, 1280]) {
     await page.getByRole('button', { name: 'Menu principal', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Novidades', exact: true }).click()
     const news = page.locator('.visual-editor.read-only')
-    await news.locator('[data-wiki^="Sloth Note 0.33.0"]').click()
+    const release = news.locator('[data-wiki^="Sloth Note 0.33.0"]')
+    await scrollNewsTo(page, release)
+    await release.click()
     await expect(news).toContainText('Escolha Bloco recolhível')
     const image = news.getByRole('img', {
       name: 'Bloco Resumo semanal aberto, com um parágrafo e uma tarefa',

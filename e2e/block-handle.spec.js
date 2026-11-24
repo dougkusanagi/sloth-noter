@@ -26,7 +26,7 @@ test.beforeEach(async ({ page }) => {
 test('the block menu turns a paragraph into a heading', async ({ page }) => {
   await fill(page, '# Nota\n\nUm parágrafo\n\nOutro')
   const menu = await openMenu(page, 'Um parágrafo')
-  await menu.getByRole('menuitemradio', { name: 'Título 2' }).click()
+  await menu.getByRole('menuitemradio', { name: 'Título', exact: true }).click()
   await source(page, '# Nota\n\n## Um parágrafo\n\nOutro')
 })
 
@@ -163,4 +163,21 @@ test('Enter starts a new paragraph and Shift+Enter breaks the line', async ({ pa
   await page.keyboard.type('mesma')
   await page.screenshot({ path: test.info().outputPath('paragraphs.png') })
   await source(page, '# Nota\n\nPrimeiro\n\nSegundo\nmesma')
+})
+
+// Regression: an alert's handle offered only colors and the clipboard, not the block types.
+test('the menu of an alert turns it into another block and changes its type', async ({ page }) => {
+  await fill(page, '# Nota\n\n> [!WARNING]\n> Cuidado aqui\n\nOutro')
+  let menu = await openMenu(page, 'Cuidado aqui')
+  await expect(menu.getByRole('group', { name: 'Transformar em' })).toBeVisible()
+  await expect(menu.getByRole('menuitemradio', { name: 'Alerta', exact: true })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  )
+  await menu.getByRole('menuitemradio', { name: 'Dica', exact: true }).click()
+  await source(page, '# Nota\n\n> [!TIP]\n> Cuidado aqui\n\nOutro')
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  menu = await openMenu(page, 'Cuidado aqui')
+  await menu.getByRole('menuitemradio', { name: 'Parágrafo', exact: true }).click()
+  await source(page, '# Nota\n\nCuidado aqui\n\nOutro')
 })

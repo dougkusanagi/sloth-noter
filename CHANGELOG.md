@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.37.0] — 2026-11-23
+
+Menus de blocos agrupados, com títulos e alertas em uma linha, e o menu da alça do alerta completo. Veja os [detalhes da versão](changelog/0.37.0.md).
+
 ## [0.36.2] — 2026-11-23
 
 Enter no fim de um bloco de código abre um parágrafo com o espaço padrão. Veja os [detalhes da versão](changelog/0.36.2.md).

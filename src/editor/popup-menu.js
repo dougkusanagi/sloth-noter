@@ -64,13 +64,22 @@ export function openPopupMenu({ view, anchor, label, className = '', build, onCl
     button.addEventListener('click', run(action))
     return button
   }
-  const grid = (text, buttons) => {
+  // With `caption`, the group's name shows above its buttons.
+  const grid = (text, buttons, { caption = false } = {}) => {
     const group = document.createElement('div')
     group.className = 'editor-popup-grid'
     group.setAttribute('role', 'group')
     group.setAttribute('aria-label', text)
     group.append(...buttons)
-    return group
+    if (!caption) return group
+    const section = document.createElement('div')
+    section.className = 'editor-popup-section'
+    const title = document.createElement('div')
+    title.className = 'editor-popup-caption'
+    title.setAttribute('aria-hidden', 'true')
+    title.textContent = text
+    section.append(title, group)
+    return section
   }
   const separator = () => {
     const line = document.createElement('div')

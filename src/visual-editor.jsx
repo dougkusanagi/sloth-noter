@@ -1,4 +1,4 @@
-import { calloutActions, calloutTypes } from './callout.js'
+import { calloutActions } from './callout.js'
 import { autoPairs } from './editor/auto-pairs.js'
 import { selectedColors, blockColorMetadata } from './document-colors.js'
 import { ColorPalette } from './components/color-palette.jsx'
@@ -79,9 +79,9 @@ import {
   CodeXml,
   ImagePlus,
   Heading2,
-  Heading3,
-  Heading4,
   List,
+  ListCollapse,
+  ListTodo,
   ListOrdered,
   Link,
   Quote,
@@ -102,7 +102,14 @@ import {
 } from 'lucide-react'
 import { documentBlocks } from './block-move.js'
 import { blockIconMarkup } from './editor/block-icons.js'
-import { TURN_INTO, turnBlocksInto } from './editor/block-actions.js'
+import {
+  HEADING_LEVELS,
+  TURN_INTO,
+  TURN_INTO_MENU,
+  isMenuEntryCurrent,
+  menuKind,
+  turnBlocksInto,
+} from './editor/block-actions.js'
 import { blockGaps } from './editor/block-gaps.js'
 
 /* eslint-disable react/jsx-key -- static tuples, rendered with explicit keys below */
@@ -125,46 +132,77 @@ const keysForLabel = (label) =>
     ? blockKeys('h2')
     : shortcutKeys(SHORTCUT_ACTIONS.find((action) => action.label === label)?.id)
 
-const blockButtons = [
-  ['h2', 'block.h2'],
-  ['h3', 'block.h3'],
-  ['h4', 'block.h4'],
-  ['quote', 'block.quote'],
-  ...calloutActions,
-  ['list', 'block.list'],
-  ['numbered', 'block.numbered'],
-  ['table', 'block.table'],
-  ['code', 'block.code'],
-  ['columns', 'block.columns'],
-  ['accordion', 'block.accordion'],
-  ['image', 'block.image'],
-  ['template', 'block.template'],
-  ['variable', 'block.variable'],
-  ['link', 'format.link'],
+/**
+ * The "/" menu, by group. Blocks that differ only by a detail (heading level, alert type) take
+ * one entry; the variants are small buttons beside it, and a search for one ("aviso", "título 3")
+ * makes it the entry's action.
+ */
+const blockGroups = [
+  [
+    'editor.blocksText',
+    [
+      {
+        action: 'h2',
+        label: 'block.heading',
+        icon: Heading2,
+        variants: ['h2', 'h3', 'h4'].map((level) => ({
+          action: level,
+          label: `block.${level}`,
+          text: level.toUpperCase(),
+        })),
+      },
+      { action: 'list', label: 'block.list', icon: List },
+      { action: 'numbered', label: 'block.numbered', icon: ListOrdered },
+      { action: 'task', label: 'block.task', icon: ListTodo },
+      { action: 'quote', label: 'block.quote', icon: Quote },
+      {
+        action: 'callout-note',
+        label: 'block.callout',
+        icon: MessageSquare,
+        variants: calloutActions.map(([action, label]) => ({
+          action,
+          label,
+          callout: action.slice('callout-'.length),
+        })),
+      },
+      { action: 'code', label: 'block.code', icon: CodeXml },
+    ],
+  ],
+  [
+    'editor.blocksLayout',
+    [
+      { action: 'table', label: 'block.table', icon: TableIcon },
+      { action: 'columns', label: 'block.columns', icon: Columns2 },
+      { action: 'accordion', label: 'block.accordion', icon: ListCollapse },
+    ],
+  ],
+  [
+    'editor.blocksInsert',
+    [
+      { action: 'image', label: 'block.image', icon: ImagePlus },
+      { action: 'link', label: 'format.link', icon: Link },
+      { action: 'template', label: 'block.template', icon: FileText },
+      { action: 'variable', label: 'block.variable', icon: Braces },
+    ],
+  ],
 ]
 
-const blockIcons = {
-  h2: Heading2,
-  h3: Heading3,
-  h4: Heading4,
-  quote: Quote,
-  ...Object.fromEntries(calloutTypes.map((type) => [`callout-${type}`, MessageSquare])),
-  list: List,
-  numbered: ListOrdered,
-  table: TableIcon,
-  code: CodeXml,
-  columns: Columns2,
-  accordion: List,
-  image: ImagePlus,
-  template: FileText,
-  variable: Braces,
-  link: Link,
-}
+const searchText = (text) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
-function BlockIcon({ action }) {
-  const Icon = blockIcons[action]
-  if (!Icon) return null
-  return <Icon className="block-icon" aria-hidden="true" />
+/** The groups and entries that match the search; an entry found by a variant runs that variant. */
+function filterBlockGroups(query) {
+  const wanted = searchText(query.trim())
+  return blockGroups
+    .map(([group, entries]) => [
+      group,
+      entries.flatMap((entry) => {
+        const matches = (action, label) => searchText(`${action} ${t(label)}`).includes(wanted)
+        if (!wanted || matches(entry.action, entry.label)) return [entry]
+        const variant = entry.variants?.find((item) => matches(item.action, item.label))
+        return variant ? [{ ...entry, action: variant.action, label: variant.label }] : []
+      }),
+    ])
+    .filter(([, entries]) => entries.length)
 }
 
 function insideCodeBlock(state, line) {
@@ -1404,17 +1442,7 @@ export function VisualEditor({
     })
   }, [notes, noteId, hideProperties])
 
-  const normalizedQuery = blockQuery
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-  const filteredBlocks = blockButtons.filter(([action, label]) =>
-    `${action} ${t(label)}`
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .includes(normalizedQuery),
-  )
+  const filteredGroups = filterBlockGroups(blockQuery)
   return (
     <div
       className={`visual-editor${sourceMode ? ' source-mode' : ''}${readOnly ? ' read-only' : ''}${blockMenu ? ' block-menu-open' : ''}`}
@@ -1639,22 +1667,55 @@ export function VisualEditor({
                   }}
                 >
                   {toolbarMenu === 'type'
-                    ? TURN_INTO.map((kind) => (
-                        <button
-                          key={kind}
-                          type="button"
-                          role="menuitemradio"
-                          aria-checked={kind === toolbar.kind}
-                          onClick={() => turnSelectionInto(kind)}
-                        >
-                          <span
-                            className="format-menu-icon"
-                            dangerouslySetInnerHTML={{ __html: blockIconMarkup[kind] }}
-                          />
-                          <span className="menu-item-label">{t(`block.${kind}`)}</span>
-                          {kind === toolbar.kind && <Check size={14} aria-hidden="true" />}
-                        </button>
-                      ))
+                    ? TURN_INTO_MENU.map((entry) => {
+                        const kind = menuKind(entry, toolbar.kind)
+                        const current = isMenuEntryCurrent(entry, toolbar.kind)
+                        const button = (
+                          <button
+                            key={entry}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={current}
+                            onClick={() => turnSelectionInto(kind)}
+                          >
+                            <span
+                              className="format-menu-icon"
+                              dangerouslySetInnerHTML={{ __html: blockIconMarkup[kind] }}
+                            />
+                            <span className="menu-item-label">{t(`block.${entry}`)}</span>
+                            {current && entry !== 'heading' && (
+                              <Check size={14} aria-hidden="true" />
+                            )}
+                          </button>
+                        )
+                        if (entry !== 'heading') return button
+                        // One row for the headings, with the level beside it.
+                        return (
+                          <div key={entry} className="menu-variant-row">
+                            {button}
+                            <span
+                              className="menu-variants"
+                              role="group"
+                              aria-label={t('block.headingLevel')}
+                            >
+                              {HEADING_LEVELS.map((level) => (
+                                <button
+                                  key={level}
+                                  type="button"
+                                  role="menuitemradio"
+                                  className="menu-variant"
+                                  aria-checked={level === toolbar.kind}
+                                  aria-label={t(`block.${level}`)}
+                                  title={t(`block.${level}`)}
+                                  onClick={() => turnSelectionInto(level)}
+                                >
+                                  {level.toUpperCase()}
+                                </button>
+                              ))}
+                            </span>
+                          </div>
+                        )
+                      })
                     : clipboardButtons.map(([action, label, icon, keys]) => (
                         <button
                           key={action}
@@ -1728,7 +1789,7 @@ export function VisualEditor({
                   52,
                   Math.min(
                     insertAt.y + 30,
-                    window.innerHeight - Math.min(350, window.innerHeight * 0.6) - 8,
+                    window.innerHeight - Math.min(420, window.innerHeight * 0.6) - 8,
                   ),
                 ),
               }}
@@ -1743,8 +1804,19 @@ export function VisualEditor({
                   insertBlock(block)
                   return
                 }
-                const buttons = [...event.currentTarget.querySelectorAll('button')]
-                const index = buttons.indexOf(document.activeElement)
+                // Up and down go through the entries; left and right through an entry's variants.
+                const buttons = [...event.currentTarget.querySelectorAll('.block-menu-entry')]
+                const active = document.activeElement
+                const row = active?.closest?.('.menu-variant-row')
+                const index = buttons.indexOf(row ? row.querySelector('.block-menu-entry') : active)
+                if ((event.key === 'ArrowRight' || event.key === 'ArrowLeft') && row) {
+                  event.preventDefault()
+                  const items = [...row.querySelectorAll('button')]
+                  const step = event.key === 'ArrowRight' ? 1 : -1
+                  items[
+                    Math.max(0, Math.min(items.length - 1, items.indexOf(active) + step))
+                  ]?.focus()
+                }
                 if (
                   event.target !== blockSearch.current &&
                   event.key.length === 1 &&
@@ -1790,20 +1862,52 @@ export function VisualEditor({
                 placeholder={t('editor.blockSearch')}
                 aria-label={t('editor.blockSearch')}
               />
-              {filteredBlocks.map(([action, label]) => (
-                <ShortcutButton
-                  key={action}
-                  label={t(label)}
-                  keys={blockKeys(action)}
-                  type="button"
-                  onClick={() => insertBlock(action)}
-                >
-                  <BlockIcon action={action} />
-                  <span className="menu-item-label">{t(label)}</span>
-                  {blockKeys(action) && <Shortcut keys={blockKeys(action)} />}
-                </ShortcutButton>
+              {filteredGroups.map(([group, entries]) => (
+                <div key={group} className="block-menu-group" role="group" aria-label={t(group)}>
+                  <div className="block-menu-caption" aria-hidden="true">
+                    {t(group)}
+                  </div>
+                  {entries.map(({ action, label, icon: Icon, variants }) => {
+                    const entry = (
+                      <ShortcutButton
+                        key={action}
+                        className="block-menu-entry"
+                        label={t(label)}
+                        keys={variants ? undefined : blockKeys(action)}
+                        type="button"
+                        onClick={() => insertBlock(action)}
+                      >
+                        <Icon className="block-icon" aria-hidden="true" />
+                        <span className="menu-item-label">{t(label)}</span>
+                        {/* With variants beside it, each variant shows its own shortcut. */}
+                        {!variants && blockKeys(action) && <Shortcut keys={blockKeys(action)} />}
+                      </ShortcutButton>
+                    )
+                    if (!variants) return entry
+                    return (
+                      <div key={label} className="menu-variant-row">
+                        {entry}
+                        <span className="menu-variants">
+                          {variants.map((variant) => (
+                            <ShortcutButton
+                              key={variant.action}
+                              type="button"
+                              className="menu-variant"
+                              data-callout={variant.callout}
+                              label={t(variant.label)}
+                              keys={blockKeys(variant.action)}
+                              onClick={() => insertBlock(variant.action)}
+                            >
+                              {variant.text ?? <span className="menu-variant-dot" />}
+                            </ShortcutButton>
+                          ))}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
               ))}
-              {!filteredBlocks.length && (
+              {!filteredGroups.length && (
                 <p className="block-no-results" role="status">
                   {t('editor.noBlocks')}
                 </p>
