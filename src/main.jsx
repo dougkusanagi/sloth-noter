@@ -221,6 +221,10 @@ function Workspace({ persistence, loaded }) {
     commit,
     invoke: persistence.invoke,
     blocked,
+    onImagesChanged: () => {
+      clearImageCache()
+      setImageVersion((value) => value + 1)
+    },
   })
   const { scheduleAfterEdit } = sync
   useEffect(() => {

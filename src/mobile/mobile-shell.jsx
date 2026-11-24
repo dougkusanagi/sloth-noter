@@ -212,6 +212,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     commit,
     invoke: persistence.invoke,
     blocked,
+    onImagesChanged: clearImageCache,
   })
   setTemplateProfile(sync.status.account?.name || sync.status.account?.email)
   const { scheduleAfterEdit } = sync

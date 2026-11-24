@@ -88,11 +88,12 @@ export async function runSync({
   const upsert = new Map()
   const remove = new Set()
   const conflicts = new Set()
-  const result = (error) => ({
+  const result = (error, retryAfter) => ({
     apply: { upsert: [...upsert].map(([id, payload]) => ({ id, payload })), remove: [...remove] },
     state: { cursor, bases, blobs },
     conflicts: [...conflicts],
     ...(error ? { error } : {}),
+    ...(retryAfter ? { retryAfter } : {}),
   })
   const set = (id, payload) => {
     working.set(id, payload)
@@ -218,7 +219,7 @@ export async function runSync({
     return result('busy')
   } catch (error) {
     // A wrong key or a changed envelope is not a SyncError: report it as a failure.
-    if (error instanceof SyncError) return result(error.code)
+    if (error instanceof SyncError) return result(error.code, error.retryAfter)
     return result(error?.name === 'OperationError' ? 'wrong_key' : 'failed')
   }
 }

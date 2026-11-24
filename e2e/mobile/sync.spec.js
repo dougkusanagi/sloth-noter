@@ -72,3 +72,81 @@ test('android settings set up sync and sync again after an edit', async ({ page,
   await page.clock.runFor(16_000)
   await expect.poll(() => puts).toBeGreaterThan(afterSetup)
 })
+
+test('android keeps local edits on offline failure, recovers and signs out cleanly', async ({
+  page,
+  context,
+}) => {
+  const directory = memoryDirectory()
+  await directory.addInvite(INVITE)
+  const store = memoryStore()
+  const api = createServer({ directory, storeFor: () => store })
+  let offline = false
+  await context.route(`${SERVER}/**`, async (route) => {
+    if (offline) return route.abort('internetdisconnected')
+    const request = route.request()
+    const response = await api(
+      new Request(request.url(), {
+        method: request.method(),
+        headers: request.headers(),
+        body: ['GET', 'OPTIONS'].includes(request.method()) ? undefined : request.postDataBuffer(),
+      }),
+    )
+    await route.fulfill({
+      status: response.status,
+      headers: Object.fromEntries(response.headers),
+      body: Buffer.from(await response.arrayBuffer()),
+    })
+  })
+  await page.addInitScript(() => {
+    const values = new Map()
+    window.SlothSecrets = {
+      get: (name) => values.get(name) ?? '',
+      set: (name, value) => (values.set(name, value), 'ok'),
+      delete: (name) => (values.delete(name), 'ok'),
+    }
+  })
+
+  await page.goto('/?platform=mobile')
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Configurações' }).tap()
+  await page.getByText('Avançado: outro servidor').tap()
+  await page.getByLabel('Endereço do servidor').fill(SERVER)
+  await page.getByLabel('Nome').fill('Ana')
+  await page.getByLabel('E-mail').fill('ana@example.com')
+  await page.getByLabel('Senha', { exact: true }).fill('senha forte 123')
+  await page.getByLabel('Confirme a senha').fill('senha forte 123')
+  await page.getByLabel('Código de convite').fill(INVITE)
+  await page.getByRole('button', { name: 'Criar conta' }).tap()
+  await page.getByRole('button', { name: 'Continuar' }).tap()
+  await page.getByRole('button', { name: 'Sincronizar', exact: true }).tap()
+  await expect(page.getByRole('status').filter({ hasText: 'Sincronizado às' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Voltar' }).tap()
+  const sheet = page.getByRole('dialog', { name: 'Mais opções' })
+  if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Fechar' }).tap()
+
+  // Edit while offline: note survives and sync reports offline cleanly.
+  offline = true
+  await page.getByRole('button', { name: 'Nova nota' }).first().tap()
+  await page.keyboard.type('Nota offline celular')
+  await page.getByRole('button', { name: 'Pronto' }).tap()
+  await page.getByRole('button', { name: 'Voltar' }).tap()
+  await page.getByRole('button', { name: 'Mais opções' }).tap()
+  await page.getByRole('button', { name: 'Configurações' }).tap()
+  await page.getByRole('button', { name: 'Sincronizar agora' }).tap()
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Sem conexão com o servidor' }),
+  ).toBeVisible()
+
+  // Connection returns and sync succeeds; signing out keeps local notes.
+  offline = false
+  await page.getByRole('button', { name: 'Sincronizar agora' }).tap()
+  await expect(page.getByRole('status').filter({ hasText: 'Sincronizado às' })).toBeVisible()
+  page.once('dialog', (confirm) => confirm.accept())
+  await page.getByRole('button', { name: 'Sair da conta' }).tap()
+  await expect(page.getByLabel('E-mail')).toBeVisible()
+  await page.getByRole('button', { name: 'Voltar' }).tap()
+  if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Fechar' }).tap()
+  await expect(page.getByRole('button', { name: /^Nota offline celular/ })).toBeVisible()
+})

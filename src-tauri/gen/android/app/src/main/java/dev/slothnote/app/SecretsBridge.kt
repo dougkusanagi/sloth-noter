@@ -19,7 +19,7 @@ import javax.crypto.spec.GCMParameterSpec
  */
 class SecretsBridge(context: Context) {
   private val prefs = context.getSharedPreferences("sloth-secrets", Context.MODE_PRIVATE)
-  private val names = Regex("sync(?:-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})?")
+  private fun allowed(name: String) = name == "sync"
 
   private fun key(): SecretKey {
     val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -37,7 +37,7 @@ class SecretsBridge(context: Context) {
 
   @JavascriptInterface
   fun get(name: String): String {
-    if (!names.matches(name)) return "error"
+    if (!allowed(name)) return "error"
     val stored = prefs.getString(name, null) ?: return ""
     return try {
       val bytes = Base64.decode(stored, Base64.NO_WRAP)
@@ -53,7 +53,7 @@ class SecretsBridge(context: Context) {
 
   @JavascriptInterface
   fun set(name: String, value: String): String {
-    if (!names.matches(name)) return "error"
+    if (!allowed(name)) return "error"
     return try {
       val cipher = Cipher.getInstance("AES/GCM/NoPadding")
       cipher.init(Cipher.ENCRYPT_MODE, key())
@@ -66,7 +66,7 @@ class SecretsBridge(context: Context) {
 
   @JavascriptInterface
   fun delete(name: String): String {
-    if (!names.matches(name)) return "error"
+    if (!allowed(name)) return "error"
     return if (prefs.edit().remove(name).commit()) "ok" else "error"
   }
 

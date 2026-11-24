@@ -320,3 +320,18 @@ test('at the server image limit, notes without new images still sync', async () 
   assert.equal((await later.sync({ images: files })).error, undefined)
   assert.deepEqual(Object.keys(later.state.bases).sort(), ['a', 'b'])
 })
+
+test('429 rate_limited preserves retryAfter and keeps local notes intact', async () => {
+  const remote = server()
+  const key = generateKeyBytes()
+  const limited = {
+    ...remote,
+    fetch: async () =>
+      new Response('{"error":"rate_limited"}', { status: 429, headers: { 'retry-after': '42' } }),
+  }
+  const desktop = device(limited, key, { a: note('mantida', 'A') })
+  const out = await desktop.sync()
+  assert.equal(out.error, 'rate_limited')
+  assert.equal(out.retryAfter, 42)
+  assert.deepEqual(desktop.notes.get('a'), note('mantida', 'A'))
+})

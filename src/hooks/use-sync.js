@@ -18,7 +18,7 @@ const statusOf = (saved) => ({
 })
 
 /** Reads and writes images under assets/ through the desktop or Android bridge. */
-function imageAdapter(invoke) {
+function imageAdapter(invoke, onWrite) {
   if (!invoke) return null
   return {
     async read(src) {
@@ -28,7 +28,10 @@ function imageAdapter(invoke) {
         return null
       }
     },
-    write: (src, bytes) => invoke('image_write', { name: src, bytes: Array.from(bytes) }),
+    async write(src, bytes) {
+      await invoke('image_write', { name: src, bytes: Array.from(bytes) })
+      onWrite?.()
+    },
   }
 }
 
@@ -36,64 +39,79 @@ function imageAdapter(invoke) {
  * Sync controller. status: unavailable | off | syncing | idle | error.
  * Secrets stay in the platform vault; the sync state is saved with the document.
  */
-export function useSync({ current, commit, invoke, blocked }) {
+export function useSync({ current, commit, invoke, blocked, onImagesChanged }) {
   const vault = useRef(platformVault(globalThis))
   const secrets = useRef(null)
   const running = useRef(false)
+  const retryUntil = useRef(0)
   const [status, setStatus] = useState({ state: 'checking' })
   // Latest values without re-creating `run` on every render.
   const live = useRef({})
-  live.current = { ...live.current, commit, invoke, blocked }
+  live.current = { ...live.current, commit, invoke, blocked, onImagesChanged }
 
-  const run = useCallback(async () => {
-    const saved = secrets.current
-    if (!saved || running.current || live.current.blocked) return
-    running.current = true
-    setStatus((previous) => ({ ...previous, state: 'syncing' }))
-    try {
-      const client = createClient({ server: saved.server, token: saved.token })
-      const remote = remoteOf(saved)
-      const document = current.current
-      const snapshot = localNotes(document)
-      const before = syncState(document, remote)
-      const result = await runSync({
-        client,
-        key: fromBase64(saved.key),
-        local: snapshot,
-        state: before,
-        images: imageAdapter(live.current.invoke),
-        labels: {
-          conflict: t('sync.conflictMark'),
-          end: t('sync.conflictEnd'),
-          ours: t('sync.thisDevice'),
-          theirs: t('sync.otherDevice'),
-        },
-      })
-      // Apply on the latest document: edits typed meanwhile are kept (applySync).
-      // A run that changed nothing does not save, so it never triggers another run.
-      const changed =
-        result.apply.upsert.length ||
-        result.apply.remove.length ||
-        current.current.sync?.server !== remote ||
-        JSON.stringify(result.state) !== JSON.stringify(before)
-      if (changed)
-        live.current.commit(
-          applySync(current.current, { server: remote, snapshot, before, result }),
-          'sistema',
-        )
-      setStatus({
-        state: result.error ? 'error' : 'idle',
-        error: result.error,
-        at: Date.now(),
-        conflicts: result.conflicts.length,
-        ...statusOf(saved),
-      })
-    } catch (error) {
-      setStatus({ state: 'error', error: error?.code ?? 'failed', ...statusOf(saved) })
-    } finally {
-      running.current = false
-    }
-  }, [current])
+  const run = useCallback(
+    async (options) => {
+      const auto = options?.auto === true
+      const saved = secrets.current
+      if (!saved || running.current || live.current.blocked) return
+      if (auto && Date.now() < retryUntil.current) return
+      running.current = true
+      setStatus((previous) => ({ ...previous, state: 'syncing' }))
+      let wroteImage = false
+      try {
+        const client = createClient({ server: saved.server, token: saved.token })
+        const remote = remoteOf(saved)
+        const document = current.current
+        const snapshot = localNotes(document)
+        const before = syncState(document, remote)
+        const result = await runSync({
+          client,
+          key: fromBase64(saved.key),
+          local: snapshot,
+          state: before,
+          images: imageAdapter(live.current.invoke, () => {
+            wroteImage = true
+          }),
+          labels: {
+            conflict: t('sync.conflictMark'),
+            end: t('sync.conflictEnd'),
+            ours: t('sync.thisDevice'),
+            theirs: t('sync.otherDevice'),
+          },
+        })
+        if (wroteImage) live.current.onImagesChanged?.()
+        // Apply on the latest document: edits typed meanwhile are kept (applySync).
+        // A run that changed nothing does not save, so it never triggers another run.
+        const changed =
+          result.apply.upsert.length ||
+          result.apply.remove.length ||
+          current.current.sync?.server !== remote ||
+          JSON.stringify(result.state) !== JSON.stringify(before)
+        if (changed)
+          live.current.commit(
+            applySync(current.current, { server: remote, snapshot, before, result }),
+            'sistema',
+          )
+        if (result.error === 'rate_limited' && result.retryAfter)
+          retryUntil.current = Date.now() + result.retryAfter * 1000
+        else if (!result.error) retryUntil.current = 0
+        setStatus({
+          state: result.error ? 'error' : 'idle',
+          error: result.error,
+          at: Date.now(),
+          conflicts: result.conflicts.length,
+          ...statusOf(saved),
+        })
+      } catch (error) {
+        if (error?.code === 'rate_limited' && error.retryAfter)
+          retryUntil.current = Date.now() + error.retryAfter * 1000
+        setStatus({ state: 'error', error: error?.code ?? 'failed', ...statusOf(saved) })
+      } finally {
+        running.current = false
+      }
+    },
+    [current],
+  )
 
   useEffect(() => {
     let alive = true
@@ -105,7 +123,7 @@ export function useSync({ current, commit, invoke, blocked }) {
       if (!alive) return
       if (!secrets.current) return setStatus({ state: 'off' })
       setStatus({ state: 'idle', ...statusOf(secrets.current) })
-      void run()
+      void run({ auto: true })
     })()
     return () => {
       alive = false
@@ -114,14 +132,14 @@ export function useSync({ current, commit, invoke, blocked }) {
 
   useEffect(() => {
     if (status.state !== 'idle' && status.state !== 'error') return
-    const timer = setInterval(() => void run(), INTERVAL)
+    const timer = setInterval(() => void run({ auto: true }), INTERVAL)
     return () => clearInterval(timer)
   }, [run, status.state])
 
   // Back in the foreground, and shortly after the notes change.
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void run()
+      if (document.visibilityState === 'visible') void run({ auto: true })
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
@@ -133,7 +151,7 @@ export function useSync({ current, commit, invoke, blocked }) {
     /** Call when notes change; syncs once things are quiet for a while. */
     scheduleAfterEdit: useCallback(() => {
       clearTimeout(live.current.timer)
-      live.current.timer = setTimeout(() => void run(), AFTER_EDIT)
+      live.current.timer = setTimeout(() => void run({ auto: true }), AFTER_EDIT)
     }, [run]),
     invoke,
     /** Account calls (ADR 0024). Each returns a session; nothing is saved yet. */
@@ -153,11 +171,14 @@ export function useSync({ current, commit, invoke, blocked }) {
       const value = { server, token, key: toBase64(key), email, name }
       await writeSyncSecrets(vault.current, value)
       secrets.current = value
+      retryUntil.current = 0
       if (previous?.email) void signOut({ server: previous.server, token: previous.token })
       await run()
     },
     async disconnect() {
       const saved = secrets.current
+      clearTimeout(live.current.timer)
+      retryUntil.current = 0
       await vault.current.delete()
       secrets.current = null
       setStatus({ state: 'off' })
