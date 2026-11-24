@@ -49,3 +49,10 @@ test('notePreview skips a cover whose data URL is longer than the preview slice'
     'Plantar.',
   )
 })
+
+test('the library preview skips the column markers', () => {
+  assert.equal(
+    notePreview('# Título\n\n<!-- sloth:columns -->\n\n<!-- sloth:column -->\n\nEsquerda'),
+    'Esquerda',
+  )
+})

@@ -39,6 +39,7 @@ import { documentChanges } from '../search-scope.js'
 import { hideFrontmatter } from './hide-frontmatter.js'
 import { blockGaps } from './block-gaps.js'
 import { readProperties, titleLineNumber } from '../frontmatter.js'
+import { embeddedDocument } from './embedded.js'
 import { lineVariables, resolveVariable } from '../variables.js'
 
 const TASK_PREFIX = /^(\s*(?:[-*+]|\d+[.)])\s+)\[([ xX]|[^\w\s[\]])\](?:\s+|$)/
@@ -111,6 +112,7 @@ class VariableWidget extends WidgetType {
 
 /** Keep the optional description on the second line, even after it is skipped. */
 export function emptyBodyLine(state) {
+  if (state.facet(embeddedDocument)) return 0
   const body = titleLineNumber(state.doc) + 1
   return state.doc.lines >= body && !state.doc.line(body).text ? body : 0
 }
@@ -590,8 +592,10 @@ export function decorationsFor(view) {
     ranges = []
   const editing = new Set(),
     selectedLines = []
-  // Read-only preview never reveals Markdown syntax, so the layout matches an idle editor.
-  for (const selection of view.state.readOnly ? [] : view.state.selection.ranges) {
+  // Read-only preview never reveals Markdown syntax, so the layout matches an idle editor. Each
+  // column keeps a cursor of its own: only the column being edited shows the syntax.
+  const idle = view.state.readOnly || (view.state.facet(embeddedDocument) && !view.hasFocus)
+  for (const selection of idle ? [] : view.state.selection.ranges) {
     const first = doc.lineAt(selection.from).number,
       last = doc.lineAt(selection.to).number
     selectedLines.push({ first, last })
@@ -599,7 +603,8 @@ export function decorationsFor(view) {
   }
   const placeholderLine = emptyBodyLine(view.state)
   const gapLines = view.state.field(blockGaps, false)?.lines ?? new Set()
-  const titleLine = titleLineNumber(doc)
+  // A column has no title line.
+  const titleLine = view.state.facet(embeddedDocument) ? 0 : titleLineNumber(doc)
   const {
     text,
     foldable,
@@ -959,6 +964,7 @@ export const liveMarkdown = ViewPlugin.fromClass(
       if (
         update.startState.facet(taskNotes) !== update.state.facet(taskNotes) ||
         update.docChanged ||
+        (update.focusChanged && update.state.facet(embeddedDocument)) ||
         update.startState.readOnly !== update.state.readOnly ||
         (update.selectionSet &&
           selectionLineSignature(update.startState) !== selectionLineSignature(update.state)) ||

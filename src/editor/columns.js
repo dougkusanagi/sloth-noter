@@ -1,4 +1,4 @@
-import { EditorState, Facet, StateField } from '@codemirror/state'
+import { EditorState, Facet, Prec, StateField } from '@codemirror/state'
 import {
   Decoration,
   EditorView,
@@ -16,17 +16,128 @@ import { clipboardImageFiles } from '../clipboard.js'
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { Markdown } from '../markdown.jsx'
-import { taskNotes } from './live-decorations.js'
+import { liveMarkdown, taskNotes } from './live-decorations.js'
 import { openExternalLink } from '../external-links.js'
 import { toast } from 'sonner'
 import { searchHighlights, setSearchHighlights } from './search.js'
 import { documentChanges } from '../search-scope.js'
+import { columnHosts, embeddedDocument } from './embedded.js'
+import { blockGaps } from './block-gaps.js'
+import { blockHandle } from './block-handle.js'
+import { documentColors } from './document-colors.js'
+import { codeCopyHandler } from './code-copy.js'
+import { continueList, indentList } from './keys.js'
+import { addColumn, removeColumn, unwrapColumns } from '../column-drop.js'
+import { blockIconMarkup } from './block-icons.js'
 
 export const columnImageHandler = Facet.define()
 export const columnReadServices = Facet.define()
 
 let dragged = null
 const searchByView = new WeakMap()
+
+/** The editor of column `index` in the columns block that starts at `from`. */
+function columnView(parent, from, index) {
+  return parent.dom.querySelector(`[data-columns-from="${from}"]`)?.columnContext?.views[index]
+}
+
+/**
+ * Replaces the note's text with `next` in one undoable step. Then puts the cursor at `selection`
+ * in the note, or runs `focus` once the columns are drawn again.
+ */
+function editNote(parent, next, selection, focus) {
+  if (next == null) return false
+  parent.dispatch({
+    changes: documentChanges(parent.state.doc.toString(), next),
+    ...(selection ? { selection } : {}),
+    userEvent: 'bloco',
+    scrollIntoView: true,
+  })
+  if (focus) requestAnimationFrame(focus)
+  else parent.focus()
+  return true
+}
+
+/**
+ * The arrow key on the first (up) or last (down) line of a column goes to the note's text above
+ * or below the columns. Below the last columns of a note, it opens an empty paragraph there.
+ */
+function leaveColumn(context, direction) {
+  return (view) => {
+    const range = view.state.selection.main
+    if (view.state.selection.ranges.length !== 1) return false
+    const line = view.state.doc.lineAt(range.head)
+    if (line.number !== (direction < 0 ? 1 : view.state.doc.lines)) return false
+    // A long line wraps: the arrow moves through its rows first.
+    const side = direction < 0 ? 1 : -1
+    const here = view.coordsAtPos(range.head, side)
+    const edge = view.coordsAtPos(direction < 0 ? line.from : line.to, side)
+    const middle = (box) => (box.top + box.bottom) / 2
+    if (here && edge && Math.abs(middle(here) - middle(edge)) > view.defaultLineHeight / 2)
+      return false
+    const { parent, block } = context
+    const doc = parent.state.doc
+    let number = doc.lineAt(direction < 0 ? block.from : block.to).number + direction
+    while (number >= 1 && number <= doc.lines && !doc.line(number).text.trim()) number += direction
+    parent.focus()
+    if (number > doc.lines) {
+      const end = doc.length
+      const insert = doc.sliceString(end - 1) === '\n' ? '\n' : '\n\n'
+      parent.dispatch({
+        changes: { from: end, insert },
+        selection: { anchor: end + insert.length },
+        userEvent: 'input',
+        scrollIntoView: true,
+      })
+      return true
+    }
+    if (number < 1) return true
+    const target = doc.line(number)
+    parent.dispatch({
+      selection: { anchor: direction < 0 ? target.to : target.from },
+      scrollIntoView: true,
+    })
+    return true
+  }
+}
+
+/** In the note, an arrow key that would pass over columns goes into the first column. */
+function enterColumns(direction) {
+  return (view) => {
+    const range = view.state.selection.main
+    if (view.state.selection.ranges.length !== 1 || !range.empty) return false
+    const moved = view.moveVertically(range, direction > 0)
+    for (const root of view.dom.querySelectorAll('.cm-columns')) {
+      const context = root.columnContext
+      if (!context || context.parent !== view || context.readOnly) continue
+      const { from, to } = context.block
+      if (range.head >= from && range.head <= to) continue
+      const lands = moved.head >= from && moved.head <= to
+      const passes =
+        direction > 0 ? range.head < from && moved.head > to : range.head > to && moved.head < from
+      if (!lands && !passes) continue
+      const target = context.views[0]
+      if (!target) return false
+      target.focus()
+      target.dispatch({
+        // At the end of the column's first line (coming from above) or of its last line.
+        selection: {
+          anchor: direction > 0 ? target.state.doc.line(1).to : target.state.doc.length,
+        },
+        scrollIntoView: true,
+      })
+      return true
+    }
+    return false
+  }
+}
+
+export const columnArrowKeys = Prec.high(
+  keymap.of([
+    { key: 'ArrowDown', run: enterColumns(1) },
+    { key: 'ArrowUp', run: enterColumns(-1) },
+  ]),
+)
 
 export function columnViewAt(element) {
   const cell = element?.closest?.('.cm-column-editor')
@@ -404,6 +515,41 @@ class ColumnsWidget extends WidgetType {
               'aria-label': t('columns.label', { number: index + 1 }),
             }),
             placeholder(t('columns.placeholder')),
+            // The same writing as in the note: formatted Markdown, the standard gap between
+            // blocks, block handles, colors, and Enter and Tab on lists.
+            embeddedDocument.of(true),
+            taskNotes.of(parent.state.facet(taskNotes)),
+            codeCopyHandler.of((text) => parent.state.facet(codeCopyHandler)[0]?.(text)),
+            foldField,
+            documentColors,
+            blockGaps,
+            liveMarkdown,
+            blockHandle,
+            Prec.high(
+              keymap.of([
+                { key: 'Enter', run: continueList },
+                { key: 'Tab', run: (view) => indentList(view) },
+                { key: 'Shift-Tab', run: (view) => indentList(view, true) },
+                { key: 'ArrowUp', run: leaveColumn(context, -1) },
+                { key: 'ArrowDown', run: leaveColumn(context, 1) },
+                {
+                  // In an empty column, Backspace removes the column.
+                  key: 'Backspace',
+                  run: (view) => {
+                    if (view.state.doc.length || !view.state.selection.main.empty) return false
+                    const { block } = context
+                    const next = removeColumn(parent.state.doc.toString(), block.from, index)
+                    if (block.columns.length <= 2)
+                      return editNote(parent, next, { anchor: block.from })
+                    return editNote(parent, next, null, () => {
+                      const previous = columnView(parent, block.from, Math.max(0, index - 1))
+                      previous?.focus()
+                      previous?.dispatch({ selection: { anchor: previous.state.doc.length } })
+                    })
+                  },
+                },
+              ]),
+            ),
             drawSelection(),
             dropCursor(),
             searchHighlights,
@@ -508,51 +654,38 @@ class ColumnsWidget extends WidgetType {
           ],
         }),
       })
+      columnHosts.set(view, { context, index })
       context.views.push(view)
     })
     applyHighlights(context, searchByView.get(parent))
     if (!this.readOnly) {
+      // Two small buttons over the top right corner, shown while the pointer or the focus is in
+      // the columns: add a column, or turn the columns back into blocks one under another.
       const controls = document.createElement('div')
       controls.className = 'cm-columns-controls'
       root.append(controls)
-      const add = document.createElement('button')
-      add.type = 'button'
-      add.className = 'cm-add-column'
-      add.setAttribute('aria-label', t('columns.add'))
-      add.title = t('columns.add')
-      add.innerHTML =
-        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
-      add.addEventListener('click', () => {
-        const from = context.block.from
-        const index = context.block.columns.length
-        const insertAt = context.block.to - '<!-- /sloth:columns -->'.length
-        parent.dispatch({
-          changes: { from: insertAt, insert: '<!-- sloth:column -->\n\n\n\n' },
-          userEvent: 'input',
-        })
-        requestAnimationFrame(() =>
-          parent.dom
-            .querySelector(`[data-columns-from="${from}"]`)
-            ?.columnContext?.views[index]?.focus(),
+      const button = (className, icon, label, action) => {
+        const element = document.createElement('button')
+        element.type = 'button'
+        element.className = className
+        element.setAttribute('aria-label', label)
+        element.title = label
+        element.innerHTML = icon
+        element.addEventListener('mousedown', (event) => event.preventDefault())
+        element.addEventListener('click', action)
+        controls.append(element)
+      }
+      button('cm-add-column', blockIconMarkup.add, t('columns.add'), () => {
+        const { from, columns } = context.block
+        editNote(parent, addColumn(parent.state.doc.toString(), from), null, () =>
+          columnView(parent, from, columns.length)?.focus(),
         )
       })
-      controls.append(add)
-      const unwrap = document.createElement('button')
-      unwrap.type = 'button'
-      unwrap.className = 'cm-remove-columns'
-      unwrap.textContent = t('columns.remove')
-      unwrap.title = t('columns.removeHint')
-      unwrap.addEventListener('click', () => {
-        const block = context.block
-        const text = block.columns.map((column) => column.text).join('\n\n')
-        parent.dispatch({
-          changes: { from: block.from, to: block.to, insert: text },
-          selection: { anchor: block.from + text.length },
-          userEvent: 'input',
-        })
-        parent.focus()
-      })
-      controls.append(unwrap)
+      button('cm-remove-columns', blockIconMarkup.unwrap, t('columns.remove'), () =>
+        editNote(parent, unwrapColumns(parent.state.doc.toString(), context.block.from), {
+          anchor: context.block.from,
+        }),
+      )
     }
     return root
   }

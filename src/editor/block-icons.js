@@ -77,6 +77,11 @@ export const blockIconMarkup = {
   ),
   add: svg('<rect x="3.5" y="3.5" width="13" height="13" rx="2" /><path d="M10 7v6M7 10h6" />'),
   indent: svg('<path d="M9 5h8M9 10h8M9 15h8M3 7.5 5.5 10 3 12.5" />'),
+  columns: svg('<rect x="3" y="4" width="14" height="12" rx="1.5" /><path d="M10 4v12" />'),
+  // Two columns turning into two rows.
+  unwrap: svg(
+    '<rect x="3" y="3.5" width="14" height="5" rx="1.2" /><rect x="3" y="11.5" width="14" height="5" rx="1.2" />',
+  ),
   outdent: svg('<path d="M9 5h8M9 10h8M9 15h8M5.5 7.5 3 10l2.5 2.5" />'),
   chevron: svg('<path d="M6 8l4 4 4-4" />'),
 }

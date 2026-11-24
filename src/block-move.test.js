@@ -128,3 +128,16 @@ test('a list item dropped right below its list joins it, without a blank line', 
   const apart = ['# N', '', '- a', '- b', '', 'texto', '', '- c'].join('\n')
   assert.equal(move(apart, 8, 8, 6), ['# N', '', '- a', '- b', '- c', '', 'texto'].join('\n'))
 })
+
+test('a columns layout is one block, and a column can start with its own heading', () => {
+  const text =
+    '# Nota\n\n<!-- sloth:columns -->\n\n<!-- sloth:column -->\n\nA\n\n<!-- sloth:column -->\n\nB\n\n<!-- /sloth:columns -->\n\nFim'
+  assert.deepEqual(
+    documentBlocks(text).map((block) => [block.kind, block.first, block.last]),
+    [
+      ['columns', 3, 13],
+      ['p', 15, 15],
+    ],
+  )
+  assert.equal(documentBlocks('# Coluna\n\nTexto', { title: false })[0].kind, 'h1')
+})

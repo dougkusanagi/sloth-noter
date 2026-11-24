@@ -2,6 +2,7 @@ import { readCallout } from './callout.js'
 import { accordionBlocks } from './accordion.js'
 import { blockColorMetadata } from './document-colors.js'
 import { markdownTree } from './markdown-model.js'
+import { columnBlocks } from './columns.js'
 
 const LIST_ITEM = /^\s*(?:[-*+]|\d+[.)])\s/
 const TABLE_FLAGS = /^<!--\s*sloth:table\b/
@@ -20,15 +21,25 @@ function kindOf(node, list) {
 /**
  * The blocks a handle can act on, as 1-based line ranges: each top-level node,
  * except that lists split into their items (nested items stay with their
- * parent). The note title on line 1 is not a block.
+ * parent). The note title on line 1 is not a block, unless `title` is false (a column's text).
+ * A columns layout is one block: its markers and columns move together.
  */
-export function documentBlocks(text) {
+export function documentBlocks(text, { title = true } = {}) {
   const blocks = []
   const tree = markdownTree(text)
   const accordions = accordionBlocks(text, tree)
+  const lineOf = (offset) => text.slice(0, offset).split('\n').length
+  const layouts = text.includes('<!-- sloth:columns -->')
+    ? columnBlocks(text).map((block) => ({ first: lineOf(block.from), last: lineOf(block.to) }))
+    : []
   for (const node of tree.children) {
     if (!node.position) continue
     const line = node.position.start.line
+    const layout = layouts.find((block) => line >= block.first && line <= block.last)
+    if (layout) {
+      if (line === layout.first) blocks.push({ ...layout, kind: 'columns', depth: 0 })
+      continue
+    }
     const accordion = accordions.findLast((block) => line >= block.line && line <= block.end)
     if (accordion) {
       if (line === accordion.line)
@@ -45,7 +56,7 @@ export function documentBlocks(text) {
     for (const item of items) {
       const first = item.position.start.line
       const last = item.position.end.line
-      if (first === 1 && item.type === 'heading' && item.depth === 1) continue
+      if (title && first === 1 && item.type === 'heading' && item.depth === 1) continue
       blocks.push({
         first,
         last,

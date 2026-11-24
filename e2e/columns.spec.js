@@ -62,7 +62,7 @@ test('the slash menu creates two editable columns', async ({ page }) => {
   await expect(page.getByRole('textbox', { name: 'Coluna 3' })).toBeFocused()
   await page.keyboard.type('Terceira')
   await expect(page.getByRole('textbox', { name: 'Coluna 3' })).toContainText('Terceira')
-  await page.getByRole('button', { name: 'Remover colunas' }).click()
+  await page.getByRole('button', { name: 'Desfazer colunas' }).click()
   await expect(page.locator('.editor-pane-primary')).toContainText('Conteúdo')
   await expect(page.locator('.editor-pane-primary')).toContainText('Terceira')
   await expect(page.locator('.cm-columns')).toHaveCount(0)
@@ -80,6 +80,8 @@ test('dragging selected text between columns moves it in one undoable step', asy
   const first = page.getByRole('textbox', { name: 'Coluna 1' })
   const second = page.getByRole('textbox', { name: 'Coluna 2' })
   await expect(first).toContainText('Primeira')
+  // The column buttons show while the pointer is over the columns.
+  await page.locator('.cm-columns').hover()
   await page.getByRole('button', { name: 'Adicionar coluna' }).click()
   const third = page.getByRole('textbox', { name: 'Coluna 3' })
   await expect(third).toBeFocused()
@@ -234,8 +236,12 @@ test('pasting an image into a column keeps it in that column', async ({ page }) 
       new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
     )
   })
-  await expect(second).toContainText('![foto.png]')
+  // The column shows the image itself; its Markdown stays in that column.
   await expect(page.getByRole('textbox', { name: 'Coluna 1' })).toHaveText('Primeira')
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await expect(page.locator('textarea')).toHaveValue(
+    /<!-- sloth:column -->\n\nSegunda[^<]*!\[foto\.png\][^<]*<!-- \/sloth:columns -->/,
+  )
 })
 
 test('select all inside a column does not replace the rest of the note', async ({ page }) => {
@@ -294,4 +300,94 @@ test('find and replace reveal matches inside columns without changing other cont
   await page.getByRole('button', { name: 'Substituir', exact: true }).click()
   await expect(page.getByRole('textbox', { name: 'Coluna 2' })).toContainText('Peras maduras')
   await expect(page.getByRole('textbox', { name: 'Coluna 1' })).toHaveText('Maçãs')
+})
+
+const fillNote = async (page, text) => {
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  await page.locator('textarea').fill(text)
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+}
+const noteSource = async (page) => {
+  await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
+  const value = await page.locator('textarea').inputValue()
+  await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+  return value
+}
+// Drags the handle of the block under `line` to the point `to`.
+const dragBlock = async (page, line, to) => {
+  await line.hover()
+  const handle = page.locator('.cm-block-handle:visible').first()
+  const box = await handle.boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(to.x, to.y, { steps: 12 })
+  await page.mouse.up()
+}
+const layout = (columns) =>
+  `<!-- sloth:columns -->\n\n${columns.map((text) => `<!-- sloth:column -->\n\n${text}`).join('\n\n')}\n\n<!-- /sloth:columns -->`
+
+test('a block dragged beside another makes columns, and back out ends them', async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 800 })
+  await page.goto('/')
+  await fillNote(page, '# Nota\n\nPrimeiro\n\n## Segundo\n\nFim')
+  const first = await page.locator('.cm-line', { hasText: 'Primeiro' }).boundingBox()
+  const content = await page.locator('.cm-content').first().boundingBox()
+  await dragBlock(page, page.locator('.cm-line', { hasText: 'Segundo' }), {
+    x: content.x + content.width - 16,
+    y: first.y + first.height / 2,
+  })
+  expect(await noteSource(page)).toBe(`# Nota\n\n${layout(['Primeiro', '## Segundo'])}\n\nFim`)
+  // The column shows the heading formatted, as in the note.
+  const second = page.getByRole('textbox', { name: 'Coluna 2' })
+  await expect(second.locator('.cm-md-h2')).toHaveText('Segundo')
+  // Dragged below the note's last block, the heading leaves its column, and one column left
+  // turns back into an ordinary block.
+  const end = await page.locator('.cm-line', { hasText: 'Fim' }).boundingBox()
+  await dragBlock(page, second.locator('.cm-line').first(), {
+    x: end.x + 4,
+    y: end.y + end.height + 12,
+  })
+  await expect(page.locator('.cm-columns')).toHaveCount(0)
+  // One undo brings the columns back.
+  await page.keyboard.press('Control+z')
+  await expect(page.locator('.cm-columns')).toHaveCount(1)
+  await page.keyboard.press('Control+Shift+z')
+  expect(await noteSource(page)).toBe('# Nota\n\nPrimeiro\n\nFim\n\n## Segundo')
+})
+
+test('the arrow keys go in and out of columns, and Backspace removes an empty one', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await fillNote(page, `# Nota\n\nAntes\n\n${layout(['Esquerda', 'Direita', ''])}\n\nDepois`)
+  await page.locator('.cm-line', { hasText: 'Antes' }).click()
+  await page.keyboard.press('End')
+  await page.keyboard.press('ArrowDown')
+  await expect(page.getByRole('textbox', { name: 'Coluna 1' })).toBeFocused()
+  await page.keyboard.type(' 1')
+  await page.getByRole('textbox', { name: 'Coluna 3' }).click()
+  await page.keyboard.press('Backspace')
+  await expect(page.getByRole('textbox', { name: 'Coluna 3' })).toHaveCount(0)
+  await expect(page.getByRole('textbox', { name: 'Coluna 2' })).toBeFocused()
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.type('Logo ')
+  expect(await noteSource(page)).toBe(
+    `# Nota\n\nAntes\n\n${layout(['Esquerda 1', 'Direita'])}\n\nLogo Depois`,
+  )
+})
+
+test('Enter in a column starts a new paragraph and continues lists', async ({ page }) => {
+  await page.goto('/')
+  await fillNote(page, `# Nota\n\n${layout(['- um', 'Texto'])}`)
+  const first = page.getByRole('textbox', { name: 'Coluna 1' })
+  await first.click()
+  await page.keyboard.press('End')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('dois')
+  const second = page.getByRole('textbox', { name: 'Coluna 2' })
+  await second.click()
+  await page.keyboard.press('End')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('Mais')
+  expect(await noteSource(page)).toBe(`# Nota\n\n${layout(['- um\n- dois', 'Texto\n\nMais'])}`)
 })

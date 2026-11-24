@@ -929,8 +929,7 @@ const messages = {
     'columns.label': 'Coluna {number}',
     'columns.placeholder': 'Comece a escrever…',
     'columns.add': 'Adicionar coluna',
-    'columns.remove': 'Remover colunas',
-    'columns.removeHint': 'Remover o layout e manter o conteúdo na nota',
+    'columns.remove': 'Desfazer colunas',
     'columns.imageInterrupted':
       'A imagem não foi inserida porque a nota foi fechada. Abra a nota e tente novamente.',
     'columns.pasteInterrupted':
@@ -1979,8 +1978,7 @@ const messages = {
     'columns.label': 'Column {number}',
     'columns.placeholder': 'Start writing…',
     'columns.add': 'Add column',
-    'columns.remove': 'Remove columns',
-    'columns.removeHint': 'Remove the layout and keep the content in the note',
+    'columns.remove': 'Unwrap columns',
     'columns.imageInterrupted':
       'The image was not inserted because the note was closed. Open the note and try again.',
     'columns.pasteInterrupted':

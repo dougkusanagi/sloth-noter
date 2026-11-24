@@ -3,6 +3,7 @@ import { EditorSelection, EditorState, StateField } from '@codemirror/state'
 import { Decoration, EditorView, WidgetType } from '@codemirror/view'
 import { markdownTree, walk } from '../markdown-model.js'
 import { titleLineNumber } from '../frontmatter.js'
+import { embeddedDocument } from './embedded.js'
 
 // The empty line holding the cursor is text being written (a Shift+Enter line break, for example),
 // never a gap; it counts as a line with text.
@@ -23,7 +24,7 @@ export function isGapLine(doc, number, firstBodyLine, cursorLine = 0) {
 }
 
 /** Gap lines outside code, keyed by line number. */
-export function gapLines(doc, boxes, cursorLine = 0) {
+export function gapLines(doc, boxes, cursorLine = 0, embedded = false) {
   const text = doc.toString()
   const tree = markdownTree(text)
   const accordionPadding = new Set(accordionBlocks(text, tree).map((block) => block.end - 1))
@@ -32,7 +33,8 @@ export function gapLines(doc, boxes, cursorLine = 0) {
     if (node.type === 'code') code.push([node.position.start.line, node.position.end.line])
   })
   const inCode = (number) => code.some(([from, to]) => number >= from && number <= to)
-  const first = titleLineNumber(doc) + 1
+  // A column has no title: its body starts on the first line.
+  const first = embedded ? 0 : titleLineNumber(doc) + 1
   if (boxes) {
     for (const [from, to] of code) {
       boxes.starts.add(from)
@@ -105,7 +107,7 @@ class GapWidget extends WidgetType {
 function build(state, cursorLine) {
   const doc = state.doc
   const boxes = { starts: new Set(), ends: new Set(), joins: new Set() }
-  const lines = gapLines(doc, boxes, cursorLine)
+  const lines = gapLines(doc, boxes, cursorLine, state.facet(embeddedDocument))
   const hidden = [],
     atomic = []
   // Two code blocks or tables, or a heading and another block, written with no empty line

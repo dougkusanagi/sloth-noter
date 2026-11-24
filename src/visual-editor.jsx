@@ -35,6 +35,7 @@ import {
 } from './editor/live-decorations.js'
 import { foldArchive, foldField } from './editor/folding.js'
 import {
+  columnArrowKeys,
   columnDrag,
   columnImageHandler,
   columnReadServices,
@@ -1062,6 +1063,7 @@ export function VisualEditor({
       }),
       foldField,
       columnsField,
+      columnArrowKeys,
       columnDrag,
       columnImageHandler.of((files, point) => callbacks.current.onImageFiles?.(files, point)),
       columnReadServices.of({

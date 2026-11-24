@@ -2,6 +2,7 @@ import { blockColorMetadata } from '../document-colors.js'
 import { EditorSelection } from '@codemirror/state'
 import { codeCopyHandler } from './code-copy.js'
 import { calloutTemplate, calloutTypes } from '../callout.js'
+import { embeddedDocument } from './embedded.js'
 
 export const HEADING_LEVELS = ['h1', 'h2', 'h3', 'h4', 'h5']
 
@@ -194,5 +195,7 @@ export function addBlockBelow(view, lastLine) {
     scrollIntoView: true,
   })
   view.focus()
-  requestAnimationFrame(() => view.dom.dispatchEvent(new CustomEvent(OPEN_INSERT_EVENT)))
+  // The block menu belongs to the note's editor; in a column the new line is only made ready.
+  if (!view.state.facet(embeddedDocument))
+    requestAnimationFrame(() => view.dom.dispatchEvent(new CustomEvent(OPEN_INSERT_EVENT)))
 }

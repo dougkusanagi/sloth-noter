@@ -43,7 +43,7 @@ export function notePreview(body, limit = 96) {
     // A line with only an image (like the cover) can hold a long data URL: drop it first.
     .replace(/^!\[[^\]\n]*\]\([^\n]*\)[ \t]*$/gm, '')
     .slice(0, 1200)
-    .replace(/<!--\s*sloth:(?:table|block)\b[^>]*-->[ \t]*/g, '')
+    .replace(/<!--\s*\/?sloth:(?:table|block|columns?)\b[^>]*-->[ \t]*/g, '')
     .replace(/<span style="(?:(?:color|background-color):#[0-9a-f]{6};?){1,2}">|<\/span>/g, '')
     .split('\n')
   for (const line of lines.slice(/^#\s/.test(lines[0]) ? 1 : 0)) {

@@ -719,34 +719,50 @@ textarea:focus-visible {
   /* The sticky copy badge can float over any line, so keep its column clear. */
   padding-right: var(--copy-reserve);
 }
+/* Columns: each column is a small editor with the note's own formatting and block handles,
+   side by side with no frame. The handles sit in the space between the columns. */
 .cm-columns {
-  margin: 8px 0;
+  position: relative;
+  margin: 4px 0;
 }
 .cm-columns-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: 16px;
-}
-.cm-columns-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--block-gap, 16px) 32px;
 }
 .markdown-columns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 16px 32px;
   margin: calc(var(--gap) * var(--line)) 0 0;
 }
 .markdown-column {
   min-width: 0;
 }
 .cm-column-editor {
+  position: relative;
   min-width: 0;
-  border: 1px solid var(--edge);
-  border-radius: 7px;
-  padding: 8px;
+  border-radius: 6px;
+  /* The column's edges show only while it is in use, so an empty column can still be found. */
+  outline: 1px dashed transparent;
+  outline-offset: 4px;
+  transition: outline-color 0.12s var(--ease);
+}
+.cm-columns:hover .cm-column-editor,
+.cm-columns:focus-within .cm-column-editor {
+  outline-color: var(--edge);
+}
+.cm-column-editor .cm-editor {
+  --block-handle-width: 18px;
+  --block-handle-offset: 6px;
+}
+/* In a column only the grip shows; the block type is in its menu and tooltip. */
+.cm-column-editor .cm-block-handle {
+  justify-content: center;
+  padding: 0;
+}
+.cm-column-editor .cm-block-handle-type {
+  display: none;
 }
 .cm-column-preview {
   min-width: 0;
@@ -762,47 +778,76 @@ textarea:focus-visible {
   background: var(--accent);
   pointer-events: none;
 }
-.cm-add-column {
-  justify-self: start;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--edge);
+.cm-section-drop.is-side {
+  width: 2px;
+}
+.cm-columns-controls {
+  position: absolute;
+  z-index: 5;
+  top: -30px;
+  right: 0;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--popover);
+  box-shadow: var(--bevel), var(--shadow-pop);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s var(--ease);
+}
+.cm-columns:hover .cm-columns-controls,
+.cm-columns:focus-within .cm-columns-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+.cm-columns-controls button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--ink);
-  cursor: pointer;
-}
-.cm-remove-columns {
-  margin-left: auto;
-  min-height: 44px;
-  padding: 0 8px;
-  border: 0;
-  background: transparent;
   color: var(--muted);
-  font: 12px var(--ui);
   cursor: pointer;
 }
-.cm-remove-columns:hover,
-.cm-remove-columns:focus-visible {
+.cm-columns-controls button:hover,
+.cm-columns-controls button:focus-visible {
+  background: var(--hover);
   color: var(--ink);
+  outline: 0;
 }
-.cm-add-column:hover,
-.cm-add-column:focus-visible {
-  background: var(--active);
+.cm-columns-controls svg {
+  width: 16px;
+  height: 16px;
+}
+@media (hover: none), (pointer: coarse) {
+  .cm-columns-controls {
+    position: static;
+    justify-content: flex-end;
+    margin-top: 6px;
+    background: transparent;
+    box-shadow: none;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .cm-columns-controls button {
+    width: 40px;
+    height: 40px;
+  }
 }
 .visual-editor .cm-column-editor .cm-editor {
-  min-height: 72px;
+  min-height: 32px;
   height: auto;
 }
 .visual-editor .cm-column-editor .cm-scroller {
-  overflow: auto;
+  overflow: visible;
   padding: 0;
 }
 .visual-editor .cm-column-editor .cm-content {
-  min-height: 56px;
+  min-height: 28px;
   padding: 0;
 }
 .visual-editor[data-wrap-page='false'] .cm-column-editor .cm-content {
@@ -3395,4 +3440,10 @@ body.cm-section-dragging * {
   .note-cover {
     height: clamp(96px, 28vw, 128px);
   }
+}
+
+/* A column starts at its top: its first block, a heading too, has no space above it. */
+.visual-editor .cm-column-editor .cm-content > .cm-line:first-child {
+  --heading-pad-top: 0px;
+  --gap-before: 0px;
 }

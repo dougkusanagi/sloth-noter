@@ -1,7 +1,7 @@
 import { colorPalettePanel } from './color-palette.js'
 import { colorBlock } from './document-colors.js'
 import { blockColorMetadata } from '../document-colors.js'
-import { ViewPlugin } from '@codemirror/view'
+import { EditorView, ViewPlugin } from '@codemirror/view'
 import { t } from '../i18n.js'
 import { documentBlocks, moveBlockChanges } from '../block-move.js'
 import { headingSections } from '../sections.js'
@@ -23,6 +23,9 @@ import {
 import { calloutTypes } from '../callout.js'
 import { listIndentChanges } from '../list-indent.js'
 import { isBareKeys, parseKeys, shortcutKeys } from '../shortcut-registry.js'
+import { addColumn, dropBeside, moveAcross, unwrapColumns } from '../column-drop.js'
+import { documentChanges } from '../search-scope.js'
+import { embeddedDocument, hostOf } from './embedded.js'
 
 const KEY_LABELS = { Shift: '⇧', Delete: 'Del' }
 
@@ -70,13 +73,33 @@ function showTooltip(anchor, label, keys) {
 }
 
 const blocksByDoc = new WeakMap()
-function blocksOf(doc) {
+/** The blocks of an editor's text; in a column, a heading on the first line is a block too. */
+function blocksOf(state) {
+  const doc = state.doc
   let blocks = blocksByDoc.get(doc)
   if (!blocks) {
-    blocks = documentBlocks(doc.toString())
+    blocks = documentBlocks(doc.toString(), { title: !state.facet(embeddedDocument) })
     blocksByDoc.set(doc, blocks)
   }
   return blocks
+}
+
+/** The note's editor or column editor under a point, when it belongs to the same note. */
+function viewAt(parent, x, y) {
+  const element = document.elementFromPoint(x, y)
+  const cell = element?.closest?.('.cm-column-editor')
+  if (cell) {
+    const view = EditorView.findFromDOM(cell.querySelector('.cm-editor') ?? cell)
+    return view && hostOf(view).parent === parent ? view : null
+  }
+  return element && parent.dom.contains(element) ? parent : null
+}
+
+/** A block's lines as offsets in the note's text. */
+function noteRange(view, block) {
+  const { offset } = hostOf(view)
+  const doc = view.state.doc
+  return { from: offset + doc.line(block.first).from, to: offset + doc.line(block.last).to }
 }
 
 const TEXT_KINDS = new Set([
@@ -169,24 +192,45 @@ function blockMenu(view, block, anchor, onClose) {
         }
         menu.append(separator())
       }
-      menu.append(
-        submenu(blockIconMarkup.palette, t('colors.title'), (panel) =>
-          panel.append(
-            colorPalettePanel({
-              value: blockColorMetadata(view.state.doc.line(block.first).text) || {},
-              onChange: (property, color) => {
-                close()
-                colorBlock(view, block, property, color)
-              },
-              onReset: () => {
-                close()
-                colorBlock(view, block, 'reset')
-              },
-            }),
+      if (block.kind === 'columns') {
+        // A columns layout: add a column, or turn the columns back into blocks one under another.
+        const doc = view.state.doc
+        const from = doc.line(block.first).from
+        const edit = (next) => {
+          if (next == null) return
+          view.dispatch({
+            changes: documentChanges(doc.toString(), next),
+            userEvent: 'bloco',
+            scrollIntoView: true,
+          })
+          view.focus()
+        }
+        menu.append(
+          item(blockIconMarkup.add, t('columns.add'), () => edit(addColumn(doc.toString(), from))),
+          item(blockIconMarkup.unwrap, t('columns.remove'), () =>
+            edit(unwrapColumns(doc.toString(), from)),
           ),
-        ),
-        separator(),
-      )
+          separator(),
+        )
+      } else
+        menu.append(
+          submenu(blockIconMarkup.palette, t('colors.title'), (panel) =>
+            panel.append(
+              colorPalettePanel({
+                value: blockColorMetadata(view.state.doc.line(block.first).text) || {},
+                onChange: (property, color) => {
+                  close()
+                  colorBlock(view, block, property, color)
+                },
+                onReset: () => {
+                  close()
+                  colorBlock(view, block, 'reset')
+                },
+              }),
+            ),
+          ),
+          separator(),
+        )
       if (isList) {
         const indent = (outdent) => () => {
           const doc = view.state.doc
@@ -279,15 +323,14 @@ export const blockHandle = ViewPlugin.fromClass(
       if (clientY < content.top || clientY > content.bottom) return null
       const pos = view.posAtCoords({ x: content.left + 4, y: clientY }, false)
       const line = view.state.doc.lineAt(pos).number
-      return (
-        blocksOf(view.state.doc).find((block) => line >= block.first && line <= block.last) ?? null
-      )
+      return blocksOf(view.state).find((block) => line >= block.first && line <= block.last) ?? null
     }
     track(event) {
       if (this.dragging || this.menuOpen || this.view.state.readOnly) return
       if (this.handle.contains(event.target)) return clearTimeout(this.hideTimer)
-      // Tables have their own handle, and widgets such as columns handle their own content.
-      if (event.target.closest?.('.cm-md-table-row, .cm-columns, .cm-column-editor'))
+      // Tables have their own handle, and each column has its own handles for its blocks.
+      const column = event.target.closest?.('.cm-column-editor')
+      if (event.target.closest?.('.cm-md-table-row') || (column && !column.contains(this.view.dom)))
         return this.hide()
       const lineElement = event.target.closest?.('.cm-line')
       const number =
@@ -297,9 +340,7 @@ export const blockHandle = ViewPlugin.fromClass(
       const block =
         number == null
           ? this.blockAt(event.clientY)
-          : blocksOf(this.view.state.doc).find(
-              (item) => number >= item.first && number <= item.last,
-            )
+          : blocksOf(this.view.state).find((item) => number >= item.first && number <= item.last)
       if (!block || block.kind === 'table') return this.scheduleHide()
       clearTimeout(this.hideTimer)
       if (
@@ -327,7 +368,8 @@ export const blockHandle = ViewPlugin.fromClass(
       const width = Number.parseFloat(style.getPropertyValue('--block-handle-width'))
       const height = Number.parseFloat(style.getPropertyValue('--block-handle-height'))
       const left = content.left - host.left - offset - width
-      if (left < 0) return this.hide()
+      // In a column, the handle sits in the space beside the column.
+      if (left < 0 && !view.state.facet(embeddedDocument)) return this.hide()
       const lineHeight = coords.bottom - coords.top
       this.block = block
       this.handle.innerHTML = `<span class="cm-block-handle-type">${blockIconMarkup[block.kind] ?? blockIconMarkup.other}</span>${gripMarkup}`
@@ -372,7 +414,7 @@ export const blockHandle = ViewPlugin.fromClass(
       const { view } = this
       if (view.state.readOnly) return false
       const line = view.state.doc.lineAt(view.state.selection.main.head).number
-      const block = blocksOf(view.state.doc).find((item) => line >= item.first && line <= item.last)
+      const block = blocksOf(view.state).find((item) => line >= item.first && line <= item.last)
       if (!block || block.kind === 'table') return false
       this.show(block)
       if (this.handle.hidden) return false
@@ -397,11 +439,12 @@ export const blockHandle = ViewPlugin.fromClass(
       event.preventDefault()
       const { view } = this
       const block = dragRange(view.state, this.block)
+      const startX = event.clientX
       const startY = event.clientY
       const pointer = event.pointerId
       this.handle.setPointerCapture(pointer)
       let lifted = false
-      let before = null
+      let target = null
       const drop = document.querySelector('.cm-section-drop') ?? document.createElement('div')
       if (!drop.isConnected) {
         drop.className = 'cm-section-drop'
@@ -419,13 +462,13 @@ export const blockHandle = ViewPlugin.fromClass(
       const onMove = (moveEvent) => {
         if (moveEvent.pointerId !== pointer) return
         if (!lifted) {
-          if (Math.abs(moveEvent.clientY - startY) < 4) return
+          if (Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) < 4) return
           lifted = true
           this.dragging = true
           document.body.classList.add('cm-section-dragging')
         }
-        before = this.dropTarget(moveEvent.clientY, block, drop)
-        const scroller = view.scrollDOM.getBoundingClientRect()
+        target = this.dropTarget(moveEvent.clientX, moveEvent.clientY, block, drop)
+        const scroller = hostOf(view).parent.scrollDOM.getBoundingClientRect()
         if (moveEvent.clientY < Math.max(scroller.top, 0) + 40) window.scrollBy(0, -8)
         else if (moveEvent.clientY > Math.min(scroller.bottom, innerHeight) - 40)
           window.scrollBy(0, 8)
@@ -434,9 +477,15 @@ export const blockHandle = ViewPlugin.fromClass(
         if (upEvent.pointerId !== pointer) return
         finish()
         if (!lifted) return this.openMenu()
-        if (before == null) return this.hide()
-        const result = moveBlockChanges(view.state.doc.toString(), block.first, block.last, before)
+        if (target == null) return this.hide()
         this.hide()
+        if (target.kind !== 'move' || target.view !== view) return this.dropAcross(block, target)
+        const result = moveBlockChanges(
+          view.state.doc.toString(),
+          block.first,
+          block.last,
+          target.before,
+        )
         if (!result) return
         const changes = view.state.changes(result.changes)
         const anchor = changes.mapPos(result.insertAt, -1) + result.lead
@@ -459,20 +508,65 @@ export const blockHandle = ViewPlugin.fromClass(
       this.handle.addEventListener('pointercancel', onCancel)
       window.addEventListener('keydown', onKey, true)
     }
-    /** Where the dragged block would go for the pointer, and shows the drop line there. */
-    dropTarget(clientY, dragged, drop) {
-      const { view } = this
+    /**
+     * Where the dragged block would go for the pointer, and shows the drop line there:
+     * `{ kind: 'move', view, before }` puts it above the line `before` of that editor (the note's
+     * or a column's); `{ kind: 'side', view, block, side }` puts it beside a block, in columns.
+     */
+    dropTarget(clientX, clientY, dragged, drop) {
+      const { parent } = hostOf(this.view)
+      const view = viewAt(parent, clientX, clientY) ?? this.view
+      const same = view === this.view
       const doc = view.state.doc
-      const blocks = blocksOf(doc).filter(
-        (block) => block.last < dragged.first || block.first > dragged.last,
+      const blocks = blocksOf(view.state).filter(
+        (block) => !same || block.last < dragged.first || block.first > dragged.last,
       )
-      if (!blocks.length) return null
       const box = (block) => ({
         top: view.coordsAtPos(doc.line(block.anchor ?? block.first).from, 1)?.top ?? 0,
         bottom: view.coordsAtPos(doc.line(block.last).to, -1)?.bottom ?? 0,
       })
+      const content = view.contentDOM.getBoundingClientRect()
+      const show = (left, top, width, height, side) => {
+        drop.style.display = 'block'
+        drop.classList.toggle('is-side', side)
+        drop.style.left = `${Math.round(left)}px`
+        drop.style.top = `${Math.round(top)}px`
+        drop.style.width = `${Math.round(width)}px`
+        drop.style.height = side ? `${Math.round(height)}px` : ''
+      }
+      // Near the right or left edge of a block, the block goes beside it, in columns. In a column,
+      // the edges of the column add a column there.
+      const cell = view === parent ? null : view.dom.closest('.cm-column-editor')
+      const area = cell?.getBoundingClientRect() ?? content
+      // A column is narrow: only a thin strip at each of its edges makes a new column.
+      const edge = cell ? Math.min(28, area.width * 0.15) : Math.min(64, area.width * 0.2)
+      const side =
+        dragged.kind === 'columns'
+          ? null
+          : clientX > area.right - edge
+            ? 'right'
+            : clientX >= area.left && clientX < area.left + edge
+              ? 'left'
+              : null
+      if (side) {
+        const hovered = cell
+          ? null
+          : blocks.find((block) => {
+              const { top, bottom } = box(block)
+              return clientY >= top - 4 && clientY <= bottom + 4
+            })
+        if (cell || hovered) {
+          const { top, bottom } = hovered ? box(hovered) : area
+          show(side === 'right' ? area.right + 4 : area.left - 6, top, 2, bottom - top, true)
+          return { kind: 'side', view, block: hovered, side }
+        }
+      }
+      if (!blocks.length && same) {
+        drop.style.display = 'none'
+        return null
+      }
       let before = doc.lines + 1
-      let y = box(blocks.at(-1)).bottom + 4
+      let y = blocks.length ? box(blocks.at(-1)).bottom + 4 : content.top
       for (const block of blocks) {
         const { top, bottom } = box(block)
         if (clientY < (top + bottom) / 2) {
@@ -482,14 +576,40 @@ export const blockHandle = ViewPlugin.fromClass(
         }
       }
       // Next to itself, nothing moves.
-      const unchanged =
-        moveBlockChanges(doc.toString(), dragged.first, dragged.last, before) === null
-      const content = view.contentDOM.getBoundingClientRect()
-      drop.style.display = unchanged ? 'none' : 'block'
-      drop.style.left = `${content.left}px`
-      drop.style.width = `${content.width}px`
-      drop.style.top = `${Math.round(y) - 1}px`
-      return unchanged ? null : before
+      if (same && moveBlockChanges(doc.toString(), dragged.first, dragged.last, before) === null) {
+        drop.style.display = 'none'
+        return null
+      }
+      show(content.left, y - 1, content.width, 0, false)
+      return { kind: 'move', view, before }
+    }
+    /** Drops the block in another editor of the note (a column or the note), or beside a block. */
+    dropAcross(block, target) {
+      const { parent } = hostOf(this.view)
+      const text = parent.state.doc.toString()
+      const source = noteRange(this.view, block)
+      let next = null
+      if (target.kind === 'move') {
+        const { offset } = hostOf(target.view)
+        const doc = target.view.state.doc
+        const at = offset + (target.before <= doc.lines ? doc.line(target.before).from : doc.length)
+        next = moveAcross(text, source, at)
+      } else {
+        const host = hostOf(target.view).host
+        if (host) {
+          // Beside a column: a new column next to it.
+          const group = host.context.block
+          const index = host.index + (target.side === 'right' ? 1 : 0)
+          next = dropBeside(text, source, group, target.side, index)
+        } else next = dropBeside(text, source, noteRange(parent, target.block), target.side)
+      }
+      if (next == null) return
+      parent.dispatch({
+        changes: documentChanges(text, next),
+        userEvent: 'secao',
+        scrollIntoView: true,
+      })
+      parent.focus()
     }
     destroy() {
       clearTimeout(this.hideTimer)
