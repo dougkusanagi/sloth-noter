@@ -695,15 +695,8 @@ export class TableColumnControlsWidget extends WidgetType {
 // them for a frame.
 const stuckHeaders = new WeakMap()
 let stickyIds = 0
-function stickTableHeaders(view) {
-  let sticky = stuckHeaders.get(view)
-  if (!sticky) {
-    const sheet = document.createElement('style')
-    view.dom.dataset.stickyTables = String(++stickyIds)
-    view.dom.append(sheet)
-    sticky = { sheet, shifts: new Map() }
-    stuckHeaders.set(view, sticky)
-  }
+function measureTableHeaders(view) {
+  const previous = stuckHeaders.get(view)?.shifts
   const headerBottom = document.querySelector('.app-header')?.getBoundingClientRect().bottom ?? 0
   const top = Math.max(0, view.scrollDOM.getBoundingClientRect().top, headerBottom)
   const shifts = new Map()
@@ -712,10 +705,23 @@ function stickTableHeaders(view) {
     const rows = view.contentDOM.querySelectorAll(`[data-table="${key}"]`)
     if (rows.length < 2) continue
     const box = head.getBoundingClientRect()
-    const natural = box.top - (sticky.shifts.get(key) ?? 0)
+    const natural = box.top - (previous?.get(key) ?? 0)
     const bottom = rows[rows.length - 1].getBoundingClientRect().bottom
     const shift = Math.max(0, Math.min(top - natural, bottom - box.height - natural))
     if (shift > 0) shifts.set(key, shift)
+  }
+  return shifts
+}
+
+function stickTableHeaders(view, shifts) {
+  let sticky = stuckHeaders.get(view)
+  if (!sticky) {
+    if (!shifts.size) return
+    const sheet = document.createElement('style')
+    view.dom.dataset.stickyTables = String(++stickyIds)
+    view.dom.append(sheet)
+    sticky = { sheet, shifts: new Map() }
+    stuckHeaders.set(view, sticky)
   }
   const same =
     shifts.size === sticky.shifts.size &&
@@ -726,7 +732,7 @@ function stickTableHeaders(view) {
   sticky.sheet.textContent = [...shifts]
     .map(
       ([key, shift]) =>
-        `${scope} .cm-md-table-headrow[data-table="${key}"] { transform: translateY(${shift}px); transition: none; box-shadow: 0 2px 6px #0002; }`,
+        `${scope} .cm-md-table-headrow[data-table="${key}"] { top: ${shift}px; transition: none; box-shadow: 0 2px 6px #0002; }`,
     )
     .join('\n')
 }
@@ -803,14 +809,14 @@ export const tableUiPlugin = ViewPlugin.fromClass(
         view.dispatch({ effects: clearAxis() })
         view.focus()
       }
-      // Runs again on the next frame, after CodeMirror has drawn the lines for the new scroll.
-      this.stick = () => {
-        stickTableHeaders(view)
-        cancelAnimationFrame(this.stickFrame)
-        this.stickFrame = requestAnimationFrame(
-          () => view.dom.isConnected && stickTableHeaders(view),
-        )
-      }
+      // Batch geometry reads and writes with CodeMirror. A relative offset avoids a
+      // transformed header layer that can lag behind the scrolling table in WebKitGTK.
+      this.stick = () =>
+        view.requestMeasure({
+          key: this,
+          read: measureTableHeaders,
+          write: (shifts) => stickTableHeaders(view, shifts),
+        })
       window.addEventListener('scroll', this.stick, { capture: true, passive: true })
       view.dom.addEventListener('mousemove', this.move)
       view.dom.addEventListener('mouseleave', this.leave)
@@ -829,17 +835,11 @@ export const tableUiPlugin = ViewPlugin.fromClass(
         update.startState.field(tableUiField) === update.state.field(tableUiField)
       )
         return
-      if (!update.view.contentDOM.querySelector('.cm-md-table-headrow')) return
-      this.view.requestMeasure({
-        key: this,
-        read: () => null,
-        write: () => stickTableHeaders(this.view),
-      })
+      this.stick()
     }
     destroy() {
       this.dragEnd()
       clearTimeout(this.timer)
-      cancelAnimationFrame(this.stickFrame)
       window.removeEventListener('scroll', this.stick, { capture: true })
       this.view.dom.removeEventListener('mousemove', this.move)
       this.view.dom.removeEventListener('mouseleave', this.leave)

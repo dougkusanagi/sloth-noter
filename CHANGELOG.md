@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.38.6] — 2026-11-24
+
+O editor reposiciona os cabeçalhos fixos das tabelas durante a rolagem. Veja os [detalhes da versão](changelog/0.38.6.md).
+
 ## [0.38.5] — 2026-11-24
 
 O editor mantém o fundo do tema durante a rolagem. Veja os [detalhes da versão](changelog/0.38.5.md).

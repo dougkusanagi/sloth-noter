@@ -264,19 +264,29 @@ test('the header row stays in view while a long table scrolls', async ({ page })
   await page.goto('/')
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   const rows = Array.from({ length: 40 }, (_, i) => `| Item ${i + 1} | ${i} |`).join('\n')
-  await page.locator('textarea').fill(`# Teste\n\n| Nome | Valor |\n| --- | --- |\n${rows}\n\nFim`)
+  const table = `| Nome | Valor |\n| --- | --- |\n${rows}`
+  await page.locator('textarea').fill(`# Teste\n\n${table}\n\n## Outra tabela\n\n${table}\n\nFim`)
   await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
   await expect(page.locator('.cm-md-table-row')).not.toHaveCount(0)
   // The page grows as the editor lays out, so the scroll is repeated until it lands.
   await expect.poll(() => page.evaluate(() => (window.scrollTo(0, 500), window.scrollY))).toBe(500)
-  const head = page.locator('.cm-md-table-headrow')
+  const head = page.locator('.cm-md-table-headrow').first()
   const top = await page
     .locator('.app-header')
     .evaluate((node) => node.getBoundingClientRect().bottom)
   await expect.poll(async () => Math.abs((await head.boundingBox()).y - top)).toBeLessThan(2)
+  await expect(head).toHaveCSS('transform', 'none')
   if (process.env.CAPTURE_UI) await page.screenshot({ path: '/tmp/table-sticky.png' })
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
-  await expect(page.locator('style', { hasText: 'translateY' })).toHaveCount(0)
+  for (const y of [1850, 350, 1800, 0, 500]) {
+    await page.evaluate((position) => window.scrollTo(0, position), y)
+    const live = page.locator('.cm-md-table-headrow').first()
+    await expect(live).toHaveCSS('transform', 'none')
+    if (y === 350 || y === 500)
+      await expect.poll(async () => Math.abs((await live.boundingBox()).y - top)).toBeLessThan(2)
+  }
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await expect(page.locator('.cm-md-table-headrow').first()).toHaveCSS('top', '0px')
+  await expect(page.locator('style', { hasText: /data-sticky-tables/ })).toHaveCount(0)
 })
 
 for (const width of [390, 640, 1280]) {
