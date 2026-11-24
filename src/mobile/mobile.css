@@ -146,6 +146,22 @@
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
+[data-platform='mobile'] .mobile-notes h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 18px 0 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+[data-platform='mobile'] .mobile-notes h3 span {
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+[data-platform='mobile'] .mobile-notes h3 svg {
+  color: var(--accent-ink);
+}
 [data-platform='mobile'] .mobile-note-row {
   display: flex;
   align-items: center;

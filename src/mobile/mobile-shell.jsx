@@ -613,7 +613,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     setTrashEmpty(false)
     back()
   }
-  function pinNote(id) {
+  function togglePin(id) {
     const old = current.current
     const pinned = old.pinnedIds ?? []
     commit({
@@ -621,6 +621,9 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       openIds: old.openIds.includes(id) ? old.openIds : [...old.openIds, id],
       pinnedIds: pinned.includes(id) ? pinned.filter((item) => item !== id) : [...pinned, id],
     })
+  }
+  function pinNote(id) {
+    togglePin(id)
     back()
   }
   const results = data.notes
@@ -636,6 +639,92 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             (recentNotes.includes(b.note.id) ? recentNotes.indexOf(b.note.id) : Infinity) ||
           a.index - b.index,
     )
+  const pinnedResults = query.trim()
+    ? []
+    : results.filter(({ note }) => data.pinnedIds?.includes(note.id))
+  const otherResults = results.filter(({ note }) => !data.pinnedIds?.includes(note.id))
+  const renderNoteRow = ({ note, result }) => {
+    const pinned = Boolean(data.pinnedIds?.includes(note.id))
+    return (
+      <SwipeNoteRow
+        key={note.id}
+        enabled={!blocked && !layer}
+        onTrash={() => removeNote(note.id, false)}
+      >
+        <div className="mobile-note-row">
+          <button
+            data-note-id={note.id}
+            className="mobile-note-open"
+            onPointerDown={(event) => {
+              if (!event.isPrimary || event.button !== 0) return
+              cancelPress()
+              suppressClick.current = false
+              const target = event.currentTarget
+              press.current = {
+                x: event.clientX,
+                y: event.clientY,
+                timer: setTimeout(() => {
+                  suppressClick.current = true
+                  target.focus({ preventScroll: true })
+                  dispatch({ type: 'layer', route: { name: 'sheet', id: note.id } })
+                }, 550),
+              }
+            }}
+            onPointerMove={(event) => {
+              if (
+                press.current &&
+                Math.hypot(event.clientX - press.current.x, event.clientY - press.current.y) > 10
+              )
+                cancelPress()
+            }}
+            onPointerUp={cancelPress}
+            onPointerCancel={cancelPress}
+            onContextMenu={(event) => event.preventDefault()}
+            onClick={() => {
+              if (suppressClick.current) {
+                suppressClick.current = false
+                return
+              }
+              openNote(note.id)
+            }}
+          >
+            <span className="mobile-note-title">
+              {pinned && <Pin size={14} aria-label={t('mobile.pinned')} />}
+              {displayName(note.name)}
+            </span>
+            <span className="mobile-note-preview">
+              {result.snippet ? (
+                <>
+                  {result.snippet.before}
+                  <mark>{result.snippet.hit}</mark>
+                  {result.snippet.after}
+                </>
+              ) : (
+                notePreview(note.body) || t('mobile.emptyNote')
+              )}
+            </span>
+          </button>
+          <button
+            className="mobile-icon mobile-pin"
+            aria-label={t(pinned ? 'mobile.unpin' : 'mobile.pin')}
+            title={t(pinned ? 'mobile.unpin' : 'mobile.pin')}
+            aria-pressed={pinned}
+            disabled={blocked}
+            onClick={() => togglePin(note.id)}
+          >
+            <Pin size={20} />
+          </button>
+          <button
+            className="mobile-icon"
+            aria-label={t('mobile.noteActions', { name: displayName(note.name) })}
+            onClick={() => dispatch({ type: 'layer', route: { name: 'sheet', id: note.id } })}
+          >
+            <MoreHorizontal size={20} />
+          </button>
+        </div>
+      </SwipeNoteRow>
+    )
+  }
   const title = active
     ? displayName(active.name)
     : route.name === 'note'
@@ -1056,82 +1145,25 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               {query.trim() ? t('mobile.results') : t('menu.notes')} <span>{results.length}</span>
             </h2>
             {!query.trim() && <GuideLibrary onOpen={openGuide} />}
-            {results.map(({ note, result }) => (
-              <SwipeNoteRow
-                key={note.id}
-                enabled={!blocked && !layer}
-                onTrash={() => removeNote(note.id, false)}
-              >
-                <div className="mobile-note-row">
-                  <button
-                    data-note-id={note.id}
-                    className="mobile-note-open"
-                    onPointerDown={(event) => {
-                      if (!event.isPrimary || event.button !== 0) return
-                      cancelPress()
-                      suppressClick.current = false
-                      const target = event.currentTarget
-                      press.current = {
-                        x: event.clientX,
-                        y: event.clientY,
-                        timer: setTimeout(() => {
-                          suppressClick.current = true
-                          target.focus({ preventScroll: true })
-                          dispatch({ type: 'layer', route: { name: 'sheet', id: note.id } })
-                        }, 550),
-                      }
-                    }}
-                    onPointerMove={(event) => {
-                      if (
-                        press.current &&
-                        Math.hypot(
-                          event.clientX - press.current.x,
-                          event.clientY - press.current.y,
-                        ) > 10
-                      )
-                        cancelPress()
-                    }}
-                    onPointerUp={cancelPress}
-                    onPointerCancel={cancelPress}
-                    onContextMenu={(event) => event.preventDefault()}
-                    onClick={() => {
-                      if (suppressClick.current) {
-                        suppressClick.current = false
-                        return
-                      }
-                      openNote(note.id)
-                    }}
-                  >
-                    <span className="mobile-note-title">
-                      {data.pinnedIds?.includes(note.id) && (
-                        <Pin size={14} aria-label={t('mobile.pinned')} />
-                      )}
-                      {displayName(note.name)}
-                    </span>
-                    <span className="mobile-note-preview">
-                      {result.snippet ? (
-                        <>
-                          {result.snippet.before}
-                          <mark>{result.snippet.hit}</mark>
-                          {result.snippet.after}
-                        </>
-                      ) : (
-                        notePreview(note.body) || t('mobile.emptyNote')
-                      )}
-                    </span>
-                  </button>
-                  <button
-                    className="mobile-icon"
-                    aria-label={t('mobile.noteActions', { name: displayName(note.name) })}
-                    onClick={() =>
-                      dispatch({ type: 'layer', route: { name: 'sheet', id: note.id } })
-                    }
-                  >
-                    <MoreHorizontal size={20} />
-                  </button>
-                </div>
-              </SwipeNoteRow>
-            ))}
+            {pinnedResults.length > 0 ? (
+              <>
+                <h3 className="mobile-notes-section">
+                  <Pin size={14} aria-hidden="true" />
+                  {t('mobile.pinnedSection')} <span>{pinnedResults.length}</span>
+                </h3>
+                {pinnedResults.map(renderNoteRow)}
+                {otherResults.length > 0 && (
+                  <>
+                    <h3 className="mobile-notes-section">
+                      {t('mobile.otherNotes')} <span>{otherResults.length}</span>
+                    </h3>
+                    {otherResults.map(renderNoteRow)}
+                  </>
+                )}
+              </>
+            ) : (
+              results.map(renderNoteRow)
+            )}
             {!results.length && (
               <div className="mobile-empty">
                 <NotebookText size={32} aria-hidden="true" />

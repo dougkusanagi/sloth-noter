@@ -5,6 +5,8 @@ import { boardColumns, isTaskNote, makeTaskNote, moveCardToColumn } from '../tas
 import { archiveClosedTasks } from '../task-archive.js'
 import { openTaskMenu } from '../editor/task-menu.js'
 import { plain } from './tasks-library.jsx'
+import { TaskDateBadge } from './task-date-badge.jsx'
+import { taskDate } from '../task-dates.js'
 import { currentLanguage, t } from '../i18n.js'
 
 const CARD_TYPE = 'application/x-sloth-card'
@@ -263,7 +265,7 @@ export function TaskBoard({ body, onChange, compact = false, readOnly = false })
               </header>
               <ul className="board-cards">
                 {cards.map((card, index) => {
-                  const label = plain(card.text)
+                  const label = plain(taskDate(card.text)?.text ?? card.text)
                   const closed = card.children.filter(
                     (child) => child.status === 'done' || child.status === 'canceled',
                   ).length
@@ -324,6 +326,7 @@ export function TaskBoard({ body, onChange, compact = false, readOnly = false })
                             onClick={() => setEditing(card.mark)}
                           >
                             {label || t('board.untitled')}
+                            <TaskDateBadge text={card.text} />
                           </button>
                         )}
                         {card.children.length > 0 && (

@@ -1,6 +1,6 @@
 # Todos os blocos
 
-Parágrafo comum logo abaixo do título, com **negrito**, *itálico*, ~~riscado~~, `código inline` e um [link](https://example.com).
+Parágrafo comum logo abaixo do título, com **negrito**, _itálico_, ~~riscado~~, `código inline` e um [link](https://example.com).
 
 Segundo parágrafo, criado com Enter. O espaço acima dele deve ser igual ao espaço entre blocos de código.
 Esta linha veio de Shift+Enter e continua no mesmo parágrafo.
@@ -43,10 +43,10 @@ console.log(exemplo)
 Bloco de código sem linguagem, logo depois de outro bloco.
 ```
 
-| Coluna A | Coluna B | Coluna C |
-| --- | :---: | ---: |
-| texto | centro | 10 |
-| mais texto | — | 1.234 |
+| Coluna A   | Coluna B | Coluna C |
+| ---------- | :------: | -------: |
+| texto      |  centro  |       10 |
+| mais texto |    —     |    1.234 |
 
 ---
 

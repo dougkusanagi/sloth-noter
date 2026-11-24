@@ -27,12 +27,12 @@ import {
   resolvedTasks,
   sectionChecklists,
   sectionTaskChanges,
-  taskCompletionDate,
   taskSettings,
   taskStatusChanges,
 } from '../tasks.js'
 import { Facet } from '@codemirror/state'
 import { progressBadge } from '../progress-badge.js'
+import { formatTaskDate, taskDate, taskDateLabel } from '../task-dates.js'
 import { onLongPress, openTaskMenu } from './task-menu.js'
 import { unarchiveTask } from '../task-archive.js'
 import { documentChanges } from '../search-scope.js'
@@ -215,20 +215,27 @@ class SectionChecklistWidget extends WidgetType {
   }
 }
 
-class TaskCompletionDate extends WidgetType {
-  constructor(date) {
+/** The `✅ AAAA-MM-DD` suffix of a task, drawn as a date badge in the active locale. */
+class TaskDateWidget extends WidgetType {
+  constructor(stamp) {
     super()
-    this.date = date
+    this.stamp = stamp
   }
   eq(other) {
-    return this.date.iso === other.date.iso
+    return this.stamp.iso === other.stamp.iso && this.stamp.kind === other.stamp.kind
   }
   toDOM() {
-    const time = document.createElement('time')
-    time.className = 'task-completion-date'
-    time.dateTime = this.date.iso
-    time.textContent = this.date.label
-    return time
+    const badge = document.createElement('time')
+    badge.className = 'task-date'
+    badge.dataset.kind = this.stamp.kind
+    badge.dateTime = this.stamp.iso
+    badge.title = taskDateLabel(this.stamp)
+    badge.setAttribute('aria-label', badge.title)
+    badge.textContent = formatTaskDate(this.stamp.iso)
+    return badge
+  }
+  ignoreEvent() {
+    return false
   }
 }
 
@@ -782,15 +789,14 @@ export function decorationsFor(view) {
         ) {
           ranges.push(Decoration.widget({ widget: new TaskMoveHint(), side: 1 }).range(line.to))
         }
-        const completion = !active && /^[xX]$/.test(task[2]) && taskCompletionDate(line.text)
-        if (completion) {
+        const stamp = active ? null : taskDate(line.text)
+        if (stamp)
           ranges.push(
-            Decoration.replace({ widget: new TaskCompletionDate(completion) }).range(
-              line.from + completion.from,
-              line.to,
+            Decoration.replace({ widget: new TaskDateWidget(stamp) }).range(
+              line.from + stamp.index,
+              line.from + stamp.index + stamp.length,
             ),
           )
-        }
         const linked = tasks.get(number)?.progress
         if (linked)
           ranges.push(

@@ -106,7 +106,7 @@ test('columns stay readable and editable on mobile', async ({ page }) => {
   })
   const first = page.getByRole('textbox', { name: 'Coluna 1' })
   const second = page.getByRole('textbox', { name: 'Coluna 2' })
-  await expect(first).toContainText('**Frutas**')
+  await expect(first).toContainText('Frutas')
   await expect(second).toContainText('Pão e café')
   const addButton = await page.getByRole('button', { name: 'Adicionar coluna' }).boundingBox()
   expect(addButton.width).toBeGreaterThanOrEqual(44)
@@ -165,7 +165,7 @@ test('#5 browser back closes action sheets and returns focus', async ({ page }) 
 
 test('trash provides undo and pinning remains after reload', async ({ page }) => {
   await page.getByRole('button', { name: 'Ações de Reunião', exact: true }).tap()
-  await page.getByRole('button', { name: 'Fixar nota', exact: true }).tap()
+  await page.getByRole('dialog').getByRole('button', { name: 'Fixar nota', exact: true }).tap()
   await expect(page.locator('.mobile-note-open').first()).toContainText('Reunião')
   await page.reload()
   await expect(page.locator('.mobile-note-open').first()).toContainText('Reunião')
@@ -173,6 +173,25 @@ test('trash provides undo and pinning remains after reload', async ({ page }) =>
   await page.getByRole('button', { name: 'Mover para a lixeira', exact: true }).tap()
   await expect(page.locator('[data-note-id="meeting"]')).toHaveCount(0)
   await page.getByRole('button', { name: 'Desfazer', exact: true }).tap()
+  await expect(page.locator('[data-note-id="meeting"]')).toBeVisible()
+})
+
+test('the list pin button keeps a note at the top and can unpin it', async ({ page }) => {
+  const row = page
+    .locator('.mobile-note-row')
+    .filter({ has: page.locator('[data-note-id="meeting"]') })
+  await row.getByRole('button', { name: 'Fixar nota', exact: true }).tap()
+  await expect(page.getByRole('heading', { name: /Fixadas/ })).toBeVisible()
+  await expect(page.locator('.mobile-note-open').first()).toContainText('Reunião')
+  await expect(row.getByRole('button', { name: 'Desafixar nota', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await page.reload()
+  await expect(page.getByRole('heading', { name: /Fixadas/ })).toBeVisible()
+  await expect(page.locator('.mobile-note-open').first()).toContainText('Reunião')
+  await row.getByRole('button', { name: 'Desafixar nota', exact: true }).tap()
+  await expect(page.getByRole('heading', { name: /Fixadas/ })).toHaveCount(0)
   await expect(page.locator('[data-note-id="meeting"]')).toBeVisible()
 })
 
@@ -453,7 +472,7 @@ test('swipe trashes an open, pinned search result once and undo keeps context', 
   await page.locator('[data-note-id="shopping"]').tap()
   await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
   await page.getByRole('button', { name: 'Ações de Compras', exact: true }).tap()
-  await page.getByRole('button', { name: 'Fixar nota', exact: true }).tap()
+  await page.getByRole('dialog').getByRole('button', { name: 'Fixar nota', exact: true }).tap()
   await dragNote(page)
   await expect(page.locator('[data-note-id="shopping"]')).toHaveCount(0)
   await expect(page.getByRole('searchbox')).toHaveValue('compras')

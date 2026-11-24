@@ -834,8 +834,8 @@ textarea:focus-visible {
     pointer-events: auto;
   }
   .cm-columns-controls button {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
 }
 .visual-editor .cm-column-editor .cm-editor {
@@ -3296,15 +3296,25 @@ body.cm-section-dragging * {
   display: none;
 }
 
-.task-completion-date {
-  display: inline-block;
+/* Closing date of a task (`✅ AAAA-MM-DD` in the file), shown in the active locale. */
+.task-date {
+  display: inline-flex;
+  align-items: center;
   margin-inline-start: 0.5em;
-  padding-inline: 0.5em;
-  border-radius: 0.35em;
-  background: var(--hover);
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--control);
+  box-shadow: 0 0 0 1px var(--edge);
   color: var(--muted);
-  font-size: 0.8em;
+  font: 500 0.75em/1.4 var(--ui);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-decoration: none;
+  vertical-align: 0.1em;
   white-space: nowrap;
+}
+.task-date[data-kind='canceled'] {
+  opacity: 0.8;
 }
 
 .visual-editor .cm-md-accordion-title,

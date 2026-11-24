@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.38.0] — 2026-11-24
+
+Notas fixadas no topo da lista no celular e datas de conclusão e cancelamento em etiquetas. Veja os [detalhes da versão](changelog/0.38.0.md).
+
 ## [0.37.2] — 2026-11-24
 
 A versão para Linux volta a ser gerada. Veja os [detalhes da versão](changelog/0.37.2.md).

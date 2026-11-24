@@ -9,7 +9,7 @@ for (const width of [390, 1280]) {
     const source = '# Compras\n\n- [x] Comprar café ✅ 2026-11-23\n- [ ] Comprar pão'
     await page.locator('textarea').fill(source)
     await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
-    const date = page.locator('time.task-completion-date')
+    const date = page.locator('time.task-date')
     await expect(date).toHaveText('23/11/2026')
     await expect(date).toHaveAttribute('datetime', '2026-11-23')
     await page.screenshot({ path: `/tmp/sloth-task-completion-date-${width}.png` })

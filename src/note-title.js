@@ -1,5 +1,6 @@
 import { frontmatterEnd } from './frontmatter.js'
 import { t } from './i18n.js'
+import { taskDate } from './task-dates.js'
 
 const LEADING = [
   /^\s*(?:[-*+]|\d+[.)])\s+(?:\[[ xX-]\]\s*)?/, // list and task markers
@@ -47,7 +48,7 @@ export function notePreview(body, limit = 96) {
     .replace(/<span style="(?:(?:color|background-color):#[0-9a-f]{6};?){1,2}">|<\/span>/g, '')
     .split('\n')
   for (const line of lines.slice(/^#\s/.test(lines[0]) ? 1 : 0)) {
-    const text = stripLeading(line)
+    const clean = stripLeading(line)
       // An image cut by the slice (long data URL) has no closing parenthesis.
       .replace(/!\[[^\]]*\]\([^)]*(?:\)|$)|!\[\[[^\]]*\]\]/g, '')
       .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
@@ -55,6 +56,7 @@ export function notePreview(body, limit = 96) {
       .replace(/[*_~`]+/g, '')
       .replace(/\s+/g, ' ')
       .trim()
+    const text = taskDate(clean)?.text ?? clean
     if (/[\p{L}\p{N}]/u.test(text)) return text.length > limit ? `${text.slice(0, limit)}…` : text
   }
   return ''

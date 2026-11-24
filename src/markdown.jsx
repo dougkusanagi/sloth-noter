@@ -17,12 +17,13 @@ import {
   sectionProgress,
   resolvedTasks,
   remarkPartialTasks,
-  remarkTaskCompletionDates,
   toggleTask,
   applyStatus,
   sectionChecklists,
   sectionTaskChanges,
 } from './tasks.js'
+import { taskDate } from './task-dates.js'
+import { TaskDateBadge } from './components/task-date-badge.jsx'
 import { openTaskMenu } from './editor/task-menu.js'
 import { unarchiveTask } from './task-archive.js'
 import { progressLabel, progressShares } from './progress-badge.js'
@@ -139,6 +140,26 @@ function dropLeadingSpace(children) {
   parts[text] = parts[text].trimStart()
   return parts.filter((part, index) => index >= text || typeof part !== 'string')
 }
+/** Replaces the trailing `✅ AAAA-MM-DD` of a task (in its last text child) with a date badge. */
+function withDateBadge(children) {
+  const parts = React.Children.toArray(children)
+  for (let index = parts.length - 1; index >= 0; index--) {
+    const part = parts[index]
+    if (typeof part === 'string') {
+      if (!part.trim()) continue
+      const stamp = taskDate(part)
+      if (!stamp) return parts
+      parts.splice(index, 1, stamp.text, <TaskDateBadge key="task-date" text={part} />)
+      return parts
+    }
+    // A nested list belongs to the subtasks; the stamp sits before it.
+    const tag = React.isValidElement(part) ? (part.props.node?.tagName ?? part.type) : null
+    if (tag === 'ul' || tag === 'ol') continue
+    if (tag === 'p') parts[index] = React.cloneElement(part, {}, withDateBadge(part.props.children))
+    return parts
+  }
+  return parts
+}
 function ListItem({ children, className, node, style }) {
   const { text, onChange, tasks } = useContext(MarkdownContext)
   const task = tasks.get(node.position.start.line)
@@ -182,7 +203,7 @@ function ListItem({ children, className, node, style }) {
           }}
         />
       )}
-      {task ? dropLeadingSpace(children) : children}
+      {task ? withDateBadge(dropLeadingSpace(children)) : children}
       {task?.progress && <ProgressBadge {...task.progress} />}
     </li>
   )
@@ -424,7 +445,6 @@ export function Markdown({
             remarkDocumentColors,
             remarkWikiLinks,
             remarkPartialTasks,
-            remarkTaskCompletionDates,
             remarkTags,
             remarkSections,
             remarkSourceLayout,

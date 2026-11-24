@@ -27,6 +27,8 @@ test('the preview is the first readable line after the title, without Markdown',
     'Negrito e link aqui',
   )
   assert.equal(notePreview('# Título\n\n- [ ] tarefa pendente'), 'tarefa pendente')
+  assert.equal(notePreview('# Título\n\n- [x] tarefa feita ✅ 2026-11-23'), 'tarefa feita')
+  assert.equal(notePreview('# Título\n\n- [-] tarefa cancelada ❌ 2026-11-21'), 'tarefa cancelada')
   assert.equal(notePreview('# Só título\n\n'), '')
   assert.equal(notePreview('sem título\nsegunda'), 'sem título')
   assert.ok(notePreview(`# T\n${'a'.repeat(200)}`).endsWith('…'))

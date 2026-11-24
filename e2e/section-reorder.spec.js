@@ -150,7 +150,9 @@ const drag = async (page, text, target, below = false) => {
   const box = await page.locator('.cm-line', { hasText: target }).boundingBox()
   await page.mouse.move(from.x, from.y)
   await page.mouse.down()
-  await page.mouse.move(box.x + 20, below ? box.y + box.height - 2 : box.y + 2, { steps: 8 })
+  await page.mouse.move(box.x + box.width / 2, below ? box.y + box.height - 2 : box.y + 2, {
+    steps: 8,
+  })
   await expect(page.locator('.cm-section-drop')).toBeVisible()
   await page.mouse.up()
   await expect(page.locator('.cm-section-drop')).toBeHidden()

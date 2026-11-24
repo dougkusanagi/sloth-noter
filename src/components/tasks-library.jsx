@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, CircleCheck, ExternalLink } from 'lucide-react'
 import { resolvedTasks } from '../tasks.js'
+import { taskDate, taskMatches } from '../task-dates.js'
+import { TaskDateBadge } from './task-date-badge.jsx'
 import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
 
@@ -21,7 +23,7 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
   const [collapsed, setCollapsed] = useState(new Set())
   const [status, setStatus] = useState('all')
   const groups = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase()
+    const needle = query.trim()
     return notes
       .map((note) => {
         const tasks = resolvedTasks(note.body, notes)
@@ -33,8 +35,8 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
               (showDone || (!task.done && task.status !== 'canceled')) &&
               (status === 'all' || task.status === status) &&
               (!needle ||
-                task.text.toLocaleLowerCase().includes(needle) ||
-                note.name.toLocaleLowerCase().includes(needle)),
+                taskMatches(task.text, needle) ||
+                note.name.toLocaleLowerCase().includes(needle.toLocaleLowerCase())),
           ),
         }
       })
@@ -113,7 +115,10 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
                     aria-label={plain(task.text) || t('task.open')}
                     onChange={() => onToggle(note.id, task.mark)}
                   />
-                  <span className="task-text">{plain(task.text) || '—'}</span>
+                  <span className="task-text">
+                    {plain(taskDate(task.text)?.text ?? task.text) || '—'}
+                  </span>
+                  <TaskDateBadge text={task.text} />
                   <button
                     type="button"
                     className="task-open-note"

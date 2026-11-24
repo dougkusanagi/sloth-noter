@@ -148,7 +148,7 @@ test('a task dragged below the last item stays in the list, without extra space'
   const last = await page.locator('.cm-line', { hasText: 'tres' }).boundingBox()
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   await page.mouse.down()
-  await page.mouse.move(last.x + 20, last.y + last.height - 3, { steps: 10 })
+  await page.mouse.move(last.x + last.width / 2, last.y + last.height - 3, { steps: 10 })
   await page.mouse.up()
   await source(page, '# Nota\n\n- [ ] um\n- [ ] tres\n- [ ] dois\n\nfim\n')
 })

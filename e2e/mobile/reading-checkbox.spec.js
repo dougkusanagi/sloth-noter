@@ -57,7 +57,7 @@ test('reading mode shows a completion date as a Brazilian date', async ({ page }
   })
   await page.goto('/?platform=mobile')
   await page.locator('[data-note-id="a"]').click()
-  const date = page.locator('.markdown time.task-completion-date')
+  const date = page.locator('.markdown time.task-date')
   await expect(date).toHaveText('23/11/2026')
   await expect(date).toHaveAttribute('datetime', '2026-11-23')
   await page.screenshot({ path: '/tmp/sloth-task-completion-date-mobile.png' })

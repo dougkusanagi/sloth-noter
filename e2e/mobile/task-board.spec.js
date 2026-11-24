@@ -64,8 +64,8 @@ test('a opção Data ao fechar tarefas vale no Quadro e na Leitura do celular', 
   await page.getByRole('button', { name: 'Mover cartão: Fila' }).click()
   await page.getByRole('menuitem', { name: 'Mover para Feito' }).click()
   await page.getByRole('tab', { name: /Feito/ }).click()
-  await expect(page.locator('.board-card', { hasText: 'Fila' })).toContainText(
-    /✅ \d{4}-\d{2}-\d{2}/,
+  await expect(page.locator('.board-card', { hasText: 'Fila' }).locator('.task-date')).toHaveText(
+    /^\d{2}\/\d{2}\/\d{4}$/,
   )
 
   await page.getByRole('button', { name: 'Mais opções' }).click()
