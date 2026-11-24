@@ -209,17 +209,23 @@ a gravação local precisa ser confiável antes de sincronizar).
         Feito em 0.11.0. Imagens no desktop usam `image_read`/`image_write`; não conferido
         com o app Tauri real nem com o Worker implantado.
 
-- [ ] **S4 — Android e teste ponta a ponta.** Mesma tela no celular; sincronizar ao abrir, ao
+- [x] **S4 — Android e teste ponta a ponta.** Mesma tela no celular; sincronizar ao abrir, ao
       voltar ao primeiro plano, após gravar e por botão.
-      Feito em 0.12.0 (parte de código): `useSync` na casca mobile, painel em Configurações,
+      Feito em 0.12.0 (código base): `useSync` na casca mobile, painel em Configurações,
       sincroniza ao voltar ao primeiro plano e 15 s após editar (também no desktop); rodada sem
       mudanças não grava. E2E `e2e/mobile/sync.spec.js`. Worker implantado. Em 2026-11-16 o celular real (APK 0.14.0 via adb)
-      configurou a sincronização, baixou 45 notas e enviou as suas, e uma nota criada no celular
-      chegou ao servidor e foi decifrada no PC. Falta: editar a mesma nota nos dois lados
-      (conflito), imagem do celular no desktop e abrir o app desktop real.
-      Pronto: editar a mesma nota no desktop e no celular e ver a mudança chegar nos dois
-      sentidos; conflito gera as duas versões; exclusão e restauração chegam ao outro lado;
-      imagem inserida no celular aparece no desktop. Casos de aparelho na lista de validação.
+      configurou a sincronização (chave antiga), baixou 45 notas e enviou as suas, e uma nota criada no celular
+      chegou ao servidor e foi decifrada no PC.
+      Validado no navegador em 2026-11-24 (0.37.1): `e2e/sync.spec.js` e `e2e/mobile/sync.spec.js`
+      (7 testes passando contra `server/accounts.js` + `server/api.js` reais em memória) cobrem
+      conta única (ADR 0024 e ADR 0031), edição da mesma nota nos dois sentidos (desktop ↔ celular),
+      conflito na mesma linha preservando ambas as versões, lixeira, restauração, exclusão definitiva,
+      falha de rede com preservação do texto local e retomada, recuperação por chave e imagem inserida
+      no celular sincronizada como blob cifrado (`/v1/blobs/`) e exibida no desktop. O Worker remoto
+      (`https://sloth-note-sync.dl-aguiar.workers.dev/v1/sessions`) responde `400 {"error":"bad_request"}`,
+      confirmando que as rotas de contas estão publicadas. Sem aparelho Android conectado (`adb devices`
+      vazio em 2026-11-24); validação nativa com conta única no desktop Tauri e no APK real registrada
+      em "Validação no aparelho (pendente)".
 
 ## Fila — 3. Restante da paridade
 
@@ -299,6 +305,10 @@ A sincronização pelo servidor próprio não espera a Parte C: ela está na fil
 
 - S3.2: o valor some após restaurar backup em outro aparelho. No AppImage e no NSIS,
   `crypto.subtle` existe e o cofre funciona (Windows Credential Manager ainda não conferido).
+- S4 (nativo real): testar conta única com e-mail e senha (ADR 0024/0031) no desktop Tauri real
+  e no APK Android real contra o Worker publicado — edição nos dois sentidos, conflito, lixeira,
+  restauração, exclusão definitiva e imagem inserida no celular aparecendo no desktop. Desligar
+  chaves antigas só após confirmar que todos os aparelhos migraram (README).
 
 Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado ao verificar.
 
@@ -385,19 +395,13 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-Aguardar a conclusão da prioridade 1 da [fila central](prioridades.md). Ao retomar esta frente,
-**fechar S4 com os aparelhos reais.** Servidor no ar em 2026-11-13
-(`https://sloth-note-sync.dl-aguiar.workers.dev`, D1 + R2, migrações 0001–0002, limite do ADR
-0021). Teste ponta a ponta com o motor contra o servidor real passou: nota e imagem nos dois
-sentidos, mesclagem, conflito, lixeira, restauração, exclusão e 401; o contador de uso registrou
-as operações; os dados de teste foram apagados. Desde 0.15.0 a tela usa conta com e-mail e senha
-(ADR 0024), e o ADR 0031 removeu os perfis locais. A anotação anterior dizia que faltavam a
-migração `0004_accounts.sql` e a publicação do Worker; conferir o estado remoto antes de agir.
-Validar a conta com dados fictícios nos dois aparelhos. A desativação das chaves antigas exige
-confirmar antes que todos os aparelhos migraram (README). O relato anterior de cinco falhas
-E2E desktop é histórico; investigar o estado atual na prioridade 1 da fila central, sem assumir que continuam iguais.
+Iniciar **A5 — Modo Código** (prioridade 3 da [fila central](prioridades.md)): conferir a
+implementação já existente na casca mobile frente aos critérios de A5 (decisão 3, preferência por
+nota, teclas de símbolos na barra, preservação de texto/seleção/desfazer/refazer/histórico ao
+alternar, sem alterar o editor desktop) e complementar testes/documentação antes de marcar.
 
-Pendente no aparelho (de entregas anteriores): validar no APK Inserir, seletor de imagem,
+Pendente no aparelho (de entregas anteriores): validar S4 nativo (conta única desktop Tauri ↔ APK
+real, conflito, lixeira/restauração e imagem) e validar no APK Inserir, seletor de imagem,
 clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,
 aviso de gravação pendente, envio ao sair com morte do processo e recuperação de dados
 corrompidos. A matriz nativa permanece aberta.

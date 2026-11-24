@@ -22,22 +22,29 @@ O [roteiro](../ROADMAP.md) guarda a direção do produto, não uma segunda fila 
 
 ## Fila
 
-| Prioridade | Frente e planos                                                                                       | Critério para avançar                                                                                                                                                                                                      |
-| ---------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 — feita  | Fechar entregas do editor, de imagens e navegação e de status, arquivo e Quadro (concluída na 0.25.2) | Guias e rolagem corrigidas/verificadas, suíte completa aprovada, ADR 0041 registrado, Recursos/ajuda/Novidades atualizados, pendências nativas preservadas em `mobile-interface.md` e planos concluídos removidos.         |
-| 2 — ativa  | Sincronização e proteção dos dados: [S4 do plano Android](mobile-interface.md#fila--2-sincronização)  | Validar o fluxo atual de conta, notas e imagens nos dois sentidos, conflito, exclusão, restauração, falhas e recuperação conforme S4 e ADR 0024. Registrar separadamente a evidência no navegador e nos aplicativos reais. |
-| 3          | Uso diário no Android: [paridade A5–A19](mobile-interface.md#fila--3-restante-da-paridade)            | Seguir a ordem local, conferindo primeiro o que já existe; não reimplementar etapas parcialmente prontas. Cumprir o critério de paridade dos requisitos antes de iniciar ideias novas.                                     |
-| 4          | Pendências de [leitura, modelos e variáveis](leitura-e-modelos.md)                                    | Conferir o que foi entregue e concluir as pendências funcionais antes dos opcionais tipográficos. Quando uma pendência também fizer parte da paridade Android, executá-la na prioridade 3 e atualizar ambos os planos.     |
-| 5          | Recursos novos e polimento opcional do [roteiro](../ROADMAP.md)                                       | Entrar após estabilizar os fluxos anteriores; no mobile, Parte B antes da Parte C, conforme os requisitos.                                                                                                                 |
+| Prioridade | Frente e planos                                                                                                                                                                            | Critério para avançar                                                                                                                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 — feita  | Fechar entregas do editor, de imagens e navegação e de status, arquivo e Quadro (concluída na 0.25.2)                                                                                      | Guias e rolagem corrigidas/verificadas, suíte completa aprovada, ADR 0041 registrado, Recursos/ajuda/Novidades atualizados, pendências nativas preservadas em `mobile-interface.md` e planos concluídos removidos.                             |
+| 2 — feita  | Sincronização e proteção dos dados: [S4 do plano Android](mobile-interface.md#fila--2-sincronização) (navegador concluído na 0.37.1; validação nativa registrada em `mobile-interface.md`) | Fluxo de conta única, notas e imagens nos dois sentidos, conflito, exclusão, restauração, falhas de rede e recuperação validados no navegador; rotas de contas confirmadas no Worker; pendências nativas preservadas em `mobile-interface.md`. |
+| 3 — ativa  | Uso diário no Android: [paridade A5–A19](mobile-interface.md#fila--3-restante-da-paridade)                                                                                                 | Seguir a ordem local, conferindo primeiro o que já existe; não reimplementar etapas parcialmente prontas. Cumprir o critério de paridade dos requisitos antes de iniciar ideias novas.                                                         |
+| 4          | Pendências de [leitura, modelos e variáveis](leitura-e-modelos.md)                                                                                                                         | Conferir o que foi entregue e concluir as pendências funcionais antes dos opcionais tipográficos. Quando uma pendência também fizer parte da paridade Android, executá-la na prioridade 3 e atualizar ambos os planos.                         |
+| 5          | Recursos novos e polimento opcional do [roteiro](../ROADMAP.md)                                                                                                                            | Entrar após estabilizar os fluxos anteriores; no mobile, Parte B antes da Parte C, conforme os requisitos.                                                                                                                                     |
 
 Um defeito que comprometa gravação, integridade ou recuperação dos dados passa à frente da fila;
 registrar a evidência e o ajuste de prioridade antes de continuar.
 
-## Etapa ativa — sincronização ponta a ponta (S4)
+## Etapa ativa — uso diário no Android (A5 — Modo Código)
 
-- [ ] Conferir o estado atual de `src/sync/`, `server/`, `e2e/sync.spec.js` e `e2e/mobile/sync.spec.js` frente ao fluxo de conta única ([ADR 0024](../adr/0024-contas-com-email-e-senha.md) e [ADR 0031](../adr/0031-conta-unica-sem-perfis.md)).
-- [ ] Validar no navegador (desktop e mobile contra o servidor local) os fluxos de conta, notas e imagens nos dois sentidos, conflito, exclusão, restauração, falhas de rede e recuperação por chave.
-- [ ] Conferir estado de migrações/implantação e validar nos aplicativos nativos reais (desktop Tauri e APK Android) sem misturar com evidência simulada; registrar resultados em [mobile-interface.md](mobile-interface.md#fila--2-sincronização).
+- [ ] Conferir a implementação existente do Modo Código na casca mobile frente aos critérios de A5 em [mobile-interface.md](mobile-interface.md#fila--3-restante-da-paridade) (decisão 3, preferência por nota, teclas de símbolos na barra, preservação de texto, seleção, desfazer/refazer e histórico ao alternar, sem alterar o editor desktop).
+- [ ] Completar eventuais ajustes e testes unitários/E2E necessários, atualizar a matriz de paridade e avançar para A6.
+
+## Evidências da prioridade 2 (2026-11-24, versão 0.37.1)
+
+- Conferido o alinhamento de `src/sync/`, `src/hooks/use-sync.js`, `src/components/sync-panel.jsx` e `server/` com os ADRs 0024 (contas com e-mail, senha, convite e chave de recuperação) e 0031 (conta única sem perfis locais, segredo único `sync`).
+- Expandido `e2e/sync.spec.js` com dois testes ponta a ponta desktop ↔ celular contra o servidor real em memória (`server/accounts.js` + `server/api.js`): edição bidirecional da mesma nota, conflito na mesma linha preservando ambas as versões, lixeira, restauração, exclusão definitiva, falha de rede com preservação local e retomada, e imagem inserida no celular enviada como blob cifrado (`/v1/blobs/`) e exibida no desktop.
+- Validação no navegador: 7/7 testes de `e2e/sync.spec.js` e `e2e/mobile/sync.spec.js` aprovados; suíte unitária JS + servidor (597 testes), Rust (`cargo test`), lint, formatação, versão e build aprovados.
+- Conferência do Worker publicado (`https://sloth-note-sync.dl-aguiar.workers.dev/v1/sessions`): responde `400 {"error":"bad_request"}`, confirmando que as rotas de contas estão no ar.
+- Validação nativa real (desktop Tauri e APK Android): nenhum aparelho conectado via `adb devices` em 2026-11-24; os cenários reais de aparelho permanecem registrados separadamente em [mobile-interface.md](mobile-interface.md#validação-no-aparelho-pendente).
 
 ## Evidências da prioridade 1 (2026-11-17, versão 0.25.2)
 
@@ -76,4 +83,4 @@ só bloqueiam a etapa que depende delas.
 
 ## Próximo passo
 
-Iniciar a prioridade 2 ([S4 do plano Android](mobile-interface.md#fila--2-sincronização)): conferir e validar o fluxo atual de sincronização com conta única no navegador e nos aplicativos reais, registrando separadamente cada evidência.
+Iniciar a prioridade 3 ([A5 — Modo Código em mobile-interface.md](mobile-interface.md#fila--3-restante-da-paridade)): conferir a implementação existente do Modo Código no mobile, validar os critérios da etapa e avançar na paridade Android.

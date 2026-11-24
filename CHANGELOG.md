@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.37.1] — 2026-11-24
+
+Sincronização entre desktop e celular coberta por testes ponta a ponta para edições, conflitos, lixeira, falhas de rede e imagens. Veja os [detalhes da versão](changelog/0.37.1.md).
+
 ## [0.37.0] — 2026-11-23
 
 Menus de blocos agrupados, com títulos e alertas em uma linha, e o menu da alça do alerta completo. Veja os [detalhes da versão](changelog/0.37.0.md).
