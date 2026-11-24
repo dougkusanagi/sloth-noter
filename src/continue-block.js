@@ -1,4 +1,13 @@
 import { markdownTree, walk } from './markdown-model.js'
+
+function paragraphBelow(text, lineEnd) {
+  // When the next block touches this one, reserve a separator below the new paragraph too.
+  // An existing blank line or the end of the note already leaves room for the caret.
+  const nextLine = text.slice(lineEnd + 1).split('\n', 1)[0]
+  const insert = nextLine.trim() ? '\n\n\n' : '\n\n'
+  return { from: lineEnd, to: lineEnd, insert, cursor: lineEnd + 2 }
+}
+
 export function continueBlock(text, position) {
   const lineStart = text.lastIndexOf('\n', position - 1) + 1
   const nextBreak = text.indexOf('\n', position)
@@ -26,10 +35,12 @@ export function continueBlock(text, position) {
     /^\s*(`{3,}|~{3,})\s*$/.test(text.slice(lineStart, lineEnd))
   // Anywhere on the closing fence (the arrow keys put the cursor at its start), Enter starts a new
   // paragraph below the block, apart from it by the standard gap. It never adds a line to the code.
-  if (onClosingFence) return { from: lineEnd, to: lineEnd, insert: '\n\n', cursor: lineEnd + 2 }
+  if (onClosingFence) return paragraphBelow(text, lineEnd)
   // At the start of a line, a plain line break already leaves an empty line before the text.
   if (paragraph && position > lineStart && text.slice(lineStart, lineEnd).trim())
-    return { from: position, to: position, insert: '\n\n', cursor: position + 2 }
+    return position === lineEnd && position === paragraph.position.end.offset
+      ? paragraphBelow(text, lineEnd)
+      : { from: position, to: position, insert: '\n\n', cursor: position + 2 }
   // At the start of a paragraph, Enter leaves an empty paragraph above it, kept apart from both
   // neighbours by the standard gap, so text typed there is a paragraph of its own. Below the note
   // title, the plain line break is kept: that line is the subtitle.
@@ -63,7 +74,7 @@ export function continueBlock(text, position) {
     lineStart > code.position.start.offset &&
     /^\s*(`{3,}|~{3,})\s*$/.test(text.slice(lineStart, lineEnd))
   )
-    return { from: position, to: position, insert: '\n\n', cursor: position + 2 }
+    return paragraphBelow(text, lineEnd)
   if (code) return null
   const line = text.slice(lineStart, lineEnd)
   const list = line.match(/^(\s*)([-*+] |\d+[.)] )(.*)$/)

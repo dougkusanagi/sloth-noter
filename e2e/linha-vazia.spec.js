@@ -187,3 +187,54 @@ test('Enter depois de descer até o fim do código cria parágrafo com o espaço
   const gapAbove = fence.y - (ab.y + ab.height)
   expect(Math.abs(novo.y - (end.y + end.height) - gapAbove)).toBeLessThan(5)
 })
+
+for (const width of [390, 768, 1280]) {
+  test(`parágrafo vazio entre dois blocos de código já tem espaço a ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 })
+    const fence = '```'
+    const source = ['# Nota', '', fence, 'primeiro()', fence, fence, 'segundo()', fence].join('\n')
+    await page
+      .getByRole('radio', { name: 'Código', exact: true })
+      .evaluate((radio) => radio.click())
+    await page.locator('textarea').fill(source)
+    await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
+    await page.evaluate(() => document.fonts.ready)
+    const before = page.locator('.cm-md-fence-end').first()
+    const after = page.locator('.cm-md-fence-start').last()
+    const gap = page.locator('.cm-block-gap')
+    await expect(gap).toHaveCount(1)
+    const standard = (await gap.boundingBox()).height
+    await gap.click()
+    expect(await caretLine(page)).toBe(fence)
+    await expect(page.locator('.insert-trigger')).toHaveCount(0)
+
+    await page.locator('.cm-md-code', { hasText: 'primeiro()' }).click()
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+    const paragraph = page.locator('.cm-md-paragraph.cm-md-blank.cm-md-editing')
+    await expect(paragraph).toBeVisible()
+    expect(await caretLine(page)).toBe('')
+    if (process.env.CAPTURE_BLOCK_FIX)
+      await page.screenshot({
+        path: `/tmp/sloth-espaco-${process.env.CAPTURE_BLOCK_FIX}-${width}.png`,
+      })
+    const upper = await before.boundingBox()
+    const lower = await after.boundingBox()
+    const empty = await paragraph.boundingBox()
+    expect(empty.y - upper.y - upper.height).toBeCloseTo(standard, 0)
+    expect(lower.y - empty.y - empty.height).toBeCloseTo(standard, 0)
+    await page.keyboard.type('Texto novo')
+    const written = await page.locator('.cm-md-paragraph', { hasText: 'Texto novo' }).boundingBox()
+    expect(written.y).toBeCloseTo(empty.y, 0)
+    expect((await after.boundingBox()).y).toBeCloseTo(lower.y, 0)
+    await page.keyboard.press('Control+z')
+    await page.keyboard.press('Control+z')
+    await expect(gap).toHaveCount(1)
+    await page
+      .getByRole('radio', { name: 'Código', exact: true })
+      .evaluate((radio) => radio.click())
+    await expect(page.locator('textarea')).toHaveValue(source)
+  })
+}
