@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.36.2] — 2026-11-23
+
+Enter no fim de um bloco de código abre um parágrafo com o espaço padrão. Veja os [detalhes da versão](changelog/0.36.2.md).
+
 ## [0.36.1] — 2026-11-23
 
 Ajuda com o modo Quadro e os status de tarefa, e tabelas mais leves durante a edição. Veja os [detalhes da versão](changelog/0.36.1.md).

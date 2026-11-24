@@ -73,3 +73,30 @@ test('Enter after a closing fence starts a new paragraph below the code block', 
   assert.equal(continueBlock('```', 3), null)
   assert.equal(continueBlock('```\nx', 5), null)
 })
+
+// Regression: the arrow keys leave the cursor at the start of the closing fence, and Enter there
+// added a line to the code instead of a paragraph below it.
+test('Enter anywhere on the closing fence starts a paragraph below the code block', () => {
+  const text = '# Nota\n\n```js\nx\n```\n\ndepois'
+  const fence = text.lastIndexOf('```')
+  assert.deepEqual(continueBlock(text, fence), {
+    from: fence + 3,
+    to: fence + 3,
+    insert: '\n\n',
+    cursor: fence + 5,
+  })
+  assert.equal(continueBlock(text, fence + 1).from, fence + 3)
+  // The last line of code is still code: Enter there adds a code line.
+  assert.equal(continueBlock(text, text.indexOf('x\n') + 1), null)
+})
+
+test('Enter at the start of a code block adds an empty paragraph above it', () => {
+  const text = '# Nota\n\nantes\n\n```\nx\n```'
+  const start = text.indexOf('```')
+  assert.deepEqual(continueBlock(text, start), {
+    from: start,
+    to: start,
+    insert: '\n\n',
+    cursor: start + 2,
+  })
+})

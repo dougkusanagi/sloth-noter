@@ -11,16 +11,32 @@ export function continueBlock(text, position) {
       position >= node.position.start.offset &&
       position <= node.position.end.offset,
   )
+  // A fenced code block at the top level: Enter on its fence lines acts on the block as a whole.
+  const fenced = tree.children.find(
+    (node) =>
+      node.type === 'code' &&
+      position >= node.position.start.offset &&
+      position <= node.position.end.offset &&
+      /^\s*(`{3,}|~{3,})/.test(text.slice(node.position.start.offset)),
+  )
+  const onClosingFence =
+    fenced &&
+    lineEnd === fenced.position.end.offset &&
+    lineStart > fenced.position.start.offset &&
+    /^\s*(`{3,}|~{3,})\s*$/.test(text.slice(lineStart, lineEnd))
+  // Anywhere on the closing fence (the arrow keys put the cursor at its start), Enter starts a new
+  // paragraph below the block, apart from it by the standard gap. It never adds a line to the code.
+  if (onClosingFence) return { from: lineEnd, to: lineEnd, insert: '\n\n', cursor: lineEnd + 2 }
   // At the start of a line, a plain line break already leaves an empty line before the text.
   if (paragraph && position > lineStart && text.slice(lineStart, lineEnd).trim())
     return { from: position, to: position, insert: '\n\n', cursor: position + 2 }
   // At the start of a paragraph, Enter leaves an empty paragraph above it, kept apart from both
   // neighbours by the standard gap, so text typed there is a paragraph of its own. Below the note
   // title, the plain line break is kept: that line is the subtitle.
-  if (paragraph && position === lineStart && position === paragraph.position.start.offset) {
-    const above = tree.children.filter(
-      (node) => node.position.end.line < paragraph.position.start.line,
-    )
+  // At the start of a code block's opening fence, the same empty paragraph goes above the block.
+  const block = paragraph ?? (fenced && position === fenced.position.start.offset ? fenced : null)
+  if (block && position === lineStart && position === block.position.start.offset) {
+    const above = tree.children.filter((node) => node.position.end.line < block.position.start.line)
     const previous = above.at(-1)
     if (previous && !(previous.type === 'heading' && previous.depth === 1)) {
       const blankAbove = !text

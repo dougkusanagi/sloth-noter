@@ -168,3 +168,22 @@ test('Enter no início do texto logo abaixo de um título cria uma linha vazia c
   await page.getByRole('radio', { name: 'Código', exact: true }).check({ force: true })
   await expect(page.locator('textarea')).toHaveValue('# Nota\n\n## Seção\n\nnova\n\nteste\n\nfim\n')
 })
+
+// Regression: ArrowDown leaves the cursor at the start of the closing fence, and Enter there added
+// a single line inside the code instead of a paragraph below it.
+test('Enter depois de descer até o fim do código cria parágrafo com o espaço padrão', async ({
+  page,
+}) => {
+  await page.locator('.cm-line', { hasText: 'abc' }).click()
+  await page.keyboard.press('End')
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('novo')
+  await expect(page.locator('.cm-md-code')).toHaveCount(1)
+  const end = await page.locator('.cm-md-fence-end').boundingBox()
+  const ab = await box(page, 'ab')
+  const fence = await page.locator('.cm-md-fence-start').boundingBox()
+  const novo = await box(page, 'novo')
+  const gapAbove = fence.y - (ab.y + ab.height)
+  expect(Math.abs(novo.y - (end.y + end.height) - gapAbove)).toBeLessThan(5)
+})
