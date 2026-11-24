@@ -33,10 +33,10 @@ O [roteiro](../ROADMAP.md) guarda a direção do produto, não uma segunda fila 
 Um defeito que comprometa gravação, integridade ou recuperação dos dados passa à frente da fila;
 registrar a evidência e o ajuste de prioridade antes de continuar.
 
-## Etapa ativa — uso diário no Android (A5 — Modo Código)
+## Etapa ativa — uso diário no Android (A6 — Buscar e comandos)
 
-- [ ] Conferir a implementação existente do Modo Código na casca mobile frente aos critérios de A5 em [mobile-interface.md](mobile-interface.md#fila--3-restante-da-paridade) (decisão 3, preferência por nota, teclas de símbolos na barra, preservação de texto, seleção, desfazer/refazer e histórico ao alternar, sem alterar o editor desktop).
-- [ ] Completar eventuais ajustes e testes unitários/E2E necessários, atualizar a matriz de paridade e avançar para A6.
+- [x] A5 — Modo Código concluída no navegador em 2026-11-24 (0.38.0): decisão 3 registrada, entrada pela folha de ações da nota e barra de símbolos com Desfazer, Refazer e Esconder teclado cobertas em `e2e/mobile/navigation.spec.js`.
+- [ ] Implementar e validar **A6 — Buscar e comandos** (P2, P3; requisitos 5.9 em [plano-mobile.md](../plano-mobile.md)): busca por nome e texto com contagem e abertura na 1ª ocorrência, `>` com ações da tela, `#` com títulos, `Ctrl+P` e `Ctrl+Shift+P` com teclado físico, foco e voltar corretos.
 
 ## Evidências da prioridade 2 (2026-11-24, versão 0.37.1)
 
@@ -83,4 +83,4 @@ só bloqueiam a etapa que depende delas.
 
 ## Próximo passo
 
-Iniciar a prioridade 3 ([A5 — Modo Código em mobile-interface.md](mobile-interface.md#fila--3-restante-da-paridade)): conferir a implementação existente do Modo Código no mobile, validar os critérios da etapa e avançar na paridade Android.
+Continuar a prioridade 3 em [A6 — Buscar e comandos](mobile-interface.md#fila--3-restante-da-paridade).

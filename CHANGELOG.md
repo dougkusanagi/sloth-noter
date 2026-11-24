@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.38.0] — 2026-11-24
+
+Modo Código no celular completo com acesso pela folha da nota e botões de Desfazer, Refazer e esconder teclado na barra de símbolos. Veja os [detalhes da versão](changelog/0.38.0.md).
+
 ## [0.37.1] — 2026-11-24
 
 Sincronização entre desktop e celular coberta por testes ponta a ponta para edições, conflitos, lixeira, falhas de rede e imagens. Veja os [detalhes da versão](changelog/0.37.1.md).

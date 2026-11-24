@@ -229,13 +229,19 @@ a gravação local precisa ser confiável antes de sincronizar).
 
 ## Fila — 3. Restante da paridade
 
-- [ ] **A5 — Modo Código** (4.2). P20. Depende de A3 e A4.
-      Implementação já descrita em “Continuação: edição e tarefas” abaixo e presente na casca.
-      Conferir critérios e testes antes de marcar; não reimplementar do zero.
-      Faz: comparar `textarea` e CodeMirror sem decorações e registrar a escolha (decisão 3);
-      preferência por nota; teclas de símbolos na barra (linha "Modo Código" de 5.6).
-      Pronto: texto, seleção, desfazer/refazer e histórico preservados ao alternar; editor
-      desktop inalterado.
+- [x] **A5 — Modo Código** (4.2). P20. Depende de A3 e A4.
+      Decisão 3 registrada: CodeMirror sem decorações na mesma instância (`modeCompartment` em
+      `src/visual-editor.jsx`) em vez de `textarea` separado, preservando texto, seleção,
+      desfazer/refazer e composição IME ao alternar entre Visual e Código, sem alterar o editor
+      desktop. Preferência salva por nota (`prefs.mobileCodeNotes`), fonte mono,
+      `autocapitalize="off"`, `spellcheck="false"`, entrada pela folha de ações da nota e pelo
+      cabeçalho de edição, barra de símbolos com `Tab`, `#`, `-`, `[ ]`, `|`, `` ` ``, `*`,
+      **Desfazer**, **Refazer** e **Esconder teclado**.
+      Feito e validado no navegador em 2026-11-24 (0.38.0): `e2e/mobile/navigation.spec.js`
+      (`code mode keeps the editor, selection and undo history across mode changes`) cobre entrada
+      pela folha da nota, atributos do editor puro, preservação de seleção/desfazer/refazer entre
+      modos, barra de símbolos/ações, esconder teclado, isolamento por nota e recarga em leitura sem
+      abrir teclado. Validação de composição/IME no APK registrada em "Validação no aparelho".
 - [ ] **A6 — Buscar e comandos.** P2, P3. Requisitos 5.9.
       Pronto: notas por nome e texto com contagem e abertura na 1ª ocorrência; `>` com as ações
       da tela; `#` com títulos; Ctrl+P e Ctrl+Shift+P com teclado físico; foco e voltar corretos.
@@ -327,6 +333,8 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 - Backup: download e seletor de restauração no WebView.
 - A17: toque longo no checkbox de tarefas, abas do Quadro e mudança de status/seção pelo menu do
   cartão no APK instalado.
+- A5: alternância Visual ↔ Código durante composição ativa de IME real (Gboard/Samsung Keyboard) e
+  barra de símbolos/Desfazer/Refazer/Esconder teclado no APK instalado.
 - A3: envio de notas e histórico ao sair com morte real do processo e gravação nativa lenta; falha
   de gravação e de histórico no WebView com as ações de backup; dados corrompidos baixados e
   substituídos no aparelho; retomada do editor após composição real do teclado.
@@ -395,10 +403,9 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-Iniciar **A5 — Modo Código** (prioridade 3 da [fila central](prioridades.md)): conferir a
-implementação já existente na casca mobile frente aos critérios de A5 (decisão 3, preferência por
-nota, teclas de símbolos na barra, preservação de texto/seleção/desfazer/refazer/histórico ao
-alternar, sem alterar o editor desktop) e complementar testes/documentação antes de marcar.
+Iniciar **A6 — Buscar e comandos** (prioridade 3 da [fila central](prioridades.md)): folha única
+de busca por nome e texto com contagem e abertura na 1ª ocorrência, `>` com ações da tela, `#` com
+títulos, `Ctrl+P` e `Ctrl+Shift+P` com teclado físico, e retorno de foco/voltar corretos.
 
 Pendente no aparelho (de entregas anteriores): validar S4 nativo (conta única desktop Tauri ↔ APK
 real, conflito, lixeira/restauração e imagem) e validar no APK Inserir, seletor de imagem,

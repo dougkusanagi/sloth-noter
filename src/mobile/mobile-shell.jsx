@@ -16,6 +16,7 @@ import {
   Menu,
   Pencil,
   Image as ImageIcon,
+  KeyboardOff,
   ListChecks,
   Monitor,
   Moon,
@@ -23,15 +24,18 @@ import {
   NotebookText,
   NotebookPen,
   Pin,
+  Redo2,
   ScanSearch,
   Search,
   Settings,
   Share2,
   Sun,
   Trash2,
+  Undo2,
   WrapText,
   X,
 } from 'lucide-react'
+import { redo, undo } from '@codemirror/commands'
 import { Toaster, toast } from 'sonner'
 import { createAppPersistence } from '../persistence-runtime.js'
 import { openWorkspace } from '../boot.js'
@@ -1467,6 +1471,46 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               {symbol === '\t' ? 'Tab' : symbol}
             </button>
           ))}
+          <button
+            type="button"
+            aria-label={t('mobile.undo')}
+            title={t('mobile.undo')}
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => {
+              const view = editor.current
+              if (!view || view.composing || view.compositionStarted) return
+              undo(view)
+              view.focus()
+            }}
+          >
+            <Undo2 size={20} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label={t('mobile.redo')}
+            title={t('mobile.redo')}
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => {
+              const view = editor.current
+              if (!view || view.composing || view.compositionStarted) return
+              redo(view)
+              view.focus()
+            }}
+          >
+            <Redo2 size={20} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label={t('mobile.hideKeyboard')}
+            title={t('mobile.hideKeyboard')}
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => {
+              document.activeElement?.blur?.()
+              window.SlothShare?.hideKeyboard?.()
+            }}
+          >
+            <KeyboardOff size={20} aria-hidden="true" />
+          </button>
         </div>
       )}
       {active && (
@@ -1666,6 +1710,20 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               </form>
             ) : actionsNote ? (
               <>
+                {active && actionsNote.id === active.id && (
+                  <button
+                    disabled={blocked}
+                    onClick={() => {
+                      const nextCode = !sourceMode
+                      setNoteMode(active.id, nextCode)
+                      if (nextCode) setEditingId(active.id)
+                      back()
+                    }}
+                  >
+                    {sourceMode ? <FileText size={20} /> : <Code2 size={20} />}
+                    {t(sourceMode ? 'mobile.visualMode' : 'mobile.codeMode')}
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     const currentValue = Object.hasOwn(prefs.wrapLinesByNote ?? {}, actionsNote.id)
