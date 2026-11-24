@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.37.1] — 2026-11-24
+
+O menu Aparência volta a aceitar cliques sobre o topo da nota, e os Exemplos explicam o ícone e os botões do topo. Veja os [detalhes da versão](changelog/0.37.1.md).
+
 ## [0.37.0] — 2026-11-23
 
 Menus de blocos agrupados, com títulos e alertas em uma linha, e o menu da alça do alerta completo. Veja os [detalhes da versão](changelog/0.37.0.md).

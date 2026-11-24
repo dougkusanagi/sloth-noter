@@ -132,7 +132,12 @@ for (const width of [390, 1280]) {
       'Uma primeira linha de código longa o bastante para ultrapassar a largura disponível '.repeat(
         8,
       )
-    await page.locator('textarea').fill(`# Nota\n\n\`\`\`markdown\n${line}\nsegunda linha\n\`\`\``)
+    // Text after the block keeps the page taller than the window after collapsing, so the
+    // browser does not pull the scroll back and move the button by itself.
+    const after = Array.from({ length: 30 }, (_, index) => `Parágrafo ${index + 1}.`).join('\n\n')
+    await page
+      .locator('textarea')
+      .fill(`# Nota\n\n\`\`\`markdown\n${line}\nsegunda linha\n\`\`\`\n\n${after}\n`)
     await page.getByRole('radio', { name: 'Padrão', exact: true }).check({ force: true })
     const first = page.locator('.cm-line', { hasText: 'Uma primeira linha' })
     await first.hover({ position: { x: 10, y: 10 } })

@@ -198,6 +198,9 @@ for (const width of [390, 1280]) {
     expect(await document.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
     if (process.env.CAPTURE_UI) await page.screenshot({ path: `/tmp/sloth-changelog-${width}.png` })
     await expect(page.locator('.cm-content')).toHaveAttribute('aria-readonly', 'true')
+    await expect(document).toContainText(
+      'O menu Aparência volta a aceitar cliques sobre o topo da nota',
+    )
     // Only the newest entries are drawn before scrolling; older ones are reached below.
     await scrollNewsTo(
       page,

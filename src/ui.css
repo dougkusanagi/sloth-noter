@@ -4239,7 +4239,6 @@ button.property-type-icon:hover {
 }
 .note-header {
   position: relative;
-  z-index: 20;
   display: flex;
   align-items: center;
   height: 36px;
@@ -4277,6 +4276,10 @@ button.property-type-icon:hover {
   opacity: 0.7;
 }
 /* The add buttons show when the pointer is at the top of the note, or with the keyboard. */
+.note-header[data-open] {
+  /* Only an open panel goes above the note; menus of the top bar stay above the header. */
+  z-index: 20;
+}
 .note-header-hint {
   opacity: 0;
   transition: opacity 0.15s ease;
