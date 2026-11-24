@@ -543,7 +543,6 @@ export function openTableMenu(view, tableFirst, anchor, options = {}) {
           ),
         ),
         separator(),
-        separator(),
         item(menuIcons.reset, t('table.resetSizes'), () =>
           setTableFlags(view, tableFirst, { widths: [], heights: [] }),
         ),

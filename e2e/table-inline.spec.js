@@ -156,6 +156,7 @@ for (const width of [390, 1280]) {
     const menu = page.getByRole('menu', { name: 'Ações da tabela' })
     await page.getByRole('button', { name: 'Selecionar coluna 1', exact: true }).click()
     await expect(menu).toBeVisible()
+    await expect(menu.locator('[role="separator"] + [role="separator"]')).toHaveCount(0)
     await expect(page.locator('.cm-table-axis-selected')).toHaveCount(3)
     await expect
       .poll(async () => {
