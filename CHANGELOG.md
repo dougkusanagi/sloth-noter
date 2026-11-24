@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.38.2] — 2026-11-24
+
+Soltar um bloco na metade direita de outro cria uma coluna. Veja os [detalhes da versão](changelog/0.38.2.md).
+
 ## [0.38.1] — 2026-11-24
 
 Parágrafos vazios entre blocos já aparecem com o espaçamento completo. Veja os [detalhes da versão](changelog/0.38.1.md).

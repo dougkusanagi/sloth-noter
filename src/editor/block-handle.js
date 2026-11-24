@@ -534,18 +534,18 @@ export const blockHandle = ViewPlugin.fromClass(
         drop.style.width = `${Math.round(width)}px`
         drop.style.height = side ? `${Math.round(height)}px` : ''
       }
-      // Near the right or left edge of a block, the block goes beside it, in columns. In a column,
-      // the edges of the column add a column there.
       const cell = view === parent ? null : view.dom.closest('.cm-column-editor')
       const area = cell?.getBoundingClientRect() ?? content
-      // A column is narrow: only a thin strip at each of its edges makes a new column.
-      const edge = cell ? Math.min(28, area.width * 0.15) : Math.min(64, area.width * 0.2)
+      // Use the right half of a standalone block. In an existing column, keep the middle
+      // available for moving blocks into it and use its edges to add a column.
+      const leftEdge = cell ? Math.min(28, area.width * 0.15) : Math.min(64, area.width * 0.2)
+      const rightEdge = cell ? leftEdge : area.width / 2
       const side =
         dragged.kind === 'columns'
           ? null
-          : clientX > area.right - edge
+          : clientX > area.right - rightEdge
             ? 'right'
-            : clientX >= area.left && clientX < area.left + edge
+            : clientX >= area.left && clientX < area.left + leftEdge
               ? 'left'
               : null
       if (side) {
