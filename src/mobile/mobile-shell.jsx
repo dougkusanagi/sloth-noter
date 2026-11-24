@@ -8,6 +8,7 @@ import {
   CheckCheck,
   Code2,
   Columns3,
+  Command,
   Copy,
   FileInput,
   FileOutput,
@@ -44,6 +45,7 @@ import { usePrefs } from '../hooks/use-prefs.js'
 import { friendlyError } from '../errors.js'
 import { protectPendingSaves } from '../save-lifecycle.js'
 import { ReadingFind } from './reading-find.jsx'
+import { CommandSheet } from './command-sheet.jsx'
 import { Markdown } from '../markdown.jsx'
 import { VisualEditor } from '../visual-editor.jsx'
 import { DocumentOutline } from '../components/document-outline.jsx'
@@ -245,6 +247,32 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     if (allowClose && drag && drag.dy > 80) back()
   }
   const [findOpen, setFindOpen] = useState(false)
+  const [findInitialQuery, setFindInitialQuery] = useState('')
+  const pendingHeadingLine = useRef(null)
+  useEffect(() => {
+    const onShortcut = (event) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return
+      if (event.key.toLowerCase() !== 'p') return
+      event.preventDefault()
+      dispatch({
+        type: 'layer',
+        route: { name: 'commands', prefix: event.shiftKey ? '>' : '' },
+      })
+    }
+    window.addEventListener('keydown', onShortcut)
+    return () => window.removeEventListener('keydown', onShortcut)
+  }, [dispatch])
+  useEffect(() => {
+    if (!active || !pendingHeadingLine.current) return
+    const line = pendingHeadingLine.current
+    pendingHeadingLine.current = null
+    const timer = setTimeout(() => {
+      content.current
+        ?.querySelector(`[data-source-line="${line}"]`)
+        ?.scrollIntoView({ block: 'start' })
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [active])
   const [fold, setFold] = useState({ id: null, body: null, lines: new Set() })
   const [editingId, setEditingId] = useState(null)
   const editing = active && editingId === active.id
@@ -921,6 +949,16 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             <CheckCheck size={22} />
           </button>
         )}
+        {!editing && (
+          <button
+            className="mobile-icon"
+            aria-label={t('mobile.commandsTitle')}
+            title={t('mobile.commandsTitle')}
+            onClick={() => dispatch({ type: 'layer', route: { name: 'commands', prefix: '' } })}
+          >
+            <Command size={20} aria-hidden="true" />
+          </button>
+        )}
         {active && !(editing && sourceMode) && (
           <DocumentOutline
             key={active.id}
@@ -1044,7 +1082,16 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           </div>
         )}
       {findOpen && active && !editing && (
-        <ReadingFind container={content} version={active.body} onClose={() => setFindOpen(false)} />
+        <ReadingFind
+          key={`${active.id}:${findInitialQuery}`}
+          container={content}
+          version={active.body}
+          initialQuery={findInitialQuery}
+          onClose={() => {
+            setFindOpen(false)
+            setFindInitialQuery('')
+          }}
+        />
       )}
       <div
         className={`mobile-content${editing ? ' mobile-editing' : ''}`}
@@ -1104,6 +1151,10 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                         return
                       }
                       openNote(note.id)
+                      if (result.matches.length && query.trim()) {
+                        setFindInitialQuery(query.trim())
+                        setFindOpen(true)
+                      }
                     }}
                   >
                     <span className="mobile-note-title">
@@ -1111,6 +1162,16 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                         <Pin size={14} aria-label={t('mobile.pinned')} />
                       )}
                       {displayName(note.name)}
+                      {result.matches.length > 0 && (
+                        <span className="mobile-match-count">
+                          {t(
+                            result.matches.length === 1
+                              ? 'mobile.matchCount.one'
+                              : 'mobile.matchCount.other',
+                            { count: result.matches.length },
+                          )}
+                        </span>
+                      )}
                     </span>
                     <span className="mobile-note-preview">
                       {result.snippet ? (
@@ -1558,11 +1619,13 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             aria-label={
               layer.name === 'insert'
                 ? t('mobile.insert')
-                : layer.name === 'cover'
-                  ? t('cover.title')
-                  : actionsNote
-                    ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
-                    : t('mobile.more')
+                : layer.name === 'commands'
+                  ? t('mobile.commandsTitle')
+                  : layer.name === 'cover'
+                    ? t('cover.title')
+                    : actionsNote
+                      ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
+                      : t('mobile.more')
             }
           >
             <div
@@ -1589,11 +1652,13 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               <h2 className="mobile-sheet-title">
                 {layer.name === 'insert'
                   ? t('mobile.insert')
-                  : layer.name === 'cover'
-                    ? t('cover.title')
-                    : actionsNote
-                      ? displayName(actionsNote.name)
-                      : 'Sloth Note'}
+                  : layer.name === 'commands'
+                    ? t('mobile.commandsTitle')
+                    : layer.name === 'cover'
+                      ? t('cover.title')
+                      : actionsNote
+                        ? displayName(actionsNote.name)
+                        : 'Sloth Note'}
               </h2>
               <button className="mobile-icon" aria-label={t('dialog.close')} onClick={back}>
                 <X size={22} />
@@ -1609,6 +1674,121 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   back()
                   imageInput.current?.click()
                 }}
+              />
+            ) : layer.name === 'commands' ? (
+              <CommandSheet
+                initialPrefix={layer.prefix ?? ''}
+                notes={data.notes}
+                active={active}
+                commands={[
+                  {
+                    id: 'newNote',
+                    label: t('menu.newNote'),
+                    icon: <FilePlus size={18} aria-hidden="true" />,
+                    run: () => createNote(),
+                  },
+                  ...(active
+                    ? [
+                        {
+                          id: 'findInNote',
+                          label: t('mobile.readingFind'),
+                          icon: <ScanSearch size={18} aria-hidden="true" />,
+                          run: () => {
+                            setEditingId(null)
+                            setFindInitialQuery('')
+                            setFindOpen(true)
+                            back()
+                          },
+                        },
+                        {
+                          id: 'toggleCodeMode',
+                          label: t(sourceMode ? 'mobile.visualMode' : 'mobile.codeMode'),
+                          icon: sourceMode ? (
+                            <FileText size={18} aria-hidden="true" />
+                          ) : (
+                            <Code2 size={18} aria-hidden="true" />
+                          ),
+                          run: () => {
+                            const nextCode = !sourceMode
+                            setNoteMode(active.id, nextCode)
+                            if (nextCode) setEditingId(active.id)
+                            back()
+                          },
+                        },
+                        {
+                          id: 'pin',
+                          label: t(
+                            data.pinnedIds?.includes(active.id) ? 'mobile.unpin' : 'mobile.pin',
+                          ),
+                          icon: <Pin size={18} aria-hidden="true" />,
+                          run: () => pinNote(active.id),
+                        },
+                        {
+                          id: 'wrapPage',
+                          label: t('menu.wrapPage'),
+                          icon: <WrapText size={18} aria-hidden="true" />,
+                          run: () => {
+                            const currentValue = Object.hasOwn(
+                              prefs.wrapLinesByNote ?? {},
+                              active.id,
+                            )
+                              ? prefs.wrapLinesByNote[active.id]
+                              : prefs.wrapLines !== false
+                            updatePrefs({
+                              wrapLinesByNote: {
+                                ...prefs.wrapLinesByNote,
+                                [active.id]: !currentValue,
+                              },
+                            })
+                            back()
+                          },
+                        },
+                      ]
+                    : []),
+                  {
+                    id: 'settings',
+                    label: t('menu.settings'),
+                    icon: <Settings size={18} aria-hidden="true" />,
+                    run: () => dispatch({ type: 'push', route: { name: 'settings' } }),
+                  },
+                  {
+                    id: 'trash',
+                    label: t('menu.trash'),
+                    icon: <Trash2 size={18} aria-hidden="true" />,
+                    run: () => dispatch({ type: 'push', route: { name: 'trash' } }),
+                  },
+                ]}
+                onOpenNote={(id, matchQuery) => {
+                  openNote(id)
+                  if (matchQuery) {
+                    setFindInitialQuery(matchQuery)
+                    setFindOpen(true)
+                  }
+                }}
+                onCreateNote={(name) => createNote(name)}
+                onRunCommand={(item) => item.run()}
+                onJumpHeading={(item) => {
+                  if (!active || active.id !== item.noteId) {
+                    pendingHeadingLine.current = item.line
+                    openNote(item.noteId)
+                    return
+                  }
+                  back()
+                  if (editing && editor.current) {
+                    const doc = editor.current.state.doc
+                    const anchor = doc.line(Math.min(item.line, doc.lines)).from
+                    editor.current.dispatch({
+                      selection: { anchor },
+                      effects: EditorView.scrollIntoView(anchor, { y: 'start', yMargin: 16 }),
+                    })
+                    editor.current.focus()
+                  } else {
+                    content.current
+                      ?.querySelector(`[data-source-line="${item.line}"]`)
+                      ?.scrollIntoView({ block: 'start' })
+                  }
+                }}
+                onClose={back}
               />
             ) : layer.name === 'cover' && actionsNote ? (
               <CoverPicker

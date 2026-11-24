@@ -33,10 +33,11 @@ O [roteiro](../ROADMAP.md) guarda a direção do produto, não uma segunda fila 
 Um defeito que comprometa gravação, integridade ou recuperação dos dados passa à frente da fila;
 registrar a evidência e o ajuste de prioridade antes de continuar.
 
-## Etapa ativa — uso diário no Android (A6 — Buscar e comandos)
+## Etapa ativa — uso diário no Android (A7 — Grupos e ordenação da lista)
 
-- [x] A5 — Modo Código concluída no navegador em 2026-11-24 (0.38.0): decisão 3 registrada, entrada pela folha de ações da nota e barra de símbolos com Desfazer, Refazer e Esconder teclado cobertas em `e2e/mobile/navigation.spec.js`.
-- [ ] Implementar e validar **A6 — Buscar e comandos** (P2, P3; requisitos 5.9 em [plano-mobile.md](../plano-mobile.md)): busca por nome e texto com contagem e abertura na 1ª ocorrência, `>` com ações da tela, `#` com títulos, `Ctrl+P` e `Ctrl+Shift+P` com teclado físico, foco e voltar corretos.
+- [x] A5 — Modo Código concluída no navegador em 2026-11-24 (0.38.0).
+- [x] A6 — Buscar e comandos concluída no navegador em 2026-11-24 (0.39.0): folha única com busca por nome/texto, contagem e abertura na 1ª ocorrência, `>` comandos, `#` títulos, criação rápida e `Ctrl+P`/`Ctrl+Shift+P` (`e2e/mobile/commands.spec.js`).
+- [ ] Implementar e validar **A7 — Grupos e ordenação da lista** (P4 em [mobile-interface.md](mobile-interface.md#fila--3-restante-da-paridade)): grupos do desktop recolhíveis, ordenação recentes/alfabética e mover nota de grupo pela folha de ações.
 
 ## Evidências da prioridade 2 (2026-11-24, versão 0.37.1)
 
@@ -83,4 +84,4 @@ só bloqueiam a etapa que depende delas.
 
 ## Próximo passo
 
-Continuar a prioridade 3 em [A6 — Buscar e comandos](mobile-interface.md#fila--3-restante-da-paridade).
+Continuar a prioridade 3 em [A7 — Grupos e ordenação da lista](mobile-interface.md#fila--3-restante-da-paridade).

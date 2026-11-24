@@ -242,9 +242,14 @@ a gravação local precisa ser confiável antes de sincronizar).
       pela folha da nota, atributos do editor puro, preservação de seleção/desfazer/refazer entre
       modos, barra de símbolos/ações, esconder teclado, isolamento por nota e recarga em leitura sem
       abrir teclado. Validação de composição/IME no APK registrada em "Validação no aparelho".
-- [ ] **A6 — Buscar e comandos.** P2, P3. Requisitos 5.9.
-      Pronto: notas por nome e texto com contagem e abertura na 1ª ocorrência; `>` com as ações
-      da tela; `#` com títulos; Ctrl+P e Ctrl+Shift+P com teclado físico; foco e voltar corretos.
+- [x] **A6 — Buscar e comandos.** P2, P3. Requisitos 5.9.
+      Feito e validado no navegador em 2026-11-24 (0.39.0): folha `src/mobile/command-sheet.jsx`
+      aberta pelo botão **Buscar e comandos** no cabeçalho ou por `Ctrl+P` / `Ctrl+Shift+P` com
+      teclado físico; busca por nome e texto com trecho, contagem de ocorrências e abertura na 1ª
+      ocorrência (`ReadingFind` pré-preenchido, também nos resultados da lista Notas); prefixo `>`
+      com ações da tela atual (ocultando ações de nota quando nenhuma está aberta); prefixo `#` com
+      títulos da nota aberta ou de todas as notas; criação rápida de nota quando não há resultados;
+      fechamento por `Escape`/Voltar. Coberto por `e2e/mobile/commands.spec.js`.
 - [ ] **A7 — Grupos e ordenação da lista.** P4.
       Faz: mostrar os grupos do desktop (recolhíveis), ordenação recentes/alfabética e mover de
       grupo pela folha de ações. Reutiliza o modelo de grupos de `note-list.jsx` sem mudar o
@@ -403,9 +408,9 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-Iniciar **A6 — Buscar e comandos** (prioridade 3 da [fila central](prioridades.md)): folha única
-de busca por nome e texto com contagem e abertura na 1ª ocorrência, `>` com ações da tela, `#` com
-títulos, `Ctrl+P` e `Ctrl+Shift+P` com teclado físico, e retorno de foco/voltar corretos.
+Iniciar **A7 — Grupos e ordenação da lista** (prioridade 3 da [fila central](prioridades.md)):
+mostrar os grupos do desktop recolhíveis, ordenação recentes/alfabética e mover nota de grupo pela
+folha de ações, reutilizando o modelo de grupos de `note-list.jsx` sem mudar o desktop.
 
 Pendente no aparelho (de entregas anteriores): validar S4 nativo (conta única desktop Tauri ↔ APK
 real, conflito, lixeira/restauração e imagem) e validar no APK Inserir, seletor de imagem,
