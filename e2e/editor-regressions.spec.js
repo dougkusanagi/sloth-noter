@@ -548,6 +548,15 @@ for (const width of [390, 1280]) {
         ).join(''),
     )
     await visual(page)
+    await page.getByRole('button', { name: 'Aparência', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'Escuro', exact: true }).click()
+    await page.keyboard.press('Escape')
+    const scroller = page.locator('.visual-editor > .cm-editor > .cm-scroller')
+    const background = await page
+      .locator('body')
+      .evaluate((el) => getComputedStyle(el).backgroundColor)
+    await expect(scroller).toHaveCSS('background-color', background)
+    await expect(page.locator('html')).toHaveCSS('background-color', background)
     await page.mouse.move(width / 2, 440)
     const scroll = () => page.evaluate(() => window.scrollY)
     for (let step = 0; step < 12; step++) {
@@ -558,6 +567,15 @@ for (const width of [390, 1280]) {
     const after = await scroll()
     await page.mouse.wheel(0, -620)
     await expect.poll(scroll).toBeLessThan(after - 150)
+    for (const delta of [3200, -2600, 3200, -2600]) {
+      const before = await scroll()
+      await page.mouse.wheel(0, delta)
+      await expect
+        .poll(async () => ((await scroll()) - before) * Math.sign(delta))
+        .toBeGreaterThan(700)
+    }
     await expect(page.locator('.cm-md-h2').first()).toBeAttached()
+    if (process.env.CAPTURE_SCROLL)
+      await page.screenshot({ path: `/tmp/sloth-rolagem-${width}.png` })
   })
 }

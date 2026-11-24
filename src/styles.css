@@ -96,6 +96,10 @@
 * {
   box-sizing: border-box;
 }
+/* Keep the canvas themed when the WebView exposes it during scrolling. */
+:root {
+  background: var(--bg);
+}
 body {
   margin: 0;
   background: var(--bg);
@@ -594,6 +598,10 @@ textarea:focus-visible {
     var(--bevel),
     0 0 0 1px var(--edge),
     var(--lift);
+}
+.visual-editor > .cm-editor > .cm-scroller {
+  background: var(--bg);
+  scrollbar-color: color-mix(in srgb, var(--ink) 18%, transparent) var(--bg);
 }
 .visual-editor .cm-scroller {
   overflow: auto;
