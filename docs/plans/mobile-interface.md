@@ -270,9 +270,9 @@ a gravação local precisa ser confiável antes de sincronizar).
 - [ ] **A16 — Classes de janela e teclado físico.** P7, P41–P43; problema 26. Requisitos 8.
       Pronto: média e expandida em 600 e 840 dp e em paisagem; consultar duas notas; troca de
       classe sem perder estado; atalhos com teclado físico.
-- [x] **A17 — Status de tarefas e Quadro.** P44. Etapas 1–4 do
-      [plano de status e quadro](status-arquivo-quadro-tarefas.md) feitas em 2026-11-16: Quadro
-      compacto com abas por status e menu do cartão. Falta conferir em aparelho real.
+- [x] **A17 — Status de tarefas e Quadro.** P44. ADRs [0004](../adr/0004-status-de-tarefas-no-checkbox.md)–[0006](../adr/0006-modo-quadro.md) e [0041](../adr/0041-preferencia-do-quadro-em-preferences.md),
+      feitos em 2026-11-16 e validados com a preferência de datas em 2026-11-17: Quadro compacto com
+      abas por status e menu do cartão (`e2e/mobile/task-board.spec.js`). Falta conferir em aparelho real.
 - [ ] **A18 — Polimento nativo** (6.1–6.4). Problemas 2, 4, 8–11, 20, 24.
       Já feito: ícones das barras (6.1); arrastar folhas no navegador (6.2).
       Falta: fundo das barras e matriz de temas com folhas; conflito do arraste com teclado,
@@ -315,6 +315,8 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 - Links externos e destinos de títulos.
 - Rotação em aparelho físico, janela dividida, teclado em paisagem.
 - Backup: download e seletor de restauração no WebView.
+- A17: toque longo no checkbox de tarefas, abas do Quadro e mudança de status/seção pelo menu do
+  cartão no APK instalado.
 - A3: envio de notas e histórico ao sair com morte real do processo e gravação nativa lenta; falha
   de gravação e de histórico no WebView com as ações de backup; dados corrompidos baixados e
   substituídos no aparelho; retomada do editor após composição real do teclado.

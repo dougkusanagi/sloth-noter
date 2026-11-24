@@ -25,8 +25,10 @@ test('save copies the existing credentials with private permissions and a manife
       saved.map((item) => item.file),
       ['updater.key', 'updater.key.pub', 'android-debug.keystore'],
     )
-    assert.equal((await stat(folder)).mode & 0o777, 0o700)
-    assert.equal((await stat(join(folder, 'updater.key'))).mode & 0o777, 0o600)
+    if (process.platform !== 'win32') {
+      assert.equal((await stat(folder)).mode & 0o777, 0o700)
+      assert.equal((await stat(join(folder, 'updater.key'))).mode & 0o777, 0o600)
+    }
     const manifest = JSON.parse(await readFile(join(folder, 'credenciais.json'), 'utf8'))
     assert.equal(manifest.files[0].path, '.local/share/sloth-note/signing/updater.key')
     await assert.rejects(save(join(repo, 'cofre'), { home, repo, log }), /dentro do repositório/)
@@ -51,7 +53,9 @@ test('restore puts files back and never silently replaces a different key', asyn
     assert.deepEqual(result.same, ['updater.key.pub'])
     assert.equal(await readFile(keystore.path, 'utf8'), 'segredo android-debug.keystore')
     assert.equal(await readFile(key.path, 'utf8'), 'chave nova')
-    assert.equal((await stat(keystore.path)).mode & 0o777, 0o600)
+    if (process.platform !== 'win32') {
+      assert.equal((await stat(keystore.path)).mode & 0o777, 0o600)
+    }
     const forced = await restore(folder, { home, repo, log, force: true })
     assert.deepEqual(forced.restored, ['updater.key'])
     assert.equal(await readFile(key.path, 'utf8'), 'segredo updater.key')

@@ -7,10 +7,10 @@ Um bloco de notas com Markdown para escrever, organizar ideias e fechar a janela
 ## Escreva do seu jeito
 
 - **Novas páginas:** a segunda linha oferece uma descrição opcional. Pressione Enter para ignorá-lo e começar o conteúdo pela linha com a dica de blocos e o botão +.
-- **Três modos para a mesma nota:** Padrão, com Markdown formatado enquanto você escreve; Código, com o texto original; e Leitura.
+- **Quatro modos para a mesma nota:** Padrão, com Markdown formatado enquanto você escreve; Código, com o texto original; Leitura; e Quadro, que organiza as tarefas da nota em colunas por status e raias por seção.
 - **Notas conectadas:** abas, links `[[Nota]]`, referências a títulos e lista de notas que apontam para o documento atual.
 - **Busca onde precisar:** encontre notas pelo nome, pesquise no conteúdo de todas elas com trechos destacados ou busque e substitua dentro de uma nota.
-- **Listas e tarefas:** sublistas, caixa de seleção durante a edição da tarefa, reordenação pelo teclado com dica na tarefa ativa, busca por data de conclusão na biblioteca, visão de tarefas na biblioteca e controles para concluir as tarefas de uma seção.
+- **Listas e tarefas:** sublistas, caixa de seleção durante a edição da tarefa, reordenação pelo teclado com dica na tarefa ativa, cinco status de tarefa (`[ ]`, `[/]`, `[>]`, `[x]`, `[-]`), arquivamento de concluídas na própria nota (`## Arquivo`), busca por data de conclusão na biblioteca, visão de tarefas na biblioteca e controles para concluir as tarefas de uma seção.
 - **Pares automáticos:** parênteses, colchetes, chaves, aspas e crases são completados durante a digitação. Selecione texto para envolvê-lo, digite o fechamento para sair do par ou use Backspace para apagar um par automático vazio. Três crases no início da linha criam um bloco de código. A composição de acentos permanece disponível.
 - **Markdown além do básico:** digite `/` numa linha vazia para buscar blocos; copie ou recolha blocos de código e escolha entre quebrar linhas e rolar horizontalmente. A configuração global de quebra fica em Configurações → Editor.
 - **Tabelas:** o mesmo menu abre pelas barras acima das colunas e à esquerda das linhas, pelo ícone no canto da tabela e pelo clique com o botão direito numa célula. Ele age nas células selecionadas (ou na tabela inteira): cores, alinhamento horizontal e vertical, formatação, inserir e remover linhas e colunas, copiar, exportar e cabeçalhos. A linha de cabeçalho fica visível ao rolar; aponte para os pontos nas bordas para inserir linhas e colunas. O cabeçalho é guardado num comentário `<!-- sloth:table … -->` acima da tabela.
@@ -51,7 +51,7 @@ Use `Ctrl` no Windows/Linux e `Cmd` no macOS. Atalhos como criar e fechar abas p
 | Buscar / substituir na nota atual            | `Ctrl+F` / `Ctrl+H`            |
 | Selecionar ocorrência e abrir busca (Padrão) | `Ctrl+D`                       |
 | Paleta de comandos                           | `Ctrl+Shift+P`                 |
-| Padrão / Código / Leitura                    | `Ctrl+Alt+1` / `2` / `3`       |
+| Padrão / Código / Leitura / Quadro           | `Ctrl+Alt+1` / `2` / `3` / `4` |
 | Modo de foco                                 | `Ctrl+Alt+F`                   |
 | Negrito / itálico / link                     | `Ctrl+B` / `Ctrl+I` / `Ctrl+K` |
 | Configurações                                | `Ctrl+,`                       |

@@ -25,10 +25,11 @@ Cada H2 com `[[link]]` mostra um anel de progresso com as tarefas da nota ligada
 (`sectionProgress` e `resolvedTasks`, em `src/tasks.js`). Cada nota de projeto tem seções
 (Backend, Frontend…) com tarefas `- [ ]`.
 
-As propostas abaixo partem do que o [plano de status, arquivo e quadro](plans/status-arquivo-quadro-tarefas.md)
-já decidiu (ADRs [0004](adr/0004-status-de-tarefas-no-checkbox.md),
-[0005](adr/0005-arquivo-de-tarefas-na-nota.md) e [0006](adr/0006-modo-quadro.md)): status no
-caractere do checkbox, seção `## Arquivo` e modo Quadro. Várias delas dependem desse plano.
+As propostas abaixo partem das decisões já implementadas nos ADRs
+[0004](adr/0004-status-de-tarefas-no-checkbox.md),
+[0005](adr/0005-arquivo-de-tarefas-na-nota.md), [0006](adr/0006-modo-quadro.md) e
+[0041](adr/0041-preferencia-do-quadro-em-preferences.md): status no caractere do checkbox, seção
+`## Arquivo` e modo Quadro lembrado por nota.
 
 ### Restrições que as propostas respeitam
 

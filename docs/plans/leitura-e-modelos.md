@@ -330,7 +330,7 @@ Cada etapa é uma entrega com versão, Novidades e capturas próprias.
 
 ## Tentativas que falharam
 
-- Reabrir o cursor após Ctrl+End por temporizadores (corrigir a rolagem do `insert-trigger.spec.js:67`): quebrou o teste de rolagem por aba (`tab-position`) e foi revertido. A falha original continua: em nota longa o cursor pode ficar ~60 px abaixo da tela por causa de alturas estimadas.
+- Reabrir o cursor após Ctrl+End por temporizadores cegos (corrigir a rolagem do `insert-trigger.spec.js:67`): quebrou o teste de rolagem por aba (`tab-position`) e foi revertido. Resolvido em 2026-11-17 (0.25.2) ajustando a rolagem apenas após transações com `scrollIntoView` quando as decorações de parágrafo expandem a altura do documento, sem interferir na restauração por aba.
 
 ## Decisões já resolvidas
 
@@ -357,5 +357,4 @@ funcionais da Parte 3: “Variável…” em Inserir e painel de propriedades no
 propriedade pelo seletor e leitura de variáveis no painel lateral. As pendências mobile também
 pertencem à paridade (prioridade 3): atualizar este plano quando forem entregues lá.
 Depois tratar `createdAt`/`{{created}}` com ADR e os prazos da Parte 4. Opcionais tipográficos
-ficam para a prioridade 5. A falha de rolagem registrada acima entra no fechamento do editor,
-na prioridade 1; esta reorganização não a declara corrigida.
+ficam para a prioridade 5.

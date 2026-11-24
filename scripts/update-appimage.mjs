@@ -133,7 +133,7 @@ export async function replaceAppImage(source, target) {
   try {
     await copyFile(source, temporary, constants.COPYFILE_EXCL)
     await chmod(temporary, (targetInfo.mode & 0o777) | 0o100)
-    const file = await open(temporary, 'r')
+    const file = await open(temporary, 'r+')
     try {
       await file.sync()
     } finally {

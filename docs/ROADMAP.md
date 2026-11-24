@@ -75,8 +75,12 @@ restante da paridade do Android com o desktop → ideias novas só do mobile →
 duas plataformas (itens 1–3 e o restante do item 4 abaixo, IA local, hub de projetos). A fila central intercala o fechamento das entregas existentes antes de retomar S4;
 depois preserva esta ordem interna do mobile. Detalhes na seção 1 dos [requisitos mobile](plano-mobile.md).
 
-Status de tarefas, arquivo de concluídas na própria nota e modo Quadro estão em
-[plano próprio](plans/status-arquivo-quadro-tarefas.md) (ADRs 0004, 0005 e 0006).
+Status de tarefas, arquivo de concluídas na própria nota e modo Quadro já estão entregues nas duas
+cascas ([ADR 0004](adr/0004-status-de-tarefas-no-checkbox.md),
+[ADR 0005](adr/0005-arquivo-de-tarefas-na-nota.md), [ADR 0006](adr/0006-modo-quadro.md) e
+[ADR 0041](adr/0041-preferencia-do-quadro-em-preferences.md)). Ideias futuras dessa frente que
+permanecem abertas: arquivamento automático após N dias e caminho completo da seção (`Backend › API`)
+em raias e grupos para subtítulos H3 ou mais fundos.
 
 1. **Notas do tipo lista de tarefas e histórico de conclusão.** Criar listas com título e itens na mesma biblioteca, com identificação e filtro por tipo para não misturar com notas comuns. Checkboxes continuam disponíveis no Markdown das notas comuns. Registrar a tarefa, a ocorrência quando houver e a data/hora da conclusão; permitir desfazer a conclusão e consultar “Concluídas hoje” e o histórico por dia. O histórico registra ações do usuário, sem depender do histórico de commits do provedor de armazenamento.
 2. **Recorrência.** Começar com repetição diária e por dias da semana. Cada período tem sua própria ocorrência: uma tarefa diária concluída ontem aparece pendente hoje, mantendo a conclusão anterior. A virada é à meia-noite no fuso definido para a recorrência, sem exigir o app aberto nesse horário; reconciliar as ocorrências ao reabrir. Definir antes da implementação como apresentar períodos não concluídos e como mudanças de fuso afetam a agenda.

@@ -25,9 +25,10 @@ as notas (`src/main.jsx`). A versão mobile não tem seletor de modos.
 - O "+" de uma coluna cria a tarefa no fim da seção, com o status da coluna.
 - O Quadro mostra só as tarefas. Para editar o resto do texto, a pessoa volta para Padrão. O
   Arquivo ([ADR 0005](0005-arquivo-de-tarefas-na-nota.md)) não aparece no Quadro.
-- **O Quadro é lembrado por nota**, nos metadados do app (`noteMeta`, fora do `.md`). Os outros
-  modos continuam globais. Assim, a nota de projeto abre como quadro e as outras notas não
-  mudam.
+- **O Quadro é lembrado por nota**, fora do `.md` (atualizado pelo
+  [ADR 0041](0041-preferencia-do-quadro-em-preferences.md): salvo em `preferences.boardNotes` em
+  vez de `noteMeta`). Os outros modos continuam globais. Assim, a nota de projeto abre como
+  quadro e as outras notas não mudam.
 - Uma nota sem tarefas mantém o botão visível e mostra uma mensagem de lista vazia com a ação
   "Adicionar tarefa".
 - Primeiro no desktop e na web. O celular fica para uma etapa posterior, com uma coluna por vez
@@ -47,7 +48,8 @@ as notas (`src/main.jsx`). A versão mobile não tem seletor de modos.
 
 - O estado do modo deixa de ser só global: o app precisa decidir o modo ao trocar de aba,
   conforme a nota.
-- `noteMeta` ganha um campo novo; o backup e a pasta de notas precisam preservá-lo.
+- `preferences.boardNotes` guarda a escolha por nota; o backup e a pasta de notas a preservam
+  ([ADR 0041](0041-preferencia-do-quadro-em-preferences.md)).
 - Os testes E2E do seletor de modos e das posições entre Padrão e Leitura precisam considerar o
   quarto modo.
 - Notas abertas no local (fora da pasta, [ADR 0001](0001-arquivos-abertos-no-local.md)) também

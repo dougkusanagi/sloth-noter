@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.36.1] — 2026-11-23
+
+Ajuda com o modo Quadro e os status de tarefa, e tabelas mais leves durante a edição. Veja os [detalhes da versão](changelog/0.36.1.md).
+
 ## [0.36.0] — 2026-11-23
 
 Ícone e capa pelo topo da nota, com galeria de capas, seletor de emoji e o menu Ações da nota. Veja os [detalhes da versão](changelog/0.36.0.md).

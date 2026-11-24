@@ -23,10 +23,10 @@ export async function miniflare() {
   })
   instances.push(mf)
   const db = await mf.getD1Database('DB')
-  // exec runs one statement per line.
+  // exec runs one statement per line; CRLF checkouts leave `\r` on `--` comments.
   await db.exec(
     schema
-      .replace(/--.*\n/g, '')
+      .replace(/--.*\r?\n/g, '')
       .split(';')
       .map((statement) => statement.replace(/\s+/g, ' ').trim())
       .filter(Boolean)

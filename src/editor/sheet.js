@@ -576,7 +576,7 @@ const sheetInput = ViewPlugin.fromClass(
         document.activeElement === document.body ||
         !document.activeElement
       if (active && owned)
-        update.view.requestMeasure({ read: () => null, write: () => this.focus() })
+        update.view.requestMeasure({ key: this, read: () => null, write: () => this.focus() })
     }
     destroy() {
       this.input.remove()

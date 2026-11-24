@@ -822,8 +822,20 @@ export const tableUiPlugin = ViewPlugin.fromClass(
       if (this.view.state.field(tableUiField).hover === hover) return
       this.view.dispatch({ effects: setTableUi.of({ hover }) })
     }
-    update() {
-      this.view.requestMeasure({ read: () => null, write: () => stickTableHeaders(this.view) })
+    update(update) {
+      if (
+        !update.docChanged &&
+        !update.viewportChanged &&
+        !update.geometryChanged &&
+        update.startState.field(tableUiField) === update.state.field(tableUiField)
+      )
+        return
+      if (!update.view.contentDOM.querySelector('.cm-md-table-headrow')) return
+      this.view.requestMeasure({
+        key: this,
+        read: () => null,
+        write: () => stickTableHeaders(this.view),
+      })
     }
     destroy() {
       this.dragEnd()

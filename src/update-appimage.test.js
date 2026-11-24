@@ -10,6 +10,8 @@ import {
   replaceAppImage,
 } from '../scripts/update-appimage.mjs'
 
+const desktopValue = (value) => value.replace(/\\/g, '\\\\')
+
 async function fixture(t) {
   const root = await mkdtemp(join(tmpdir(), 'sloth-update-'))
   t.after(() => rm(root, { recursive: true, force: true }))
@@ -21,7 +23,7 @@ async function fixture(t) {
   await writeFile(target, 'old version', { mode: 0o755 })
   await writeFile(
     join(apps, 'sloth.desktop'),
-    `[Desktop Entry]\nType=Application\nName=Sloth Note\nTryExec=${target}\nExec=env DESKTOPINTEGRATION=1 "${target}"\n[Desktop Action Other]\nTryExec=/wrong/path\n`,
+    `[Desktop Entry]\nType=Application\nName=Sloth Note\nTryExec=${desktopValue(target)}\nExec=env DESKTOPINTEGRATION=1 "${desktopValue(target)}"\n[Desktop Action Other]\nTryExec=/wrong/path\n`,
   )
   return { root, apps, target }
 }
@@ -42,7 +44,7 @@ test('replaces the binary atomically, retaining the previous version and executa
   await replaceAppImage(source, target)
   assert.deepEqual(await readFile(target), content)
   assert.equal(await readFile(`${target}.previous`, 'utf8'), 'old version')
-  assert.equal((await stat(target)).mode & 0o777, 0o755)
+  if (process.platform !== 'win32') assert.equal((await stat(target)).mode & 0o777, 0o755)
   await assert.rejects(stat(`${target}.update-lock`), { code: 'ENOENT' })
 })
 
@@ -64,7 +66,7 @@ test('refuses ambiguous installations rather than replacing an arbitrary one', a
   await writeFile(second, 'second')
   await writeFile(
     join(apps, 'second.desktop'),
-    `[Desktop Entry]\nType=Application\nName=Sloth Note\nTryExec=${second}\n`,
+    `[Desktop Entry]\nType=Application\nName=Sloth Note\nTryExec=${desktopValue(second)}\n`,
   )
   await assert.rejects(installedAppImage(apps, 'Sloth Note'), /Encontradas 2 instalações/)
 })

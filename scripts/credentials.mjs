@@ -97,7 +97,11 @@ export async function save(folder, { home = homedir(), repo = REPO, log = consol
     const destination = join(target, item.file)
     await copyFile(item.path, destination)
     await chmod(destination, 0o600)
-    saved.push({ file: item.file, path: relative(home, item.path), what: item.what })
+    saved.push({
+      file: item.file,
+      path: relative(home, item.path).replaceAll('\\', '/'),
+      what: item.what,
+    })
     log(`  guardado  ${item.file}`)
   }
   const manifest = {
