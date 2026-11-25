@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.49.0] — 2026-11-25
+
+Adicionados a lupa de tabela por toque longo (B13), o trackpad estrutural na barra de formatação (B14) e o bloco "Nova nota" nas Configurações rápidas do Android (B3, `TileService`). Veja os [detalhes da versão](changelog/0.49.0.md).
+
 ## [0.48.0] — 2026-11-25
 
 Adicionados a régua de títulos na leitura mobile (B11, com feedback háptico por seção) e o zoom semântico por pinça ou botão (B12: Completo → Esboço → Só títulos, preservando o zoom de acessibilidade). Veja os [detalhes da versão](changelog/0.48.0.md).

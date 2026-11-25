@@ -5,6 +5,7 @@ import { triggerHaptic } from './mobile/haptics.js'
 import { adjacentOpenNoteId, classifyHeaderGesture } from './mobile/header-gestures.js'
 import { classifyEditorSwipe, structureSwipeEdit } from './mobile/editor-gestures.js'
 import { classifyPinch, headingIndexForRatio, stepReadingZoom } from './mobile/reading-zoom.js'
+import { nextBlockCursor } from './mobile/structural-trackpad.js'
 import { initialNavigation, navigate } from './mobile/nav-stack.js'
 
 test('B1: runNoteTransition uses View Transitions API when available and motion is not reduced', () => {
@@ -208,4 +209,15 @@ test('B11 & B12: heading ruler ratio mapping and semantic reading zoom levels', 
   assert.equal(classifyPinch(100, 70), 'out')
   assert.equal(classifyPinch(100, 135), 'in')
   assert.equal(classifyPinch(100, 105), null)
+})
+
+test('B14: nextBlockCursor jumps cleanly between Markdown blocks', () => {
+  const doc = '# Título\n\nPrimeiro parágrafo\n\n## Seção\n\n- Item 1\n- Item 2\n'
+  const p1 = doc.indexOf('Primeiro')
+  const h2 = doc.indexOf('## Seção')
+  const i1 = doc.indexOf('- Item 1')
+  assert.equal(nextBlockCursor(doc, p1, 1), h2)
+  assert.equal(nextBlockCursor(doc, h2, 1), i1)
+  assert.equal(nextBlockCursor(doc, i1, -1), h2)
+  assert.equal(nextBlockCursor(doc, p1, -1), null)
 })

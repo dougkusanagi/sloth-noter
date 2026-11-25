@@ -1691,3 +1691,33 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   white-space: nowrap;
   color: var(--muted);
 }
+
+/* B13: Table row loupe dialog & B14: Structural trackpad pill */
+[data-platform='mobile'] .mobile-table-loupe {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(0 0 0 / 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+[data-platform='mobile'] .mobile-table-loupe-card {
+  width: min(100%, 420px);
+  max-height: 80vh;
+  overflow: auto;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 12px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+}
+[data-platform='mobile'] .mobile-trackpad {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}

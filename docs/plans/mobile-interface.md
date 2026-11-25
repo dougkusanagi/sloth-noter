@@ -306,6 +306,9 @@ Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e deta
 - [x] **B16 — Modelos de nota ao criar** (entregue em 0.19.0 / confirmado em 0.47.0): notas novas exibem os botões "Começar com" (`TemplateStarters`) abaixo do título e a folha Inserir inclui "Modelo…", mantendo criação sem modelo em um toque.
 - [x] **B11 — Régua de títulos** (0.48.0): trilha lateral a 28 px da borda (`> 24 dp`) em modo Leitura exibe o nome do título H2+ atual, vibra (B2) a cada mudança de seção e rola até a seção (`src/mobile/heading-ruler.jsx`, `src/mobile/reading-zoom.js`).
 - [x] **B12 — Zoom semântico por pinça** (0.48.0): alterna entre Completo → Esboço → Só títulos tanto por pinça sem bloquear zoom de acessibilidade quanto pelo botão na folha de ações da nota (`src/mobile/reading-zoom.js`, `src/mobile/mobile-shell.jsx`, `src/mobile/mobile.css`).
+- [x] **B13 — Lupa de tabela** (0.49.0): toque longo em uma célula no modo Leitura abre um cartão flutuante com `cabeçalho: valor` de todas as colunas da linha, fechando por Voltar/Escape/Fechar (`src/markdown.jsx`, `src/mobile/mobile.css`).
+- [x] **B14 — Trackpad estrutural** (0.49.0): controle dedicado na barra de formatação (`touch-action: none`) desliza o cursor bloco a bloco Markdown sem conflitar com a rolagem da barra (`src/mobile/structural-trackpad.js`, `src/mobile/formatting-bar.jsx`, `src/mobile-platform.test.js`).
+- [x] **B3 — Bloco nas Configurações rápidas** (0.49.0): `NewNoteTileService` (`TileService`) registrado no `AndroidManifest.xml`, reutilizando `dev.slothnote.app.NEW_NOTE` com app aberto ou fechado.
 
 ## Depois deste plano — Parte C: ideias para as duas plataformas
 

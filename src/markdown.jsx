@@ -28,6 +28,7 @@ import { openTaskMenu } from './editor/task-menu.js'
 import { unarchiveTask } from './task-archive.js'
 import { progressLabel, progressShares } from './progress-badge.js'
 import { remarkVariables } from './variables.js'
+import { triggerHaptic } from './mobile/haptics.js'
 
 function highlightedCode(tokens) {
   return tokens.map((token, index) =>
@@ -403,6 +404,9 @@ function Table({ node, children, ...props }) {
   const { focusableTables } = useContext(MarkdownContext)
   const [view, setView] = useState('table')
   const [fullscreen, setFullscreen] = useState(false)
+  const [loupeRow, setLoupeRow] = useState(null)
+  const loupeTimer = React.useRef(null)
+  const loupeStart = React.useRef(null)
   if (!focusableTables) return <table {...props}>{children}</table>
   const thead = node.children.find((part) => part.tagName === 'thead')
   const tbody = node.children.find((part) => part.tagName === 'tbody')
@@ -417,9 +421,43 @@ function Table({ node, children, ...props }) {
     )
   const totalRows = (headRow ? 1 : 0) + bodyRows.length
   const cols = headerCells.length || (bodyRows[0]?.length ?? 0)
+  const clearLoupeTimer = () => {
+    if (loupeTimer.current) {
+      clearTimeout(loupeTimer.current)
+      loupeTimer.current = null
+    }
+    loupeStart.current = null
+  }
   const meta = t('mobile.tableMeta', { rows: bodyRows.length, cols })
   const tableEl = (
-    <div className="mobile-table-wrap" data-wide={cols >= 4 ? '' : undefined}>
+    <div
+      className="mobile-table-wrap"
+      data-wide={cols >= 4 ? '' : undefined}
+      onPointerDown={(event) => {
+        if (!event.isPrimary) return
+        const tr = event.target.closest('tbody tr')
+        if (!tr) return
+        const rows = [...tr.parentElement.children]
+        const index = rows.indexOf(tr)
+        if (index < 0 || !bodyRows[index]) return
+        loupeStart.current = { x: event.clientX, y: event.clientY }
+        loupeTimer.current = setTimeout(() => {
+          loupeTimer.current = null
+          triggerHaptic('threshold')
+          setLoupeRow(index)
+        }, 480)
+      }}
+      onPointerMove={(event) => {
+        if (!loupeStart.current) return
+        if (
+          Math.abs(event.clientX - loupeStart.current.x) > 10 ||
+          Math.abs(event.clientY - loupeStart.current.y) > 10
+        )
+          clearLoupeTimer()
+      }}
+      onPointerUp={clearLoupeTimer}
+      onPointerCancel={clearLoupeTimer}
+    >
       <table {...props} tabIndex={0} aria-label={t('mobile.tableLabel', { rows: totalRows })}>
         {children}
       </table>
@@ -476,6 +514,38 @@ function Table({ node, children, ...props }) {
             </button>
           </div>
           <div className="mobile-table-fullscreen-body">{content}</div>
+        </div>
+      )}
+      {loupeRow !== null && bodyRows[loupeRow] && (
+        <div
+          className="mobile-table-loupe"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('mobile.tableLoupe')}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setLoupeRow(null)
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.stopPropagation()
+              setLoupeRow(null)
+            }
+          }}
+        >
+          <div className="mobile-table-loupe-card">
+            <div className="mobile-table-fullscreen-bar">
+              <span className="mobile-table-meta">{t('mobile.tableLoupe')}</span>
+              <button
+                type="button"
+                className="mobile-table-btn"
+                onClick={() => setLoupeRow(null)}
+                autoFocus
+              >
+                {t('dialog.close')}
+              </button>
+            </div>
+            <TableCards headers={headerCells} rows={[bodyRows[loupeRow]]} />
+          </div>
         </div>
       )}
     </div>
