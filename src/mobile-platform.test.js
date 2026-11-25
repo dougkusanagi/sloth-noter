@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { runNoteTransition } from './mobile/view-transition.js'
 import { triggerHaptic } from './mobile/haptics.js'
 import { adjacentOpenNoteId, classifyHeaderGesture } from './mobile/header-gestures.js'
+import { initialNavigation, navigate } from './mobile/nav-stack.js'
 
 test('B1: runNoteTransition uses View Transitions API when available and motion is not reduced', () => {
   let ran = 0
@@ -145,4 +146,13 @@ test('B8 & B9: classifyHeaderGesture detects pull-down commands and horizontal n
   assert.equal(adjacentOpenNoteId(['a', 'b', 'c'], 'b', 'prev'), 'a')
   assert.equal(adjacentOpenNoteId(['a', 'b', 'c'], 'a', 'prev'), null)
   assert.equal(adjacentOpenNoteId(['a'], 'a', 'next'), null)
+
+  // Deck swipe replaces the current note on the nav stack so Back returns straight to the list.
+  let nav = navigate(initialNavigation('notes'), { type: 'push', route: { name: 'note', id: 'a' } })
+  nav = navigate(nav, { type: 'push', replace: true, route: { name: 'note', id: 'b' } })
+  assert.equal(nav.screens.length, 2)
+  assert.equal(nav.screens[1].id, 'b')
+  nav = navigate(nav, { type: 'back' })
+  assert.equal(nav.screens.length, 1)
+  assert.equal(nav.screens[0].name, 'notes')
 })

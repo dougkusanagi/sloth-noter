@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.46.3] — 2026-11-25
+
+Trocar de nota pelo gesto horizontal no cabeçalho mobile (B9) agora substitui a nota atual na pilha de navegação em vez de empilhar histórico, para que o botão Voltar retorne direto à lista de notas. Veja os [detalhes da versão](changelog/0.46.3.md).
+
 ## [0.46.2] — 2026-11-25
 
 Corrigida a seleção de capas da galeria (gradientes) em modo estrito do React, adicionada a remoção completa da seção de propriedades YAML (inclusive ao excluir a última propriedade) e ampliado o gesto de baralho de notas no cabeçalho mobile para alternar pela lista quando houver menos de duas notas abertas. Veja os [detalhes da versão](changelog/0.46.2.md).

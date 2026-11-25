@@ -480,7 +480,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       cursor: editor.current?.state.selection.main.head ?? route.cursor ?? 2,
     })
   }
-  function openNote(id, edit = undefined) {
+  function openNote(id, edit = undefined, { replace = false } = {}) {
     saveActiveNoteView()
     document.activeElement?.blur?.()
     const saved = noteViewState.current.get(id)
@@ -512,6 +512,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       flushSync(() =>
         dispatch({
           type: 'push',
+          replace,
           route: { name: 'note', id, scroll: saved?.scroll ?? 0, cursor: saved?.cursor },
         }),
       ),
@@ -1060,7 +1061,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             const targetId = adjacentOpenNoteId(deckIds, active?.id, gesture)
             if (targetId) {
               triggerHaptic('heading')
-              openNote(targetId)
+              openNote(targetId, undefined, { replace: true })
             }
           }
         }}
