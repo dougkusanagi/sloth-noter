@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.42.3] — 2026-11-25
+
+Ritmo vertical de tabelas, colunas empilhadas e tarefas no celular alinhado ao padrão proporcional do desktop. Veja os [detalhes da versão](changelog/0.42.3.md).
+
 ## [0.42.2] — 2026-11-25
 
 Ajustes de layout e usabilidade no Android: espaçamento das tarefas, tabelas mais legíveis, remoção da folha de abas abertas (mantendo recentes no topo), ícone dinâmico no modo Quadro e novo ícone para Buscar e comandos. Veja os [detalhes da versão](changelog/0.42.2.md).

@@ -387,10 +387,10 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   padding-left: 30px;
 }
 [data-platform='mobile'] .markdown .task-list-item {
-  line-height: 1.65;
+  line-height: 1.62;
 }
 [data-platform='mobile'] .markdown .task-list-item + .task-list-item {
-  margin-top: 10px;
+  margin-top: max(calc(var(--gap) * var(--line)), 0.45em);
 }
 [data-platform='mobile'] .task-checkbox {
   width: 20px;
@@ -398,8 +398,8 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   margin: 0 10px 0 -30px;
 }
 [data-platform='mobile'] .visual-editor .cm-md-task {
-  padding-top: 4px;
-  padding-bottom: 4px;
+  padding-top: 0.2em;
+  padding-bottom: 0.2em;
 }
 [data-platform='mobile'] .changelog-page {
   padding: 16px;
@@ -879,13 +879,16 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   height: 20px;
 }
 
-/* Tables on mobile: clean framed block, smooth horizontal scroll, legible cards and fullscreen. */
+/* Tables on mobile: clean framed block following the desktop vertical rhythm (--gap * --line). */
 [data-platform='mobile'] .mobile-table-block {
-  margin: 16px 0;
+  margin: max(calc(var(--gap) * var(--line)), 0.75em) 0 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-md, 10px);
   background: var(--paper);
   overflow: hidden;
+}
+[data-platform='mobile'] .markdown .mobile-table-block + * {
+  margin-top: max(calc(var(--gap) * var(--line)), 0.75em);
 }
 [data-platform='mobile'] .mobile-table-bar {
   display: flex;
@@ -1059,14 +1062,14 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   font-size: 0.85rem;
 }
 
-/* Columns in compact mobile reading stack vertically with a separator and column badge. */
+/* Columns in compact mobile reading stack vertically following the desktop block gap. */
 @media (max-width: 599px) {
   [data-platform='mobile'] .markdown-columns {
     grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
+    gap: var(--block-gap, calc(var(--editor-size, 16px) * 1.35));
   }
   [data-platform='mobile'] .markdown-column {
-    padding-top: 8px;
+    padding-top: 0.75em;
     border-top: 1px solid var(--line);
   }
   [data-platform='mobile'] .markdown-column::before {
