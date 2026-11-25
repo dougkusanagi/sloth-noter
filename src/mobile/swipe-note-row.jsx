@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { t } from '../i18n.js'
+import { triggerHaptic } from './haptics.js'
 
 // Keep vertical scrolling native. Only a leftward, clearly horizontal gesture owns a row.
 export function SwipeNoteRow({ children, enabled, onTrash }) {
@@ -80,7 +81,14 @@ export function SwipeNoteRow({ children, enabled, onTrash }) {
             event.currentTarget.setPointerCapture(event.pointerId)
         }
         ignoreClick.current = true
-        setDistance(Math.min(160, Math.max(0, -dx)))
+        const nextDistance = Math.min(160, Math.max(0, -dx))
+        if (nextDistance >= 88 && !start.thresholdReached) {
+          start.thresholdReached = true
+          triggerHaptic('threshold')
+        } else if (nextDistance < 88) {
+          start.thresholdReached = false
+        }
+        setDistance(nextDistance)
       }}
       onPointerUp={(event) => {
         const start = gesture.current

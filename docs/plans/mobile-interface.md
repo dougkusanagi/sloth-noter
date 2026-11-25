@@ -298,6 +298,9 @@ Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e deta
 9.2 dos requisitos: B1, B2 → B8, B9, B10 → B16 (modelos de nota ao criar, pedido do usuário em
 2026-11-09: Tarefas, Tabelas e outros) → B11–B14 → B3 → B15 → B4–B7, B17 (essas exigem ADR).
 
+- [x] **B1 — Transições compartilhadas** (0.45.0): `src/mobile/view-transition.js` com View Transitions API ao abrir notas, respeitando `prefers-reduced-motion` e com fallback instantâneo (`src/mobile-platform.test.js`).
+- [x] **B2 — Háptica com significado** (0.45.0): `src/mobile/haptics.js` + ponte nativa `SlothSystem.haptic(kind)` em `MainActivity.kt` (`HapticFeedbackConstants`, respeitando a configuração de vibração do sistema), disparada no limite do gesto de exclusão (`SwipeNoteRow`) e na conclusão de tarefas (`TasksLibrary`) (`src/mobile-platform.test.js`).
+
 ## Depois deste plano — Parte C: ideias para as duas plataformas
 
 Começa só depois da Parte B. As propostas C1–C6 (seção 9.3 dos requisitos) mudam desktop e

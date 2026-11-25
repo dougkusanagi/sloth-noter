@@ -13,6 +13,9 @@ import { useWorkspaceBoot } from '../hooks/use-workspace-boot.js'
 import { useTheme } from '../hooks/use-theme.js'
 import { DocumentWidthPresets } from '../components/document-width-presets.jsx'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
+import { runNoteTransition } from './view-transition.js'
+import { triggerHaptic } from './haptics.js'
 import {
   ArrowDown,
   ArrowLeft,
@@ -503,10 +506,14 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         },
       })
     }
-    dispatch({
-      type: 'push',
-      route: { name: 'note', id, scroll: saved?.scroll ?? 0, cursor: saved?.cursor },
-    })
+    runNoteTransition(() =>
+      flushSync(() =>
+        dispatch({
+          type: 'push',
+          route: { name: 'note', id, scroll: saved?.scroll ?? 0, cursor: saved?.cursor },
+        }),
+      ),
+    )
   }
   function foldAllSections() {
     if (!active) return
@@ -1531,6 +1538,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             }}
             onToggle={(id, mark) => {
               if (!blocked) {
+                triggerHaptic('task-done')
                 const note = current.current.notes.find((item) => item.id === id)
                 if (note) {
                   const updated = toggleTask(note.body, mark)
