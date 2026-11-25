@@ -72,7 +72,9 @@ test('Reading mode handles [[Note#Heading]], missing note creation, external lin
 
   // Back returns to Inicio preserving reading context.
   await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
-  await expect(page.getByRole('heading', { name: 'Início', exact: true })).toBeVisible()
+  await expect(
+    page.getByRole('article').getByRole('heading', { name: 'Início', exact: true }),
+  ).toBeVisible()
 
   // Missing wiki link offers creating the note via toast action.
   await page.getByRole('link', { name: 'Nova Ideia' }).tap()

@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.44.1] — 2026-11-25
+
+Corrigido o seletor estrito de título `h1` no teste E2E de leitura mobile (`reading-interactions.spec.js`). Veja os [detalhes da versão](changelog/0.44.1.md).
+
 ## [0.44.0] — 2026-11-25
 
 Adicionado suporte a prazos e datas em tarefas (`📅`, `⏳`, `🛫`) com chips relativos por situação nos modos Padrão e Leitura e filtro/ordenação por prazo na biblioteca de tarefas (ADR 0044). Veja os [detalhes da versão](changelog/0.44.0.md).
