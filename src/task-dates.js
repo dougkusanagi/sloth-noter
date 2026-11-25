@@ -1,10 +1,68 @@
 import { currentLanguage, t } from './i18n.js'
 
 /**
- * The `✅ AAAA-MM-DD` / `❌ AAAA-MM-DD` suffix written when a task is closed (Obsidian Tasks
- * format, ADR 0034). The file keeps ISO dates; the interface shows them in the active locale.
+ * Task date stamps following the Obsidian Tasks format (ADR 0004, ADR 0044):
+ * `📅 YYYY-MM-DD` (due), `⏳ YYYY-MM-DD` (scheduled), `🛫 YYYY-MM-DD` (start),
+ * `✅ YYYY-MM-DD` (done), `❌ YYYY-MM-DD` (canceled).
  */
 const STAMP = /[ \t]+([✅❌])[ \t]+(\d{4})-(\d{2})-(\d{2})[ \t]*$/u
+const ANY_STAMP = /(?:^|[ \t]+)([📅⏳🛫✅❌])[ \t]+(\d{4})-(\d{2})-(\d{2})(?=$|[ \t])/gu
+const KINDS = { '📅': 'due', '⏳': 'scheduled', '🛫': 'start', '✅': 'done', '❌': 'canceled' }
+const DAY = 24 * 60 * 60 * 1000
+
+const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
+
+/** All task date stamps in a line (`due`, `scheduled`, `start`, `done`, `canceled`). */
+export function taskDates(text) {
+  const result = []
+  for (const match of text.matchAll(ANY_STAMP)) {
+    const [, mark, year, month, day] = match
+    result.push({
+      index: match.index,
+      length: match[0].length,
+      mark,
+      kind: KINDS[mark],
+      iso: `${year}-${month}-${day}`,
+    })
+  }
+  return result
+}
+
+/** Removes all task date stamps from a task text for clean display. */
+export function stripTaskDates(text) {
+  return text
+    .replace(ANY_STAMP, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+/** Urgency state of a due date: `'overdue' | 'today' | 'soon' | 'future'`. */
+export function taskDueState(iso, now = new Date()) {
+  const [year, month, day] = iso.split('-').map(Number)
+  const target = new Date(year, month - 1, day)
+  if (target.getMonth() !== month - 1) return 'future'
+  const days = Math.round((startOfDay(target) - startOfDay(now)) / DAY)
+  if (days < 0) return 'overdue'
+  if (days === 0) return 'today'
+  if (days <= 2) return 'soon'
+  return 'future'
+}
+
+/** Short visible text for a task date chip (relative for due dates, formatted otherwise). */
+export function taskStampText(stamp, now = new Date(), language = currentLanguage()) {
+  if (stamp.kind === 'due') {
+    const [year, month, day] = stamp.iso.split('-').map(Number)
+    const target = new Date(year, month - 1, day)
+    if (target.getMonth() === month - 1) {
+      const days = Math.round((startOfDay(target) - startOfDay(now)) / DAY)
+      if (days < 0) return t('task.overdue', { count: Math.abs(days) })
+      if (days === 0) return t('task.dueToday')
+      if (days === 1) return t('task.dueTomorrow')
+      if (days <= 7) return t('task.dueIn', { count: days })
+    }
+  }
+  return formatTaskDate(stamp.iso, language)
+}
 
 /** Splits a task text into the text before the stamp and the stamp itself. */
 export function taskDate(text) {
@@ -32,9 +90,17 @@ export function formatTaskDate(iso, language = currentLanguage()) {
   }).format(date)
 }
 
-/** Accessible text of the badge, e.g. "Concluída em 23/11/2026". */
+/** Accessible text of the badge, e.g. "Concluída em 23/11/2026" or "Prazo: 23/11/2026". */
 export function taskDateLabel(stamp) {
-  return t(stamp.kind === 'done' ? 'task.doneOn' : 'task.canceledOn', {
+  const key =
+    {
+      done: 'task.doneOn',
+      canceled: 'task.canceledOn',
+      due: 'task.dueOn',
+      scheduled: 'task.scheduledOn',
+      start: 'task.startOn',
+    }[stamp.kind] ?? 'task.dueOn'
+  return t(key, {
     date: formatTaskDate(stamp.iso),
   })
 }

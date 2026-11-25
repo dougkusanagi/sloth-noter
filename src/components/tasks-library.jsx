@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, CircleCheck, ExternalLink } from 'lucide-react'
 import { resolvedTasks } from '../tasks.js'
-import { taskDate, taskMatches } from '../task-dates.js'
+import { stripTaskDates, taskDates, taskDueState, taskMatches } from '../task-dates.js'
 import { TaskDateBadge } from './task-date-badge.jsx'
 import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
@@ -22,26 +22,49 @@ export function plain(text) {
 export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJump }) {
   const [collapsed, setCollapsed] = useState(new Set())
   const [status, setStatus] = useState('all')
+  const [dueFilter, setDueFilter] = useState('all')
+  const [sortByDue, setSortByDue] = useState(false)
   const groups = useMemo(() => {
     const needle = query.trim()
+    const dueIso = (text) => taskDates(text).find((stamp) => stamp.kind === 'due')?.iso ?? null
+    const matchesDue = (text) => {
+      if (dueFilter === 'all') return true
+      const iso = dueIso(text)
+      if (!iso) return false
+      if (dueFilter === 'any') return true
+      const state = taskDueState(iso)
+      if (dueFilter === 'overdue') return state === 'overdue'
+      if (dueFilter === 'today') return state === 'today'
+      if (dueFilter === 'upcoming') return state === 'soon' || state === 'future'
+      return true
+    }
     return notes
       .map((note) => {
         const tasks = resolvedTasks(note.body, notes)
+        const filtered = tasks.filter(
+          (task) =>
+            (showDone || (!task.done && task.status !== 'canceled')) &&
+            (status === 'all' || task.status === status) &&
+            matchesDue(task.text) &&
+            (!needle ||
+              taskMatches(task.text, needle) ||
+              note.name.toLocaleLowerCase().includes(needle.toLocaleLowerCase())),
+        )
+        if (sortByDue) {
+          filtered.sort((a, b) => {
+            const da = dueIso(a.text) ?? '9999-99-99'
+            const db = dueIso(b.text) ?? '9999-99-99'
+            return da.localeCompare(db)
+          })
+        }
         return {
           note,
           open: tasks.filter((task) => !task.done && task.status !== 'canceled').length,
-          tasks: tasks.filter(
-            (task) =>
-              (showDone || (!task.done && task.status !== 'canceled')) &&
-              (status === 'all' || task.status === status) &&
-              (!needle ||
-                taskMatches(task.text, needle) ||
-                note.name.toLocaleLowerCase().includes(needle.toLocaleLowerCase())),
-          ),
+          tasks: filtered,
         }
       })
       .filter((group) => group.tasks.length)
-  }, [notes, query, showDone, status])
+  }, [notes, query, showDone, status, dueFilter, sortByDue])
   return (
     <section className="tasks-library" aria-label={t('tasks.title')}>
       <label className="tasks-filter tasks-status-filter">
@@ -51,6 +74,25 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
           <option value="doing">{t('task.status.doing')}</option>
           <option value="waiting">{t('task.status.waiting')}</option>
         </select>
+      </label>
+      <label className="tasks-filter tasks-due-filter">
+        {t('tasks.due')}
+        <select value={dueFilter} onChange={(event) => setDueFilter(event.target.value)}>
+          <option value="all">{t('tasks.dueAll')}</option>
+          <option value="overdue">{t('tasks.dueOverdue')}</option>
+          <option value="today">{t('tasks.dueToday')}</option>
+          <option value="upcoming">{t('tasks.dueUpcoming')}</option>
+          <option value="any">{t('tasks.dueAny')}</option>
+        </select>
+      </label>
+      <label className="tasks-filter">
+        <input
+          type="checkbox"
+          className="switch small"
+          checked={sortByDue}
+          onChange={(event) => setSortByDue(event.target.checked)}
+        />
+        {t('tasks.sortByDue')}
       </label>
       <label className="tasks-filter">
         <input
@@ -115,9 +157,7 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
                     aria-label={plain(task.text) || t('task.open')}
                     onChange={() => onToggle(note.id, task.mark)}
                   />
-                  <span className="task-text">
-                    {plain(taskDate(task.text)?.text ?? task.text) || '—'}
-                  </span>
+                  <span className="task-text">{plain(stripTaskDates(task.text)) || '—'}</span>
                   <TaskDateBadge text={task.text} />
                   <button
                     type="button"

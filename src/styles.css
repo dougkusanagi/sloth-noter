@@ -3326,6 +3326,24 @@ body.cm-section-dragging * {
 .task-date[data-kind='canceled'] {
   opacity: 0.8;
 }
+.task-date[data-kind='due'][data-state='overdue'] {
+  background: color-mix(in srgb, #dc2626 14%, var(--control));
+  box-shadow: 0 0 0 1px color-mix(in srgb, #dc2626 40%, var(--edge));
+  color: #b91c1c;
+}
+:root[data-theme='dark'] .task-date[data-kind='due'][data-state='overdue'] {
+  color: #fca5a5;
+}
+.task-date[data-kind='due'][data-state='today'],
+.task-date[data-kind='due'][data-state='soon'] {
+  background: color-mix(in srgb, #d97706 14%, var(--control));
+  box-shadow: 0 0 0 1px color-mix(in srgb, #d97706 40%, var(--edge));
+  color: #92400e;
+}
+:root[data-theme='dark'] .task-date[data-kind='due'][data-state='today'],
+:root[data-theme='dark'] .task-date[data-kind='due'][data-state='soon'] {
+  color: #fcd34d;
+}
 
 .visual-editor .cm-md-accordion-title,
 .markdown-accordion > summary {

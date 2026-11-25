@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.44.0] — 2026-11-25
+
+Adicionado suporte a prazos e datas em tarefas (`📅`, `⏳`, `🛫`) com chips relativos por situação nos modos Padrão e Leitura e filtro/ordenação por prazo na biblioteca de tarefas (ADR 0044). Veja os [detalhes da versão](changelog/0.44.0.md).
+
 ## [0.43.0] — 2026-11-25
 
 Concluídas as pendências funcionais de leitura, modelos e variáveis: variáveis renderizadas no modo Leitura, criação de propriedades direto pelo seletor de variáveis, painel de propriedades, "Variável…" e "Usar como modelo" no celular, além de `createdAt` e a variável `{{created}}` (ADR 0043). Veja os [detalhes da versão](changelog/0.43.0.md).

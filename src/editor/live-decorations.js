@@ -32,7 +32,7 @@ import {
 } from '../tasks.js'
 import { Facet } from '@codemirror/state'
 import { progressBadge } from '../progress-badge.js'
-import { formatTaskDate, taskDate, taskDateLabel } from '../task-dates.js'
+import { taskDateLabel, taskDates, taskDueState, taskStampText } from '../task-dates.js'
 import { onLongPress, openTaskMenu } from './task-menu.js'
 import { unarchiveTask } from '../task-archive.js'
 import { documentChanges } from '../search-scope.js'
@@ -228,10 +228,11 @@ class TaskDateWidget extends WidgetType {
     const badge = document.createElement('time')
     badge.className = 'task-date'
     badge.dataset.kind = this.stamp.kind
+    if (this.stamp.kind === 'due') badge.dataset.state = taskDueState(this.stamp.iso)
     badge.dateTime = this.stamp.iso
     badge.title = taskDateLabel(this.stamp)
     badge.setAttribute('aria-label', badge.title)
-    badge.textContent = formatTaskDate(this.stamp.iso)
+    badge.textContent = taskStampText(this.stamp)
     return badge
   }
   ignoreEvent() {
@@ -790,8 +791,8 @@ export function decorationsFor(view) {
         ) {
           ranges.push(Decoration.widget({ widget: new TaskMoveHint(), side: 1 }).range(line.to))
         }
-        const stamp = active ? null : taskDate(line.text)
-        if (stamp)
+        const stamps = active ? [] : taskDates(line.text)
+        for (const stamp of stamps)
           ranges.push(
             Decoration.replace({ widget: new TaskDateWidget(stamp) }).range(
               line.from + stamp.index,

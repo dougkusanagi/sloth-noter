@@ -328,6 +328,7 @@ Cada etapa é uma entrega com versão, Novidades e capturas próprias.
 
 - Parte 3.1 a 3.3, primeira fase, na 0.22.0 ([ADR 0027](../adr/0027-propriedades-yaml-e-variaveis.md)): sintaxe `{{nome}}` (sem `=`, por escolha da pessoa), bloco YAML antes do título, leitura com a biblioteca `yaml`, variáveis `today`, `updated`, `words`, `reading`, `tasks`, `until` e `user.x`, chips no Padrão e na Leitura, "Inserir propriedades (YAML)" e auditoria do título (nome, prévia, estatísticas, tarefas, seções, rótulos, celular). Painel de propriedades na margem direita na 0.23.0 ([ADR 0028](../adr/0028-painel-de-propriedades-na-margem-direita.md)): adicionar, renomear, remover com aviso de referências, tipos e erros do YAML. "Variável…" no menu `/` do computador entregue na 0.24.0.
 - Parte 3 concluída na 0.43.0 (2026-11-25): leitura de variáveis no componente `Markdown` (`remarkVariables` em `src/variables.js` e `src/markdown.jsx`), criação de propriedade direto pelo seletor de variáveis (`VariablePicker` e `EditingSheet`), painel de propriedades (`PropertiesDock`), "Inserir propriedades (YAML)", "Variável…" e "Usar como modelo" no celular (`src/mobile/mobile-shell.jsx`), além de `createdAt` e `{{created}}` ([ADR 0043](../adr/0043-data-de-criacao-da-nota.md)).
+- Parte 4 concluída na 0.44.0 (2026-11-25): prazos e datas em tarefas (`📅`, `⏳`, `🛫` além de `✅`/`❌`, [ADR 0044](../adr/0044-prazos-em-tarefas.md)), chips relativos com cor e texto nos modos Padrão e Leitura, e filtro/ordenação por prazo em `TasksLibrary`.
 
 ## Tentativas que falharam
 
