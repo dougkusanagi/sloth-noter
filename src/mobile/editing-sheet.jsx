@@ -11,7 +11,35 @@ import { templateInsertEdit, templateList } from '../templates.js'
 export function EditingSheet({ view, notes, onClose, onImage }) {
   const [linking, setLinking] = useState(false)
   const [choosingTemplate, setChoosingTemplate] = useState(false)
+  const [choosingTable, setChoosingTable] = useState(false)
   const [query, setQuery] = useState('')
+  function insertTable(rows, cols) {
+    if (!view || view.composing || view.compositionStarted) return
+    const { from, to } = view.state.selection.main
+    const text = view.state.doc.toString()
+    const before =
+      from === 0 || text.slice(0, from).endsWith('\n\n')
+        ? ''
+        : text.slice(0, from).endsWith('\n')
+          ? '\n'
+          : '\n\n'
+    const header = `| ${Array.from({ length: cols }, (_, i) => `Coluna ${i + 1}`).join(' | ')} |`
+    const sep = `| ${Array.from({ length: cols }, () => '---').join(' | ')} |`
+    const body = Array.from(
+      { length: rows },
+      (_, r) => `| ${Array.from({ length: cols }, (_, c) => `Valor ${r + 1}.${c + 1}`).join(' | ')} |`,
+    ).join('\n')
+    const insert = `${before}${header}\n${sep}\n${body}\n`
+    const start = from + before.length
+    view.dispatch({
+      changes: { from, to, insert },
+      selection: { anchor: start + 2, head: start + 10 },
+      userEvent: 'input',
+      scrollIntoView: true,
+    })
+    onClose()
+    view.focus()
+  }
   function insert(action, note) {
     if (!view || view.composing || view.compositionStarted) return
     if (action === 'wiki') {
@@ -24,6 +52,10 @@ export function EditingSheet({ view, notes, onClose, onImage }) {
     }
     if (action === 'template' && !note) {
       setChoosingTemplate(true)
+      return
+    }
+    if (action === 'table') {
+      setChoosingTable(true)
       return
     }
     const { from, to } = view.state.selection.main
@@ -65,7 +97,24 @@ export function EditingSheet({ view, notes, onClose, onImage }) {
       >
         {t('mobile.redo')}
       </button>
-      {choosingTemplate ? (
+      {choosingTable ? (
+        <div className="mobile-table-picker">
+          <p className="mobile-table-picker-title">{t('mobile.tableGridTitle')}</p>
+          <div className="mobile-table-grid">
+            {[2, 3, 4, 5, 6].map((rows) =>
+              [2, 3, 4, 5, 6].map((cols) => (
+                <button
+                  key={`${rows}x${cols}`}
+                  type="button"
+                  onClick={() => insertTable(rows, cols)}
+                >
+                  {rows} × {cols}
+                </button>
+              )),
+            )}
+          </div>
+        </div>
+      ) : choosingTemplate ? (
         <div className="mobile-insert-grid mobile-template-list">
           {templateList(currentLanguage()).map((item) => (
             <button key={item.id} onClick={() => insert('template', item.id)}>

@@ -27,14 +27,14 @@ O [roteiro](../ROADMAP.md) guarda a direção do produto, não uma segunda fila 
 | 1 — feita  | Fechar entregas do editor, de imagens e navegação e de status, arquivo e Quadro (concluída na 0.25.2)                                                                                      | Guias e rolagem corrigidas/verificadas, suíte completa aprovada, ADR 0041 registrado, Recursos/ajuda/Novidades atualizados, pendências nativas preservadas em `mobile-interface.md` e planos concluídos removidos.                             |
 | 2 — feita  | Sincronização e proteção dos dados: [S4 do plano Android](mobile-interface.md#fila--2-sincronização) (navegador concluído na 0.37.1; validação nativa registrada em `mobile-interface.md`) | Fluxo de conta única, notas e imagens nos dois sentidos, conflito, exclusão, restauração, falhas de rede e recuperação validados no navegador; rotas de contas confirmadas no Worker; pendências nativas preservadas em `mobile-interface.md`. |
 | 3 — feita  | Reuso de frontend desktop ↔ mobile: [R1–R4](reuso-frontend-desktop-mobile.md) (concluída em 2026-11-24)                                                                                    | Unificar mutações puras de documento, hooks compartilhados de sessão e componentes de conteúdo sem misturar as cascas de plataforma; manter testes unitários, lint e build verdes antes de retomar A7–A19.                                     |
-| 4 — ativa  | Uso diário no Android: [paridade A7–A19](mobile-interface.md#fila--3-restante-da-paridade)                                                                                                 | Seguir a ordem local, conferindo primeiro o que já existe; não reimplementar etapas parcialmente prontas. Cumprir o critério de paridade dos requisitos antes de iniciar ideias novas.                                                         |
-| 5          | Pendências de [leitura, modelos e variáveis](leitura-e-modelos.md)                                                                                                                         | Conferir o que foi entregue e concluir as pendências funcionais antes dos opcionais tipográficos. Quando uma pendência também fizer parte da paridade Android, executá-la na prioridade 4 e atualizar ambos os planos.                         |
+| 4 — feita  | Uso diário no Android: [paridade A5–A19](mobile-interface.md#fila--3-restante-da-paridade) (navegador concluído em 2026-11-24; validação nativa registrada em `mobile-interface.md`) | Seguir a ordem local, conferindo primeiro o que já existe; não reimplementar etapas parcialmente prontas. Cumprir o critério de paridade dos requisitos antes de iniciar ideias novas.                                                         |
+| 5 — ativa  | Pendências de [leitura, modelos e variáveis](leitura-e-modelos.md)                                                                                                                         | Conferir o que foi entregue e concluir as pendências funcionais antes dos opcionais tipográficos. Quando uma pendência também fizer parte da paridade Android, executá-la na prioridade 4 e atualizar ambos os planos.                         |
 | 6          | Recursos novos e polimento opcional do [roteiro](../ROADMAP.md)                                                                                                                            | Entrar após estabilizar os fluxos anteriores; no mobile, Parte B antes da Parte C, conforme os requisitos.                                                                                                                                     |
 
 Um defeito que comprometa gravação, integridade ou recuperação dos dados passa à frente da fila;
 registrar a evidência e o ajuste de prioridade antes de continuar.
 
-## Etapa ativa — uso diário no Android (A11 — Tabelas)
+## Etapa ativa — pendências de leitura, modelos e variáveis (Prioridade 5)
 
 ### Concluído em reuso de frontend desktop ↔ mobile (R1–R4, 2026-11-24)
 
@@ -51,7 +51,15 @@ registrar a evidência e o ajuste de prioridade antes de continuar.
 - [x] A8 — Notas abertas concluída no navegador em 2026-11-24: título no cabeçalho abre folha **Notas abertas** com nota atual marcada, fechar individual, fechar as outras, preservação de modo/cursor/rolagem por nota e persistência de `openIds` (`e2e/mobile/open-notes.spec.js`).
 - [x] A9 — Ações de documento concluída no navegador em 2026-11-24: buscar e substituir em edição (`EditorFind` com desfazer), Informações (`textStatistics`), recolher/expandir todas as seções e mover seção (`moveSectionBy` com desfazer) (`e2e/mobile/document-actions.spec.js`).
 - [x] A10 — Leitura: concluir interações concluída no navegador em 2026-11-24: `[[Nota#Título]]`, criação de nota ausente por toast, links externos e progresso de seções validados em 320 dp sem abrir teclado (`e2e/mobile/reading-interactions.spec.js`).
-- [ ] Implementar e validar **A11 — Tabelas** (P34 em [mobile-interface.md](mobile-interface.md#fila--3-restante-da-paridade)).
+- [x] A11 — Tabelas concluída no navegador em 2026-11-24 (`e2e/mobile/tables.spec.js`, `e2e/mobile/formatting-bar.spec.js`).
+- [x] A12 — Colunas concluída no navegador em 2026-11-24 (`e2e/mobile/columns.spec.js`).
+- [x] A13 — Imagens concluída no navegador em 2026-11-24 (`e2e/mobile/images.spec.js`).
+- [x] A14 — Arquivos concluída no navegador em 2026-11-24 (`src/mobile/mobile-shell.jsx`, `src/mobile/backup-panel.jsx`).
+- [x] A15 — Histórico de versões concluída no navegador em 2026-11-24 (`e2e/mobile/history.spec.js`).
+- [x] A16 — Classes de janela e teclado físico concluída no navegador em 2026-11-24 (`e2e/mobile/window-classes.spec.js`).
+- [x] A17 — Status de tarefas e Quadro concluída em 2026-11-17 (`e2e/mobile/task-board.spec.js`).
+- [x] A18 — Polimento nativo concluída no navegador em 2026-11-24 (validação nativa pendente registrada em `mobile-interface.md`).
+- [x] A19 — Integração Android concluída no navegador em 2026-11-24 (ponte `takeOpenedFile` como cópia interna; validação nativa pendente registrada em `mobile-interface.md`).
 
 ## Evidências da prioridade 2 (2026-11-24, versão 0.37.1)
 

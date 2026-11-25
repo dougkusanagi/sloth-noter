@@ -22,6 +22,8 @@ const layers = new Set([
   'open-notes',
   'info',
   'sections',
+  'image-detail',
+  'image-insert',
 ])
 
 export function initialNavigation(tab = 'notes') {

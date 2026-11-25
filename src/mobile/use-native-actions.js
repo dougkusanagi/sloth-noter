@@ -12,6 +12,8 @@ export function useNativeActions(handlers, ready, env = window) {
       if (action === 'new-note') latest.current.newNote()
       const text = env.SlothSystem?.takeSharedText?.()
       if (text) latest.current.sharedText(text)
+      const opened = env.SlothSystem?.takeOpenedFile?.()
+      if (opened && latest.current.openedFile) latest.current.openedFile(opened)
     }
     take()
     env.__nativeAction = take

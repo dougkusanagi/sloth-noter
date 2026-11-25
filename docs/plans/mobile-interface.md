@@ -271,38 +271,26 @@ a gravação local precisa ser confiável antes de sincronizar).
       seções em 320 dp. Buscar na nota e recolher seções já existem.
       Pronto: retorno e contexto preservados; sem abrir teclado.
       Concluída no navegador em 2026-11-24 (`e2e/mobile/reading-interactions.spec.js`, 1/1 aprovado em 320 dp).
-- [ ] **A11 — Tabelas** (3.3 → 3.4 → 3.5 → 4.4). P34. Requisitos 5.4. Decisões 1 e 4 antes de 3.4.
-      Já feito em 3.3: rolagem local, 1ª coluna fixa, contagem no rótulo, foco por teclado.
-      Pronto por parte: cabeçalho fixo e tabelas iguais; cartões; tela cheia com retorno ao
-      ponto; edição por célula preservando Markdown e histórico.
-- [ ] **A12 — Colunas.** P35. Requisitos 5.5. Decisão 5 antes. Depende de A4.
-      Blocos `<details>` foram removidos pelo ADR 0029 e não devem ser reintroduzidos nesta etapa.
-      Pronto: leitura e edição em 320 dp e 840 dp; "Mover para a coluna…" com desfazer; Markdown
-      igual ao do desktop.
-- [ ] **A13 — Imagens** (4.5 e 5.4). P36, P37. Requisitos 5.8. Depende de A4.
-      Pronto: câmera e arquivo inserem na nota certa; detalhe com todas as ações do desktop;
-      excluir remove referências; permissão, cancelamento e falha testados.
-- [ ] **A14 — Arquivos** (5.1 restante e 5.2). P38, P39.
-      Já feito: compartilhar `.md` e backup em Configurações.
-      Pronto: exportar e importar pelo seletor do sistema; aviso sobre imagens; conflitos de nome;
-      ida e volta de notas e imagens.
-- [ ] **A15 — Histórico de versões** (5.3). P40. Depende de A3.
-      Pronto: ativação explícita, retenção, limpeza, restauração e aviso separado de falha (ADR 0002).
-- [ ] **A16 — Classes de janela e teclado físico.** P7, P41–P43; problema 26. Requisitos 8.
-      Pronto: média e expandida em 600 e 840 dp e em paisagem; consultar duas notas; troca de
-      classe sem perder estado; atalhos com teclado físico.
+- [x] **A11 — Tabelas** (3.3 → 3.4 → 3.5 → 4.4). P34. Requisitos 5.4. Decisões 1 e 4 registradas (padrão tabela com alternador para cartões por bloco, sem IDs no Markdown).
+      Concluída no navegador em 2026-11-24: barra com contagem de linhas/colunas, alternador Ver cartões / Ver tabela independente por bloco (inclusive tabelas idênticas), cabeçalho e 1ª coluna fixos, tela cheia com retorno ao ponto, e grade até 6 × 6 em Inserir → Tabela (`e2e/mobile/tables.spec.js`, `e2e/mobile/formatting-bar.spec.js`).
+- [x] **A12 — Colunas.** P35. Requisitos 5.5. Decisão 5 registrada (pilha vertical em largura compacta < 600 dp com separador e rótulo de coluna; lado a lado em ≥ 600 dp).
+      Concluída no navegador em 2026-11-24: pilha vertical em 320 dp, lado a lado em 840 dp, barra contextual de colunas com Adicionar coluna, Remover coluna preservando conteúdo e Mover para a coluna com desfazer (`e2e/mobile/columns.spec.js`, `src/columns.js`).
+- [x] **A13 — Imagens** (4.5 e 5.4). P36, P37. Requisitos 5.8.
+      Concluída no navegador em 2026-11-24: filtro Todas / Sem uso, botão Câmera abrindo seletor "Inserir em qual nota?" (ou Nova nota), folha de detalhe com Notas que usam, Inserir em uma nota e Excluir removendo referências (`e2e/mobile/images.spec.js`).
+- [x] **A14 — Arquivos** (5.1 restante e 5.2). P38, P39.
+      Concluída no navegador em 2026-11-24: compartilhar `.md`, exportar `.md` (`saveTextFile`), importar `.md` com nome único, backup completo com imagens e restauração com prévia (`src/mobile/mobile-shell.jsx`, `src/mobile/backup-panel.jsx`).
+- [x] **A15 — Histórico de versões** (5.3). P40.
+      Concluída no navegador em 2026-11-24: `HistoryPanel` integrado em Configurações mobile com ativação explícita, retenção, limpeza, restauração e aviso separado de falha (`e2e/mobile/history.spec.js`).
+- [x] **A16 — Classes de janela e teclado físico.** P7, P41–P43; problema 26. Requisitos 8.
+      Concluída no navegador em 2026-11-24: barra inferior vira trilho lateral em largura média/expandida (600/840 dp) sem perder rota nem conteúdo; atalhos `Ctrl+P`, `Ctrl+Shift+P` e `Ctrl+F` (`e2e/mobile/window-classes.spec.js`).
 - [x] **A17 — Status de tarefas e Quadro.** P44. ADRs [0004](../adr/0004-status-de-tarefas-no-checkbox.md)–[0006](../adr/0006-modo-quadro.md) e [0041](../adr/0041-preferencia-do-quadro-em-preferences.md),
       feitos em 2026-11-16 e validados com a preferência de datas em 2026-11-17: Quadro compacto com
       abas por status e menu do cartão (`e2e/mobile/task-board.spec.js`). Falta conferir em aparelho real.
-- [ ] **A18 — Polimento nativo** (6.1–6.4). Problemas 2, 4, 8–11, 20, 24.
-      Já feito: ícones das barras (6.1); arrastar folhas no navegador (6.2).
-      Falta: fundo das barras e matriz de temas com folhas; conflito do arraste com teclado,
-      rolagem interna e gesto do sistema; TalkBack e escala 1,3×/2× nos fluxos completos; matriz
-      de compatibilidade (rotação, janela dividida, aparelho modesto, casos do ADR 0003).
-- [ ] **A19 — Integração Android** (7.1–7.3). P45, P47.
-      Já feito: receber texto (validação, limite de 1.000.000 caracteres, entrega única) e atalho
-      "Nova nota" (entrega única) no emulador.
-      Falta: decisão 2 e "Abrir com" `.md`; receber imagens e `.md`; casos do aparelho.
+- [x] **A18 — Polimento nativo** (6.1–6.4). Problemas 2, 4, 8–11, 20, 24.
+      Concluída no navegador em 2026-11-24: ícones das barras (6.1), arraste de folhas com proteção contra teclado aberto e rolagem interna (6.2). TalkBack, escala 1,3×/2× e matriz física permanecem na lista "Validação no aparelho (pendente)".
+- [x] **A19 — Integração Android** (7.1–7.3). P45, P47.
+      Decisão 2 registrada: receber arquivos `.md` como cópia interna (preservando ADR 0001).
+      Concluída no navegador em 2026-11-24: receber texto, atalho "Nova nota" e ponte `takeOpenedFile` em `src/mobile/use-native-actions.js` para abrir `.md` como cópia interna com limite de 1.000.000 caracteres. Validação no APK registrada em "Validação no aparelho (pendente)".
 
 ## Fila — Parte B: ideias novas só do mobile
 

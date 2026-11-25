@@ -84,9 +84,16 @@ import {
   reconcileHeadingNames,
   restoreFromTrash,
 } from '../notes.js'
-import { clearImageCache, importImage, libraryImages, markdownImage } from '../images.js'
+import {
+  clearImageCache,
+  importImage,
+  libraryImages,
+  markdownImage,
+  removeDocumentImage,
+} from '../images.js'
 import { createFullBackup, readBackupBundle, restoreBackupImages } from '../backup.js'
 import { AboutPanel } from '../components/about-panel.jsx'
+import { HistoryPanel } from '../components/history-panel.jsx'
 import { SyncPanel } from '../components/sync-panel.jsx'
 import { useSync } from '../hooks/use-sync.js'
 import { ImageThumbnail } from '../components/image-library.jsx'
@@ -243,16 +250,21 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   useEffect(() => {
     const onShortcut = (event) => {
       if (!(event.ctrlKey || event.metaKey) || event.altKey) return
-      if (event.key.toLowerCase() !== 'p') return
-      event.preventDefault()
-      dispatch({
-        type: 'layer',
-        route: { name: 'commands', prefix: event.shiftKey ? '>' : '' },
-      })
+      const key = event.key.toLowerCase()
+      if (key === 'p') {
+        event.preventDefault()
+        dispatch({
+          type: 'layer',
+          route: { name: 'commands', prefix: event.shiftKey ? '>' : '' },
+        })
+      } else if (key === 'f' && route.name === 'note') {
+        event.preventDefault()
+        dispatch({ type: 'layer', route: { name: 'find' } })
+      }
     }
     window.addEventListener('keydown', onShortcut)
     return () => window.removeEventListener('keydown', onShortcut)
-  }, [dispatch])
+  }, [dispatch, route.name])
   useEffect(() => {
     if (!active || !pendingHeadingLine.current) return
     const line = pendingHeadingLine.current
@@ -288,6 +300,10 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   }
   const [showDone, setShowDone] = useState(false)
   const [imageBusy, setImageBusy] = useState(false)
+  const [imagesFilter, setImagesFilter] = useState('all')
+  const [selectedImage, setSelectedImage] = useState(null)
+  const [pendingInsertImage, setPendingInsertImage] = useState(null)
+  const cameraInput = useRef(null)
   const [shareBusy, setShareBusy] = useState(false)
   const sharePending = useRef(false)
   const [searchFocused, setSearchFocused] = useState(false)
@@ -579,7 +595,26 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     openNote(created.activeId, false)
     toast(t('mobile.sharedSaved'))
   }
-  useNativeActions({ newNote: () => createNote(), sharedText: receiveSharedText }, !blocked)
+  function receiveOpenedFile(payload) {
+    if (!payload || blocked) return
+    let body = ''
+    if (typeof payload === 'string') {
+      try {
+        const parsed = JSON.parse(payload)
+        body = typeof parsed?.text === 'string' ? parsed.text : payload
+      } catch {
+        body = payload
+      }
+    } else if (typeof payload?.text === 'string') {
+      body = payload.text
+    }
+    if (!body || body.length > 1_000_000) return
+    receiveSharedText(body)
+  }
+  useNativeActions(
+    { newNote: () => createNote(), sharedText: receiveSharedText, openedFile: receiveOpenedFile },
+    !blocked,
+  )
   function updateBody(body) {
     if (!active || blocked) return
     commit(updateMobileNote(current.current, active.id, body))
@@ -1511,34 +1546,98 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             }}
           />
         )}
-        {route.name === 'images' && (
-          <section className="mobile-images" aria-label={t('images.title')}>
-            {libraryImages(data).map((image) => (
-              <figure key={image.src}>
-                <ImageThumbnail src={image.src} alt={image.name} />
-                <figcaption>
-                  {image.name}
-                  {image.noteIds.map((id) => {
-                    const note = data.notes.find((item) => item.id === id)
-                    return (
-                      note && (
-                        <button key={id} onClick={() => openNote(id)}>
-                          {displayName(note.name)}
-                        </button>
-                      )
-                    )
-                  })}
-                </figcaption>
-              </figure>
-            ))}
-            {!libraryImages(data).length && (
-              <div className="mobile-empty">
-                <ImageIcon size={32} aria-hidden="true" />
-                <p>{t('mobile.noImages')}</p>
+        {route.name === 'images' && (() => {
+          const allImages = libraryImages(data)
+          const visibleImages =
+            imagesFilter === 'unused'
+              ? allImages.filter((image) => image.noteIds.length === 0)
+              : allImages
+          return (
+            <section className="mobile-images" aria-label={t('images.title')}>
+              <div className="mobile-images-toolbar">
+                <div className="mobile-images-filters" role="group" aria-label={t('images.title')}>
+                  <button
+                    type="button"
+                    aria-pressed={imagesFilter === 'all'}
+                    onClick={() => setImagesFilter('all')}
+                  >
+                    {t('mobile.imagesAll')}
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={imagesFilter === 'unused'}
+                    onClick={() => setImagesFilter('unused')}
+                  >
+                    {t('mobile.imagesUnused')}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  disabled={imageBusy || blocked}
+                  onClick={() => cameraInput.current?.click()}
+                >
+                  {t('mobile.camera')}
+                </button>
+                <input
+                  ref={cameraInput}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  hidden
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0]
+                    event.target.value = ''
+                    if (!file || imageBusy || blocked) return
+                    setImageBusy(true)
+                    try {
+                      const src = await importImage(file, persistence.invoke)
+                      setPendingInsertImage({ name: file.name, src })
+                      dispatch({ type: 'layer', route: { name: 'image-insert' } })
+                    } catch (cause) {
+                      toast.error(t('images.importFailed', { error: friendlyError(cause) }))
+                    } finally {
+                      setImageBusy(false)
+                    }
+                  }}
+                />
               </div>
-            )}
-          </section>
-        )}
+              {visibleImages.map((image) => (
+                <figure key={image.src}>
+                  <button
+                    type="button"
+                    className="mobile-image-card"
+                    aria-label={image.name}
+                    onClick={() => {
+                      setSelectedImage(image)
+                      dispatch({ type: 'layer', route: { name: 'image-detail' } })
+                    }}
+                  >
+                    <ImageThumbnail src={image.src} alt={image.name} />
+                  </button>
+                  <figcaption>
+                    {image.name}
+                    {image.noteIds.map((id) => {
+                      const note = data.notes.find((item) => item.id === id)
+                      return (
+                        note && (
+                          <button key={id} onClick={() => openNote(id)}>
+                            {displayName(note.name)}
+                          </button>
+                        )
+                      )
+                    })}
+                  </figcaption>
+                </figure>
+              ))}
+              {!visibleImages.length && (
+                <div className="mobile-empty">
+                  <ImageIcon size={32} aria-hidden="true" />
+                  <p>{t('mobile.noImages')}</p>
+                </div>
+              )}
+            </section>
+          )
+        })()}
         {route.name === 'trash' && (
           <section className="mobile-trash" aria-label={t('trash.title')}>
             {data.trash.length > 0 && (
@@ -1629,6 +1728,20 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             <h2>{t('settings.sync')}</h2>
             <div className="settings-card settings-sync">
               <SyncPanel sync={sync} />
+            </div>
+            <h2>{t('history.title')}</h2>
+            <div className="settings-card">
+              <HistoryPanel
+                prefs={prefs}
+                note={active}
+                history={store.noteHistory}
+                onChange={updatePrefs}
+                onRestore={(body) => {
+                  if (!active || blocked) return
+                  updateBody(body)
+                  toast.success(t('history.restored'))
+                }}
+              />
             </div>
             <h2>{t('settings.about')}</h2>
             <div className="settings-card">
@@ -1793,6 +1906,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               data-sheet-drag
               onPointerDown={(event) => {
                 if (event.target.closest('button, input')) return
+                if (
+                  document.documentElement.dataset.keyboard === 'open' ||
+                  (dialog.current && dialog.current.scrollTop > 0)
+                )
+                  return
                 sheetDrag.current = { y: event.clientY, dy: 0 }
                 try {
                   event.currentTarget.setPointerCapture(event.pointerId)
@@ -1816,15 +1934,105 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                     ? t('mobile.commandsTitle')
                     : layer.name === 'cover'
                       ? t('cover.title')
-                      : actionsNote
-                        ? displayName(actionsNote.name)
-                        : 'Sloth Note'}
+                      : layer.name === 'image-detail'
+                        ? selectedImage?.name || t('images.title')
+                        : layer.name === 'image-insert'
+                          ? t('mobile.insertInNote')
+                          : actionsNote
+                            ? displayName(actionsNote.name)
+                            : 'Sloth Note'}
               </h2>
               <button className="mobile-icon" aria-label={t('dialog.close')} onClick={back}>
                 <X size={22} />
               </button>
             </div>
-            {layer.name === 'insert' ? (
+            {layer.name === 'image-detail' && selectedImage ? (
+              <div className="mobile-image-detail">
+                <ImageThumbnail src={selectedImage.src} alt={selectedImage.name} />
+                {selectedImage.noteIds.length > 0 && (
+                  <div className="mobile-image-notes">
+                    <p>{t('mobile.imageNotes')}</p>
+                    {selectedImage.noteIds.map((id) => {
+                      const note = data.notes.find((item) => item.id === id)
+                      return (
+                        note && (
+                          <button
+                            key={id}
+                            onClick={() => {
+                              back()
+                              openNote(id)
+                            }}
+                          >
+                            {displayName(note.name)}
+                          </button>
+                        )
+                      )
+                    })}
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    setPendingInsertImage({ name: selectedImage.name, src: selectedImage.src })
+                    dispatch({ type: 'layer', route: { name: 'image-insert' } })
+                  }}
+                >
+                  {t('mobile.insertAgain')}
+                </button>
+                <button
+                  className="danger"
+                  disabled={blocked}
+                  onClick={() => {
+                    commit(removeDocumentImage(current.current, selectedImage.src))
+                    setSelectedImage(null)
+                    back()
+                    toast.success(t('mobile.imageDeleted'))
+                  }}
+                >
+                  {t('trash.purge')}
+                </button>
+              </div>
+            ) : layer.name === 'image-insert' && pendingInsertImage ? (
+              <div className="mobile-image-insert-list">
+                <button
+                  disabled={blocked}
+                  onClick={() => {
+                    const md = markdownImage(pendingInsertImage.name, pendingInsertImage.src)
+                    const next = newMobileNote(current.current)
+                    const created = next.notes.find((item) => item.id === next.activeId)
+                    if (created) created.body = `${created.body}\n\n${md}\n`
+                    commit(next)
+                    setPendingInsertImage(null)
+                    dispatch({ type: 'replace', route: { name: 'note', id: next.activeId } })
+                  }}
+                >
+                  {t('menu.newNote')}
+                </button>
+                {data.notes.map((note) => (
+                  <button
+                    key={note.id}
+                    disabled={blocked}
+                    onClick={() => {
+                      const md = markdownImage(pendingInsertImage.name, pendingInsertImage.src)
+                      const next = {
+                        ...current.current,
+                        notes: current.current.notes.map((item) =>
+                          item.id === note.id
+                            ? { ...item, body: `${item.body.trimEnd()}\n\n${md}\n` }
+                            : item,
+                        ),
+                      }
+                      commit(next)
+                      setPendingInsertImage(null)
+                      setSelectedImage(null)
+                      dispatch({ type: 'tab', name: 'images' })
+                      dispatch({ type: 'push', route: { name: 'note', id: note.id } })
+                    }}
+                  >
+                    {displayName(note.name)}
+                  </button>
+                ))}
+              </div>
+            ) : layer.name === 'insert' ? (
               <EditingSheet
                 view={editor.current}
                 notes={data.notes}

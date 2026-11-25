@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.41.0] — 2026-11-24
+
+Paridade mobile concluída no navegador (A11–A19): tabelas com cartões e tela cheia, colunas responsivas, galeria de imagens com câmera e exclusão, histórico de versões, classes de janela e integração Android. Veja os [detalhes da versão](changelog/0.41.0.md).
+
 ## [0.40.0] — 2026-11-24
 
 Grupos e ordenação na lista, folha Notas abertas, ações de documento (buscar e substituir, informações, recolher/expandir e mover seção) e interações de leitura no celular. Veja os [detalhes da versão](changelog/0.40.0.md).

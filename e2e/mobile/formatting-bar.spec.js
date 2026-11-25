@@ -209,6 +209,7 @@ test('table group adds a column and exposes alignment actions', async ({ page })
   await openKeyboard(page)
   await bar(page).getByRole('button', { name: 'Inserir', exact: true }).tap()
   await page.getByRole('dialog').getByRole('button', { name: 'Tabela', exact: true }).tap()
+  await page.getByRole('dialog').getByRole('button', { name: '2 × 2', exact: true }).tap()
   await expect(
     bar(page).getByRole('button', { name: 'Adicionar coluna', exact: true }),
   ).toBeVisible()

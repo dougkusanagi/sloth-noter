@@ -37,6 +37,12 @@ import { activeFormats } from '../format-selection.js'
 import { indentList, moveList } from '../editor/keys.js'
 import { clipboardAction } from '../clipboard-actions.js'
 import { formattingContext, taskLineEdit } from './formatting-context.js'
+import {
+  addColumnEdit,
+  columnBlockAt,
+  moveSelectionToColumnEdit,
+  removeColumnEdit,
+} from '../columns.js'
 import { codeAt, alignTableColumn } from './editing-actions.js'
 import { toggleWrap, codeCopyHandler } from '../editor/code-copy.js'
 import {
@@ -301,6 +307,51 @@ export function FormattingBar({ view, onHideKeyboard, onInsert }) {
         <MoreHorizontal size={20} />
       </Button>,
     )
+  }
+  if (context === 'columns') {
+    const text = view.state.doc.toString()
+    const { from, to } = view.state.selection.main
+    const found = columnBlockAt(text, from)
+    const applyCol = (edit) => {
+      if (!edit || composing) return
+      view.dispatch({
+        changes: { from: edit.from, to: edit.to, insert: edit.insert },
+        selection: { anchor: edit.selectionFrom, head: edit.selectionTo },
+        userEvent: 'input',
+        scrollIntoView: true,
+      })
+      view.focus()
+    }
+    group.push(
+      <Button
+        key="col-add"
+        label="mobile.columnAdd"
+        onClick={() => applyCol(addColumnEdit(text, from))}
+      >
+        {t('mobile.columnAdd')}
+      </Button>,
+      <Button
+        key="col-remove"
+        label="mobile.columnRemove"
+        onClick={() => applyCol(removeColumnEdit(text, from))}
+      >
+        {t('mobile.columnRemove')}
+      </Button>,
+    )
+    if (found) {
+      found.block.columns.forEach((_, idx) => {
+        if (idx === found.colIndex) return
+        group.push(
+          <Button
+            key={`col-move-${idx}`}
+            label={t('mobile.moveToColumn', { index: idx + 1 })}
+            onClick={() => applyCol(moveSelectionToColumnEdit(text, from, to, idx))}
+          >
+            {t('mobile.moveToColumn', { index: idx + 1 })}
+          </Button>,
+        )
+      })
+    }
   }
   if (context === 'code') {
     const node = codeAt(view.state)
