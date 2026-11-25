@@ -300,6 +300,8 @@ Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e deta
 
 - [x] **B1 — Transições compartilhadas** (0.45.0): `src/mobile/view-transition.js` com View Transitions API ao abrir notas, respeitando `prefers-reduced-motion` e com fallback instantâneo (`src/mobile-platform.test.js`).
 - [x] **B2 — Háptica com significado** (0.45.0): `src/mobile/haptics.js` + ponte nativa `SlothSystem.haptic(kind)` em `MainActivity.kt` (`HapticFeedbackConstants`, respeitando a configuração de vibração do sistema), disparada no limite do gesto de exclusão (`SwipeNoteRow`) e na conclusão de tarefas (`TasksLibrary`) (`src/mobile-platform.test.js`).
+- [x] **B8 — Barra de comando puxada do topo** (0.46.0): arrastar o cabeçalho para baixo abre a folha **Buscar e comandos** (`src/mobile/header-gestures.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
+- [x] **B9 — Notas abertas como baralho** (0.46.0): deslizar o cabeçalho na horizontal (longe das bordas e sem seleção ativa) alterna entre as notas abertas preservando cursor, rolagem e modo (`src/mobile/header-gestures.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
 
 ## Depois deste plano — Parte C: ideias para as duas plataformas
 

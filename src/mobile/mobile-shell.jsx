@@ -16,6 +16,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { runNoteTransition } from './view-transition.js'
 import { triggerHaptic } from './haptics.js'
+import { adjacentOpenNoteId, classifyHeaderGesture } from './header-gestures.js'
 import {
   ArrowDown,
   ArrowLeft,
@@ -184,6 +185,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const [trashEmpty, setTrashEmpty] = useState(false)
   const [backupCandidate, setBackupCandidate] = useState(null)
   const [transferBusy, setTransferBusy] = useState('')
+  const headerGesture = useRef(null)
   const transferPending = useRef(false)
   const [replaceConfirm, setReplaceConfirm] = useState(false)
   const [replaceBusy, setReplaceBusy] = useState(false)
@@ -1023,7 +1025,41 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           prefs.documentWidth === 'full' ? '100%' : `${prefs.contentWidth || 760}px`,
       }}
     >
-      <header className="mobile-header">
+      <header
+        className="mobile-header"
+        onPointerDown={(event) => {
+          if (!event.isPrimary || event.button !== 0) return
+          headerGesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY }
+        }}
+        onPointerUp={(event) => {
+          const start = headerGesture.current
+          headerGesture.current = null
+          if (!start || start.id !== event.pointerId) return
+          const selection = window.getSelection?.()
+          const hasSelection = Boolean(selection && !selection.isCollapsed)
+          const gesture = classifyHeaderGesture({
+            startX: start.x,
+            startY: start.y,
+            endX: event.clientX,
+            endY: event.clientY,
+            viewportWidth: window.innerWidth,
+            canSwitchNotes: route.name === 'note' && Boolean(active),
+            hasSelection,
+          })
+          if (gesture === 'commands') {
+            dispatch({ type: 'layer', route: { name: 'commands', prefix: '' } })
+          } else if (gesture === 'next' || gesture === 'prev') {
+            const targetId = adjacentOpenNoteId(data.openIds, active?.id, gesture)
+            if (targetId) {
+              triggerHaptic('heading')
+              openNote(targetId)
+            }
+          }
+        }}
+        onPointerCancel={() => {
+          headerGesture.current = null
+        }}
+      >
         {!root && (
           <button
             className="mobile-icon"

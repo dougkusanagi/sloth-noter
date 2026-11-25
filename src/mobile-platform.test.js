@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { runNoteTransition } from './mobile/view-transition.js'
 import { triggerHaptic } from './mobile/haptics.js'
+import { adjacentOpenNoteId, classifyHeaderGesture } from './mobile/header-gestures.js'
 
 test('B1: runNoteTransition uses View Transitions API when available and motion is not reduced', () => {
   let ran = 0
@@ -94,4 +95,54 @@ test('B2: triggerHaptic prefers SlothSystem.haptic and falls back to navigator.v
     }),
     false,
   )
+})
+
+test('B8 & B9: classifyHeaderGesture detects pull-down commands and horizontal note deck swipe', () => {
+  assert.equal(classifyHeaderGesture({ startX: 180, startY: 20, endX: 185, endY: 80 }), 'commands')
+  assert.equal(
+    classifyHeaderGesture({
+      startX: 200,
+      startY: 30,
+      endX: 120,
+      endY: 34,
+      canSwitchNotes: true,
+    }),
+    'next',
+  )
+  assert.equal(
+    classifyHeaderGesture({
+      startX: 120,
+      startY: 30,
+      endX: 200,
+      endY: 34,
+      canSwitchNotes: true,
+    }),
+    'prev',
+  )
+  // Edge swipe and active selection must not trigger note switching.
+  assert.equal(
+    classifyHeaderGesture({
+      startX: 10,
+      startY: 30,
+      endX: 100,
+      endY: 30,
+      canSwitchNotes: true,
+    }),
+    null,
+  )
+  assert.equal(
+    classifyHeaderGesture({
+      startX: 120,
+      startY: 30,
+      endX: 200,
+      endY: 30,
+      canSwitchNotes: true,
+      hasSelection: true,
+    }),
+    null,
+  )
+  assert.equal(adjacentOpenNoteId(['a', 'b', 'c'], 'b', 'next'), 'c')
+  assert.equal(adjacentOpenNoteId(['a', 'b', 'c'], 'b', 'prev'), 'a')
+  assert.equal(adjacentOpenNoteId(['a', 'b', 'c'], 'a', 'prev'), null)
+  assert.equal(adjacentOpenNoteId(['a'], 'a', 'next'), null)
 })
