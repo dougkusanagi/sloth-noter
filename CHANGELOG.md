@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.49.1] — 2026-11-25
+
+Corrigida a referência de rótulo `@string/shortcut_new_note` no `NewNoteTileService` do `AndroidManifest.xml`. Veja os [detalhes da versão](changelog/0.49.1.md).
+
 ## [0.49.0] — 2026-11-25
 
 Adicionados a lupa de tabela por toque longo (B13), o trackpad estrutural na barra de formatação (B14) e o bloco "Nova nota" nas Configurações rápidas do Android (B3, `TileService`). Veja os [detalhes da versão](changelog/0.49.0.md).
