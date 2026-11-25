@@ -1029,7 +1029,13 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         className="mobile-header"
         onPointerDown={(event) => {
           if (!event.isPrimary || event.button !== 0) return
+          if (event.target.closest('button, input, a')) return
           headerGesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY }
+          try {
+            event.currentTarget.setPointerCapture(event.pointerId)
+          } catch {
+            // Ignore when pointer capture is unavailable (e.g. synthetic events).
+          }
         }}
         onPointerUp={(event) => {
           const start = headerGesture.current

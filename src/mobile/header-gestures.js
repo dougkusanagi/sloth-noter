@@ -15,14 +15,14 @@ export function classifyHeaderGesture({
 }) {
   const dx = endX - startX
   const dy = endY - startY
-  if (dy >= 44 && dy > Math.abs(dx) * 1.5) return 'commands'
+  if (dy >= 32 && dy > Math.abs(dx) * 1.3) return 'commands'
   if (
     canSwitchNotes &&
     !hasSelection &&
     startX > 24 &&
     startX < viewportWidth - 24 &&
-    Math.abs(dx) >= 48 &&
-    Math.abs(dx) > Math.abs(dy) * 1.5
+    Math.abs(dx) >= 36 &&
+    Math.abs(dx) > Math.abs(dy) * 1.3
   ) {
     return dx < 0 ? 'next' : 'prev'
   }

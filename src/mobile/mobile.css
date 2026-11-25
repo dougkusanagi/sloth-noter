@@ -38,6 +38,8 @@
   flex-shrink: 0;
   padding: 4px 8px;
   border-bottom: 1px solid var(--line);
+  touch-action: none;
+  user-select: none;
 }
 [data-platform='mobile'] .mobile-header h1 {
   flex: 1;
@@ -846,6 +848,8 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   flex-shrink: 0;
   padding: 4px 8px;
   border-bottom: 1px solid var(--line);
+  touch-action: none;
+  user-select: none;
 }
 [data-platform='mobile'] .mobile-find input {
   flex: 1;

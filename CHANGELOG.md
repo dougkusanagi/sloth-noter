@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.46.1] — 2026-11-25
+
+Corrigida a captura de toque nos gestos do cabeçalho no Android (B8 e B9): adicionado `touch-action: none` e `setPointerCapture` para que arrastar o cabeçalho para baixo ou na horizontal não seja cancelado pelo WebView nem perdido ao sair da área do cabeçalho. Veja os [detalhes da versão](changelog/0.46.1.md).
+
 ## [0.46.0] — 2026-11-25
 
 Novos gestos no cabeçalho do celular (Parte B: B8 e B9): puxar o cabeçalho para baixo abre Buscar e comandos, e deslizar o cabeçalho da nota na horizontal alterna entre notas abertas preservando cursor, rolagem e modo. Veja os [detalhes da versão](changelog/0.46.0.md).
