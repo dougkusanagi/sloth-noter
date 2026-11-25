@@ -304,6 +304,8 @@ Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e deta
 - [x] **B9 — Notas abertas como baralho** (0.46.0–0.46.3): deslizar o cabeçalho na horizontal (longe das bordas e sem seleção ativa) alterna entre as notas abertas (ou lista) substituindo a rota na pilha para que Voltar retorne à lista (`src/mobile/header-gestures.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
 - [x] **B10 — Gestos de estrutura no editor** (0.47.0): deslizar item de lista recua/desrecua (`listIndentChanges`) e deslizar parágrafo para a direita transforma em tarefa (`blockEdit`), gerando o mesmo Markdown e desfazer dos botões da barra (`src/mobile/editor-gestures.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
 - [x] **B16 — Modelos de nota ao criar** (entregue em 0.19.0 / confirmado em 0.47.0): notas novas exibem os botões "Começar com" (`TemplateStarters`) abaixo do título e a folha Inserir inclui "Modelo…", mantendo criação sem modelo em um toque.
+- [x] **B11 — Régua de títulos** (0.48.0): trilha lateral a 28 px da borda (`> 24 dp`) em modo Leitura exibe o nome do título H2+ atual, vibra (B2) a cada mudança de seção e rola até a seção (`src/mobile/heading-ruler.jsx`, `src/mobile/reading-zoom.js`).
+- [x] **B12 — Zoom semântico por pinça** (0.48.0): alterna entre Completo → Esboço → Só títulos tanto por pinça sem bloquear zoom de acessibilidade quanto pelo botão na folha de ações da nota (`src/mobile/reading-zoom.js`, `src/mobile/mobile-shell.jsx`, `src/mobile/mobile.css`).
 
 ## Depois deste plano — Parte C: ideias para as duas plataformas
 

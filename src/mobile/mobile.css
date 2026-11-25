@@ -1624,3 +1624,70 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* B11: Heading ruler (> 24 dp from edge) & B12: Semantic reading zoom */
+[data-platform='mobile'] .mobile-heading-ruler {
+  position: fixed;
+  right: 28px;
+  top: 24%;
+  bottom: 24%;
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  z-index: 15;
+}
+[data-platform='mobile'] .mobile-heading-ruler-track {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+  padding: 6px 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 75%, transparent);
+}
+[data-platform='mobile'] .mobile-heading-ruler-tick {
+  width: 6px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--muted);
+  opacity: 0.55;
+}
+[data-platform='mobile'] .mobile-heading-ruler-tick[data-active='true'] {
+  width: 12px;
+  background: var(--accent);
+  opacity: 1;
+}
+[data-platform='mobile'] .mobile-heading-ruler-pill {
+  position: absolute;
+  right: 30px;
+  max-width: 200px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.22);
+  pointer-events: none;
+}
+[data-platform='mobile'] .mobile-reading-wrap[data-reading-zoom='headings'] .markdown > :not(h1, h2, h3, h4, h5, h6, section),
+[data-platform='mobile'] .mobile-reading-wrap[data-reading-zoom='headings'] .markdown section > :not(h1, h2, h3, h4, h5, h6, section) {
+  display: none;
+}
+[data-platform='mobile'] .mobile-reading-wrap[data-reading-zoom='outline'] .markdown > :not(h1, h2, h3, h4, h5, h6, section, p:first-of-type),
+[data-platform='mobile'] .mobile-reading-wrap[data-reading-zoom='outline'] .markdown section > :not(h1, h2, h3, h4, h5, h6, section, p:first-of-type) {
+  display: none;
+}
+[data-platform='mobile'] .mobile-reading-wrap[data-reading-zoom='outline'] .markdown p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}

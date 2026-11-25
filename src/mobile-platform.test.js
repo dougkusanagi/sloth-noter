@@ -4,6 +4,7 @@ import { runNoteTransition } from './mobile/view-transition.js'
 import { triggerHaptic } from './mobile/haptics.js'
 import { adjacentOpenNoteId, classifyHeaderGesture } from './mobile/header-gestures.js'
 import { classifyEditorSwipe, structureSwipeEdit } from './mobile/editor-gestures.js'
+import { classifyPinch, headingIndexForRatio, stepReadingZoom } from './mobile/reading-zoom.js'
 import { initialNavigation, navigate } from './mobile/nav-stack.js'
 
 test('B1: runNoteTransition uses View Transitions API when available and motion is not reduced', () => {
@@ -189,4 +190,22 @@ test('B10: structureSwipeEdit indents/outdents list items and converts paragraph
     classifyEditorSwipe({ startX: 100, startY: 200, endX: 180, endY: 200, hasSelection: true }),
     null,
   )
+})
+
+test('B11 & B12: heading ruler ratio mapping and semantic reading zoom levels', () => {
+  assert.equal(headingIndexForRatio(4, 0), 0)
+  assert.equal(headingIndexForRatio(4, 0.5), 2)
+  assert.equal(headingIndexForRatio(4, 1), 3)
+  assert.equal(headingIndexForRatio(0, 0.5), -1)
+
+  assert.equal(stepReadingZoom('full', 'out'), 'outline')
+  assert.equal(stepReadingZoom('outline', 'out'), 'headings')
+  assert.equal(stepReadingZoom('headings', 'out'), 'headings')
+  assert.equal(stepReadingZoom('headings', 'in'), 'outline')
+  assert.equal(stepReadingZoom('outline', 'in'), 'full')
+  assert.equal(stepReadingZoom('headings'), 'full')
+
+  assert.equal(classifyPinch(100, 70), 'out')
+  assert.equal(classifyPinch(100, 135), 'in')
+  assert.equal(classifyPinch(100, 105), null)
 })

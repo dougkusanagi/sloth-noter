@@ -18,6 +18,8 @@ import { runNoteTransition } from './view-transition.js'
 import { triggerHaptic } from './haptics.js'
 import { adjacentOpenNoteId, classifyHeaderGesture } from './header-gestures.js'
 import { classifyEditorSwipe, structureSwipeEdit } from './editor-gestures.js'
+import { classifyPinch, stepReadingZoom } from './reading-zoom.js'
+import { HeadingRuler } from './heading-ruler.jsx'
 import {
   ArrowDown,
   ArrowLeft,
@@ -188,6 +190,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const [transferBusy, setTransferBusy] = useState('')
   const headerGesture = useRef(null)
   const editorSwipe = useRef(null)
+  const pinchStart = useRef(null)
+  const [readingZoom, setReadingZoom] = useState('full')
   const transferPending = useRef(false)
   const [replaceConfirm, setReplaceConfirm] = useState(false)
   const [replaceBusy, setReplaceBusy] = useState(false)
@@ -1558,7 +1562,35 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 />
               </div>
             ) : (
-              <>
+              <div
+                className="mobile-reading-wrap"
+                data-reading-zoom={readingZoom}
+                onTouchStart={(event) => {
+                  if (event.touches.length === 2) {
+                    const [a, b] = event.touches
+                    pinchStart.current = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+                  }
+                }}
+                onTouchEnd={(event) => {
+                  if (pinchStart.current !== null && event.touches.length < 2) {
+                    pinchStart.current = null
+                  }
+                }}
+                onTouchMove={(event) => {
+                  if (pinchStart.current === null || event.touches.length !== 2) return
+                  const [a, b] = event.touches
+                  const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+                  const dir = classifyPinch(pinchStart.current, dist)
+                  if (dir) {
+                    pinchStart.current = null
+                    setReadingZoom((prev) => {
+                      const next = stepReadingZoom(prev, dir)
+                      if (next !== prev) triggerHaptic('heading')
+                      return next
+                    })
+                  }
+                }}
+              >
                 <NoteCoverBanner
                   body={active.body}
                   onChange={
@@ -1593,7 +1625,14 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                     setFold({ id: active.id, body: active.body, lines })
                   }}
                 />
-              </>
+                <HeadingRuler
+                  headings={headingSections(active.body).filter((item) => item.level >= 2)}
+                  onJump={(item) => {
+                    const target = document.querySelector(`[data-source-line="${item.line}"]`)
+                    target?.scrollIntoView?.({ block: 'start' })
+                  }}
+                />
+              </div>
             )
           ) : (
             <div className="mobile-empty">
@@ -2579,6 +2618,15 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                     </button>
                   </>
                 )}
+                <button
+                  onClick={() => {
+                    setReadingZoom((prev) => stepReadingZoom(prev))
+                    back()
+                  }}
+                >
+                  <ScanSearch size={20} aria-hidden="true" />
+                  {t('mobile.readingZoom', { level: t(`mobile.readingZoom.${readingZoom}`) })}
+                </button>
                 <button
                   onClick={() => {
                     setFindOpen(true)
