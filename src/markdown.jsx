@@ -27,6 +27,7 @@ import { TaskDateBadge } from './components/task-date-badge.jsx'
 import { openTaskMenu } from './editor/task-menu.js'
 import { unarchiveTask } from './task-archive.js'
 import { progressLabel, progressShares } from './progress-badge.js'
+import { remarkVariables } from './variables.js'
 
 function highlightedCode(tokens) {
   return tokens.map((token, index) =>
@@ -497,6 +498,9 @@ const components = {
 }
 export function Markdown({
   text,
+  fullBody,
+  modifiedAt,
+  createdAt,
   onCopy,
   onChange,
   onOpenWiki,
@@ -507,6 +511,10 @@ export function Markdown({
   wrapLines = true,
   wrapPage = wrapLines,
 }) {
+  const variableContext = useMemo(
+    () => ({ body: fullBody ?? text, modifiedAt, createdAt }),
+    [fullBody, text, modifiedAt, createdAt],
+  )
   const coverOffset = useMemo(() => noteCover(text)?.position.start.offset, [text])
   const tasks = useMemo(
     () => new Map(resolvedTasks(text, notes).map((task) => [task.line, task])),
@@ -546,6 +554,7 @@ export function Markdown({
             remarkWikiLinks,
             remarkPartialTasks,
             remarkTags,
+            [remarkVariables, variableContext],
             remarkSections,
             remarkSourceLayout,
           ]}

@@ -37,9 +37,13 @@ function formatValue(entry, language) {
  * Context: `{ body, modifiedAt, now, language }`.
  */
 export function resolveVariable(name, argument, context) {
-  const { body, modifiedAt, now = new Date(), language = currentLanguage() } = context
+  const { body, modifiedAt, createdAt, now = new Date(), language = currentLanguage() } = context
   const text = body.slice(frontmatterEnd(body))
   if (name === 'today') return { text: new Intl.DateTimeFormat(language).format(now) }
+  if (name === 'created') {
+    if (!createdAt) return { text: t('variables.createdUnknown') }
+    return { text: new Intl.DateTimeFormat(language).format(new Date(createdAt)) }
+  }
   if (name === 'updated') {
     if (!modifiedAt) return { text: '' }
     const at = new Date(modifiedAt)
@@ -128,7 +132,7 @@ export function propertyReferences(body, key) {
   return count
 }
 
-const DOCUMENT_VARIABLES = ['today', 'updated', 'words', 'reading', 'tasks', 'until']
+const DOCUMENT_VARIABLES = ['today', 'created', 'updated', 'words', 'reading', 'tasks', 'until']
 const pad = (value) => String(value).padStart(2, '0')
 const isoDate = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 
@@ -174,5 +178,48 @@ export function variableInsertEdit(from, to, choice) {
     insert: choice.insert,
     selectionFrom: choice.select ? from + choice.select[0] : end,
     selectionTo: choice.select ? from + choice.select[1] : end,
+  }
+}
+
+/**
+ * Remark plugin that replaces `{{name}}` markers in text nodes with rendered variable chips
+ * (`.md-variable`), skipping links and code. Mirrors the live editor's variable decorations.
+ */
+export function remarkVariables(context) {
+  return (tree) => {
+    function visit(parent) {
+      if (!parent.children || ['link', 'linkReference', 'code', 'inlineCode'].includes(parent.type))
+        return
+      parent.children = parent.children.flatMap((node) => {
+        if (node.type !== 'text') {
+          visit(node)
+          return [node]
+        }
+        if (!node.value.includes('{{')) return [node]
+        const pieces = []
+        let from = 0
+        for (const match of node.value.matchAll(VARIABLE)) {
+          if (match.index > from)
+            pieces.push({ type: 'text', value: node.value.slice(from, match.index) })
+          const result = resolveVariable(match[1], match[2], context)
+          pieces.push({
+            type: 'emphasis',
+            data: {
+              hName: 'span',
+              hProperties: {
+                className: result.error ? ['md-variable', 'md-variable-error'] : ['md-variable'],
+                title: result.error ?? match[0],
+              },
+            },
+            children: [{ type: 'text', value: result.error ? match[0] : result.text }],
+          })
+          from = match.index + match[0].length
+        }
+        if (!pieces.length) return [node]
+        if (from < node.value.length) pieces.push({ type: 'text', value: node.value.slice(from) })
+        return pieces
+      })
+    }
+    visit(tree)
   }
 }

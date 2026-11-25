@@ -3216,7 +3216,8 @@ body.cm-section-dragging * {
 }
 
 /* Variables such as {{updated}}: the value is computed on screen; the file keeps the marker. */
-.visual-editor .cm-variable {
+.visual-editor .cm-variable,
+.markdown .md-variable {
   padding: 0.05em 0.45em;
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 12%, var(--soft));
@@ -3224,7 +3225,8 @@ body.cm-section-dragging * {
   font-size: 0.92em;
   white-space: nowrap;
 }
-.visual-editor .cm-variable-error {
+.visual-editor .cm-variable-error,
+.markdown .md-variable-error {
   border-radius: 4px;
   background: transparent;
   color: var(--text-secondary);

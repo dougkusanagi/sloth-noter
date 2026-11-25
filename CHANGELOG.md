@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.43.0] — 2026-11-25
+
+Concluídas as pendências funcionais de leitura, modelos e variáveis: variáveis renderizadas no modo Leitura, criação de propriedades direto pelo seletor de variáveis, painel de propriedades, "Variável…" e "Usar como modelo" no celular, além de `createdAt` e a variável `{{created}}` (ADR 0043). Veja os [detalhes da versão](changelog/0.43.0.md).
+
 ## [0.42.4] — 2026-11-25
 
 Corrigida a renderização de tabelas no celular: removida a faixa cinza no cabeçalho causada por conflito de variável CSS e ajustadas tabelas de 2–3 colunas para caberem na largura da tela sem cortar texto. Veja os [detalhes da versão](changelog/0.42.4.md).

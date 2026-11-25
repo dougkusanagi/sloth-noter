@@ -12,6 +12,14 @@ test.beforeEach(() => setLanguage('pt-BR'))
 
 test('resolveVariable shows dates, counts and task progress', () => {
   assert.equal(resolveVariable('today', undefined, context).text, '16/11/2026')
+  assert.equal(
+    resolveVariable('created', undefined, {
+      ...context,
+      createdAt: new Date(2026, 9, 5, 10, 0).getTime(),
+    }).text,
+    '05/10/2026',
+  )
+  assert.equal(resolveVariable('created', undefined, context).text, 'data de criação desconhecida')
   assert.equal(resolveVariable('updated', undefined, context).text, 'hoje, 09:05')
   assert.equal(
     resolveVariable('updated', undefined, {
@@ -81,12 +89,13 @@ test('variableChoices lists the document variables and the note properties', asy
     choices.map((item) => item.id),
     [
       'today',
+      'created',
       'updated',
       'words',
       'reading',
       'tasks',
       'until',
-      ...choices.slice(6).map((i) => i.id),
+      ...choices.slice(7).map((i) => i.id),
     ],
   )
   assert.ok(choices.some((item) => item.id === 'user.responsavel' && item.preview === 'Ana'))
@@ -96,4 +105,30 @@ test('variableChoices lists the document variables and the note properties', asy
   assert.equal(edit.insert.slice(edit.selectionFrom - 10, edit.selectionTo - 10), '2026-11-23')
   const today = variableInsertEdit(3, 3, choices[0])
   assert.equal(today.selectionFrom, 3 + '{{today}}'.length)
+})
+
+test('remarkVariables turns variables in text into chips and skips code', async () => {
+  const { remarkVariables } = await import('./variables.js')
+  const tree = {
+    type: 'root',
+    children: [
+      {
+        type: 'paragraph',
+        children: [
+          { type: 'text', value: 'Data: {{today}} e {{user.responsavel}} e {{desconhecida}}.' },
+          { type: 'inlineCode', value: '{{today}}' },
+        ],
+      },
+    ],
+  }
+  remarkVariables(context)(tree)
+  const nodes = tree.children[0].children
+  const chips = nodes.filter((node) => node.data?.hName === 'span')
+  assert.equal(chips.length, 3)
+  assert.equal(chips[0].children[0].value, '16/11/2026')
+  assert.deepEqual(chips[0].data.hProperties.className, ['md-variable'])
+  assert.equal(chips[1].children[0].value, 'Ana')
+  assert.equal(chips[2].children[0].value, '{{desconhecida}}')
+  assert.deepEqual(chips[2].data.hProperties.className, ['md-variable', 'md-variable-error'])
+  assert.equal(nodes[nodes.length - 1].type, 'inlineCode')
 })

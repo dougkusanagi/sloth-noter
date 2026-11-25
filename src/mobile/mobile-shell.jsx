@@ -47,6 +47,7 @@ import {
   Search,
   Settings,
   Share2,
+  SlidersHorizontal,
   Sun,
   Trash2,
   Undo2,
@@ -104,6 +105,8 @@ import { GuideLibrary, guideDocument, guideTarget } from '../components/guide-li
 import { LANGUAGES, currentLanguage, t } from '../i18n.js'
 import { isTaskNote, makeTaskNote } from '../task-note.js'
 import { setOwnTemplates, setTemplateProfile } from '../templates.js'
+import { PropertiesDock } from '../components/properties-panel.jsx'
+import { frontmatterEnd } from '../frontmatter.js'
 import { FONT_SIZE } from '../storage.js'
 import { useInsets, useKeyboardOpen } from './use-insets.js'
 import { useSystemBars } from './use-system-bars.js'
@@ -1474,10 +1477,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                       : undefined
                   }
                 />
+                <PropertiesDock
+                  body={active.body}
+                  readOnly={blocked || Boolean(active.external)}
+                  onApply={updateBody}
+                />
                 <Markdown
                   wrapLines={prefs.wrapLines !== false}
                   wrapPage={pageWrap}
                   text={active.body}
+                  modifiedAt={active.modifiedAt}
+                  createdAt={active.createdAt}
                   notes={data.notes}
                   onChange={blocked ? undefined : updateBody}
                   onOpenWiki={openWiki}
@@ -2040,6 +2050,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               <EditingSheet
                 view={editor.current}
                 notes={data.notes}
+                modifiedAt={active?.modifiedAt}
+                createdAt={active?.createdAt}
                 onClose={back}
                 onImage={() => {
                   imagePoint.current = editor.current.state.selection.main
@@ -2395,6 +2407,42 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   <ImageIcon size={20} aria-hidden="true" />
                   {t('cover.title')}
                 </button>
+                {active &&
+                  actionsNote.id === active.id &&
+                  !frontmatterEnd(actionsNote.body) &&
+                  !blocked &&
+                  !actionsNote.external && (
+                    <button
+                      onClick={() => {
+                        updateBody(`---\npropriedade: valor\n---\n${actionsNote.body}`)
+                        back()
+                      }}
+                    >
+                      <SlidersHorizontal size={20} aria-hidden="true" />
+                      {t('menu.properties')}
+                    </button>
+                  )}
+                {!actionsNote.external && (
+                  <button
+                    disabled={blocked}
+                    onClick={() => {
+                      const templateNotes = { ...prefs.templateNotes }
+                      const marked = Boolean(templateNotes[actionsNote.id])
+                      if (marked) delete templateNotes[actionsNote.id]
+                      else templateNotes[actionsNote.id] = true
+                      updatePrefs({ templateNotes })
+                      toast(t(marked ? 'templates.removedToast' : 'templates.addedToast'))
+                      back()
+                    }}
+                  >
+                    <FileText size={20} aria-hidden="true" />
+                    {t(
+                      prefs.templateNotes?.[actionsNote.id]
+                        ? 'menu.removeTemplate'
+                        : 'menu.useAsTemplate',
+                    )}
+                  </button>
+                )}
                 <button
                   data-rename-trigger
                   disabled={blocked || Boolean(actionsNote.external)}

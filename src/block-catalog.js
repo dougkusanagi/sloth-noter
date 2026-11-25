@@ -54,4 +54,5 @@ export const MOBILE_INSERT_BLOCKS = [
   ['columns', BLOCK_LABELS.columns, 'A  |  B'],
   ['accordion', BLOCK_LABELS.accordion, '▸'],
   ['template', BLOCK_LABELS.template, '▤'],
+  ['variable', BLOCK_LABELS.variable, '{{…}}'],
 ]

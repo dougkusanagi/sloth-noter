@@ -640,6 +640,7 @@ export function decorationsFor(view) {
   const variableContext = () => ({
     body: text,
     modifiedAt: noteInfo?.modifiedAt,
+    createdAt: noteInfo?.createdAt,
     language: currentLanguage(),
   })
   for (const visible of view.visibleRanges) {

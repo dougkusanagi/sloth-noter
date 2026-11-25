@@ -7,10 +7,15 @@ import { t } from '../i18n.js'
 import { displayName } from '../note-title.js'
 import { currentLanguage } from '../i18n.js'
 import { templateInsertEdit, templateList } from '../templates.js'
+import { variableChoices, variableInsertEdit } from '../variables.js'
+import { writeProperty } from '../frontmatter.js'
 
-export function EditingSheet({ view, notes, onClose, onImage }) {
+const VALID_PROPERTY_KEY = /^[a-z][a-z0-9_.-]*$/
+
+export function EditingSheet({ view, notes, modifiedAt, createdAt, onClose, onImage }) {
   const [linking, setLinking] = useState(false)
   const [choosingTemplate, setChoosingTemplate] = useState(false)
+  const [choosingVariable, setChoosingVariable] = useState(false)
   const [choosingTable, setChoosingTable] = useState(false)
   const [query, setQuery] = useState('')
   function insertTable(rows, cols) {
@@ -55,6 +60,11 @@ export function EditingSheet({ view, notes, onClose, onImage }) {
       setChoosingTemplate(true)
       return
     }
+    if (action === 'variable' && !note) {
+      setQuery('')
+      setChoosingVariable(true)
+      return
+    }
     if (action === 'table') {
       setChoosingTable(true)
       return
@@ -85,6 +95,52 @@ export function EditingSheet({ view, notes, onClose, onImage }) {
     onClose()
     view.focus()
   }
+  function insertVariable(choice, createKey) {
+    if (!view || view.composing || view.compositionStarted) return
+    const { from, to } = view.state.selection.main
+    const doc = view.state.doc.toString()
+    if (createKey) {
+      const withProp = writeProperty(doc, createKey, '')
+      if (withProp === null) return
+      const delta = withProp.length - doc.length
+      const edit = variableInsertEdit(from + delta, to + delta, choice)
+      const next = withProp.slice(0, edit.from) + edit.insert + withProp.slice(edit.to)
+      view.dispatch({
+        changes: { from: 0, to: doc.length, insert: next },
+        selection: { anchor: edit.selectionFrom, head: edit.selectionTo },
+        userEvent: 'input',
+        scrollIntoView: true,
+      })
+    } else {
+      const edit = variableInsertEdit(from, to, choice)
+      view.dispatch({
+        changes: { from: edit.from, to: edit.to, insert: edit.insert },
+        selection: { anchor: edit.selectionFrom, head: edit.selectionTo },
+        userEvent: 'input',
+        scrollIntoView: true,
+      })
+    }
+    onClose()
+    view.focus()
+  }
+  const variableText = choosingVariable ? (view?.state.doc.toString() ?? '') : ''
+  const allVariables = choosingVariable
+    ? variableChoices(variableText, { body: variableText, modifiedAt, createdAt })
+    : []
+  const filteredVariables = choosingVariable
+    ? query.trim()
+      ? allVariables.filter((item) =>
+          `${item.label} ${item.insert}`.toLowerCase().includes(query.trim().toLowerCase()),
+        )
+      : allVariables
+    : []
+  const candidatePropertyKey = (() => {
+    if (!choosingVariable) return null
+    const raw = query.trim().toLowerCase().replace(/\s+/g, '_')
+    if (!VALID_PROPERTY_KEY.test(raw)) return null
+    if (allVariables.some((item) => item.id === `user.${raw}`)) return null
+    return raw
+  })()
   return (
     <>
       <button
@@ -114,6 +170,46 @@ export function EditingSheet({ view, notes, onClose, onImage }) {
               )),
             )}
           </div>
+        </div>
+      ) : choosingVariable ? (
+        <div className="mobile-insert-grid mobile-template-list">
+          <label>
+            {t('variables.title')}
+            <input
+              autoFocus
+              type="search"
+              placeholder={t('variables.search')}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          {filteredVariables.map((item) => (
+            <button key={item.id} onClick={() => insertVariable(item)}>
+              <strong>{item.label}</strong>
+              <span>{item.preview || item.insert}</span>
+            </button>
+          ))}
+          {candidatePropertyKey && (
+            <button
+              onClick={() =>
+                insertVariable(
+                  {
+                    id: `user.${candidatePropertyKey}`,
+                    group: 'user',
+                    label: candidatePropertyKey,
+                    insert: `{{user.${candidatePropertyKey}}}`,
+                    preview: '',
+                    select: null,
+                  },
+                  candidatePropertyKey,
+                )
+              }
+            >
+              <strong>{t('variables.createProperty', { name: candidatePropertyKey })}</strong>
+              <span>{`{{user.${candidatePropertyKey}}}`}</span>
+            </button>
+          )}
+          {!filteredVariables.length && !candidatePropertyKey && <p>{t('variables.none')}</p>}
         </div>
       ) : choosingTemplate ? (
         <div className="mobile-insert-grid mobile-template-list">

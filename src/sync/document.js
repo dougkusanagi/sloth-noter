@@ -9,6 +9,7 @@ const payloadOf = (note, trashed) => ({
   name: note.name,
   body: note.body,
   ...(note.group ? { group: note.group } : {}),
+  ...(note.createdAt !== undefined ? { createdAt: note.createdAt } : {}),
   trashed,
 })
 
@@ -16,6 +17,7 @@ const samePayload = (a, b) =>
   a.name === b.name &&
   a.body === b.body &&
   (a.group ?? null) === (b.group ?? null) &&
+  (a.createdAt ?? null) === (b.createdAt ?? null) &&
   a.trashed === b.trashed
 
 /** Notes that sync: active and trashed ones. Files opened in place stay out (ADR 0001). */
@@ -88,6 +90,11 @@ export function applySync(document, { server, snapshot, before, result, now = Da
       name: payload.name,
       body: payload.body,
       revision: old ? old.revision + 1 : 0,
+      ...(payload.createdAt !== undefined
+        ? { createdAt: payload.createdAt }
+        : old?.createdAt !== undefined
+          ? { createdAt: old.createdAt }
+          : {}),
       modifiedAt: now,
     }
     if (payload.group) {
