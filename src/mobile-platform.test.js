@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { runNoteTransition } from './mobile/view-transition.js'
 import { triggerHaptic } from './mobile/haptics.js'
 import { adjacentOpenNoteId, classifyHeaderGesture } from './mobile/header-gestures.js'
+import { classifyEditorSwipe, structureSwipeEdit } from './mobile/editor-gestures.js'
 import { initialNavigation, navigate } from './mobile/nav-stack.js'
 
 test('B1: runNoteTransition uses View Transitions API when available and motion is not reduced', () => {
@@ -155,4 +156,37 @@ test('B8 & B9: classifyHeaderGesture detects pull-down commands and horizontal n
   nav = navigate(nav, { type: 'back' })
   assert.equal(nav.screens.length, 1)
   assert.equal(nav.screens[0].name, 'notes')
+})
+
+test('B10: structureSwipeEdit indents/outdents list items and converts paragraphs to tasks', () => {
+  const doc = '# Nota\n\n- Primeiro\n- Segundo\n\nTexto solto\n'
+  const secondPos = doc.indexOf('- Segundo') + 2
+  const indent = structureSwipeEdit(doc, secondPos, 'right')
+  assert.ok(indent && indent.length > 0)
+  assert.equal(indent[0].insert, '    ')
+
+  const indentedDoc = '# Nota\n\n- Primeiro\n    - Segundo\n'
+  const outdent = structureSwipeEdit(indentedDoc, indentedDoc.indexOf('Segundo'), 'left')
+  assert.ok(outdent && outdent.length > 0)
+  assert.equal(outdent[0].insert, '')
+
+  const paraPos = doc.indexOf('Texto solto') + 3
+  const toTask = structureSwipeEdit(doc, paraPos, 'right')
+  assert.ok(toTask && toTask.length === 1)
+  assert.equal(toTask[0].insert, '- [ ] Texto solto')
+
+  // Swiping left on a plain paragraph or swiping on the title does nothing.
+  assert.equal(structureSwipeEdit(doc, paraPos, 'left'), null)
+  assert.equal(structureSwipeEdit(doc, 2, 'right'), null)
+
+  assert.equal(classifyEditorSwipe({ startX: 100, startY: 200, endX: 180, endY: 205 }), 'right')
+  assert.equal(classifyEditorSwipe({ startX: 180, startY: 200, endX: 100, endY: 205 }), 'left')
+  assert.equal(
+    classifyEditorSwipe({ startX: 10, startY: 200, endX: 100, endY: 200 }),
+    null,
+  )
+  assert.equal(
+    classifyEditorSwipe({ startX: 100, startY: 200, endX: 180, endY: 200, hasSelection: true }),
+    null,
+  )
 })

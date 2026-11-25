@@ -17,6 +17,7 @@ import { flushSync } from 'react-dom'
 import { runNoteTransition } from './view-transition.js'
 import { triggerHaptic } from './haptics.js'
 import { adjacentOpenNoteId, classifyHeaderGesture } from './header-gestures.js'
+import { classifyEditorSwipe, structureSwipeEdit } from './editor-gestures.js'
 import {
   ArrowDown,
   ArrowLeft,
@@ -186,6 +187,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const [backupCandidate, setBackupCandidate] = useState(null)
   const [transferBusy, setTransferBusy] = useState('')
   const headerGesture = useRef(null)
+  const editorSwipe = useRef(null)
   const transferPending = useRef(false)
   const [replaceConfirm, setReplaceConfirm] = useState(false)
   const [replaceBusy, setReplaceBusy] = useState(false)
@@ -1471,7 +1473,42 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         {route.name === 'note' &&
           (active ? (
             editing ? (
-              <VisualEditor
+              <div
+                className="mobile-editor-gestures"
+                style={{ display: 'contents' }}
+                onTouchStart={(event) => {
+                  if (sourceMode || event.touches.length !== 1) return
+                  const touch = event.touches[0]
+                  editorSwipe.current = { x: touch.clientX, y: touch.clientY }
+                }}
+                onTouchEnd={(event) => {
+                  const start = editorSwipe.current
+                  editorSwipe.current = null
+                  if (!start || sourceMode || event.changedTouches.length !== 1) return
+                  const view = editor.current
+                  if (!view || view.composing || view.compositionStarted) return
+                  const touch = event.changedTouches[0]
+                  const direction = classifyEditorSwipe({
+                    startX: start.x,
+                    startY: start.y,
+                    endX: touch.clientX,
+                    endY: touch.clientY,
+                    viewportWidth: window.innerWidth,
+                    hasSelection: !view.state.selection.main.empty,
+                  })
+                  if (!direction) return
+                  const pos = view.posAtCoords({ x: start.x, y: start.y })
+                  if (pos === null) return
+                  const changes = structureSwipeEdit(view.state.doc.toString(), pos, direction)
+                  if (!changes) return
+                  view.dispatch({ changes, userEvent: 'input', scrollIntoView: true })
+                  triggerHaptic('heading')
+                }}
+                onTouchCancel={() => {
+                  editorSwipe.current = null
+                }}
+              >
+                <VisualEditor
                 wrapLines={prefs.wrapLines !== false}
                 wrapPage={pageWrap}
                 key={active.id}
@@ -1508,7 +1545,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                     view.focus()
                   }
                 }}
-              />
+                />
+              </div>
             ) : boardView ? (
               <div className="board-wrap">
                 <TaskBoard

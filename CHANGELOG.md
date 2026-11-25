@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.47.0] — 2026-11-25
+
+Adicionados gestos de estrutura no editor visual do celular (B10): deslizar um item de lista para a direita/esquerda recua ou desrecua o item, e deslizar um parágrafo comum para a direita o transforma em tarefa, usando o mesmo Markdown e histórico de desfazer dos botões da barra. Confirmado também B16 (modelos ao criar nota). Veja os [detalhes da versão](changelog/0.47.0.md).
+
 ## [0.46.3] — 2026-11-25
 
 Trocar de nota pelo gesto horizontal no cabeçalho mobile (B9) agora substitui a nota atual na pilha de navegação em vez de empilhar histórico, para que o botão Voltar retorne direto à lista de notas. Veja os [detalhes da versão](changelog/0.46.3.md).
