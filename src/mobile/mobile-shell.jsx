@@ -104,7 +104,7 @@ import { noteTasks, syncLinkedTasks, taskSettings, toggleTask } from '../tasks.j
 import { ensureDocumentTitles } from '../title.js'
 import { GuideLibrary, guideDocument, guideTarget } from '../components/guide-library.jsx'
 import { LANGUAGES, currentLanguage, t } from '../i18n.js'
-import { makeTaskNote } from '../task-note.js'
+import { isTaskNote, makeTaskNote } from '../task-note.js'
 import { setOwnTemplates, setTemplateProfile } from '../templates.js'
 import { FONT_SIZE } from '../storage.js'
 import { useInsets, useKeyboardOpen } from './use-insets.js'
@@ -1121,7 +1121,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             <CheckCheck size={22} />
           </button>
         )}
-        {!editing && (
+        {!active && !editing && (
           <button
             className="mobile-icon"
             aria-label={t('mobile.commandsTitle')}
@@ -1192,7 +1192,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             {sourceMode ? <FileText size={22} /> : <Code2 size={22} />}
           </button>
         )}
-        {active && !editing && (
+        {active && !editing && (boardView || isTaskNote(active.body)) && (
           <button
             className="mobile-icon"
             aria-label={t(boardView ? 'mobile.boardOff' : 'mobile.boardOn')}
@@ -2414,18 +2414,42 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             ) : actionsNote ? (
               <>
                 {active && actionsNote.id === active.id && (
-                  <button
-                    disabled={blocked}
-                    onClick={() => {
-                      const nextCode = !sourceMode
-                      setNoteMode(active.id, nextCode)
-                      if (nextCode) setEditingId(active.id)
-                      back()
-                    }}
-                  >
-                    {sourceMode ? <FileText size={20} /> : <Code2 size={20} />}
-                    {t(sourceMode ? 'mobile.visualMode' : 'mobile.codeMode')}
-                  </button>
+                  <>
+                    <button
+                      onClick={() =>
+                        dispatch({
+                          type: 'layer',
+                          replace: true,
+                          route: { name: 'commands', prefix: '' },
+                        })
+                      }
+                    >
+                      <Command size={20} aria-hidden="true" />
+                      {t('mobile.commandsTitle')}
+                    </button>
+                    <button
+                      aria-pressed={boardView}
+                      onClick={() => {
+                        setBoardView(active.id, !boardView)
+                        back()
+                      }}
+                    >
+                      <Columns3 size={20} aria-hidden="true" />
+                      {t(boardView ? 'mobile.boardOff' : 'mobile.boardOn')}
+                    </button>
+                    <button
+                      disabled={blocked}
+                      onClick={() => {
+                        const nextCode = !sourceMode
+                        setNoteMode(active.id, nextCode)
+                        if (nextCode) setEditingId(active.id)
+                        back()
+                      }}
+                    >
+                      {sourceMode ? <FileText size={20} /> : <Code2 size={20} />}
+                      {t(sourceMode ? 'mobile.visualMode' : 'mobile.codeMode')}
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => {

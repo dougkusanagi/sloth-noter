@@ -77,9 +77,9 @@ test('Buscar e comandos supports > commands, # headings, Ctrl+Shift+P, and Escap
   await expect(dialog).toBeHidden()
   await expect(page.getByRole('heading', { name: 'Cronograma' })).toBeVisible()
 
-  // Inside a note, '>' shows note-specific actions and '#' shows only the open note's headings.
-  const trigger = page.getByRole('button', { name: 'Buscar e comandos', exact: true })
-  await trigger.tap()
+  // Inside a note, Buscar e comandos lives in the note actions sheet (and Ctrl+P) to keep the header uncluttered.
+  await page.getByRole('button', { name: /Ações de Projeto/ }).tap()
+  await page.getByRole('button', { name: 'Buscar e comandos', exact: true }).tap()
   await input.fill('#')
   await expect(dialog.getByRole('button', { name: 'Metas' })).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Mercado' })).toHaveCount(0)
@@ -91,7 +91,7 @@ test('Buscar e comandos supports > commands, # headings, Ctrl+Shift+P, and Escap
 
   // Escape closes the sheet cleanly.
   await page.getByRole('button', { name: 'Pronto' }).tap()
-  await trigger.tap()
+  await page.keyboard.press('Control+p')
   await expect(input).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()

@@ -33,16 +33,16 @@
 [data-platform='mobile'] .mobile-header {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   min-height: 56px;
   flex-shrink: 0;
-  padding: 4px 12px;
+  padding: 4px 8px;
   border-bottom: 1px solid var(--line);
 }
 [data-platform='mobile'] .mobile-header h1 {
   flex: 1;
   min-width: 0;
-  margin: 0;
+  margin: 0 4px 0 0;
   font-size: 1.125rem;
   font-weight: 650;
   overflow: hidden;
@@ -507,7 +507,10 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   white-space: nowrap;
 }
 [data-platform='mobile'] .mobile-header > button {
-  flex: 0 0 48px;
+  flex: 0 0 44px;
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0;
 }
 [data-platform='mobile'] .mobile-drawer-scrim {
@@ -1215,9 +1218,9 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   background: none;
 }
 [data-platform='mobile'] .document-outline.mobile-outline > button {
-  width: 48px;
-  min-width: 48px;
-  min-height: 48px;
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

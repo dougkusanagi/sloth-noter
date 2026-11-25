@@ -74,7 +74,12 @@ export function navigate(state, action) {
       return { screens: [...state.screens, copyRoute(action.route)], layers: [] }
     case 'layer':
       return validRoute(action.route, layers)
-        ? { ...state, layers: [...state.layers, copyRoute(action.route)] }
+        ? {
+            ...state,
+            layers: action.replace
+              ? [...state.layers.slice(0, -1), copyRoute(action.route)]
+              : [...state.layers, copyRoute(action.route)],
+          }
         : state
     case 'position': {
       const screens = [...state.screens]
@@ -195,7 +200,8 @@ export function createNavigation({ history, events, storage, noteExists, onChang
       const next = navigate(state, action)
       if (next === state) return
       state = next
-      if (action.type === 'push' || action.type === 'layer') history.pushState(entry(), '')
+      if (action.type === 'push' || (action.type === 'layer' && !action.replace))
+        history.pushState(entry(), '')
       else history.replaceState(entry(), '')
       publish()
     },

@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.42.1] — 2026-11-25
+
+Cabeçalho da nota no celular mais limpo e com espaço para o título, mantendo Buscar e comandos e o modo Quadro acessíveis no menu Ações da nota. Veja os [detalhes da versão](changelog/0.42.1.md).
+
 ## [0.42.0] — 2026-11-25
 
 Notas fixadas no topo da lista no celular, datas de conclusão e cancelamento em etiquetas, melhorias em colunas, tabelas e rolagem do editor, e atualização imediata de imagens sincronizadas. Veja os [detalhes da versão](changelog/0.42.0.md).
