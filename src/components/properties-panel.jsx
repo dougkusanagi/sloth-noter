@@ -11,7 +11,7 @@ import {
   TriangleAlert,
   X,
 } from 'lucide-react'
-import { readProperties, renameProperty, writeProperty } from '../frontmatter.js'
+import { readProperties, removeFrontmatter, renameProperty, writeProperty } from '../frontmatter.js'
 import { propertyReferences } from '../variables.js'
 import { currentLanguage, t } from '../i18n.js'
 
@@ -406,6 +406,20 @@ export function PropertiesDock({ body, readOnly, onApply }) {
           >
             <Plus size={15} aria-hidden="true" />
             <span>{t('properties.add')}</span>
+          </button>
+        )}
+        {open && !readOnly && (
+          <button
+            type="button"
+            className="property-add"
+            aria-label={t('properties.removeAll')}
+            title={t('properties.removeAll')}
+            onClick={() => {
+              setAdding(false)
+              onApply(removeFrontmatter(body))
+            }}
+          >
+            <Trash2 size={14} aria-hidden="true" />
           </button>
         )}
       </div>

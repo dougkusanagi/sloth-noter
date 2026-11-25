@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.46.2] — 2026-11-25
+
+Corrigida a seleção de capas da galeria (gradientes) em modo estrito do React, adicionada a remoção completa da seção de propriedades YAML (inclusive ao excluir a última propriedade) e ampliado o gesto de baralho de notas no cabeçalho mobile para alternar pela lista quando houver menos de duas notas abertas. Veja os [detalhes da versão](changelog/0.46.2.md).
+
 ## [0.46.1] — 2026-11-25
 
 Corrigida a captura de toque nos gestos do cabeçalho no Android (B8 e B9): adicionado `touch-action: none` e `setPointerCapture` para que arrastar o cabeçalho para baixo ou na horizontal não seja cancelado pelo WebView nem perdido ao sair da área do cabeçalho. Veja os [detalhes da versão](changelog/0.46.1.md).

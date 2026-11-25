@@ -85,6 +85,7 @@ test('writeProperty keeps comments and order, adds, replaces and removes', () =>
   assert.equal(created, '---\nautor: Ana\n---\n# T\n\nTexto')
   assert.equal(writeProperty('---\na: [1\n---\n# T', 'b', 1), null)
   assert.equal(writeProperty('# T', 'x', undefined), '# T')
+  assert.equal(writeProperty('---\na: 1\n---\n# T\n', 'a', undefined), '# T\n')
 })
 
 test('titleLineNumber follows the YAML block of an editor document', async () => {

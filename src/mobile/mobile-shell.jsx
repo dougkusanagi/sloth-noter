@@ -1055,7 +1055,9 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           if (gesture === 'commands') {
             dispatch({ type: 'layer', route: { name: 'commands', prefix: '' } })
           } else if (gesture === 'next' || gesture === 'prev') {
-            const targetId = adjacentOpenNoteId(data.openIds, active?.id, gesture)
+            const deckIds =
+              data.openIds.length >= 2 ? data.openIds : data.notes.map((item) => item.id)
+            const targetId = adjacentOpenNoteId(deckIds, active?.id, gesture)
             if (targetId) {
               triggerHaptic('heading')
               openNote(targetId)
