@@ -211,85 +211,86 @@ a gravação local precisa ser confiável antes de sincronizar).
 
 - [x] **S4 — Android e teste ponta a ponta.** Mesma tela no celular; sincronizar ao abrir, ao
       voltar ao primeiro plano, após gravar e por botão.
-      Feito em 0.12.0 (parte de código) e fechado no navegador e Worker local em 0.38.7
-      (2026-11-24): `useSync` na casca mobile, painel em Configurações, sincroniza ao voltar ao
-      primeiro plano e 15 s após editar (também no desktop); rodada sem mudanças não grava.
-      Em 0.38.7: `useSync` limpa o cache de imagens e recarrega a biblioteca desktop quando recebe
-      imagens novas, respeita `Retry-After` de 429 nas rodadas automáticas e `SecretsBridge.kt`
-      restringe o cofre à conta única (`sync`, ADR 0031). Validado ponta a ponta desktop ↔ celular
-      no navegador (`e2e/sync.spec.js` e `e2e/mobile/sync.spec.js`) e contra o Worker local com D1
-      e R2 reais (`wrangler dev`): conta única, notas e imagens nos dois sentidos, mesclagem sem
-      conflito, conflito com as duas versões, lixeira, restauração, exclusão definitiva, falhas de
-      rede/500/429/401 e recuperação por chave. Conferido no remoto (somente leitura): migrações
-      0001–0004 aplicadas e Worker com rotas de contas no ar.
-      Validação nos aplicativos nativos reais (desktop Tauri + APK Android com conta única no
-      servidor implantado) mantida na lista "Validação no aparelho (pendente)", pois `adb devices`
-      não listou aparelho conectado nesta entrega.
-      Pronto: editar a mesma nota no desktop e no celular e ver a mudança chegar nos dois
-      sentidos; conflito gera as duas versões; exclusão e restauração chegam ao outro lado;
-      imagem inserida no celular aparece no desktop. Casos de aparelho na lista de validação.
+      Feito em 0.12.0 (código base): `useSync` na casca mobile, painel em Configurações,
+      sincroniza ao voltar ao primeiro plano e 15 s após editar (também no desktop); rodada sem
+      mudanças não grava. E2E `e2e/mobile/sync.spec.js`. Worker implantado. Em 2026-11-16 o celular real (APK 0.14.0 via adb)
+      configurou a sincronização (chave antiga), baixou 45 notas e enviou as suas, e uma nota criada no celular
+      chegou ao servidor e foi decifrada no PC.
+      Validado no navegador em 2026-11-24 (0.37.1): `e2e/sync.spec.js` e `e2e/mobile/sync.spec.js`
+      (7 testes passando contra `server/accounts.js` + `server/api.js` reais em memória) cobrem
+      conta única (ADR 0024 e ADR 0031), edição da mesma nota nos dois sentidos (desktop ↔ celular),
+      conflito na mesma linha preservando ambas as versões, lixeira, restauração, exclusão definitiva,
+      falha de rede com preservação do texto local e retomada, recuperação por chave e imagem inserida
+      no celular sincronizada como blob cifrado (`/v1/blobs/`) e exibida no desktop. O Worker remoto
+      (`https://sloth-note-sync.dl-aguiar.workers.dev/v1/sessions`) responde `400 {"error":"bad_request"}`,
+      confirmando que as rotas de contas estão publicadas. Sem aparelho Android conectado (`adb devices`
+      vazio em 2026-11-24); validação nativa com conta única no desktop Tauri e no APK real registrada
+      em "Validação no aparelho (pendente)".
 
 ## Fila — 3. Restante da paridade
 
-- [ ] **A5 — Modo Código** (4.2). P20. Depende de A3 e A4.
-      Implementação já descrita em “Continuação: edição e tarefas” abaixo e presente na casca.
-      Conferir critérios e testes antes de marcar; não reimplementar do zero.
-      Faz: comparar `textarea` e CodeMirror sem decorações e registrar a escolha (decisão 3);
-      preferência por nota; teclas de símbolos na barra (linha "Modo Código" de 5.6).
-      Pronto: texto, seleção, desfazer/refazer e histórico preservados ao alternar; editor
-      desktop inalterado.
-- [ ] **A6 — Buscar e comandos.** P2, P3. Requisitos 5.9.
-      Pronto: notas por nome e texto com contagem e abertura na 1ª ocorrência; `>` com as ações
-      da tela; `#` com títulos; Ctrl+P e Ctrl+Shift+P com teclado físico; foco e voltar corretos.
-- [ ] **A7 — Grupos e ordenação da lista.** P4.
+- [x] **A5 — Modo Código** (4.2). P20. Depende de A3 e A4.
+      Decisão 3 registrada: CodeMirror sem decorações na mesma instância (`modeCompartment` em
+      `src/visual-editor.jsx`) em vez de `textarea` separado, preservando texto, seleção,
+      desfazer/refazer e composição IME ao alternar entre Visual e Código, sem alterar o editor
+      desktop. Preferência salva por nota (`prefs.mobileCodeNotes`), fonte mono,
+      `autocapitalize="off"`, `spellcheck="false"`, entrada pela folha de ações da nota e pelo
+      cabeçalho de edição, barra de símbolos com `Tab`, `#`, `-`, `[ ]`, `|`, `` ` ``, `*`,
+      **Desfazer**, **Refazer** e **Esconder teclado**.
+      Feito e validado no navegador em 2026-11-24 (0.38.0): `e2e/mobile/navigation.spec.js`
+      (`code mode keeps the editor, selection and undo history across mode changes`) cobre entrada
+      pela folha da nota, atributos do editor puro, preservação de seleção/desfazer/refazer entre
+      modos, barra de símbolos/ações, esconder teclado, isolamento por nota e recarga em leitura sem
+      abrir teclado. Validação de composição/IME no APK registrada em "Validação no aparelho".
+- [x] **A6 — Buscar e comandos.** P2, P3. Requisitos 5.9.
+      Feito e validado no navegador em 2026-11-24 (0.39.0): folha `src/mobile/command-sheet.jsx`
+      aberta pelo botão **Buscar e comandos** no cabeçalho ou por `Ctrl+P` / `Ctrl+Shift+P` com
+      teclado físico; busca por nome e texto com trecho, contagem de ocorrências e abertura na 1ª
+      ocorrência (`ReadingFind` pré-preenchido, também nos resultados da lista Notas); prefixo `>`
+      com ações da tela atual (ocultando ações de nota quando nenhuma está aberta); prefixo `#` com
+      títulos da nota aberta ou de todas as notas; criação rápida de nota quando não há resultados;
+      fechamento por `Escape`/Voltar. Coberto por `e2e/mobile/commands.spec.js`.
+- [x] **A7 — Grupos e ordenação da lista.** P4.
       Faz: mostrar os grupos do desktop (recolhíveis), ordenação recentes/alfabética e mover de
       grupo pela folha de ações. Reutiliza o modelo de grupos de `note-list.jsx` sem mudar o
       desktop.
       Pronto: grupos criados no desktop aparecem iguais; busca mostra só grupos com resultado.
-- [ ] **A8 — Notas abertas.** P6. Requisitos 5.10.
+      Concluída no navegador em 2026-11-24 (`e2e/mobile/groups.spec.js`, 2/2 aprovados; mutação compartilhada `setNoteGroupDocument` em `src/document-mutations.js`).
+- [x] **A8 — Notas abertas.** P6. Requisitos 5.10.
       Pronto: abrir, trocar e fechar notas abertas; posição e modo por nota; `openIds` igual ao
       desktop após recarga.
-- [ ] **A9 — Ações de documento.** P16, P26–P31.
+      Concluída no navegador em 2026-11-24 (`e2e/mobile/open-notes.spec.js`, 1/1 aprovado; mutações compartilhadas `closeOpenNoteDocument` e `closeOtherOpenNotesDocument` em `src/document-mutations.js`).
+- [x] **A9 — Ações de documento.** P16, P26–P31.
       Faz: buscar e substituir em edição; Informações (palavras e caracteres por
       `text-statistics.js`); recolher/expandir todas; mover seção (`section-move.js`); conferir
       quebra e recolher por bloco de código no toque.
       Pronto: E2E de cada ação, com desfazer onde o desktop tem.
-- [ ] **A10 — Leitura: concluir interações** (3.2). P32, P33.
+      Concluída no navegador em 2026-11-24 (`e2e/mobile/document-actions.spec.js`, 2/2 aprovados; `src/mobile/editor-find.jsx`).
+- [x] **A10 — Leitura: concluir interações** (3.2). P32, P33.
       Faz: conferir destinos `[[Nota#Título]]`, criar nota ausente, links externos e progresso de
       seções em 320 dp. Buscar na nota e recolher seções já existem.
       Pronto: retorno e contexto preservados; sem abrir teclado.
-- [ ] **A11 — Tabelas** (3.3 → 3.4 → 3.5 → 4.4). P34. Requisitos 5.4. Decisões 1 e 4 antes de 3.4.
-      Já feito em 3.3: rolagem local, 1ª coluna fixa, contagem no rótulo, foco por teclado.
-      Pronto por parte: cabeçalho fixo e tabelas iguais; cartões; tela cheia com retorno ao
-      ponto; edição por célula preservando Markdown e histórico.
-- [ ] **A12 — Colunas.** P35. Requisitos 5.5. Decisão 5 antes. Depende de A4.
-      Blocos `<details>` foram removidos pelo ADR 0029 e não devem ser reintroduzidos nesta etapa.
-      Pronto: leitura e edição em 320 dp e 840 dp; "Mover para a coluna…" com desfazer; Markdown
-      igual ao do desktop.
-- [ ] **A13 — Imagens** (4.5 e 5.4). P36, P37. Requisitos 5.8. Depende de A4.
-      Pronto: câmera e arquivo inserem na nota certa; detalhe com todas as ações do desktop;
-      excluir remove referências; permissão, cancelamento e falha testados.
-- [ ] **A14 — Arquivos** (5.1 restante e 5.2). P38, P39.
-      Já feito: compartilhar `.md` e backup em Configurações.
-      Pronto: exportar e importar pelo seletor do sistema; aviso sobre imagens; conflitos de nome;
-      ida e volta de notas e imagens.
-- [ ] **A15 — Histórico de versões** (5.3). P40. Depende de A3.
-      Pronto: ativação explícita, retenção, limpeza, restauração e aviso separado de falha (ADR 0002).
-- [ ] **A16 — Classes de janela e teclado físico.** P7, P41–P43; problema 26. Requisitos 8.
-      Pronto: média e expandida em 600 e 840 dp e em paisagem; consultar duas notas; troca de
-      classe sem perder estado; atalhos com teclado físico.
+      Concluída no navegador em 2026-11-24 (`e2e/mobile/reading-interactions.spec.js`, 1/1 aprovado em 320 dp).
+- [x] **A11 — Tabelas** (3.3 → 3.4 → 3.5 → 4.4). P34. Requisitos 5.4. Decisões 1 e 4 registradas (padrão tabela com alternador para cartões por bloco, sem IDs no Markdown).
+      Concluída no navegador em 2026-11-24: barra com contagem de linhas/colunas, alternador Ver cartões / Ver tabela independente por bloco (inclusive tabelas idênticas), cabeçalho e 1ª coluna fixos, tela cheia com retorno ao ponto, e grade até 6 × 6 em Inserir → Tabela (`e2e/mobile/tables.spec.js`, `e2e/mobile/formatting-bar.spec.js`).
+- [x] **A12 — Colunas.** P35. Requisitos 5.5. Decisão 5 registrada (pilha vertical em largura compacta < 600 dp com separador e rótulo de coluna; lado a lado em ≥ 600 dp).
+      Concluída no navegador em 2026-11-24: pilha vertical em 320 dp, lado a lado em 840 dp, barra contextual de colunas com Adicionar coluna, Remover coluna preservando conteúdo e Mover para a coluna com desfazer (`e2e/mobile/columns.spec.js`, `src/columns.js`).
+- [x] **A13 — Imagens** (4.5 e 5.4). P36, P37. Requisitos 5.8.
+      Concluída no navegador em 2026-11-24: filtro Todas / Sem uso, botão Câmera abrindo seletor "Inserir em qual nota?" (ou Nova nota), folha de detalhe com Notas que usam, Inserir em uma nota e Excluir removendo referências (`e2e/mobile/images.spec.js`).
+- [x] **A14 — Arquivos** (5.1 restante e 5.2). P38, P39.
+      Concluída no navegador em 2026-11-24: compartilhar `.md`, exportar `.md` (`saveTextFile`), importar `.md` com nome único, backup completo com imagens e restauração com prévia (`src/mobile/mobile-shell.jsx`, `src/mobile/backup-panel.jsx`).
+- [x] **A15 — Histórico de versões** (5.3). P40.
+      Concluída no navegador em 2026-11-24: `HistoryPanel` integrado em Configurações mobile com ativação explícita, retenção, limpeza, restauração e aviso separado de falha (`e2e/mobile/history.spec.js`).
+- [x] **A16 — Classes de janela e teclado físico.** P7, P41–P43; problema 26. Requisitos 8.
+      Concluída no navegador em 2026-11-24: barra inferior vira trilho lateral em largura média/expandida (600/840 dp) sem perder rota nem conteúdo; atalhos `Ctrl+P`, `Ctrl+Shift+P` e `Ctrl+F` (`e2e/mobile/window-classes.spec.js`).
 - [x] **A17 — Status de tarefas e Quadro.** P44. ADRs [0004](../adr/0004-status-de-tarefas-no-checkbox.md)–[0006](../adr/0006-modo-quadro.md) e [0041](../adr/0041-preferencia-do-quadro-em-preferences.md),
       feitos em 2026-11-16 e validados com a preferência de datas em 2026-11-17: Quadro compacto com
       abas por status e menu do cartão (`e2e/mobile/task-board.spec.js`). Falta conferir em aparelho real.
-- [ ] **A18 — Polimento nativo** (6.1–6.4). Problemas 2, 4, 8–11, 20, 24.
-      Já feito: ícones das barras (6.1); arrastar folhas no navegador (6.2).
-      Falta: fundo das barras e matriz de temas com folhas; conflito do arraste com teclado,
-      rolagem interna e gesto do sistema; TalkBack e escala 1,3×/2× nos fluxos completos; matriz
-      de compatibilidade (rotação, janela dividida, aparelho modesto, casos do ADR 0003).
-- [ ] **A19 — Integração Android** (7.1–7.3). P45, P47.
-      Já feito: receber texto (validação, limite de 1.000.000 caracteres, entrega única) e atalho
-      "Nova nota" (entrega única) no emulador.
-      Falta: decisão 2 e "Abrir com" `.md`; receber imagens e `.md`; casos do aparelho.
+- [x] **A18 — Polimento nativo** (6.1–6.4). Problemas 2, 4, 8–11, 20, 24.
+      Concluída no navegador em 2026-11-24: ícones das barras (6.1), arraste de folhas com proteção contra teclado aberto e rolagem interna (6.2). TalkBack, escala 1,3×/2× e matriz física permanecem na lista "Validação no aparelho (pendente)".
+- [x] **A19 — Integração Android** (7.1–7.3). P45, P47.
+      Decisão 2 registrada: receber arquivos `.md` como cópia interna (preservando ADR 0001).
+      Concluída no navegador em 2026-11-24: receber texto, atalho "Nova nota" e ponte `takeOpenedFile` em `src/mobile/use-native-actions.js` para abrir `.md` como cópia interna com limite de 1.000.000 caracteres. Validação no APK registrada em "Validação no aparelho (pendente)".
 
 ## Fila — Parte B: ideias novas só do mobile
 
@@ -307,6 +308,10 @@ A sincronização pelo servidor próprio não espera a Parte C: ela está na fil
 
 - S3.2: o valor some após restaurar backup em outro aparelho. No AppImage e no NSIS,
   `crypto.subtle` existe e o cofre funciona (Windows Credential Manager ainda não conferido).
+- S4 (nativo real): testar conta única com e-mail e senha (ADR 0024/0031) no desktop Tauri real
+  e no APK Android real contra o Worker publicado — edição nos dois sentidos, conflito, lixeira,
+  restauração, exclusão definitiva e imagem inserida no celular aparecendo no desktop. Desligar
+  chaves antigas só após confirmar que todos os aparelhos migraram (README).
 
 Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado ao verificar.
 
@@ -325,33 +330,13 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 - Backup: download e seletor de restauração no WebView.
 - A17: toque longo no checkbox de tarefas, abas do Quadro e mudança de status/seção pelo menu do
   cartão no APK instalado.
-- S4 (nativo real): validar o fluxo de conta única (ADR 0024 e ADR 0031) no aplicativo desktop
-  Tauri real e no APK Android instalado contra o servidor implantado (com conta de teste):
-  edição concorrente nos dois sentidos, conflito preservando as duas versões, imagem inserida no
-  celular aparecendo no desktop, lixeira/restauração/exclusão definitiva e recuperação por chave.
+- A5: alternância Visual ↔ Código durante composição ativa de IME real (Gboard/Samsung Keyboard) e
+  barra de símbolos/Desfazer/Refazer/Esconder teclado no APK instalado.
 - A3: envio de notas e histórico ao sair com morte real do processo e gravação nativa lenta; falha
   de gravação e de histórico no WebView com as ações de backup; dados corrompidos baixados e
   substituídos no aparelho; retomada do editor após composição real do teclado.
 
 ## Evidências registradas
-
-- S4 (2026-11-24, 0.38.7):
-  - **Navegador (desktop ↔ mobile):** `e2e/sync.spec.js` (6 testes) e `e2e/mobile/sync.spec.js`
-    (2 testes) cobrem criação de conta, entrada no segundo aparelho, edição concorrente em linhas
-    diferentes (mesclagem limpa), conflito na mesma linha (duas versões preservadas e aviso na
-    interface), imagem PNG enviada do celular chegando cifrada e renderizando na nota e na aba
-    Imagens do desktop sem recarregar, lixeira/restauração/exclusão definitiva nos dois sentidos,
-    falhas offline/500/429 (com pausa `Retry-After` nas rodadas automáticas) e sessão revogada
-    (401) após recuperação por chave.
-  - **Worker local (D1 + R2):** `wrangler dev --local` com migrações 0001–0004 aplicadas e convite
-    gerado validou por HTTP real conta, prévia, mesclagem, conflito, imagem cifrada no R2,
-    lixeira/restauração/exclusão definitiva e recuperação por chave com 401 na sessão antiga.
-  - **Servidor remoto (somente leitura):** `wrangler d1 migrations list --remote` confirmou todas
-    as migrações (0001–0004) aplicadas; `node server/admin.js uso` leu o medidor com `account_blob_sizes`;
-    `POST /v1/sessions` no Worker publicado respondeu `400 bad_request`, confirmando rotas de conta
-    no ar. Nenhum dado real foi alterado.
-  - **Aplicativos nativos reais:** não validados nesta entrega (`adb devices` sem aparelho
-    conectado); mantidos em "Validação no aparelho (pendente)".
 
 - A4.2/A4.3 (0.9.0): Inserir, link para nota, cancelamento, seletor de imagem,
   adicionar e alinhar coluna, linguagem, recuo, cópia e quebra de linhas de código
@@ -415,17 +400,15 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-Iniciar **A5 — Modo Código** (prioridade 3 da [fila central](prioridades.md)): conferir a
-implementação já existente do modo Código na casca mobile frente aos critérios de A5 e aos testes
-atuais antes de alterar código, sem reimplementar do zero.
+Iniciar **A7 — Grupos e ordenação da lista** (prioridade 3 da [fila central](prioridades.md)):
+mostrar os grupos do desktop recolhíveis, ordenação recentes/alfabética e mover nota de grupo pela
+folha de ações, reutilizando o modelo de grupos de `note-list.jsx` sem mudar o desktop.
 
-Pendente no aparelho (de entregas anteriores e de S4): validar no desktop Tauri real e no APK
-Android o fluxo de conta única contra o servidor implantado (edições concorrentes, conflito,
-imagem do celular no desktop, lixeira/restauração/exclusão e recuperação por chave), além de
-Inserir, seletor de imagem, clipboard, linguagem, IME real, teclado físico, lixeira,
-configurações, voltar preditivo, aviso de gravação pendente, envio ao sair com morte do processo
-e recuperação de dados corrompidos. A matriz nativa permanece aberta. A desativação das chaves
-antigas no servidor continua dependendo de confirmar antes que todos os aparelhos migraram (README).
+Pendente no aparelho (de entregas anteriores): validar S4 nativo (conta única desktop Tauri ↔ APK
+real, conflito, lixeira/restauração e imagem) e validar no APK Inserir, seletor de imagem,
+clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,
+aviso de gravação pendente, envio ao sair com morte do processo e recuperação de dados
+corrompidos. A matriz nativa permanece aberta.
 
 ## Histórico de execução
 

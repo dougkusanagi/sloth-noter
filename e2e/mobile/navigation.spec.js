@@ -1121,27 +1121,62 @@ test('code mode keeps the editor, selection and undo history across mode changes
   page,
 }) => {
   await page.locator('[data-note-id="meeting"]').tap()
-  await page.getByRole('button', { name: 'Editar', exact: true }).tap()
+  // Entering Code mode from the note actions sheet opens the raw Markdown editor.
+  await page.getByRole('button', { name: 'Ações de Reunião', exact: true }).tap()
+  await page.getByRole('button', { name: 'Modo código', exact: true }).tap()
+  const rawEditor = page.getByRole('textbox', { name: 'Editor Markdown em texto puro' })
+  await expect(rawEditor).toBeVisible()
+  await expect(rawEditor).toHaveAttribute('spellcheck', 'false')
+  await expect(rawEditor).toHaveAttribute('autocapitalize', 'off')
+  await expect(rawEditor).toContainText('# Reunião')
+
+  // Switch to Visual, type, select a word, and confirm selection + undo/redo survive mode changes.
+  await page.getByRole('button', { name: 'Modo visual' }).tap()
   const editor = page.locator('.cm-content')
   await editor.focus()
   await page.keyboard.press('ControlOrMeta+End')
   await page.keyboard.type(' alterado')
+  for (let i = 0; i < 'alterado'.length; i++) await page.keyboard.press('Shift+ArrowLeft')
+  const selectedBefore = await page.evaluate(() => window.getSelection()?.toString())
+  expect(selectedBefore).toBe('alterado')
+
   await page.getByRole('button', { name: 'Modo código' }).tap()
-  await expect(page.getByRole('textbox', { name: 'Editor Markdown em texto puro' })).toBeVisible()
-  await expect(editor).toContainText('# Reunião')
+  await expect(rawEditor).toBeVisible()
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe('alterado')
+
+  // Collapse selection at end and test symbol, undo, redo and hide-keyboard controls in Code mode.
+  await page.keyboard.press('ArrowRight')
   await page.getByRole('button', { name: '#' }).tap()
   await expect(editor).toContainText('alterado#')
+  const symbolsBar = page.getByRole('toolbar', { name: 'Símbolos para Markdown' })
+  await symbolsBar.getByRole('button', { name: 'Desfazer' }).tap()
+  await expect(editor).not.toContainText('alterado#')
+  await symbolsBar.getByRole('button', { name: 'Refazer' }).tap()
+  await expect(editor).toContainText('alterado#')
+
+  // Undo still works after switching back to Visual mode.
   await page.getByRole('button', { name: 'Modo visual' }).tap()
   await editor.focus()
   await page.keyboard.press('ControlOrMeta+z')
   await expect(editor).not.toContainText('alterado#')
+
+  // Per-note preference: Reunião stays in Code mode across reload, while Compras stays Visual.
   await page.getByRole('button', { name: 'Modo código' }).tap()
+  await symbolsBar.getByRole('button', { name: 'Esconder teclado' }).tap()
+  await expect(editor).not.toBeFocused()
   await page.getByRole('button', { name: 'Pronto' }).tap()
   await page.getByRole('button', { name: 'Editar', exact: true }).tap()
-  await expect(page.getByRole('textbox', { name: 'Editor Markdown em texto puro' })).toBeVisible()
+  await expect(rawEditor).toBeVisible()
   await page.reload()
+  // Restores in Reading mode without opening the keyboard, then Editar reopens Code mode.
+  await expect(page.locator('.cm-content')).toHaveCount(0)
   await page.getByRole('button', { name: 'Editar', exact: true }).tap()
-  await expect(page.getByRole('textbox', { name: 'Editor Markdown em texto puro' })).toBeVisible()
+  await expect(rawEditor).toBeVisible()
+  await page.getByRole('button', { name: 'Pronto' }).tap()
+  await page.getByRole('button', { name: 'Voltar' }).tap()
+  await page.locator('[data-note-id="shopping"]').tap()
+  await page.getByRole('button', { name: 'Editar', exact: true }).tap()
+  await expect(page.getByRole('textbox', { name: 'Editor Markdown visual' })).toBeVisible()
 })
 
 test('task list locates the right repeated task and can undo completion', async ({ page }) => {

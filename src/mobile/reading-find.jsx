@@ -22,8 +22,8 @@ function collectRanges(root, query) {
   return ranges
 }
 
-export function ReadingFind({ container, version, onClose }) {
-  const [query, setQuery] = useState('')
+export function ReadingFind({ container, version, initialQuery = '', onClose }) {
+  const [query, setQuery] = useState(initialQuery)
   const [index, setIndex] = useState(0)
   const [count, setCount] = useState(0)
   const ranges = useRef([])

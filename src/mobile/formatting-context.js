@@ -2,6 +2,7 @@ import { titleLineNumber } from '../frontmatter.js'
 import { markdownTree } from '../markdown-model.js'
 import { selectionInCode } from '../format-selection.js'
 import { tableCells } from '../markdown-table.js'
+import { columnBlockAt } from '../columns.js'
 
 /**
  * Which contextual group the formatting bar shows for the editor state.
@@ -16,6 +17,7 @@ export function formattingContext(state) {
   if (line.number === titleLineNumber(state.doc)) return selection.empty ? 'text' : 'selection'
   if (selectionInCode(markdownTree(text), selection.from, selection.to)) return 'code'
   if (tableCells(line.text)) return 'table'
+  if (columnBlockAt(text, selection.head)) return 'columns'
   if (!selection.empty) return 'selection'
   if (/^#{1,6}\s/.test(line.text)) return 'heading'
   if (/^\s*([-*+]|\d+[.)])\s/.test(line.text)) return 'list'

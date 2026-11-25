@@ -1,4 +1,4 @@
-import { calloutActions } from './callout.js'
+import { BLOCK_LABELS, CALLOUT_VARIANTS } from './block-catalog.js'
 import { autoPairs } from './editor/auto-pairs.js'
 import { selectedColors, blockColorMetadata } from './document-colors.js'
 import { ColorPalette } from './components/color-palette.jsx'
@@ -158,32 +158,28 @@ const blockGroups = [
       { action: 'quote', label: 'block.quote', icon: Quote },
       {
         action: 'callout-note',
-        label: 'block.callout',
+        label: BLOCK_LABELS.callout,
         icon: MessageSquare,
-        variants: calloutActions.map(([action, label]) => ({
-          action,
-          label,
-          callout: action.slice('callout-'.length),
-        })),
+        variants: CALLOUT_VARIANTS,
       },
-      { action: 'code', label: 'block.code', icon: CodeXml },
+      { action: 'code', label: BLOCK_LABELS.code, icon: CodeXml },
     ],
   ],
   [
     'editor.blocksLayout',
     [
-      { action: 'table', label: 'block.table', icon: TableIcon },
-      { action: 'columns', label: 'block.columns', icon: Columns2 },
-      { action: 'accordion', label: 'block.accordion', icon: ListCollapse },
+      { action: 'table', label: BLOCK_LABELS.table, icon: TableIcon },
+      { action: 'columns', label: BLOCK_LABELS.columns, icon: Columns2 },
+      { action: 'accordion', label: BLOCK_LABELS.accordion, icon: ListCollapse },
     ],
   ],
   [
     'editor.blocksInsert',
     [
-      { action: 'image', label: 'block.image', icon: ImagePlus },
-      { action: 'link', label: 'format.link', icon: Link },
-      { action: 'template', label: 'block.template', icon: FileText },
-      { action: 'variable', label: 'block.variable', icon: Braces },
+      { action: 'image', label: BLOCK_LABELS.image, icon: ImagePlus },
+      { action: 'link', label: BLOCK_LABELS.link, icon: Link },
+      { action: 'template', label: BLOCK_LABELS.template, icon: FileText },
+      { action: 'variable', label: BLOCK_LABELS.variable, icon: Braces },
     ],
   ],
 ]

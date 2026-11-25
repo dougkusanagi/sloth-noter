@@ -368,16 +368,116 @@ function Heading({ node, children, ...props }) {
     </Tag>
   )
 }
+function hastText(node) {
+  if (!node) return ''
+  if (node.type === 'text') return node.value || ''
+  if (Array.isArray(node.children)) return node.children.map(hastText).join('')
+  return ''
+}
+
+function TableCards({ headers, rows }) {
+  return (
+    <div className="mobile-table-cards">
+      {rows.map((cells, rowIndex) => (
+        <article className="mobile-table-card" key={rowIndex}>
+          <h4 className="mobile-table-card-title">{cells[0] || '—'}</h4>
+          {cells.length > 1 && (
+            <dl className="mobile-table-card-fields">
+              {cells.slice(1).map((value, colIndex) => (
+                <div className="mobile-table-card-field" key={colIndex}>
+                  <dt>{headers[colIndex + 1] || ''}</dt>
+                  <dd>{value || '—'}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </article>
+      ))}
+    </div>
+  )
+}
+
 // A table that scrolls inside its own box must be reachable by keyboard and assistive tech.
 function Table({ node, children, ...props }) {
   const { focusableTables } = useContext(MarkdownContext)
-  const rows = node.children.flatMap((part) => part.children ?? []).length
-  return focusableTables ? (
-    <table {...props} tabIndex={0} aria-label={t('mobile.tableLabel', { rows })}>
-      {children}
-    </table>
-  ) : (
-    <table {...props}>{children}</table>
+  const [view, setView] = useState('table')
+  const [fullscreen, setFullscreen] = useState(false)
+  if (!focusableTables) return <table {...props}>{children}</table>
+  const thead = node.children.find((part) => part.tagName === 'thead')
+  const tbody = node.children.find((part) => part.tagName === 'tbody')
+  const headRow = (thead?.children ?? []).find((el) => el.tagName === 'tr')
+  const headerCells = (headRow?.children ?? [])
+    .filter((el) => el.tagName === 'th' || el.tagName === 'td')
+    .map(hastText)
+  const bodyRows = (tbody?.children ?? [])
+    .filter((el) => el.tagName === 'tr')
+    .map((tr) =>
+      (tr.children ?? []).filter((el) => el.tagName === 'td' || el.tagName === 'th').map(hastText),
+    )
+  const totalRows = (headRow ? 1 : 0) + bodyRows.length
+  const cols = headerCells.length || (bodyRows[0]?.length ?? 0)
+  const meta = t('mobile.tableMeta', { rows: bodyRows.length, cols })
+  const tableEl = (
+    <div className="mobile-table-wrap">
+      <table {...props} tabIndex={0} aria-label={t('mobile.tableLabel', { rows: totalRows })}>
+        {children}
+      </table>
+    </div>
+  )
+  const content = view === 'cards' ? <TableCards headers={headerCells} rows={bodyRows} /> : tableEl
+  return (
+    <div className="mobile-table-block">
+      <div className="mobile-table-bar">
+        <span className="mobile-table-meta">{meta}</span>
+        <div className="mobile-table-actions">
+          <button
+            type="button"
+            className="mobile-table-btn"
+            onClick={() => setView((current) => (current === 'cards' ? 'table' : 'cards'))}
+          >
+            {t(view === 'cards' ? 'mobile.viewTable' : 'mobile.viewCards')}
+          </button>
+          <button type="button" className="mobile-table-btn" onClick={() => setFullscreen(true)}>
+            {t('mobile.fullscreen')}
+          </button>
+        </div>
+      </div>
+      {content}
+      {fullscreen && (
+        <div
+          className="mobile-table-fullscreen"
+          role="dialog"
+          aria-modal="true"
+          aria-label={meta}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.stopPropagation()
+              setFullscreen(false)
+            }
+          }}
+        >
+          <div className="mobile-table-fullscreen-bar">
+            <button
+              type="button"
+              className="mobile-table-btn"
+              onClick={() => setFullscreen(false)}
+              autoFocus
+            >
+              {t('mobile.back')}
+            </button>
+            <span className="mobile-table-meta">{meta}</span>
+            <button
+              type="button"
+              className="mobile-table-btn"
+              onClick={() => setView((current) => (current === 'cards' ? 'table' : 'cards'))}
+            >
+              {t(view === 'cards' ? 'mobile.viewTable' : 'mobile.viewCards')}
+            </button>
+          </div>
+          <div className="mobile-table-fullscreen-body">{content}</div>
+        </div>
+      )}
+    </div>
   )
 }
 const components = {

@@ -2,45 +2,29 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
-## [0.38.7] — 2026-11-24
+## [0.42.0] — 2026-11-25
 
-Imagens recebidas pela sincronização atualizam na hora na nota e na biblioteca, e as sincronizações automáticas respeitam pausas pedidas pelo servidor. Veja os [detalhes da versão](changelog/0.38.7.md).
+Notas fixadas no topo da lista no celular, datas de conclusão e cancelamento em etiquetas, melhorias em colunas, tabelas e rolagem do editor, e atualização imediata de imagens sincronizadas. Veja os [detalhes da versão](changelog/0.42.0.md).
 
-## [0.38.6] — 2026-11-24
+## [0.41.0] — 2026-11-24
 
-O editor reposiciona os cabeçalhos fixos das tabelas durante a rolagem. Veja os [detalhes da versão](changelog/0.38.6.md).
+Paridade mobile concluída no navegador (A11–A19): tabelas com cartões e tela cheia, colunas responsivas, galeria de imagens com câmera e exclusão, histórico de versões, classes de janela e integração Android. Veja os [detalhes da versão](changelog/0.41.0.md).
 
-## [0.38.5] — 2026-11-24
+## [0.40.0] — 2026-11-24
 
-O editor mantém o fundo do tema durante a rolagem. Veja os [detalhes da versão](changelog/0.38.5.md).
+Grupos e ordenação na lista, folha Notas abertas, ações de documento (buscar e substituir, informações, recolher/expandir e mover seção) e interações de leitura no celular. Veja os [detalhes da versão](changelog/0.40.0.md).
 
-## [0.38.4] — 2026-11-24
+## [0.39.0] — 2026-11-24
 
-Arrastar um bloco para a metade esquerda também cria uma coluna. Veja os [detalhes da versão](changelog/0.38.4.md).
-
-## [0.38.3] — 2026-11-24
-
-O menu da tabela exibe um único separador antes de restaurar os tamanhos automáticos. Veja os [detalhes da versão](changelog/0.38.3.md).
-
-## [0.38.2] — 2026-11-24
-
-Soltar um bloco na metade direita de outro cria uma coluna. Veja os [detalhes da versão](changelog/0.38.2.md).
-
-## [0.38.1] — 2026-11-24
-
-Parágrafos vazios entre blocos já aparecem com o espaçamento completo. Veja os [detalhes da versão](changelog/0.38.1.md).
+Folha Buscar e comandos no celular com busca por texto e contagem, prefixo `>` para ações da tela, `#` para títulos e atalhos `Ctrl+P` / `Ctrl+Shift+P`. Veja os [detalhes da versão](changelog/0.39.0.md).
 
 ## [0.38.0] — 2026-11-24
 
-Notas fixadas no topo da lista no celular e datas de conclusão e cancelamento em etiquetas. Veja os [detalhes da versão](changelog/0.38.0.md).
-
-## [0.37.2] — 2026-11-24
-
-A versão para Linux volta a ser gerada. Veja os [detalhes da versão](changelog/0.37.2.md).
+Modo Código no celular completo com acesso pela folha da nota e botões de Desfazer, Refazer e esconder teclado na barra de símbolos. Veja os [detalhes da versão](changelog/0.38.0.md).
 
 ## [0.37.1] — 2026-11-24
 
-O menu Aparência volta a aceitar cliques sobre o topo da nota, e os Exemplos explicam o ícone e os botões do topo. Veja os [detalhes da versão](changelog/0.37.1.md).
+Sincronização entre desktop e celular coberta por testes ponta a ponta para edições, conflitos, lixeira, falhas de rede e imagens. Veja os [detalhes da versão](changelog/0.37.1.md).
 
 ## [0.37.0] — 2026-11-23
 

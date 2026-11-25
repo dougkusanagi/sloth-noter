@@ -2,16 +2,14 @@ import { useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
 import { t } from '../i18n.js'
-import { ensureTitle } from '../title.js'
-import { renameWikiReferences } from '../markdown-model.js'
 import {
-  headingFileName,
   isDiscardableEmptyNote,
   moveToTrash,
   purgeFromTrash,
   restoreFromTrash,
   uniqueName,
 } from '../notes.js'
+import { createNoteDocument, renameNoteDocument } from '../document-mutations.js'
 import { isExternalNote } from '../external-notes.js'
 import { resolvedTasks, taskSettings, taskStatus, taskStatusChanges, toggleTask } from '../tasks.js'
 
@@ -82,23 +80,13 @@ export function useNoteActions({
 
   function createNote(name = 'new note.md', body = '', group = undefined, selection = undefined) {
     const blank = !body
-    body = blank && name === 'new note.md' ? '# \n' : ensureTitle(body, name.replace(/\.md$/i, ''))
-    const old = current.current
-    const note = {
-      id: crypto.randomUUID(),
-      name: uniqueName(old.notes, headingFileName(body) ?? name),
+    const { note, document: next } = createNoteDocument(current.current, {
+      name,
       body,
-      revision: 0,
-      modifiedAt: Date.now(),
-      ...(group && old.groups?.includes(group) ? { group } : {}),
-    }
+      group,
+    })
     flushSync(() => {
-      commit({
-        ...old,
-        notes: [...old.notes, note],
-        openIds: [...old.openIds, note.id],
-        activeId: note.id,
-      })
+      commit(next)
       if (mode === 'reading') setMode('visual')
       if (palette) closePalette()
     })
@@ -171,38 +159,12 @@ export function useNoteActions({
       await ask({ kind: 'prompt', label: t('dialog.renameLabel'), initial: note.name })
     )?.trim()
     if (!proposed || proposed === note.name) return
-    const name = proposed.toLowerCase().endsWith('.md') ? proposed : `${proposed}.md`
-    if (
-      current.current.notes.some(
-        (item) => item.id !== id && item.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
-      )
-    ) {
+    const result = renameNoteDocument(current.current, id, proposed, { strict: false })
+    if (result.error === 'error.nameExists') {
       await ask({ kind: 'confirm', single: true, message: t('error.nameExists') })
       return
     }
-    const body = note.body.replace(/^# [ \t]*(.+?)[ \t]*$/m, `# ${name.slice(0, -3)}`)
-    commit({
-      ...current.current,
-      trash: current.current.trash.map((entry) => {
-        const body = renameWikiReferences(entry.note.body, note.name, name)
-        return body === entry.note.body
-          ? entry
-          : { ...entry, note: { ...entry.note, body, revision: entry.note.revision + 1 } }
-      }),
-      notes: current.current.notes.map((item) =>
-        (() => {
-          const nextBody = renameWikiReferences(item.id === id ? body : item.body, note.name, name)
-          return item.id === id || nextBody !== item.body
-            ? {
-                ...item,
-                name: item.id === id ? name : item.name,
-                body: nextBody,
-                revision: item.revision + 1,
-              }
-            : item
-        })(),
-      ),
-    })
+    if (result.document) commit(result.document)
   }
   async function deleteNote(id = active?.id) {
     const note = data.notes.find((item) => item.id === id)

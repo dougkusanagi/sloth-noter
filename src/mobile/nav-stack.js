@@ -11,7 +11,20 @@ const details = new Set([
   'table',
   'image',
 ])
-const layers = new Set(['sheet', 'dialog', 'find', 'insert', 'cover'])
+const layers = new Set([
+  'sheet',
+  'dialog',
+  'find',
+  'insert',
+  'cover',
+  'commands',
+  'group',
+  'open-notes',
+  'info',
+  'sections',
+  'image-detail',
+  'image-insert',
+])
 
 export function initialNavigation(tab = 'notes') {
   return { screens: [{ name: roots.has(tab) ? tab : 'notes' }], layers: [] }
@@ -29,6 +42,7 @@ function copyRoute(route) {
   const result = { name: route.name }
   if (route.id !== undefined) result.id = route.id
   if (typeof route.query === 'string') result.query = route.query
+  if (typeof route.prefix === 'string') result.prefix = route.prefix
   if (Number.isFinite(route.scroll) && route.scroll >= 0) result.scroll = route.scroll
   if (Number.isSafeInteger(route.cursor) && route.cursor >= 0) result.cursor = route.cursor
   return result

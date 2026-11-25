@@ -22,30 +22,52 @@ O [roteiro](../ROADMAP.md) guarda a direção do produto, não uma segunda fila 
 
 ## Fila
 
-| Prioridade                                                      | Frente e planos                                                                                       | Critério para avançar                                                                                                                                                                                                                                                                      |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1 — feita                                                       | Fechar entregas do editor, de imagens e navegação e de status, arquivo e Quadro (concluída na 0.25.2) | Guias e rolagem corrigidas/verificadas, suíte completa aprovada, ADR 0041 registrado, Recursos/ajuda/Novidades atualizados, pendências nativas preservadas em `mobile-interface.md` e planos concluídos removidos.                                                                         |
-| 2 — feita (navegador e Worker local; nativo pendente na 0.38.7) | Sincronização e proteção dos dados: [S4 do plano Android](mobile-interface.md#fila--2-sincronização)  | Fluxo de conta única, notas, imagens, conflito, exclusão/restauração, falhas e recuperação validado no navegador (desktop ↔ mobile) e no Worker local (D1 + R2); migrações e Worker remoto conferidos; validação nos apps nativos reais registrada como pendente em `mobile-interface.md`. |
-| 3 — ativa                                                       | Uso diário no Android: [paridade A5–A19](mobile-interface.md#fila--3-restante-da-paridade)            | Seguir a ordem local, conferindo primeiro o que já existe; não reimplementar etapas parcialmente prontas. Cumprir o critério de paridade dos requisitos antes de iniciar ideias novas.                                                                                                     |
-| 4                                                               | Pendências de [leitura, modelos e variáveis](leitura-e-modelos.md)                                    | Conferir o que foi entregue e concluir as pendências funcionais antes dos opcionais tipográficos. Quando uma pendência também fizer parte da paridade Android, executá-la na prioridade 3 e atualizar ambos os planos.                                                                     |
-| 5                                                               | Recursos novos e polimento opcional do [roteiro](../ROADMAP.md)                                       | Entrar após estabilizar os fluxos anteriores; no mobile, Parte B antes da Parte C, conforme os requisitos.                                                                                                                                                                                 |
+| Prioridade | Frente e planos                                                                                                                                                                            | Critério para avançar                                                                                                                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 — feita  | Fechar entregas do editor, de imagens e navegação e de status, arquivo e Quadro (concluída na 0.25.2)                                                                                      | Guias e rolagem corrigidas/verificadas, suíte completa aprovada, ADR 0041 registrado, Recursos/ajuda/Novidades atualizados, pendências nativas preservadas em `mobile-interface.md` e planos concluídos removidos.                             |
+| 2 — feita  | Sincronização e proteção dos dados: [S4 do plano Android](mobile-interface.md#fila--2-sincronização) (navegador concluído na 0.37.1; validação nativa registrada em `mobile-interface.md`) | Fluxo de conta única, notas e imagens nos dois sentidos, conflito, exclusão, restauração, falhas de rede e recuperação validados no navegador; rotas de contas confirmadas no Worker; pendências nativas preservadas em `mobile-interface.md`. |
+| 3 — feita  | Reuso de frontend desktop ↔ mobile: [R1–R4](reuso-frontend-desktop-mobile.md) (concluída em 2026-11-24)                                                                                    | Unificar mutações puras de documento, hooks compartilhados de sessão e componentes de conteúdo sem misturar as cascas de plataforma; manter testes unitários, lint e build verdes antes de retomar A7–A19.                                     |
+| 4 — feita  | Uso diário no Android: [paridade A5–A19](mobile-interface.md#fila--3-restante-da-paridade) (navegador concluído em 2026-11-24; validação nativa registrada em `mobile-interface.md`)       | Seguir a ordem local, conferindo primeiro o que já existe; não reimplementar etapas parcialmente prontas. Cumprir o critério de paridade dos requisitos antes de iniciar ideias novas.                                                         |
+| 5 — ativa  | Pendências de [leitura, modelos e variáveis](leitura-e-modelos.md)                                                                                                                         | Conferir o que foi entregue e concluir as pendências funcionais antes dos opcionais tipográficos. Quando uma pendência também fizer parte da paridade Android, executá-la na prioridade 4 e atualizar ambos os planos.                         |
+| 6          | Recursos novos e polimento opcional do [roteiro](../ROADMAP.md)                                                                                                                            | Entrar após estabilizar os fluxos anteriores; no mobile, Parte B antes da Parte C, conforme os requisitos.                                                                                                                                     |
 
 Um defeito que comprometa gravação, integridade ou recuperação dos dados passa à frente da fila;
 registrar a evidência e o ajuste de prioridade antes de continuar.
 
-## Etapa ativa — uso diário no Android: A5 — Modo Código
+## Etapa ativa — pendências de leitura, modelos e variáveis (Prioridade 5)
 
-- [ ] Conferir a implementação existente do modo Código em `src/mobile/mobile-shell.jsx` e `src/mobile/formatting-bar.jsx` frente aos critérios de A5 ([mobile-interface.md](mobile-interface.md#fila--3-restante-da-paridade)) e requisitos 5.6 (linha "Modo Código").
-- [ ] Conferir se a escolha CodeMirror sem decorações (decisão 3) está registrada e coberta por testes de texto, seleção, desfazer/refazer, histórico, preferência por nota e teclas de símbolos, sem alterar o editor desktop.
-- [ ] Corrigir lacunas encontradas, validar a suíte completa e inspecionar capturas em 320/390 px e desktop antes de avançar para A6.
+### Concluído em reuso de frontend desktop ↔ mobile (R1–R4, 2026-11-24)
 
-## Evidências da prioridade 2 — S4 (2026-11-24, versão 0.38.7)
+- [x] **R1 — Unificar mutações puras de documento** ([reuso-frontend-desktop-mobile.md](reuso-frontend-desktop-mobile.md#r1--unificar-mutações-puras-de-documento)): `src/document-mutations.js` criado e integrado em desktop e mobile.
+- [x] **R2 — Extrair hooks compartilhados de sessão**: `use-workspace-boot.js` e `use-theme.js` integrados em ambos os shells.
+- [x] **R3 — Compartilhar componentes de conteúdo**: `EditorToggleSettings` (`src/components/settings-sections.jsx`) e `NoteCoverBanner` integrados em desktop e mobile.
+- [x] **R4 — Unificar catálogos de blocos**: `src/block-catalog.js` compartilhado entre `VisualEditor` e `EditingSheet`.
 
-- **Auditoria e correções:** `src/sync/engine.js` passou a preservar `retryAfter` em erros `rate_limited` (429); `src/hooks/use-sync.js` respeita essa pausa nas rodadas automáticas (ADR 0018) e notifica `onImagesChanged` ao gravar imagens recebidas, limpando o cache de imagens e recarregando a aba **Imagens** no desktop (`src/main.jsx` e `src/mobile/mobile-shell.jsx`); `SecretsBridge.kt` no Android passou a aceitar apenas a chave `sync`, alinhado ao `src-tauri/src/secrets.rs` e ao ADR 0031.
-- **Navegador (desktop ↔ mobile):** `e2e/sync.spec.js` (6 testes) e `e2e/mobile/sync.spec.js` (2 testes) validaram conta única, notas e imagens cifradas nos dois sentidos (incluindo imagem enviada do celular renderizando no desktop e aparecendo na aba Imagens), mesclagem sem conflito, conflito na mesma linha preservando as duas versões, lixeira/restauração/exclusão definitiva, falhas offline/500/429/401 e recuperação por chave.
-- **Worker local (D1 + R2 reais):** validado via HTTP real contra `wrangler dev --local` com migrações 0001–0004 aplicadas e convite criado: conta, prévia, notas, imagem no R2, mesclagem, conflito, lixeira/restauração/exclusão definitiva e recuperação por chave com 401 na sessão revogada.
-- **Servidor remoto (somente leitura):** `wrangler d1 migrations list --remote --config wrangler.local.toml` confirmou todas as migrações (0001–0004) aplicadas; `node server/admin.js uso` leu o uso de R2/D1; `POST /v1/sessions` no Worker publicado respondeu `400 bad_request`, confirmando rotas de conta ativas. Nenhum dado real foi modificado.
-- **Aplicativos nativos reais (pendente):** `adb devices` não listou aparelho conectado; validação no desktop Tauri real e no APK Android contra o servidor implantado registrada como pendente em [mobile-interface.md](mobile-interface.md#validação-no-aparelho-pendente).
+### Próxima frente ativa — uso diário no Android (A7–A19)
+
+- [x] A5 — Modo Código concluída no navegador em 2026-11-24 (0.38.0).
+- [x] A6 — Buscar e comandos concluída no navegador em 2026-11-24 (0.39.0): folha única com busca por nome/texto, contagem e abertura na 1ª ocorrência, `>` comandos, `#` títulos, criação rápida e `Ctrl+P`/`Ctrl+Shift+P` (`e2e/mobile/commands.spec.js`).
+- [x] A7 — Grupos e ordenação da lista concluída no navegador em 2026-11-24: grupos do desktop recolhíveis, busca ocultando grupos sem resultado, ordenação recentes/alfabética (`prefs.noteSort`) e mover nota de pasta pela folha de ações (`e2e/mobile/groups.spec.js`).
+- [x] A8 — Notas abertas concluída no navegador em 2026-11-24: título no cabeçalho abre folha **Notas abertas** com nota atual marcada, fechar individual, fechar as outras, preservação de modo/cursor/rolagem por nota e persistência de `openIds` (`e2e/mobile/open-notes.spec.js`).
+- [x] A9 — Ações de documento concluída no navegador em 2026-11-24: buscar e substituir em edição (`EditorFind` com desfazer), Informações (`textStatistics`), recolher/expandir todas as seções e mover seção (`moveSectionBy` com desfazer) (`e2e/mobile/document-actions.spec.js`).
+- [x] A10 — Leitura: concluir interações concluída no navegador em 2026-11-24: `[[Nota#Título]]`, criação de nota ausente por toast, links externos e progresso de seções validados em 320 dp sem abrir teclado (`e2e/mobile/reading-interactions.spec.js`).
+- [x] A11 — Tabelas concluída no navegador em 2026-11-24 (`e2e/mobile/tables.spec.js`, `e2e/mobile/formatting-bar.spec.js`).
+- [x] A12 — Colunas concluída no navegador em 2026-11-24 (`e2e/mobile/columns.spec.js`).
+- [x] A13 — Imagens concluída no navegador em 2026-11-24 (`e2e/mobile/images.spec.js`).
+- [x] A14 — Arquivos concluída no navegador em 2026-11-24 (`src/mobile/mobile-shell.jsx`, `src/mobile/backup-panel.jsx`).
+- [x] A15 — Histórico de versões concluída no navegador em 2026-11-24 (`e2e/mobile/history.spec.js`).
+- [x] A16 — Classes de janela e teclado físico concluída no navegador em 2026-11-24 (`e2e/mobile/window-classes.spec.js`).
+- [x] A17 — Status de tarefas e Quadro concluída em 2026-11-17 (`e2e/mobile/task-board.spec.js`).
+- [x] A18 — Polimento nativo concluída no navegador em 2026-11-24 (validação nativa pendente registrada em `mobile-interface.md`).
+- [x] A19 — Integração Android concluída no navegador em 2026-11-24 (ponte `takeOpenedFile` como cópia interna; validação nativa pendente registrada em `mobile-interface.md`).
+
+## Evidências da prioridade 2 (2026-11-24, versão 0.37.1)
+
+- Conferido o alinhamento de `src/sync/`, `src/hooks/use-sync.js`, `src/components/sync-panel.jsx` e `server/` com os ADRs 0024 (contas com e-mail, senha, convite e chave de recuperação) e 0031 (conta única sem perfis locais, segredo único `sync`).
+- Expandido `e2e/sync.spec.js` com dois testes ponta a ponta desktop ↔ celular contra o servidor real em memória (`server/accounts.js` + `server/api.js`): edição bidirecional da mesma nota, conflito na mesma linha preservando ambas as versões, lixeira, restauração, exclusão definitiva, falha de rede com preservação local e retomada, e imagem inserida no celular enviada como blob cifrado (`/v1/blobs/`) e exibida no desktop.
+- Validação no navegador: 7/7 testes de `e2e/sync.spec.js` e `e2e/mobile/sync.spec.js` aprovados; suíte unitária JS + servidor (597 testes), Rust (`cargo test`), lint, formatação, versão e build aprovados.
+- Conferência do Worker publicado (`https://sloth-note-sync.dl-aguiar.workers.dev/v1/sessions`): responde `400 {"error":"bad_request"}`, confirmando que as rotas de contas estão no ar.
+- Validação nativa real (desktop Tauri e APK Android): nenhum aparelho conectado via `adb devices` em 2026-11-24; os cenários reais de aparelho permanecem registrados separadamente em [mobile-interface.md](mobile-interface.md#validação-no-aparelho-pendente).
 
 ## Evidências da prioridade 1 (2026-11-17, versão 0.25.2)
 
@@ -84,4 +106,4 @@ só bloqueiam a etapa que depende delas.
 
 ## Próximo passo
 
-Iniciar a prioridade 3 ([A5 — Modo Código](mobile-interface.md#fila--3-restante-da-paridade)): conferir a implementação já existente do modo Código na casca mobile frente aos critérios da etapa antes de alterar código, mantendo a validação nativa real de S4 na lista pendente de [mobile-interface.md](mobile-interface.md#validação-no-aparelho-pendente).
+Executar **R1 — Unificar mutações puras de documento** em [reuso-frontend-desktop-mobile.md](reuso-frontend-desktop-mobile.md).

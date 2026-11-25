@@ -62,14 +62,21 @@ export function remarkColumns() {
         continue
       }
       const content = tree.children.slice(index + 1, last)
-      const cells = block.columns.map((column) => {
+      const cells = block.columns.map((column, columnIndex) => {
         const children = content.filter(
           (node) =>
             node.position?.start.offset >= column.from && node.position?.end.offset <= column.to,
         )
         return {
           type: 'column',
-          data: { hName: 'div', hProperties: { className: ['markdown-column'] } },
+          data: {
+            hName: 'div',
+            hProperties: {
+              className: ['markdown-column'],
+              'data-column-index': String(columnIndex + 1),
+              'data-column-count': String(block.columns.length),
+            },
+          },
           position: children.length
             ? { start: children[0].position.start, end: children.at(-1).position.end }
             : start.position,
@@ -90,4 +97,84 @@ export function remarkColumns() {
 
 export function columnsTemplate(values) {
   return `${START}\n\n${values.map((value) => `${COLUMN}\n\n${value}`).join('\n\n')}\n\n${END}`
+}
+
+export function columnBlockAt(text, pos) {
+  for (const block of columnBlocks(text)) {
+    if (pos >= block.from && pos <= block.to) {
+      const colIndex = block.columns.findIndex((col) => pos >= col.from && pos <= col.to)
+      return { block, colIndex: colIndex >= 0 ? colIndex : 0 }
+    }
+  }
+  return null
+}
+
+export function addColumnEdit(text, pos) {
+  const found = columnBlockAt(text, pos)
+  if (!found) return null
+  const values = found.block.columns.map((col) => col.text)
+  values.splice(found.colIndex + 1, 0, '')
+  const insert = columnsTemplate(values)
+  return {
+    from: found.block.from,
+    to: found.block.to,
+    insert,
+    selectionFrom: found.block.from + insert.length - END.length - 2,
+    selectionTo: found.block.from + insert.length - END.length - 2,
+  }
+}
+
+export function removeColumnEdit(text, pos) {
+  const found = columnBlockAt(text, pos)
+  if (!found) return null
+  const values = found.block.columns.map((col) => col.text)
+  const removed = values.splice(found.colIndex, 1)[0]
+  if (removed.trim()) {
+    const target = Math.max(0, found.colIndex - 1)
+    values[target] = values[target].trim() ? `${values[target]}\n\n${removed}` : removed
+  }
+  const insert = values.length < 2 ? values.join('\n\n') : columnsTemplate(values)
+  return {
+    from: found.block.from,
+    to: found.block.to,
+    insert,
+    selectionFrom: found.block.from,
+    selectionTo: found.block.from,
+  }
+}
+
+export function moveSelectionToColumnEdit(text, from, to, targetColIndex) {
+  const found = columnBlockAt(text, from)
+  if (!found) return null
+  if (targetColIndex < 0 || targetColIndex >= found.block.columns.length) return null
+  if (targetColIndex === found.colIndex) return null
+  const col = found.block.columns[found.colIndex]
+  let sliceFrom = from
+  let sliceTo = to
+  if (sliceFrom === sliceTo) {
+    const lineStart = text.lastIndexOf('\n', from - 1) + 1
+    const lineEnd = text.indexOf('\n', from)
+    sliceFrom = Math.max(col.from, lineStart)
+    sliceTo = Math.min(col.to, lineEnd < 0 ? col.to : lineEnd)
+  } else {
+    sliceFrom = Math.max(col.from, sliceFrom)
+    sliceTo = Math.min(col.to, sliceTo)
+  }
+  const moved = text.slice(sliceFrom, sliceTo).trim()
+  if (!moved) return null
+  const values = found.block.columns.map((c) => c.text)
+  const before = text.slice(col.from, sliceFrom)
+  const after = text.slice(sliceTo, col.to)
+  values[found.colIndex] = `${before}${after}`.replace(/\n{3,}/g, '\n\n').trim()
+  values[targetColIndex] = values[targetColIndex].trim()
+    ? `${values[targetColIndex].trim()}\n\n${moved}`
+    : moved
+  const insert = columnsTemplate(values)
+  return {
+    from: found.block.from,
+    to: found.block.to,
+    insert,
+    selectionFrom: found.block.from,
+    selectionTo: found.block.from,
+  }
 }

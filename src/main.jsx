@@ -19,13 +19,10 @@ import { listen } from '@tauri-apps/api/event'
 import { createRoot } from 'react-dom/client'
 import { Toaster, toast } from 'sonner'
 import { createBackup, createFullBackup, readBackupBundle, restoreBackupImages } from './backup.js'
-import {
-  findNote,
-  wikiParts,
-  noteReferences,
-  renameWikiReferences,
-  normalizeImageSource,
-} from './markdown-model.js'
+import { findNote, wikiParts, noteReferences, normalizeImageSource } from './markdown-model.js'
+import { setNoteGroupDocument, updateNoteBody } from './document-mutations.js'
+import { useWorkspaceBoot } from './hooks/use-workspace-boot.js'
+import { useTheme } from './hooks/use-theme.js'
 import { CONTENT_WIDTH, FONT_SIZE, contentWidth } from './storage.js'
 import { WidthFeedback } from './components/width-feedback.jsx'
 import { TrashLibrary } from './components/trash-library.jsx'
@@ -62,9 +59,7 @@ import { blockShortcut, formatShortcut, shortcutEdit } from './editor-shortcuts.
 import { blockEdit } from './insert-block.js'
 import { searchNote, replacementText } from './find.js'
 import { setSearchHighlights, revealSearchMatch } from './editor/search.js'
-import { headingFileName, moveToTrash, nameFromHeading, uniqueName } from './notes.js'
-import { openWorkspace } from './boot.js'
-import { createAppPersistence } from './persistence-runtime.js'
+import { headingFileName, moveToTrash, uniqueName } from './notes.js'
 import { VAULT_DISCONNECT, connectVault } from './persistence-vault.js'
 import { VisualEditor } from './visual-editor.jsx'
 import { useSync } from './hooks/use-sync.js'
@@ -176,22 +171,7 @@ function Opening({ failure }) {
 }
 
 function App() {
-  const [started, setStarted] = useState(null)
-  const [failure, setFailure] = useState(null)
-  useEffect(() => {
-    let cancelled = false
-    createAppPersistence()
-      .then(async (persistence) => ({ persistence, loaded: await openWorkspace(persistence) }))
-      .then((result) => {
-        if (!cancelled) setStarted(result)
-      })
-      .catch((cause) => {
-        if (!cancelled) setFailure(friendlyError(cause))
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const { started, failure } = useWorkspaceBoot()
   if (failure) return <Opening failure={failure} />
   if (!started) return <Opening />
   return <Workspace persistence={started.persistence} loaded={started.loaded} />
@@ -539,12 +519,7 @@ function Workspace({ persistence, loaded }) {
   // Dragging notes between folders is undoable from the library (Ctrl+Z / Ctrl+Shift+Z).
   const moveHistory = useRef({ undo: [], redo: [] })
   function setNoteGroup(id, group) {
-    const doc = current.current
-    const valid = group && (doc.groups ?? []).includes(group) ? group : undefined
-    commit({
-      ...doc,
-      notes: doc.notes.map((note) => (note.id === id ? { ...note, group: valid } : note)),
-    })
+    commit(setNoteGroupDocument(current.current, id, group))
   }
   function moveNoteGroup(id, group) {
     const note = current.current.notes.find((item) => item.id === id)
@@ -650,31 +625,6 @@ function Workspace({ persistence, loaded }) {
       )
     }
     if (noteId === previewId) setPreviewId(null)
-    // The name of a file opened in place is its file name; the title never renames it.
-    const name = isExternalNote(active ?? {}) ? null : nameFromHeading(body, old.notes, noteId)
-    const previousName = active.name
-    const rewrite = (note) => {
-      const active = note.id === noteId
-      const content = active ? body : note.body
-      const nextBody =
-        name && previousName && name !== previousName
-          ? renameWikiReferences(
-              content,
-              previousName,
-              name,
-              active ? undefined : noteReferences(note).wiki,
-            )
-          : content
-      return active || nextBody !== note.body
-        ? {
-            ...note,
-            name: active ? (name ?? note.name) : note.name,
-            body: nextBody,
-            revision: note.revision + 1,
-            modifiedAt: active ? Date.now() : note.modifiedAt,
-          }
-        : note
-    }
     for (const tr of noteHistory.enabled ? transactions : [])
       noteHistory.record(
         { ...active, revision: active.revision + 1 },
@@ -684,12 +634,7 @@ function Workspace({ persistence, loaded }) {
         pasteGesture(),
         tr.changes,
       )
-    commit({
-      ...old,
-      ...(newAsset ? { assets: [...(old.assets ?? []), newAsset] } : {}),
-      notes: old.notes.map(rewrite),
-      trash: old.trash.map((entry) => ({ ...entry, note: rewrite(entry.note) })),
-    })
+    commit(updateNoteBody(old, noteId, body, { newAsset }))
   }
 
   useEffect(() => {
@@ -2044,22 +1989,7 @@ function Workspace({ persistence, loaded }) {
       toast.error(t('error.import', { error: importError }), { id: 'import', duration: 10000 })
     else toast.dismiss('import')
   }, [importError])
-  useEffect(() => {
-    const theme =
-      prefs.theme === 'system'
-        ? window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'dark'
-          : 'light'
-        : prefs.theme
-    document.documentElement.dataset.theme = theme
-    if (prefs.theme !== 'system') return
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const change = () => {
-      document.documentElement.dataset.theme = media.matches ? 'dark' : 'light'
-    }
-    media.addEventListener('change', change)
-    return () => media.removeEventListener('change', change)
-  }, [prefs.theme])
+  useTheme(prefs.theme)
   useEffect(() => {
     if (palette) search.current?.focus()
   }, [palette])
