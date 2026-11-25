@@ -6,6 +6,11 @@ import { adjacentOpenNoteId, classifyHeaderGesture } from './mobile/header-gestu
 import { classifyEditorSwipe, structureSwipeEdit } from './mobile/editor-gestures.js'
 import { classifyPinch, headingIndexForRatio, stepReadingZoom } from './mobile/reading-zoom.js'
 import { nextBlockCursor } from './mobile/structural-trackpad.js'
+import {
+  adjacentColumnIndex,
+  classifyBoardCardSwipe,
+  classifyBoardColumnSwipe,
+} from './mobile/board-gestures.js'
 import { initialNavigation, navigate } from './mobile/nav-stack.js'
 
 test('B1: runNoteTransition uses View Transitions API when available and motion is not reduced', () => {
@@ -220,4 +225,15 @@ test('B14: nextBlockCursor jumps cleanly between Markdown blocks', () => {
   assert.equal(nextBlockCursor(doc, h2, 1), i1)
   assert.equal(nextBlockCursor(doc, i1, -1), h2)
   assert.equal(nextBlockCursor(doc, p1, -1), null)
+})
+
+test('B15: board gestures move cards and switch columns safely away from edges', () => {
+  assert.equal(classifyBoardCardSwipe({ startX: 100, startY: 200, endX: 200, endY: 205 }), 1)
+  assert.equal(classifyBoardCardSwipe({ startX: 200, startY: 200, endX: 100, endY: 205 }), -1)
+  assert.equal(classifyBoardCardSwipe({ startX: 10, startY: 200, endX: 120, endY: 200 }), 0)
+  assert.equal(classifyBoardColumnSwipe({ startX: 220, startY: 300, endX: 120, endY: 305 }), 1)
+  assert.equal(classifyBoardColumnSwipe({ startX: 120, startY: 300, endX: 220, endY: 305 }), -1)
+  assert.equal(adjacentColumnIndex(3, 0, 1), 1)
+  assert.equal(adjacentColumnIndex(3, 0, -1), -1)
+  assert.equal(adjacentColumnIndex(3, 2, 1), -1)
 })

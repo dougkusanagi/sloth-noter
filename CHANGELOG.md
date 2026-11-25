@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.50.0] — 2026-11-25
+
+Adicionados gestos no modo Quadro compacto do celular (B15): deslizar um cartão move a tarefa para a coluna seguinte ou anterior com vibração curta usando o mesmo Markdown do menu, e deslizar a área da coluna navega entre as colunas como carrossel. Veja os [detalhes da versão](changelog/0.50.0.md).
+
 ## [0.49.1] — 2026-11-25
 
 Corrigida a referência de rótulo `@string/shortcut_new_note` no `NewNoteTileService` do `AndroidManifest.xml`. Veja os [detalhes da versão](changelog/0.49.1.md).

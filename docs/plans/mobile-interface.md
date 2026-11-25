@@ -309,6 +309,7 @@ Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e deta
 - [x] **B13 — Lupa de tabela** (0.49.0): toque longo em uma célula no modo Leitura abre um cartão flutuante com `cabeçalho: valor` de todas as colunas da linha, fechando por Voltar/Escape/Fechar (`src/markdown.jsx`, `src/mobile/mobile.css`).
 - [x] **B14 — Trackpad estrutural** (0.49.0): controle dedicado na barra de formatação (`touch-action: none`) desliza o cursor bloco a bloco Markdown sem conflitar com a rolagem da barra (`src/mobile/structural-trackpad.js`, `src/mobile/formatting-bar.jsx`, `src/mobile-platform.test.js`).
 - [x] **B3 — Bloco nas Configurações rápidas** (0.49.0): `NewNoteTileService` (`TileService`) registrado no `AndroidManifest.xml`, reutilizando `dev.slothnote.app.NEW_NOTE` com app aberto ou fechado.
+- [x] **B15 — Quadro com gestos** (0.50.0): no modo compacto do Quadro, deslizar a área da coluna troca de coluna como carrossel e deslizar um cartão move a tarefa para a coluna seguinte/anterior com vibração, usando o mesmo `moveCardToColumn` do menu (`src/mobile/board-gestures.js`, `src/components/task-board.jsx`, `src/mobile-platform.test.js`).
 
 ## Depois deste plano — Parte C: ideias para as duas plataformas
 
