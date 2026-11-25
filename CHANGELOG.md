@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.45.1] — 2026-11-25
+
+Corrigida a referência qualificada `android.os.Build` na ponte háptica nativa (`MainActivity.kt`) para compilação do APK Android. Veja os [detalhes da versão](changelog/0.45.1.md).
+
 ## [0.45.0] — 2026-11-25
 
 Iniciada a Parte B no Android (Prioridade 6): transições suaves ao abrir notas (View Transitions API respeitando movimento reduzido, B1) e resposta háptica discreta no limite do gesto de exclusão e na conclusão de tarefas (B2). Veja os [detalhes da versão](changelog/0.45.0.md).

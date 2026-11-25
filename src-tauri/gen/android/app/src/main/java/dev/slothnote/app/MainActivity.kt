@@ -257,7 +257,7 @@ class MainActivity : TauriActivity() {
         val code = when (kind) {
           "heading" -> android.view.HapticFeedbackConstants.CLOCK_TICK
           "task-done", "threshold" ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R)
               android.view.HapticFeedbackConstants.CONFIRM
             else
               android.view.HapticFeedbackConstants.KEYBOARD_TAP
