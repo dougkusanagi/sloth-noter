@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.40.0] — 2026-11-24
+
+Grupos e ordenação na lista, folha Notas abertas, ações de documento (buscar e substituir, informações, recolher/expandir e mover seção) e interações de leitura no celular. Veja os [detalhes da versão](changelog/0.40.0.md).
+
 ## [0.39.0] — 2026-11-24
 
 Folha Buscar e comandos no celular com busca por texto e contagem, prefixo `>` para ações da tela, `#` para títulos e atalhos `Ctrl+P` / `Ctrl+Shift+P`. Veja os [detalhes da versão](changelog/0.39.0.md).

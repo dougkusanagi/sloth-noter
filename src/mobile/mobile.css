@@ -1185,3 +1185,187 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   color: var(--muted);
   white-space: nowrap;
 }
+
+/* A7 — Collapsible desktop groups in mobile notes list */
+.mobile-group {
+  margin-bottom: 8px;
+}
+
+.mobile-group > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.mobile-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.mobile-group-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-group-count {
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+.mobile-group-list {
+  padding-left: 8px;
+}
+
+/* A8 — Open notes title trigger and sheet */
+.mobile-title-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mobile-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-open-count {
+  flex: none;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-2, rgba(127, 127, 127, 0.16));
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 22px;
+  text-align: center;
+}
+
+.mobile-open-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-open-note-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mobile-open-note-select {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-open-note-select[aria-current='page'] {
+  font-weight: 700;
+}
+
+.mobile-close-others {
+  margin-top: 8px;
+}
+
+/* A9 — Document actions: editor find/replace, info sheet, move section */
+.mobile-editor-find {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.mobile-find-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mobile-find-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+}
+
+.mobile-find-row output {
+  min-width: 36px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.mobile-info-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 8px 0;
+}
+
+.mobile-info-list > div {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--surface-2, rgba(127, 127, 127, 0.1));
+}
+
+.mobile-info-list dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.mobile-info-list dd {
+  margin: 4px 0 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.mobile-sections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mobile-section-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 0;
+}
+
+.mobile-section-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

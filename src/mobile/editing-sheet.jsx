@@ -1,4 +1,4 @@
-import { calloutActions } from '../callout.js'
+import { MOBILE_INSERT_BLOCKS as blocks } from '../block-catalog.js'
 import { useState } from 'react'
 import { redo } from '@codemirror/commands'
 import { blockEdit } from '../insert-block.js'
@@ -7,31 +7,6 @@ import { t } from '../i18n.js'
 import { displayName } from '../note-title.js'
 import { currentLanguage } from '../i18n.js'
 import { templateInsertEdit, templateList } from '../templates.js'
-
-const blocks = [
-  ['h2', 'block.h2', '## Título'],
-  ['h3', 'block.h3', '### Título'],
-  ['h4', 'block.h4', '#### Título'],
-  ['list', 'block.list', '• Item'],
-  ['numbered', 'block.numbered', '1. Item'],
-  ['task', 'block.task', '☐ Tarefa'],
-  ['table', 'block.table', '| A | B |'],
-  ['code', 'block.code', '``` código'],
-  ['quote', 'block.quote', '> Citação'],
-  ...calloutActions.map(([action, label]) => [
-    action,
-    label,
-    '> [!' + action.slice(8).toUpperCase() + ']',
-  ]),
-  ['image', 'block.image', '▧'],
-  ['link', 'format.link', '[texto](url)'],
-  ['wiki', 'mobile.noteLink', '[[Nota]]'],
-  ['divider', 'mobile.divider', '───'],
-  ['date', 'mobile.today', 'dd/mm/aaaa'],
-  ['columns', 'block.columns', 'A  |  B'],
-  ['accordion', 'block.accordion', '▸'],
-  ['template', 'block.template', '▤'],
-]
 
 export function EditingSheet({ view, notes, onClose, onImage }) {
   const [linking, setLinking] = useState(false)

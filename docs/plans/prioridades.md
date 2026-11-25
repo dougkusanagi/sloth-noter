@@ -26,18 +26,32 @@ O [roteiro](../ROADMAP.md) guarda a direção do produto, não uma segunda fila 
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1 — feita  | Fechar entregas do editor, de imagens e navegação e de status, arquivo e Quadro (concluída na 0.25.2)                                                                                      | Guias e rolagem corrigidas/verificadas, suíte completa aprovada, ADR 0041 registrado, Recursos/ajuda/Novidades atualizados, pendências nativas preservadas em `mobile-interface.md` e planos concluídos removidos.                             |
 | 2 — feita  | Sincronização e proteção dos dados: [S4 do plano Android](mobile-interface.md#fila--2-sincronização) (navegador concluído na 0.37.1; validação nativa registrada em `mobile-interface.md`) | Fluxo de conta única, notas e imagens nos dois sentidos, conflito, exclusão, restauração, falhas de rede e recuperação validados no navegador; rotas de contas confirmadas no Worker; pendências nativas preservadas em `mobile-interface.md`. |
-| 3 — ativa  | Uso diário no Android: [paridade A5–A19](mobile-interface.md#fila--3-restante-da-paridade)                                                                                                 | Seguir a ordem local, conferindo primeiro o que já existe; não reimplementar etapas parcialmente prontas. Cumprir o critério de paridade dos requisitos antes de iniciar ideias novas.                                                         |
-| 4          | Pendências de [leitura, modelos e variáveis](leitura-e-modelos.md)                                                                                                                         | Conferir o que foi entregue e concluir as pendências funcionais antes dos opcionais tipográficos. Quando uma pendência também fizer parte da paridade Android, executá-la na prioridade 3 e atualizar ambos os planos.                         |
-| 5          | Recursos novos e polimento opcional do [roteiro](../ROADMAP.md)                                                                                                                            | Entrar após estabilizar os fluxos anteriores; no mobile, Parte B antes da Parte C, conforme os requisitos.                                                                                                                                     |
+| 3 — feita  | Reuso de frontend desktop ↔ mobile: [R1–R4](reuso-frontend-desktop-mobile.md) (concluída em 2026-11-24)                                                                                    | Unificar mutações puras de documento, hooks compartilhados de sessão e componentes de conteúdo sem misturar as cascas de plataforma; manter testes unitários, lint e build verdes antes de retomar A7–A19.                                     |
+| 4 — ativa  | Uso diário no Android: [paridade A7–A19](mobile-interface.md#fila--3-restante-da-paridade)                                                                                                 | Seguir a ordem local, conferindo primeiro o que já existe; não reimplementar etapas parcialmente prontas. Cumprir o critério de paridade dos requisitos antes de iniciar ideias novas.                                                         |
+| 5          | Pendências de [leitura, modelos e variáveis](leitura-e-modelos.md)                                                                                                                         | Conferir o que foi entregue e concluir as pendências funcionais antes dos opcionais tipográficos. Quando uma pendência também fizer parte da paridade Android, executá-la na prioridade 4 e atualizar ambos os planos.                         |
+| 6          | Recursos novos e polimento opcional do [roteiro](../ROADMAP.md)                                                                                                                            | Entrar após estabilizar os fluxos anteriores; no mobile, Parte B antes da Parte C, conforme os requisitos.                                                                                                                                     |
 
 Um defeito que comprometa gravação, integridade ou recuperação dos dados passa à frente da fila;
 registrar a evidência e o ajuste de prioridade antes de continuar.
 
-## Etapa ativa — uso diário no Android (A7 — Grupos e ordenação da lista)
+## Etapa ativa — uso diário no Android (A11 — Tabelas)
+
+### Concluído em reuso de frontend desktop ↔ mobile (R1–R4, 2026-11-24)
+
+- [x] **R1 — Unificar mutações puras de documento** ([reuso-frontend-desktop-mobile.md](reuso-frontend-desktop-mobile.md#r1--unificar-mutações-puras-de-documento)): `src/document-mutations.js` criado e integrado em desktop e mobile.
+- [x] **R2 — Extrair hooks compartilhados de sessão**: `use-workspace-boot.js` e `use-theme.js` integrados em ambos os shells.
+- [x] **R3 — Compartilhar componentes de conteúdo**: `EditorToggleSettings` (`src/components/settings-sections.jsx`) e `NoteCoverBanner` integrados em desktop e mobile.
+- [x] **R4 — Unificar catálogos de blocos**: `src/block-catalog.js` compartilhado entre `VisualEditor` e `EditingSheet`.
+
+### Próxima frente ativa — uso diário no Android (A7–A19)
 
 - [x] A5 — Modo Código concluída no navegador em 2026-11-24 (0.38.0).
 - [x] A6 — Buscar e comandos concluída no navegador em 2026-11-24 (0.39.0): folha única com busca por nome/texto, contagem e abertura na 1ª ocorrência, `>` comandos, `#` títulos, criação rápida e `Ctrl+P`/`Ctrl+Shift+P` (`e2e/mobile/commands.spec.js`).
-- [ ] Implementar e validar **A7 — Grupos e ordenação da lista** (P4 em [mobile-interface.md](mobile-interface.md#fila--3-restante-da-paridade)): grupos do desktop recolhíveis, ordenação recentes/alfabética e mover nota de grupo pela folha de ações.
+- [x] A7 — Grupos e ordenação da lista concluída no navegador em 2026-11-24: grupos do desktop recolhíveis, busca ocultando grupos sem resultado, ordenação recentes/alfabética (`prefs.noteSort`) e mover nota de pasta pela folha de ações (`e2e/mobile/groups.spec.js`).
+- [x] A8 — Notas abertas concluída no navegador em 2026-11-24: título no cabeçalho abre folha **Notas abertas** com nota atual marcada, fechar individual, fechar as outras, preservação de modo/cursor/rolagem por nota e persistência de `openIds` (`e2e/mobile/open-notes.spec.js`).
+- [x] A9 — Ações de documento concluída no navegador em 2026-11-24: buscar e substituir em edição (`EditorFind` com desfazer), Informações (`textStatistics`), recolher/expandir todas as seções e mover seção (`moveSectionBy` com desfazer) (`e2e/mobile/document-actions.spec.js`).
+- [x] A10 — Leitura: concluir interações concluída no navegador em 2026-11-24: `[[Nota#Título]]`, criação de nota ausente por toast, links externos e progresso de seções validados em 320 dp sem abrir teclado (`e2e/mobile/reading-interactions.spec.js`).
+- [ ] Implementar e validar **A11 — Tabelas** (P34 em [mobile-interface.md](mobile-interface.md#fila--3-restante-da-paridade)).
 
 ## Evidências da prioridade 2 (2026-11-24, versão 0.37.1)
 
@@ -84,4 +98,4 @@ só bloqueiam a etapa que depende delas.
 
 ## Próximo passo
 
-Continuar a prioridade 3 em [A7 — Grupos e ordenação da lista](mobile-interface.md#fila--3-restante-da-paridade).
+Executar **R1 — Unificar mutações puras de documento** em [reuso-frontend-desktop-mobile.md](reuso-frontend-desktop-mobile.md).

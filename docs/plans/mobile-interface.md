@@ -250,23 +250,27 @@ a gravação local precisa ser confiável antes de sincronizar).
       com ações da tela atual (ocultando ações de nota quando nenhuma está aberta); prefixo `#` com
       títulos da nota aberta ou de todas as notas; criação rápida de nota quando não há resultados;
       fechamento por `Escape`/Voltar. Coberto por `e2e/mobile/commands.spec.js`.
-- [ ] **A7 — Grupos e ordenação da lista.** P4.
+- [x] **A7 — Grupos e ordenação da lista.** P4.
       Faz: mostrar os grupos do desktop (recolhíveis), ordenação recentes/alfabética e mover de
       grupo pela folha de ações. Reutiliza o modelo de grupos de `note-list.jsx` sem mudar o
       desktop.
       Pronto: grupos criados no desktop aparecem iguais; busca mostra só grupos com resultado.
-- [ ] **A8 — Notas abertas.** P6. Requisitos 5.10.
+      Concluída no navegador em 2026-11-24 (`e2e/mobile/groups.spec.js`, 2/2 aprovados; mutação compartilhada `setNoteGroupDocument` em `src/document-mutations.js`).
+- [x] **A8 — Notas abertas.** P6. Requisitos 5.10.
       Pronto: abrir, trocar e fechar notas abertas; posição e modo por nota; `openIds` igual ao
       desktop após recarga.
-- [ ] **A9 — Ações de documento.** P16, P26–P31.
+      Concluída no navegador em 2026-11-24 (`e2e/mobile/open-notes.spec.js`, 1/1 aprovado; mutações compartilhadas `closeOpenNoteDocument` e `closeOtherOpenNotesDocument` em `src/document-mutations.js`).
+- [x] **A9 — Ações de documento.** P16, P26–P31.
       Faz: buscar e substituir em edição; Informações (palavras e caracteres por
       `text-statistics.js`); recolher/expandir todas; mover seção (`section-move.js`); conferir
       quebra e recolher por bloco de código no toque.
       Pronto: E2E de cada ação, com desfazer onde o desktop tem.
-- [ ] **A10 — Leitura: concluir interações** (3.2). P32, P33.
+      Concluída no navegador em 2026-11-24 (`e2e/mobile/document-actions.spec.js`, 2/2 aprovados; `src/mobile/editor-find.jsx`).
+- [x] **A10 — Leitura: concluir interações** (3.2). P32, P33.
       Faz: conferir destinos `[[Nota#Título]]`, criar nota ausente, links externos e progresso de
       seções em 320 dp. Buscar na nota e recolher seções já existem.
       Pronto: retorno e contexto preservados; sem abrir teclado.
+      Concluída no navegador em 2026-11-24 (`e2e/mobile/reading-interactions.spec.js`, 1/1 aprovado em 320 dp).
 - [ ] **A11 — Tabelas** (3.3 → 3.4 → 3.5 → 4.4). P34. Requisitos 5.4. Decisões 1 e 4 antes de 3.4.
       Já feito em 3.3: rolagem local, 1ª coluna fixa, contagem no rótulo, foco por teclado.
       Pronto por parte: cabeçalho fixo e tabelas iguais; cartões; tela cheia com retorno ao

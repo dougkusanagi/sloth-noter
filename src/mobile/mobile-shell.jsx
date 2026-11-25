@@ -1,11 +1,29 @@
 import { CoverPicker } from '../components/cover-picker.jsx'
-import { noteCover, setNoteCover } from '../note-cover.js'
+import { NoteCoverBanner } from '../components/note-cover-banner.jsx'
+import { EditorToggleSettings } from '../components/settings-sections.jsx'
+import { noteCover } from '../note-cover.js'
+import {
+  applyNoteCover,
+  closeOpenNoteDocument,
+  closeOtherOpenNotesDocument,
+  setNoteBoardView,
+  setNoteGroupDocument,
+  toggleNoteWrap,
+  togglePinnedNote,
+} from '../document-mutations.js'
+import { useWorkspaceBoot } from '../hooks/use-workspace-boot.js'
+import { useTheme } from '../hooks/use-theme.js'
 import { DocumentWidthPresets } from '../components/document-width-presets.jsx'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
+  ArrowUpDown,
   Check,
   CheckCheck,
+  ChevronsDownUp,
+  ChevronsUpDown,
   Code2,
   Columns3,
   Command,
@@ -14,6 +32,8 @@ import {
   FileOutput,
   FilePlus,
   FileText,
+  Folder,
+  Info,
   Menu,
   Pencil,
   Image as ImageIcon,
@@ -38,21 +58,25 @@ import {
 } from 'lucide-react'
 import { redo, undo } from '@codemirror/commands'
 import { Toaster, toast } from 'sonner'
-import { createAppPersistence } from '../persistence-runtime.js'
-import { openWorkspace } from '../boot.js'
 import { useNotesStore } from '../hooks/use-notes-store.js'
 import { usePrefs } from '../hooks/use-prefs.js'
 import { friendlyError } from '../errors.js'
 import { protectPendingSaves } from '../save-lifecycle.js'
 import { ReadingFind } from './reading-find.jsx'
+import { EditorFind } from './editor-find.jsx'
 import { CommandSheet } from './command-sheet.jsx'
+import { textStatistics } from '../text-statistics.js'
+import { headingSections } from '../sections.js'
+import { moveSectionBy } from '../section-move.js'
+import { foldAll, unfoldAll } from '../editor/folding.js'
+import { applyChanges } from '../list-indent.js'
 import { Markdown } from '../markdown.jsx'
 import { VisualEditor } from '../visual-editor.jsx'
 import { DocumentOutline } from '../components/document-outline.jsx'
 import { EditorView } from '@codemirror/view'
 import { displayName, notePreview } from '../note-title.js'
 import { noteSearchResult } from '../note-search.js'
-import { findNote } from '../markdown-model.js'
+import { findNote, wikiParts } from '../markdown-model.js'
 import {
   moveToTrash,
   nameFromHeading,
@@ -126,23 +150,7 @@ const SHARED_TEXT_LIMIT = 1_000_000
 export function MobileShell() {
   useInsets()
   useSystemBars()
-  const [started, setStarted] = useState(null)
-  const [failure, setFailure] = useState(null)
-  const [attempt, setAttempt] = useState(0)
-  useEffect(() => {
-    let cancelled = false
-    createAppPersistence()
-      .then(async (persistence) => ({ persistence, loaded: await openWorkspace(persistence) }))
-      .then((result) => {
-        if (!cancelled) setStarted(result)
-      })
-      .catch((cause) => {
-        if (!cancelled) setFailure(friendlyError(cause))
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [attempt])
+  const { started, failure, retry, reload } = useWorkspaceBoot()
   if (!started)
     return (
       <main className="mobile-shell" data-platform="mobile">
@@ -151,28 +159,11 @@ export function MobileShell() {
         </header>
         <div className="mobile-empty" role={failure ? 'alert' : 'status'}>
           <p>{failure ? t('app.openFailed', { failure }) : t('app.opening')}</p>
-          {failure && (
-            <button
-              onClick={() => {
-                setFailure(null)
-                setAttempt(attempt + 1)
-              }}
-            >
-              {t('mobile.retry')}
-            </button>
-          )}
+          {failure && <button onClick={retry}>{t('mobile.retry')}</button>}
         </div>
       </main>
     )
-  return (
-    <MobileWorkspace
-      {...started}
-      onReload={() => {
-        setStarted(null)
-        setAttempt(attempt + 1)
-      }}
-    />
-  )
+  return <MobileWorkspace {...started} onReload={reload} />
 }
 
 function MobileWorkspace({ persistence, loaded, onReload }) {
@@ -281,10 +272,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   // The board view is shared with the desktop (prefs.boardNotes); editing always shows the text.
   const boardView = Boolean(active && prefs.boardNotes?.[active.id])
   function setBoardView(id, board) {
-    const boardNotes = { ...current.current.preferences.boardNotes }
-    if (board) boardNotes[id] = true
-    else delete boardNotes[id]
-    updatePrefs({ boardNotes })
+    updatePrefs(setNoteBoardView(current.current.preferences, id, board))
   }
   function setNoteMode(id, source) {
     const saved = Array.isArray(current.current.preferences.mobileCodeNotes)
@@ -313,6 +301,10 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const previousRoute = useRef(null)
   const restoreFocus = useRef(null)
   const taskJump = useRef(null)
+  const noteViewState = useRef(new Map())
+  const openNotes = data.openIds
+    .map((id) => data.notes.find((note) => note.id === id))
+    .filter(Boolean)
   const back = () => {
     if (transferPending.current) return
     document.activeElement?.blur?.()
@@ -357,16 +349,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const root = state.screens.length === 1
   const actionsNote = layer?.id && data.notes.find((note) => note.id === layer.id)
 
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const apply = () => {
-      document.documentElement.dataset.theme =
-        prefs.theme === 'system' ? (media.matches ? 'dark' : 'light') : prefs.theme
-    }
-    apply()
-    media.addEventListener('change', apply)
-    return () => media.removeEventListener('change', apply)
-  }, [prefs.theme])
+  useTheme(prefs.theme)
   useEffect(() => {
     let cleanup,
       stopped = false
@@ -469,9 +452,20 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layer])
 
-  function openNote(id, edit = false) {
+  function saveActiveNoteView() {
+    if (!active) return
+    noteViewState.current.set(active.id, {
+      editing: Boolean(editing),
+      scroll: content.current?.scrollTop ?? route.scroll ?? 0,
+      cursor: editor.current?.state.selection.main.head ?? route.cursor ?? 2,
+    })
+  }
+  function openNote(id, edit = undefined) {
+    saveActiveNoteView()
     document.activeElement?.blur?.()
-    setEditingId(edit ? id : null)
+    const saved = noteViewState.current.get(id)
+    const nextEdit = edit === undefined ? Boolean(saved?.editing) : Boolean(edit)
+    setEditingId(nextEdit ? id : null)
     setSearchFocused(false)
     if (!blocked) {
       const old = current.current
@@ -494,7 +488,73 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         },
       })
     }
-    dispatch({ type: 'push', route: { name: 'note', id } })
+    dispatch({
+      type: 'push',
+      route: { name: 'note', id, scroll: saved?.scroll ?? 0, cursor: saved?.cursor },
+    })
+  }
+  function closeOpenNote(id) {
+    if (blocked) return
+    noteViewState.current.delete(id)
+    const next = closeOpenNoteDocument(current.current, id)
+    commit(next)
+    if (active?.id === id) {
+      if (next.activeId) openNote(next.activeId)
+      else dispatch({ type: 'tab', name: 'notes' })
+    }
+  }
+  function closeOtherOpenNotes(keepId) {
+    if (blocked) return
+    for (const key of noteViewState.current.keys()) {
+      if (key !== keepId) noteViewState.current.delete(key)
+    }
+    commit(closeOtherOpenNotesDocument(current.current, keepId))
+    back()
+  }
+  function foldAllSections() {
+    if (!active) return
+    if (editing && editor.current) {
+      foldAll(editor.current)
+      return
+    }
+    const lines = new Set(
+      headingSections(active.body)
+        .filter((heading) => heading.level > 0)
+        .map((heading) => heading.line),
+    )
+    setFold({ id: active.id, body: active.body, lines })
+  }
+  function unfoldAllSections() {
+    if (!active) return
+    if (editing && editor.current) {
+      unfoldAll(editor.current)
+      return
+    }
+    setFold({ id: active.id, body: active.body, lines: new Set() })
+  }
+  function moveNoteSection(line, direction) {
+    if (!active || blocked) return
+    const moved = moveSectionBy(active.body, line, direction)
+    if (!moved?.changes?.length) return
+    if (editing && editor.current) {
+      editor.current.dispatch({
+        changes: moved.changes,
+        selection: { anchor: moved.anchor },
+        userEvent: 'move',
+        scrollIntoView: true,
+      })
+      return
+    }
+    const previousBody = active.body
+    const nextBody = applyChanges(previousBody, moved.changes)
+    updateBody(nextBody)
+    toast(t('mobile.moveSection'), {
+      duration: 8000,
+      action: {
+        label: t('mobile.undo'),
+        onClick: () => updateBody(previousBody),
+      },
+    })
   }
   function createNote(title = '') {
     if (blocked) return
@@ -527,21 +587,12 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       dispatch({ type: 'position', position: { cursor: editor.current.state.selection.main.head } })
   }
   function applyCover(image, imported) {
-    const document = current.current
-    const note = document.notes.find((item) => item.id === layer?.id)
-    if (blocked || !note || note.external) {
+    const next = blocked ? null : applyNoteCover(current.current, layer?.id, image, imported)
+    if (!next) {
       toast.error(t('cover.noteUnavailable'))
       return
     }
-    const body = setNoteCover(note.body, image)
-    if (body !== note.body)
-      commit(
-        updateMobileNote(
-          imported ? { ...document, assets: [...(document.assets ?? []), image] } : document,
-          note.id,
-          body,
-        ),
-      )
+    if (next !== current.current) commit(next)
     back()
   }
 
@@ -594,9 +645,46 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     dispatch({ type: 'position', position: { query: term, scroll: 0 } })
   }
   function openWiki(target) {
-    const note = findNote(current.current.notes, target)
-    if (note) openNote(note.id)
-    else toast.info(t('mobile.missingNote', { name: target }))
+    const parts = wikiParts(target)
+    const note = parts.name ? findNote(current.current.notes, target) : active
+    if (note) {
+      let targetLine = null
+      if (parts.heading) {
+        const lines = note.body.split('\n')
+        for (let i = 0; i < lines.length; i++) {
+          if (
+            lines[i]
+              .replace(/^#{1,6}\s+/, '')
+              .trim()
+              .toLocaleLowerCase() === parts.heading.toLocaleLowerCase()
+          ) {
+            targetLine = i + 1
+            break
+          }
+        }
+      }
+      if (active && note.id === active.id) {
+        if (targetLine) {
+          content.current
+            ?.querySelector(`[data-source-line="${targetLine}"]`)
+            ?.scrollIntoView({ block: 'start' })
+        }
+        return
+      }
+      if (targetLine) pendingHeadingLine.current = targetLine
+      openNote(note.id, false)
+      return
+    }
+    if (!parts.name) return
+    toast(t('wiki.create', { name: parts.name }), {
+      duration: 8000,
+      action: {
+        label: t('wiki.createConfirm'),
+        onClick: () => {
+          if (!blocked) createNote(parts.name)
+        },
+      },
+    })
   }
   function removeNote(id, closeSheet = true) {
     const before = current.current
@@ -646,28 +734,43 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     back()
   }
   function pinNote(id) {
-    const old = current.current
-    const pinned = old.pinnedIds ?? []
-    commit({
-      ...old,
-      openIds: old.openIds.includes(id) ? old.openIds : [...old.openIds, id],
-      pinnedIds: pinned.includes(id) ? pinned.filter((item) => item !== id) : [...pinned, id],
-    })
+    commit(togglePinnedNote(current.current, id))
     back()
   }
+  const noteSort = prefs.noteSort === 'alphabetical' ? 'alphabetical' : 'recent'
+  const groups = Array.isArray(data.groups) ? data.groups : []
+  const groupOf = (note) => (groups.includes(note.group) ? note.group : undefined)
   const results = data.notes
     .map((note, index) => ({ note, index, result: noteSearchResult(note, query) }))
     .filter(({ result }) => !query.trim() || result.titleMatches.length || result.matches.length)
-    .sort((a, b) =>
-      query.trim()
-        ? Number(Boolean(b.result.titleMatches.length)) -
+    .sort((a, b) => {
+      if (query.trim()) {
+        return (
+          Number(Boolean(b.result.titleMatches.length)) -
             Number(Boolean(a.result.titleMatches.length)) || a.index - b.index
-        : Number(data.pinnedIds?.includes(b.note.id) ?? false) -
-            Number(data.pinnedIds?.includes(a.note.id) ?? false) ||
-          (recentNotes.includes(a.note.id) ? recentNotes.indexOf(a.note.id) : Infinity) -
-            (recentNotes.includes(b.note.id) ? recentNotes.indexOf(b.note.id) : Infinity) ||
-          a.index - b.index,
-    )
+        )
+      }
+      const pinDiff =
+        Number(data.pinnedIds?.includes(b.note.id) ?? false) -
+        Number(data.pinnedIds?.includes(a.note.id) ?? false)
+      if (pinDiff) return pinDiff
+      if (noteSort === 'alphabetical') {
+        return (
+          displayName(a.note.name).localeCompare(displayName(b.note.name), undefined, {
+            sensitivity: 'base',
+          }) || a.index - b.index
+        )
+      }
+      return (
+        (recentNotes.includes(a.note.id) ? recentNotes.indexOf(a.note.id) : Infinity) -
+          (recentNotes.includes(b.note.id) ? recentNotes.indexOf(b.note.id) : Infinity) ||
+        a.index - b.index
+      )
+    })
+  const looseResults = results.filter(({ note }) => !groupOf(note))
+  const groupedResults = groups
+    .map((name) => ({ name, items: results.filter(({ note }) => groupOf(note) === name) }))
+    .filter(({ items }) => !query.trim() || items.length > 0)
   const title = active
     ? displayName(active.name)
     : route.name === 'note'
@@ -908,7 +1011,22 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           </button>
         )}
         <h1 ref={heading} tabIndex={-1} title={title}>
-          {root && route.name === 'notes' ? 'Sloth Note' : title}
+          {active ? (
+            <button
+              type="button"
+              className="mobile-title-button"
+              aria-haspopup="dialog"
+              aria-label={`${title} — ${t('tabs.label')}`}
+              onClick={() => dispatch({ type: 'layer', route: { name: 'open-notes' } })}
+            >
+              <span className="mobile-title-text">{title}</span>
+              {openNotes.length > 1 && <span className="mobile-open-count">{openNotes.length}</span>}
+            </button>
+          ) : root && route.name === 'notes' ? (
+            'Sloth Note'
+          ) : (
+            title
+          )}
         </h1>
         {root && route.name === 'notes' && (
           <>
@@ -926,6 +1044,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               }}
             >
               {searchVisible ? <X size={22} /> : <Search size={22} />}
+            </button>
+            <button
+              className="mobile-icon"
+              aria-label={t('library.sort')}
+              title={t(noteSort === 'alphabetical' ? 'library.sortAlphabetical' : 'library.sortRecent')}
+              aria-pressed={noteSort === 'alphabetical'}
+              onClick={() =>
+                updatePrefs({ noteSort: noteSort === 'alphabetical' ? 'recent' : 'alphabetical' })
+              }
+            >
+              <ArrowUpDown size={20} />
             </button>
             <button
               className="mobile-icon"
@@ -996,6 +1125,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             }}
           >
             {editing ? <Check size={22} /> : <Pencil size={22} />}
+          </button>
+        )}
+        {active && editing && (
+          <button
+            className="mobile-icon"
+            aria-label={t('find.label')}
+            title={t('find.label')}
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => setFindOpen((open) => !open)}
+          >
+            <ScanSearch size={20} aria-hidden="true" />
           </button>
         )}
         {active && editing && (
@@ -1081,6 +1221,18 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             ))}
           </div>
         )}
+      {findOpen && active && editing && (
+        <EditorFind
+          key={`${active.id}:edit:${findInitialQuery}`}
+          view={editor.current}
+          body={active.body}
+          initialQuery={findInitialQuery}
+          onClose={() => {
+            setFindOpen(false)
+            setFindInitialQuery('')
+          }}
+        />
+      )}
       {findOpen && active && !editing && (
         <ReadingFind
           key={`${active.id}:${findInitialQuery}`}
@@ -1107,96 +1259,113 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               {query.trim() ? t('mobile.results') : t('menu.notes')} <span>{results.length}</span>
             </h2>
             {!query.trim() && <GuideLibrary onOpen={openGuide} />}
-            {results.map(({ note, result }) => (
-              <SwipeNoteRow
-                key={note.id}
-                enabled={!blocked && !layer}
-                onTrash={() => removeNote(note.id, false)}
-              >
-                <div className="mobile-note-row">
-                  <button
-                    data-note-id={note.id}
-                    className="mobile-note-open"
-                    onPointerDown={(event) => {
-                      if (!event.isPrimary || event.button !== 0) return
-                      cancelPress()
-                      suppressClick.current = false
-                      const target = event.currentTarget
-                      press.current = {
-                        x: event.clientX,
-                        y: event.clientY,
-                        timer: setTimeout(() => {
-                          suppressClick.current = true
-                          target.focus({ preventScroll: true })
-                          dispatch({ type: 'layer', route: { name: 'sheet', id: note.id } })
-                        }, 550),
-                      }
-                    }}
-                    onPointerMove={(event) => {
-                      if (
-                        press.current &&
-                        Math.hypot(
-                          event.clientX - press.current.x,
-                          event.clientY - press.current.y,
-                        ) > 10
-                      )
+            {(() => {
+              const renderNoteRow = ({ note, result }) => (
+                <SwipeNoteRow
+                  key={note.id}
+                  enabled={!blocked && !layer}
+                  onTrash={() => removeNote(note.id, false)}
+                >
+                  <div className="mobile-note-row">
+                    <button
+                      data-note-id={note.id}
+                      className="mobile-note-open"
+                      onPointerDown={(event) => {
+                        if (!event.isPrimary || event.button !== 0) return
                         cancelPress()
-                    }}
-                    onPointerUp={cancelPress}
-                    onPointerCancel={cancelPress}
-                    onContextMenu={(event) => event.preventDefault()}
-                    onClick={() => {
-                      if (suppressClick.current) {
                         suppressClick.current = false
-                        return
+                        const target = event.currentTarget
+                        press.current = {
+                          x: event.clientX,
+                          y: event.clientY,
+                          timer: setTimeout(() => {
+                            suppressClick.current = true
+                            target.focus({ preventScroll: true })
+                            dispatch({ type: 'layer', route: { name: 'sheet', id: note.id } })
+                          }, 550),
+                        }
+                      }}
+                      onPointerMove={(event) => {
+                        if (
+                          press.current &&
+                          Math.hypot(
+                            event.clientX - press.current.x,
+                            event.clientY - press.current.y,
+                          ) > 10
+                        )
+                          cancelPress()
+                      }}
+                      onPointerUp={cancelPress}
+                      onPointerCancel={cancelPress}
+                      onContextMenu={(event) => event.preventDefault()}
+                      onClick={() => {
+                        if (suppressClick.current) {
+                          suppressClick.current = false
+                          return
+                        }
+                        openNote(note.id)
+                        if (result.matches.length && query.trim()) {
+                          setFindInitialQuery(query.trim())
+                          setFindOpen(true)
+                        }
+                      }}
+                    >
+                      <span className="mobile-note-title">
+                        {data.pinnedIds?.includes(note.id) && (
+                          <Pin size={14} aria-label={t('mobile.pinned')} />
+                        )}
+                        {displayName(note.name)}
+                        {result.matches.length > 0 && (
+                          <span className="mobile-match-count">
+                            {t(
+                              result.matches.length === 1
+                                ? 'mobile.matchCount.one'
+                                : 'mobile.matchCount.other',
+                              { count: result.matches.length },
+                            )}
+                          </span>
+                        )}
+                      </span>
+                      <span className="mobile-note-preview">
+                        {result.snippet ? (
+                          <>
+                            {result.snippet.before}
+                            <mark>{result.snippet.hit}</mark>
+                            {result.snippet.after}
+                          </>
+                        ) : (
+                          notePreview(note.body) || t('mobile.emptyNote')
+                        )}
+                      </span>
+                    </button>
+                    <button
+                      className="mobile-icon"
+                      aria-label={t('mobile.noteActions', { name: displayName(note.name) })}
+                      onClick={() =>
+                        dispatch({ type: 'layer', route: { name: 'sheet', id: note.id } })
                       }
-                      openNote(note.id)
-                      if (result.matches.length && query.trim()) {
-                        setFindInitialQuery(query.trim())
-                        setFindOpen(true)
-                      }
-                    }}
-                  >
-                    <span className="mobile-note-title">
-                      {data.pinnedIds?.includes(note.id) && (
-                        <Pin size={14} aria-label={t('mobile.pinned')} />
-                      )}
-                      {displayName(note.name)}
-                      {result.matches.length > 0 && (
-                        <span className="mobile-match-count">
-                          {t(
-                            result.matches.length === 1
-                              ? 'mobile.matchCount.one'
-                              : 'mobile.matchCount.other',
-                            { count: result.matches.length },
-                          )}
-                        </span>
-                      )}
-                    </span>
-                    <span className="mobile-note-preview">
-                      {result.snippet ? (
-                        <>
-                          {result.snippet.before}
-                          <mark>{result.snippet.hit}</mark>
-                          {result.snippet.after}
-                        </>
-                      ) : (
-                        notePreview(note.body) || t('mobile.emptyNote')
-                      )}
-                    </span>
-                  </button>
-                  <button
-                    className="mobile-icon"
-                    aria-label={t('mobile.noteActions', { name: displayName(note.name) })}
-                    onClick={() =>
-                      dispatch({ type: 'layer', route: { name: 'sheet', id: note.id } })
-                    }
-                  >
-                    <MoreHorizontal size={20} />
-                  </button>
-                </div>
-              </SwipeNoteRow>
-            ))}
+                    >
+                      <MoreHorizontal size={20} />
+                    </button>
+                  </div>
+                </SwipeNoteRow>
+              )
+              return (
+                <>
+                  {groupedResults.map(({ name, items }) => (
+                    <details key={name} className="mobile-group" open>
+                      <summary>
+                        <Folder size={16} aria-hidden="true" />
+                        <span className="mobile-group-name">{name}</span>
+                        <span className="mobile-group-count">{items.length}</span>
+                      </summary>
+                      <div className="mobile-group-list">{items.map(renderNoteRow)}</div>
+                    </details>
+                  ))}
+                  {looseResults.map(renderNoteRow)}
+                </>
+              )
+            })()}
             {!results.length && (
               <div className="mobile-empty">
                 <NotebookText size={32} aria-hidden="true" />
@@ -1262,7 +1431,16 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 />
               </div>
             ) : (
-              <Markdown
+              <>
+                <NoteCoverBanner
+                  body={active.body}
+                  onChange={
+                    !blocked && !active.external
+                      ? () => dispatch({ type: 'layer', route: { name: 'cover', id: active.id } })
+                      : undefined
+                  }
+                />
+                <Markdown
                 wrapLines={prefs.wrapLines !== false}
                 wrapPage={pageWrap}
                 text={active.body}
@@ -1279,6 +1457,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   setFold({ id: active.id, body: active.body, lines })
                 }}
               />
+              </>
             )
           ) : (
             <div className="mobile-empty">
@@ -1418,34 +1597,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             </div>
             <h2>{t('settings.editor')}</h2>
             <div className="settings-card">
-              <div className="settings-row">
-                <label htmlFor="mobile-wrap-lines">
-                  {t('settings.wrapLines')}
-                  <small>{t('settings.wrapLinesHint')}</small>
-                </label>
-                <input
-                  id="mobile-wrap-lines"
-                  type="checkbox"
-                  role="switch"
-                  className="switch"
-                  checked={prefs.wrapLines !== false}
-                  onChange={(event) => updatePrefs({ wrapLines: event.target.checked })}
-                />
-              </div>
-              <div className="settings-row">
-                <label htmlFor="mobile-task-dates">
-                  {t('settings.taskDates')}
-                  <small>{t('settings.taskDatesHint')}</small>
-                </label>
-                <input
-                  id="mobile-task-dates"
-                  type="checkbox"
-                  role="switch"
-                  className="switch"
-                  checked={prefs.taskDates !== false}
-                  onChange={(event) => updatePrefs({ taskDates: event.target.checked })}
-                />
-              </div>
+              <EditorToggleSettings prefs={prefs} onChange={updatePrefs} variant="mobile" />
             </div>
             <h2>{t('settings.data')}</h2>
             <p className="settings-note">{t('mobile.backupDetails')}</p>
@@ -1623,7 +1775,15 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   ? t('mobile.commandsTitle')
                   : layer.name === 'cover'
                     ? t('cover.title')
-                    : actionsNote
+                    : layer.name === 'group'
+                      ? t('mobile.moveToGroup')
+                      : layer.name === 'open-notes'
+                        ? t('tabs.label')
+                        : layer.name === 'info'
+                          ? t('mobile.info')
+                          : layer.name === 'sections'
+                            ? t('mobile.moveSection')
+                            : actionsNote
                       ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
                       : t('mobile.more')
             }
@@ -1728,18 +1888,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                           label: t('menu.wrapPage'),
                           icon: <WrapText size={18} aria-hidden="true" />,
                           run: () => {
-                            const currentValue = Object.hasOwn(
-                              prefs.wrapLinesByNote ?? {},
-                              active.id,
-                            )
-                              ? prefs.wrapLinesByNote[active.id]
-                              : prefs.wrapLines !== false
-                            updatePrefs({
-                              wrapLinesByNote: {
-                                ...prefs.wrapLinesByNote,
-                                [active.id]: !currentValue,
-                              },
-                            })
+                            updatePrefs(toggleNoteWrap(prefs, active.id))
                             back()
                           },
                         },
@@ -1790,6 +1939,99 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 }}
                 onClose={back}
               />
+            ) : layer.name === 'info' && active ? (
+              (() => {
+                const stats = textStatistics(active.body)
+                return (
+                  <dl className="mobile-info-list">
+                    <div>
+                      <dt>{t('mobile.words')}</dt>
+                      <dd>{stats.words}</dd>
+                    </div>
+                    <div>
+                      <dt>{t('mobile.characters')}</dt>
+                      <dd>{stats.characters}</dd>
+                    </div>
+                    <div>
+                      <dt>{t('mobile.charactersNoSpaces')}</dt>
+                      <dd>{stats.charactersNoSpaces}</dd>
+                    </div>
+                    <div>
+                      <dt>{t('mobile.lines')}</dt>
+                      <dd>{stats.lines}</dd>
+                    </div>
+                  </dl>
+                )
+              })()
+            ) : layer.name === 'sections' && active ? (
+              (() => {
+                const sections = headingSections(active.body).filter((h) => h.level >= 1)
+                if (!sections.length) return <p className="mobile-empty">{t('mobile.noSections')}</p>
+                return (
+                  <div className="mobile-sections-list">
+                    {sections.map((section) => {
+                      const text = active.body.split('\n')[section.line - 1]?.replace(/^#+\s*/, '')
+                      return (
+                        <div key={section.line} className="mobile-section-row">
+                          <span className="mobile-section-title">{text}</span>
+                          <button
+                            type="button"
+                            className="mobile-icon"
+                            aria-label={`${t('mobile.moveUp')}: ${text}`}
+                            onClick={() => moveNoteSection(section.line, -1)}
+                          >
+                            <ArrowUp size={18} aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="mobile-icon"
+                            aria-label={`${t('mobile.moveDown')}: ${text}`}
+                            onClick={() => moveNoteSection(section.line, 1)}
+                          >
+                            <ArrowDown size={18} aria-hidden="true" />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()
+            ) : layer.name === 'open-notes' ? (
+              <div className="mobile-open-notes">
+                {openNotes.map((note) => (
+                  <div key={note.id} className="mobile-open-note-row">
+                    <button
+                      type="button"
+                      className="mobile-open-note-select"
+                      aria-current={active?.id === note.id ? 'page' : undefined}
+                      onClick={() => {
+                        if (active?.id === note.id) back()
+                        else openNote(note.id)
+                      }}
+                    >
+                      <FileText size={18} aria-hidden="true" />
+                      <span>{displayName(note.name)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="mobile-icon"
+                      aria-label={t('mobile.closeNote', { name: displayName(note.name) })}
+                      onClick={() => closeOpenNote(note.id)}
+                    >
+                      <X size={18} aria-hidden="true" />
+                    </button>
+                  </div>
+                ))}
+                {active && openNotes.length > 1 && (
+                  <button
+                    type="button"
+                    className="mobile-close-others"
+                    onClick={() => closeOtherOpenNotes(active.id)}
+                  >
+                    {t('mobile.closeOtherNotes')}
+                  </button>
+                )}
+              </div>
             ) : layer.name === 'cover' && actionsNote ? (
               <CoverPicker
                 images={libraryImages(data)}
@@ -1797,6 +2039,32 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 invoke={persistence.invoke}
                 onApply={applyCover}
               />
+            ) : layer.name === 'group' && actionsNote ? (
+              <>
+                <button
+                  aria-pressed={!groupOf(actionsNote)}
+                  onClick={() => {
+                    commit(setNoteGroupDocument(current.current, actionsNote.id, undefined))
+                    back()
+                  }}
+                >
+                  <NotebookText size={20} aria-hidden="true" />
+                  {t('mobile.noGroup')}
+                </button>
+                {groups.map((name) => (
+                  <button
+                    key={name}
+                    aria-pressed={groupOf(actionsNote) === name}
+                    onClick={() => {
+                      commit(setNoteGroupDocument(current.current, actionsNote.id, name))
+                      back()
+                    }}
+                  >
+                    <Folder size={20} aria-hidden="true" />
+                    {name}
+                  </button>
+                ))}
+              </>
             ) : layer.name === 'dialog' && route.name === 'settings' && backupCandidate ? (
               <>
                 <p>
@@ -1906,15 +2174,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 )}
                 <button
                   onClick={() => {
-                    const currentValue = Object.hasOwn(prefs.wrapLinesByNote ?? {}, actionsNote.id)
-                      ? prefs.wrapLinesByNote[actionsNote.id]
-                      : prefs.wrapLines !== false
-                    updatePrefs({
-                      wrapLinesByNote: {
-                        ...prefs.wrapLinesByNote,
-                        [actionsNote.id]: !currentValue,
-                      },
-                    })
+                    updatePrefs(toggleNoteWrap(prefs, actionsNote.id))
                     back()
                   }}
                 >
@@ -1942,6 +2202,41 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   <Pencil size={20} />
                   {t('menu.rename')}
                 </button>
+                {active && actionsNote.id === active.id && (
+                  <>
+                    <button
+                      onClick={() => dispatch({ type: 'layer', route: { name: 'info' } })}
+                    >
+                      <Info size={20} aria-hidden="true" />
+                      {t('mobile.info')}
+                    </button>
+                    <button
+                      onClick={() => {
+                        foldAllSections()
+                        back()
+                      }}
+                    >
+                      <ChevronsDownUp size={20} aria-hidden="true" />
+                      {t('menu.foldAll')}
+                    </button>
+                    <button
+                      onClick={() => {
+                        unfoldAllSections()
+                        back()
+                      }}
+                    >
+                      <ChevronsUpDown size={20} aria-hidden="true" />
+                      {t('menu.unfoldAll')}
+                    </button>
+                    <button
+                      disabled={blocked}
+                      onClick={() => dispatch({ type: 'layer', route: { name: 'sections' } })}
+                    >
+                      <ArrowUpDown size={20} aria-hidden="true" />
+                      {t('mobile.moveSection')}
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => {
                     setFindOpen(true)
@@ -1972,6 +2267,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   {t('menu.export')}
                 </button>
                 <p className="mobile-export-hint">{t('mobile.noteExportHint')}</p>
+                {groups.length > 0 && (
+                  <button
+                    disabled={blocked}
+                    onClick={() =>
+                      dispatch({ type: 'layer', route: { name: 'group', id: actionsNote.id } })
+                    }
+                  >
+                    <Folder size={20} aria-hidden="true" />
+                    {t('mobile.moveToGroup')}
+                  </button>
+                )}
                 <button disabled={blocked} onClick={() => pinNote(actionsNote.id)}>
                   <Pin size={20} />
                   {t(data.pinnedIds?.includes(actionsNote.id) ? 'mobile.unpin' : 'mobile.pin')}

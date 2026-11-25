@@ -18,6 +18,7 @@ import { HistoryPanel } from './history-panel.jsx'
 import { SyncPanel } from './sync-panel.jsx'
 import { Modal, ShortcutList } from './dialogs.jsx'
 import { FontSlider, RangeSlider, Segmented, Switch } from './controls.jsx'
+import { EditorToggleSettings } from './settings-sections.jsx'
 import { CONTENT_WIDTH, FONT_SIZE, contentWidth } from '../storage.js'
 import { LANGUAGES, t } from '../i18n.js'
 
@@ -170,28 +171,7 @@ export function SettingsDialog({
           )}
           {section === 'editor' && (
             <>
-              <Row
-                id="settings-wrap-lines"
-                title={t('settings.wrapLines')}
-                hint={t('settings.wrapLinesHint')}
-              >
-                <Switch
-                  id="settings-wrap-lines"
-                  checked={prefs.wrapLines !== false}
-                  onChange={(wrapLines) => onChange({ wrapLines })}
-                />
-              </Row>
-              <Row
-                id="settings-task-dates"
-                title={t('settings.taskDates')}
-                hint={t('settings.taskDatesHint')}
-              >
-                <Switch
-                  id="settings-task-dates"
-                  checked={prefs.taskDates !== false}
-                  onChange={(taskDates) => onChange({ taskDates })}
-                />
-              </Row>
+              <EditorToggleSettings prefs={prefs} onChange={onChange} variant="desktop" />
               <Row id="settings-font" title={t('settings.fontSize')} hint={t('settings.fontHint')}>
                 <FontSlider
                   id="settings-font"
