@@ -4,8 +4,6 @@ import { EditorToggleSettings } from '../components/settings-sections.jsx'
 import { noteCover } from '../note-cover.js'
 import {
   applyNoteCover,
-  closeOpenNoteDocument,
-  closeOtherOpenNotesDocument,
   setNoteBoardView,
   setNoteGroupDocument,
   toggleNoteWrap,
@@ -26,7 +24,6 @@ import {
   ChevronsUpDown,
   Code2,
   Columns3,
-  Command,
   Copy,
   FileInput,
   FileOutput,
@@ -55,6 +52,7 @@ import {
   Undo2,
   WrapText,
   X,
+  Zap,
 } from 'lucide-react'
 import { redo, undo } from '@codemirror/commands'
 import { Toaster, toast } from 'sonner'
@@ -319,9 +317,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const restoreFocus = useRef(null)
   const taskJump = useRef(null)
   const noteViewState = useRef(new Map())
-  const openNotes = data.openIds
-    .map((id) => data.notes.find((note) => note.id === id))
-    .filter(Boolean)
   const back = () => {
     if (transferPending.current) return
     document.activeElement?.blur?.()
@@ -509,24 +504,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       type: 'push',
       route: { name: 'note', id, scroll: saved?.scroll ?? 0, cursor: saved?.cursor },
     })
-  }
-  function closeOpenNote(id) {
-    if (blocked) return
-    noteViewState.current.delete(id)
-    const next = closeOpenNoteDocument(current.current, id)
-    commit(next)
-    if (active?.id === id) {
-      if (next.activeId) openNote(next.activeId)
-      else dispatch({ type: 'tab', name: 'notes' })
-    }
-  }
-  function closeOtherOpenNotes(keepId) {
-    if (blocked) return
-    for (const key of noteViewState.current.keys()) {
-      if (key !== keepId) noteViewState.current.delete(key)
-    }
-    commit(closeOtherOpenNotesDocument(current.current, keepId))
-    back()
   }
   function foldAllSections() {
     if (!active) return
@@ -1050,24 +1027,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           </button>
         )}
         <h1 ref={heading} tabIndex={-1} title={title}>
-          {active ? (
-            <button
-              type="button"
-              className="mobile-title-button"
-              aria-haspopup="dialog"
-              aria-label={`${title} — ${t('tabs.label')}`}
-              onClick={() => dispatch({ type: 'layer', route: { name: 'open-notes' } })}
-            >
-              <span className="mobile-title-text">{title}</span>
-              {openNotes.length > 1 && (
-                <span className="mobile-open-count">{openNotes.length}</span>
-              )}
-            </button>
-          ) : root && route.name === 'notes' ? (
-            'Sloth Note'
-          ) : (
-            title
-          )}
+          {root && route.name === 'notes' ? 'Sloth Note' : title}
         </h1>
         {root && route.name === 'notes' && (
           <>
@@ -1128,7 +1088,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             title={t('mobile.commandsTitle')}
             onClick={() => dispatch({ type: 'layer', route: { name: 'commands', prefix: '' } })}
           >
-            <Command size={20} aria-hidden="true" />
+            <Zap size={20} aria-hidden="true" />
           </button>
         )}
         {active && !(editing && sourceMode) && (
@@ -1200,7 +1160,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             aria-pressed={boardView}
             onClick={() => setBoardView(active.id, !boardView)}
           >
-            <Columns3 size={22} />
+            {boardView ? <FileText size={22} /> : <Columns3 size={22} />}
           </button>
         )}
         {active && !editing && (
@@ -1936,15 +1896,13 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                     ? t('cover.title')
                     : layer.name === 'group'
                       ? t('mobile.moveToGroup')
-                      : layer.name === 'open-notes'
-                        ? t('tabs.label')
-                        : layer.name === 'info'
-                          ? t('mobile.info')
-                          : layer.name === 'sections'
-                            ? t('mobile.moveSection')
-                            : actionsNote
-                              ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
-                              : t('mobile.more')
+                      : layer.name === 'info'
+                        ? t('mobile.info')
+                        : layer.name === 'sections'
+                          ? t('mobile.moveSection')
+                          : actionsNote
+                            ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
+                            : t('mobile.more')
             }
           >
             <div
@@ -2251,42 +2209,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   </div>
                 )
               })()
-            ) : layer.name === 'open-notes' ? (
-              <div className="mobile-open-notes">
-                {openNotes.map((note) => (
-                  <div key={note.id} className="mobile-open-note-row">
-                    <button
-                      type="button"
-                      className="mobile-open-note-select"
-                      aria-current={active?.id === note.id ? 'page' : undefined}
-                      onClick={() => {
-                        if (active?.id === note.id) back()
-                        else openNote(note.id)
-                      }}
-                    >
-                      <FileText size={18} aria-hidden="true" />
-                      <span>{displayName(note.name)}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="mobile-icon"
-                      aria-label={t('mobile.closeNote', { name: displayName(note.name) })}
-                      onClick={() => closeOpenNote(note.id)}
-                    >
-                      <X size={18} aria-hidden="true" />
-                    </button>
-                  </div>
-                ))}
-                {active && openNotes.length > 1 && (
-                  <button
-                    type="button"
-                    className="mobile-close-others"
-                    onClick={() => closeOtherOpenNotes(active.id)}
-                  >
-                    {t('mobile.closeOtherNotes')}
-                  </button>
-                )}
-              </div>
             ) : layer.name === 'cover' && actionsNote ? (
               <CoverPicker
                 images={libraryImages(data)}
@@ -2424,7 +2346,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                         })
                       }
                     >
-                      <Command size={20} aria-hidden="true" />
+                      <Zap size={20} aria-hidden="true" />
                       {t('mobile.commandsTitle')}
                     </button>
                     <button
@@ -2434,7 +2356,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                         back()
                       }}
                     >
-                      <Columns3 size={20} aria-hidden="true" />
+                      {boardView ? (
+                        <FileText size={20} aria-hidden="true" />
+                      ) : (
+                        <Columns3 size={20} aria-hidden="true" />
+                      )}
                       {t(boardView ? 'mobile.boardOff' : 'mobile.boardOn')}
                     </button>
                     <button

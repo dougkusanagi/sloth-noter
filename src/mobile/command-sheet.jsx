@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Command, FilePlus, FileText, Hash, Search } from 'lucide-react'
+import { FilePlus, FileText, Hash, Search, Zap } from 'lucide-react'
 import { markdownTree } from '../markdown-model.js'
 import { noteSearchResult } from '../note-search.js'
 import { displayName } from '../note-title.js'
@@ -93,7 +93,7 @@ export function CommandSheet({
     <div className="mobile-command-sheet">
       <label className="mobile-command-input">
         {mode === 'commands' ? (
-          <Command size={18} aria-hidden="true" />
+          <Zap size={18} aria-hidden="true" />
         ) : mode === 'headings' ? (
           <Hash size={18} aria-hidden="true" />
         ) : (

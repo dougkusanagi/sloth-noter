@@ -37,56 +37,33 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/?platform=mobile')
 })
 
-test('Open notes sheet switches notes preserving mode, closes notes without deleting, and persists openIds', async ({
+test('recently opened notes move to the top by default and can still toggle to alphabetical order', async ({
   page,
 }) => {
-  // Open Alpha and enter edit mode.
-  await page.locator('[data-note-id="alpha"]').tap()
-  await page.getByRole('button', { name: 'Editar', exact: true }).tap()
-  await expect(page.locator('.cm-content')).toBeVisible()
+  const rows = page.locator('.mobile-note-open')
 
-  // Tap the title in the header to open the Notas abertas sheet.
-  await page.getByRole('button', { name: /Alpha — Notas abertas/ }).tap()
-  const dialog = page.getByRole('dialog', { name: 'Notas abertas' })
-  await expect(dialog).toBeVisible()
-  await expect(dialog.getByRole('button', { name: 'Alpha', exact: true })).toHaveAttribute(
-    'aria-current',
-    'page',
-  )
-
-  // Switch to Beta (should open in reading mode).
-  await dialog.getByRole('button', { name: 'Beta', exact: true }).tap()
-  await expect(dialog).toBeHidden()
-  await expect(page.locator('.cm-content')).toHaveCount(0)
-  await expect(page.getByText('Conteúdo da nota Beta.')).toBeVisible()
-
-  // Switch back to Alpha: editing mode is preserved.
-  await page.getByRole('button', { name: /Beta — Notas abertas/ }).tap()
-  await expect(dialog).toBeVisible()
-  await dialog.getByRole('button', { name: 'Alpha', exact: true }).tap()
-  await expect(page.locator('.cm-content')).toBeVisible()
-
-  // Open Gamma from the list so it is added to openIds, then close others.
-  await page.getByRole('button', { name: 'Notas', exact: true }).tap()
+  // Opening Gamma moves it to the top of the recent list, with a clean note title in the header.
   await page.locator('[data-note-id="gamma"]').tap()
+  await expect(page.locator('.mobile-header h1')).toHaveText('Gamma')
+  await expect(page.locator('.mobile-open-count')).toHaveCount(0)
 
-  await page.getByRole('button', { name: /Gamma — Notas abertas/ }).tap()
-  await expect(dialog).toBeVisible()
-  await expect(dialog.getByRole('button', { name: 'Alpha', exact: true })).toBeVisible()
-  await expect(dialog.getByRole('button', { name: 'Beta', exact: true })).toBeVisible()
-  await expect(dialog.getByRole('button', { name: 'Gamma', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
+  await expect(rows.nth(0)).toContainText('Gamma')
 
-  // Close Beta individually.
-  await dialog.getByRole('button', { name: 'Fechar Beta', exact: true }).tap()
-  await expect(dialog.getByRole('button', { name: 'Beta', exact: true })).toHaveCount(0)
+  // Opening Beta moves Beta ahead of Gamma.
+  await page.locator('[data-note-id="beta"]').tap()
+  await page.getByRole('button', { name: 'Voltar', exact: true }).tap()
+  await expect(rows.nth(0)).toContainText('Beta')
+  await expect(rows.nth(1)).toContainText('Gamma')
 
-  // Close others (keeps only Gamma).
-  await dialog.getByRole('button', { name: 'Fechar as outras', exact: true }).tap()
-  await expect(dialog).toBeHidden()
+  // Toggling sort switches to alphabetical order and back to recent order.
+  const sortButton = page.getByRole('button', { name: 'Ordenar notas' })
+  await sortButton.tap()
+  await expect(rows.nth(0)).toContainText('Alpha')
+  await expect(rows.nth(1)).toContainText('Beta')
+  await expect(rows.nth(2)).toContainText('Gamma')
 
-  // Reload and verify openIds persisted and no note was deleted.
-  await page.reload()
-  const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), STORAGE_KEY)
-  expect(stored.openIds).toEqual(['gamma'])
-  expect(stored.notes.map((note) => note.id).sort()).toEqual(['alpha', 'beta', 'gamma'])
+  await sortButton.tap()
+  await expect(rows.nth(0)).toContainText('Beta')
+  await expect(rows.nth(1)).toContainText('Gamma')
 })

@@ -282,7 +282,7 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   padding-inline-start: 32px;
   margin-inline-start: -32px;
 }
-[data-platform='mobile'] .markdown table {
+[data-platform='mobile'] .markdown > table {
   display: block;
   max-width: 100%;
   overflow-x: auto;
@@ -383,9 +383,23 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   min-height: 44px;
   min-width: 0;
 }
+[data-platform='mobile'] .markdown ul:has(> .task-list-item) {
+  padding-left: 30px;
+}
+[data-platform='mobile'] .markdown .task-list-item {
+  line-height: 1.65;
+}
+[data-platform='mobile'] .markdown .task-list-item + .task-list-item {
+  margin-top: 10px;
+}
 [data-platform='mobile'] .task-checkbox {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
+  margin: 0 10px 0 -30px;
+}
+[data-platform='mobile'] .visual-editor .cm-md-task {
+  padding-top: 4px;
+  padding-bottom: 4px;
 }
 [data-platform='mobile'] .changelog-page {
   padding: 16px;
@@ -865,9 +879,13 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   height: 20px;
 }
 
-/* Wide tables scroll inside their own box; the first column and header stay visible. */
+/* Tables on mobile: clean framed block, smooth horizontal scroll, legible cards and fullscreen. */
 [data-platform='mobile'] .mobile-table-block {
-  margin: 12px 0;
+  margin: 16px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 10px);
+  background: var(--paper);
+  overflow: hidden;
 }
 [data-platform='mobile'] .mobile-table-bar {
   display: flex;
@@ -875,32 +893,32 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 92%, var(--ink) 8%);
 }
 [data-platform='mobile'] .mobile-table-meta {
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 [data-platform='mobile'] .mobile-table-actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 [data-platform='mobile'] .mobile-table-btn {
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--paper);
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
   color: var(--ink);
-  font: inherit;
-  font-size: 0.875rem;
+  font: 500 0.8125rem var(--ui);
 }
 [data-platform='mobile'] .mobile-table-wrap {
   max-width: 100%;
   max-height: 60vh;
   overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  -webkit-overflow-scrolling: touch;
 }
 [data-platform='mobile'] .markdown .mobile-table-wrap table {
   display: table;
@@ -909,67 +927,89 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   border-spacing: 0;
   width: max-content;
   min-width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.5;
 }
 [data-platform='mobile'] .markdown .mobile-table-wrap th,
 [data-platform='mobile'] .markdown .mobile-table-wrap td {
-  min-width: 96px;
-  max-width: 220px;
-  overflow-wrap: anywhere;
+  min-width: 84px;
+  max-width: 240px;
+  padding: 10px 12px;
+  vertical-align: top;
+  overflow-wrap: break-word;
+  word-break: normal;
+  border-bottom: 1px solid var(--soft);
+  border-right: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+}
+[data-platform='mobile'] .markdown .mobile-table-wrap th:last-child,
+[data-platform='mobile'] .markdown .mobile-table-wrap td:last-child {
+  border-right: 0;
+}
+[data-platform='mobile'] .markdown .mobile-table-wrap tbody tr:last-child td {
+  border-bottom: 0;
+}
+[data-platform='mobile'] .markdown .mobile-table-wrap tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
 }
 [data-platform='mobile'] .markdown .mobile-table-wrap thead th {
   position: sticky;
   top: 0;
   z-index: 2;
   background: var(--paper);
+  font-weight: 600;
   box-shadow: 0 1px 0 var(--line);
-}
-[data-platform='mobile'] .markdown table th:first-child,
-[data-platform='mobile'] .markdown table td:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--bg, Canvas);
-  box-shadow: 1px 0 0 var(--line);
-}
-[data-platform='mobile'] .markdown .mobile-table-wrap thead th:first-child {
-  z-index: 3;
-  background: var(--paper);
 }
 [data-platform='mobile'] .markdown table:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 [data-platform='mobile'] .mobile-table-cards {
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  padding: 10px;
+  background: var(--bg);
 }
 [data-platform='mobile'] .mobile-table-card {
-  padding: 12px;
+  padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--paper);
 }
 [data-platform='mobile'] .mobile-table-card-title {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--soft);
   font-size: 0.95rem;
+  font-weight: 650;
 }
 [data-platform='mobile'] .mobile-table-card-fields {
   margin: 0;
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 [data-platform='mobile'] .mobile-table-card-field {
   display: grid;
-  grid-template-columns: minmax(80px, auto) 1fr;
-  gap: 8px;
+  grid-template-columns: minmax(84px, 38%) 1fr;
+  gap: 6px 12px;
+  align-items: baseline;
 }
 [data-platform='mobile'] .mobile-table-card-field dt {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
+  overflow-wrap: break-word;
 }
 [data-platform='mobile'] .mobile-table-card-field dd {
   margin: 0;
-  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+  overflow-wrap: break-word;
+}
+[data-platform='mobile'] .visual-editor .cm-table-pin,
+[data-platform='mobile'] .visual-editor .cm-table-guide {
+  display: none;
+}
+[data-platform='mobile'] .visual-editor .cm-md-table-cell {
+  padding: 6px 8px;
+  font-size: 0.92rem;
 }
 [data-platform='mobile'] .mobile-table-fullscreen {
   position: fixed;
