@@ -60,3 +60,46 @@ test('tables support cards view, fullscreen, identical tables and grid insertion
   await page.getByRole('dialog').getByRole('button', { name: '3 × 4', exact: true }).tap()
   await expect(page.locator('.cm-content')).toContainText('Coluna 4')
 })
+
+test('2-column table fits mobile viewport width cleanly without horizontal overflow', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 360, height: 800 })
+  const tableMd = [
+    '| Referência antiga | Divergência ou dúvida |',
+    '| --- | --- |',
+    '| 103 | Antigo: escura com nervura e tampa lateral. Novo: azul escuro estonado. |',
+    '| 207 e 208 | Ambos mencionam fenda e recorte. Não dá para distinguir os novos modelos. |',
+    '| 218 | Antigo: marmorizado com bolso embutido e elo, sem cor definida. Novo: preto marmorizado. |',
+  ].join('\n')
+  const fixture = {
+    ...newDocument(),
+    preferences: { ...newDocument().preferences, theme: 'dark' },
+    notes: [
+      {
+        id: 'div',
+        name: 'Divergências.md',
+        body: `# Divergências\n\n${tableMd}\n`,
+        revision: 0,
+      },
+    ],
+    openIds: ['div'],
+    activeId: 'div',
+  }
+  await page.addInitScript(
+    ([key, data]) => {
+      localStorage.setItem(key, JSON.stringify(data))
+    },
+    [STORAGE_KEY, fixture],
+  )
+  await page.goto('/?platform=mobile')
+  await page.locator('[data-note-id="div"]').tap()
+  const wrap = page.locator('.mobile-table-wrap')
+  await expect(wrap).toBeVisible()
+  const fits = await wrap.evaluate((node) => node.scrollWidth <= node.clientWidth + 1)
+  expect(fits).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('mobile-table-2col-dark.png') })
+  if (process.env.CAPTURE_UI) {
+    await page.screenshot({ path: '/tmp/sloth-mobile-table-2col-dark.png' })
+  }
+})

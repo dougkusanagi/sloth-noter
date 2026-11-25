@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.42.4] — 2026-11-25
+
+Corrigida a renderização de tabelas no celular: removida a faixa cinza no cabeçalho causada por conflito de variável CSS e ajustadas tabelas de 2–3 colunas para caberem na largura da tela sem cortar texto. Veja os [detalhes da versão](changelog/0.42.4.md).
+
 ## [0.42.3] — 2026-11-25
 
 Ritmo vertical de tabelas, colunas empilhadas e tarefas no celular alinhado ao padrão proporcional do desktop. Veja os [detalhes da versão](changelog/0.42.3.md).

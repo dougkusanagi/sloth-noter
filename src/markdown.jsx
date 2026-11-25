@@ -418,7 +418,7 @@ function Table({ node, children, ...props }) {
   const cols = headerCells.length || (bodyRows[0]?.length ?? 0)
   const meta = t('mobile.tableMeta', { rows: bodyRows.length, cols })
   const tableEl = (
-    <div className="mobile-table-wrap">
+    <div className="mobile-table-wrap" data-wide={cols >= 4 ? '' : undefined}>
       <table {...props} tabIndex={0} aria-label={t('mobile.tableLabel', { rows: totalRows })}>
         {children}
       </table>
