@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, CircleCheck, ExternalLink } from 'lucide-react'
-import { resolvedTasks } from '../tasks.js'
+import { resolvedTasks, taskHeadings, tasksProgress } from '../tasks.js'
+import { progressLabel, progressShares } from '../progress-badge.js'
+import { DEFAULT_TASK_FILTERS } from './library-menus.jsx'
 import { stripTaskDates, taskDates, taskDueState, taskMatches } from '../task-dates.js'
 import { TaskDateBadge } from './task-date-badge.jsx'
 import { displayName } from '../note-title.js'
@@ -15,15 +17,72 @@ export function plain(text) {
     .replace(/(?<![\w*])[*_](.+?)[*_](?![\w*])/g, '$1')
 }
 
+/** The same done/total pill the editor draws after a heading with tasks. */
+export function ProgressPill({ done, total, doing = 0, waiting = 0 }) {
+  if (!total) return null
+  const share = progressShares(done, total, doing, waiting)
+  return (
+    <span
+      className="section-progress"
+      role="img"
+      aria-label={progressLabel(done, total, doing, waiting)}
+      data-complete={done === total ? '' : undefined}
+    >
+      <span className="section-progress-bar" aria-hidden="true">
+        <span className="section-progress-done" style={{ width: `${share.done}%` }} />
+        <span className="section-progress-doing" style={{ width: `${share.doing}%` }} />
+        <span className="section-progress-waiting" style={{ width: `${share.waiting}%` }} />
+      </span>
+      <span className="section-progress-count" data-count={`${done}/${total}`} />
+    </span>
+  )
+}
+
+function TaskRow({ note, task, onToggle, onJump }) {
+  return (
+    <li
+      className="task-row"
+      data-done={task.done || undefined}
+      data-status={task.status}
+      style={{ '--depth': Math.min(3, Math.floor(task.depth / 2)) }}
+    >
+      <input
+        type="checkbox"
+        className="task-checkbox"
+        data-status={task.status}
+        checked={task.done}
+        ref={(input) => {
+          if (input) input.indeterminate = task.partial
+        }}
+        aria-checked={task.partial ? 'mixed' : task.done}
+        disabled={Boolean(task.progress)}
+        aria-label={plain(task.text) || t('task.open')}
+        onChange={() => onToggle(note.id, task.mark)}
+      />
+      <span className="task-text">{plain(stripTaskDates(task.text)) || '—'}</span>
+      <TaskDateBadge text={task.text} />
+      <button
+        type="button"
+        className="task-open-note"
+        aria-label={`${t('tasks.openTask')}: ${plain(task.text) || '—'}`}
+        title={t('tasks.openTask')}
+        onClick={() => onJump(note.id, task.offset)}
+      >
+        <ExternalLink size={14} aria-hidden="true" />
+      </button>
+    </li>
+  )
+}
+
 /**
- * Every task across the notes, grouped by note. Checking one edits its note; the text
- * is plain text; dedicated buttons open the note or jump to a task.
+ * Every task across the notes, grouped by note and then by the note's headings, each with
+ * the same progress pill the note shows. Checking one edits its note; dedicated buttons
+ * open the note or jump to a task. Filters come from the caller (`TaskFilterMenu`).
  */
-export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJump }) {
+export function TasksLibrary({ notes, query, filters: given, onToggle, onJump }) {
+  const filters = { ...DEFAULT_TASK_FILTERS, ...given }
+  const { status, due: dueFilter, sortByDue, showDone } = filters
   const [collapsed, setCollapsed] = useState(new Set())
-  const [status, setStatus] = useState('all')
-  const [dueFilter, setDueFilter] = useState('all')
-  const [sortByDue, setSortByDue] = useState(false)
   const groups = useMemo(() => {
     const needle = query.trim()
     const dueIso = (text) => taskDates(text).find((stamp) => stamp.kind === 'due')?.iso ?? null
@@ -57,54 +116,40 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
             return da.localeCompare(db)
           })
         }
+        // Sections follow the note's order; each counts all of its tasks, as the note does.
+        const headings = taskHeadings(note.body, tasks)
+        const sections = []
+        for (const task of filtered) {
+          // Sorting by due date reads across sections, so it keeps one flat list.
+          const heading = sortByDue ? null : (headings.get(task.line) ?? null)
+          let section = sections.find((item) => item.heading?.line === heading?.line)
+          if (!section) {
+            section = {
+              heading,
+              tasks: [],
+              progress: tasksProgress(
+                tasks.filter(
+                  (item) => (headings.get(item.line)?.line ?? null) === (heading?.line ?? null),
+                ),
+              ),
+            }
+            sections.push(section)
+          }
+          section.tasks.push(task)
+        }
         return {
           note,
-          open: tasks.filter((task) => !task.done && task.status !== 'canceled').length,
-          tasks: filtered,
+          progress: tasksProgress(tasks),
+          sections,
+          count: filtered.length,
         }
       })
-      .filter((group) => group.tasks.length)
+      .filter((group) => group.count)
   }, [notes, query, showDone, status, dueFilter, sortByDue])
   return (
     <section className="tasks-library" aria-label={t('tasks.title')}>
-      <label className="tasks-filter tasks-status-filter">
-        {t('tasks.status')}
-        <select value={status} onChange={(event) => setStatus(event.target.value)}>
-          <option value="all">{t('tasks.statusAll')}</option>
-          <option value="doing">{t('task.status.doing')}</option>
-          <option value="waiting">{t('task.status.waiting')}</option>
-        </select>
-      </label>
-      <label className="tasks-filter tasks-due-filter">
-        {t('tasks.due')}
-        <select value={dueFilter} onChange={(event) => setDueFilter(event.target.value)}>
-          <option value="all">{t('tasks.dueAll')}</option>
-          <option value="overdue">{t('tasks.dueOverdue')}</option>
-          <option value="today">{t('tasks.dueToday')}</option>
-          <option value="upcoming">{t('tasks.dueUpcoming')}</option>
-          <option value="any">{t('tasks.dueAny')}</option>
-        </select>
-      </label>
-      <label className="tasks-filter">
-        <input
-          type="checkbox"
-          className="switch small"
-          checked={sortByDue}
-          onChange={(event) => setSortByDue(event.target.checked)}
-        />
-        {t('tasks.sortByDue')}
-      </label>
-      <label className="tasks-filter">
-        <input
-          type="checkbox"
-          className="switch small"
-          checked={showDone}
-          onChange={(event) => onShowDone(event.target.checked)}
-        />
-        {t('tasks.showDone')}
-      </label>
       {groups.length ? (
-        groups.map(({ note, open, tasks }) => (
+        groups.map(({ note, progress, sections }) => (
           <div className="task-group" key={note.id} role="group" aria-label={note.name}>
             <div className="task-group-header">
               <button
@@ -123,8 +168,8 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
               >
                 <ChevronDown size={14} aria-hidden="true" />
                 <span>{displayName(note.name)}</span>
-                {open > 0 && <span className="count">{open}</span>}
               </button>
+              <ProgressPill {...progress} />
               <button
                 type="button"
                 className="task-open-note"
@@ -135,42 +180,29 @@ export function TasksLibrary({ notes, query, showDone, onShowDone, onToggle, onJ
                 <ExternalLink size={14} aria-hidden="true" />
               </button>
             </div>
-            <ul id={`tasks-${note.id}`} hidden={collapsed.has(note.id)}>
-              {tasks.map((task) => (
-                <li
-                  key={task.mark}
-                  className="task-row"
-                  data-done={task.done || undefined}
-                  data-status={task.status}
-                  style={{ '--depth': Math.min(3, Math.floor(task.depth / 2)) }}
-                >
-                  <input
-                    type="checkbox"
-                    className="task-checkbox"
-                    data-status={task.status}
-                    checked={task.done}
-                    ref={(input) => {
-                      if (input) input.indeterminate = task.partial
-                    }}
-                    aria-checked={task.partial ? 'mixed' : task.done}
-                    disabled={Boolean(task.progress)}
-                    aria-label={plain(task.text) || t('task.open')}
-                    onChange={() => onToggle(note.id, task.mark)}
-                  />
-                  <span className="task-text">{plain(stripTaskDates(task.text)) || '—'}</span>
-                  <TaskDateBadge text={task.text} />
-                  <button
-                    type="button"
-                    className="task-open-note"
-                    aria-label={`${t('tasks.openTask')}: ${plain(task.text) || '—'}`}
-                    title={t('tasks.openTask')}
-                    onClick={() => onJump(note.id, task.offset)}
-                  >
-                    <ExternalLink size={14} aria-hidden="true" />
-                  </button>
-                </li>
+            <div id={`tasks-${note.id}`} hidden={collapsed.has(note.id)}>
+              {sections.map(({ heading, tasks, progress: sectionProgress }) => (
+                <div className="task-section" key={heading?.line ?? 0}>
+                  {heading && (
+                    <p className="task-section-title">
+                      <span>{plain(heading.title) || '—'}</span>
+                      <ProgressPill {...sectionProgress} />
+                    </p>
+                  )}
+                  <ul>
+                    {tasks.map((task) => (
+                      <TaskRow
+                        key={task.mark}
+                        note={note}
+                        task={task}
+                        onToggle={onToggle}
+                        onJump={onJump}
+                      />
+                    ))}
+                  </ul>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         ))
       ) : (

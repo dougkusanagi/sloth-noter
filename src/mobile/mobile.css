@@ -261,9 +261,6 @@
   color: var(--accent-ink);
   background: var(--active);
 }
-[data-platform='mobile'] .tasks-filter {
-  display: none;
-}
 html[data-keyboard='open'] [data-platform='mobile'] .mobile-bottom,
 html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   display: none;
@@ -1991,4 +1988,13 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   padding: 0 8px;
   border-radius: 999px;
   border: 1px solid var(--line);
+}
+
+/* Tasks screen: headings with the same progress pill the note shows. */
+[data-platform='mobile'] .task-section-title {
+  min-height: 36px;
+  font-size: 0.9rem;
+}
+[data-platform='mobile'] .task-group-header .section-progress {
+  font-size: 0.75rem;
 }

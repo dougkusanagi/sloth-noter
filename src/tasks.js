@@ -115,6 +115,37 @@ function withStatusCounts(done, total, doing, waiting) {
   return { done, total, ...(doing && { doing }), ...(waiting && { waiting }) }
 }
 
+/** Done/total (and doing/waiting) of a list of tasks, as a section badge counts them. */
+export function tasksProgress(tasks) {
+  const totals = taskTotals(tasks)
+  return withStatusCounts(totals.done, totals.total, totals.doing, totals.waiting)
+}
+
+/**
+ * The innermost H2–H6 heading above each task, keyed by the task's line, so a list of
+ * tasks can be grouped the way the note shows them. Tasks above any such heading map to null.
+ */
+export function taskHeadings(body, tasks = noteTasks(body)) {
+  const headings = headingSections(body).filter((heading) => heading.level > 0)
+  const lines = body.split('\n')
+  const result = new Map()
+  for (const task of tasks) {
+    const heading = headings.findLast((item) => task.line > item.titleEnd && task.line <= item.end)
+    result.set(
+      task.line,
+      heading
+        ? {
+            line: heading.line,
+            title: (lines[heading.line - 1] ?? '')
+              .replace(/^\s*#+\s*/, '')
+              .replace(/\s+#+\s*$/, ''),
+          }
+        : null,
+    )
+  }
+  return result
+}
+
 /**
  * Done/total tasks under H2–H6, keyed by heading line. Expanded ancestors omit
  * totals carried entirely by a single subsection; collapsed sections keep their summary.

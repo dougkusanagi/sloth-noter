@@ -28,7 +28,13 @@ import { WidthFeedback } from './components/width-feedback.jsx'
 import { TrashLibrary } from './components/trash-library.jsx'
 import { CompletedLibrary } from './components/completed-library.jsx'
 import { NoteList } from './components/note-list.jsx'
-import { NewMenu, SortMenu } from './components/library-menus.jsx'
+import {
+  DEFAULT_TASK_FILTERS,
+  NewMenu,
+  SortMenu,
+  TaskFilterChips,
+  TaskFilterMenu,
+} from './components/library-menus.jsx'
 import { friendlyError } from './errors.js'
 import { ToastButtons } from './components/toast-buttons.jsx'
 import { CommandPalette } from './components/command-palette.jsx'
@@ -216,7 +222,8 @@ function Workspace({ persistence, loaded }) {
   const [renamingGroup, setRenamingGroup] = useState(null)
   const sidebarSearchRef = useRef(null)
   const [sidebarSection, setSidebarSection] = useState('notes')
-  const [showDoneTasks, setShowDoneTasks] = useState(false)
+  const [taskFilters, setTaskFilters] = useState(DEFAULT_TASK_FILTERS)
+  const changeTaskFilters = (change) => setTaskFilters((previous) => ({ ...previous, ...change }))
   const [diskImages, setDiskImages] = useState([])
   const [imageVersion, setImageVersion] = useState(0)
   const [imagesLoading, setImagesLoading] = useState(false)
@@ -2569,6 +2576,9 @@ function Workspace({ persistence, loaded }) {
                   <NewMenu onNote={() => createNote()} onFolder={createGroup} />
                 </>
               )}
+              {sidebarSection === 'tasks' && (
+                <TaskFilterMenu filters={taskFilters} onChange={changeTaskFilters} />
+              )}
               {sidebarSection === 'images' && (
                 <ShortcutButton
                   className="button sidebar-add sidebar-add-image"
@@ -2580,6 +2590,9 @@ function Workspace({ persistence, loaded }) {
                 </ShortcutButton>
               )}
             </div>
+            {sidebarSection === 'tasks' && (
+              <TaskFilterChips filters={taskFilters} onChange={changeTaskFilters} />
+            )}
             <div className="sidebar-items">
               {sidebarSection === 'notes' ? (
                 <>
@@ -2626,8 +2639,7 @@ function Workspace({ persistence, loaded }) {
                 <TasksLibrary
                   notes={data.notes}
                   query={sidebarQuery}
-                  showDone={showDoneTasks}
-                  onShowDone={setShowDoneTasks}
+                  filters={taskFilters}
                   onToggle={toggleNoteTask}
                   onJump={jumpToTask}
                 />

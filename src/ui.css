@@ -1551,22 +1551,95 @@ html:has(
 }
 
 /* Tasks */
-.tasks-filter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 2px 6px 10px;
+.task-filter-menu {
+  min-width: 200px;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+}
+.library-menu-label {
+  margin: 0;
+  padding: 6px 10px 2px;
   color: var(--muted);
+  font: 600 11px var(--ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.library-menu-separator {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--line);
+}
+.button.sidebar-filter {
+  position: relative;
+}
+.button.sidebar-filter[data-active] {
+  color: var(--accent-ink);
+}
+.button.sidebar-filter[data-active]::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.task-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.task-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 0 6px 0 10px;
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--ink);
   font: 12px var(--ui);
   cursor: pointer;
 }
-.tasks-status-filter select {
-  min-height: 24px;
-  border: 1px solid var(--edge);
-  border-radius: var(--radius-sm);
-  background: var(--control);
+.task-filter-chip:hover,
+.task-filter-chip:focus-visible {
+  border-color: var(--edge-strong);
+  background: var(--hover);
+}
+.task-filter-chip svg {
+  color: var(--muted);
+}
+.task-group-header .section-progress {
+  flex: none;
+  margin-left: 0;
+}
+.task-section + .task-section {
+  margin-top: 4px;
+}
+.task-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 2px;
+  padding: 0 6px 0 8px;
   color: var(--ink);
-  font: inherit;
+  font: 600 12.5px/1.4 var(--ui);
+}
+.task-section-title > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-section-title .section-progress {
+  flex: none;
+  margin-left: 0;
+  vertical-align: baseline;
 }
 .task-row[data-status='canceled'] .task-text {
   text-decoration: line-through;

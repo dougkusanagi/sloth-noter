@@ -679,6 +679,9 @@ const messages = {
     'tasks.dueToday': 'Hoje',
     'tasks.dueUpcoming': 'Próximas',
     'tasks.dueAny': 'Com prazo',
+    'tasks.filters': 'Filtrar tarefas',
+    'tasks.clearFilters': 'Limpar filtros',
+    'tasks.removeFilter': 'Remover filtro: {name}',
     'tasks.sortByDue': 'Ordenar por prazo',
     'task.open': 'Marcar como concluída',
 
@@ -1856,6 +1859,9 @@ const messages = {
     'tasks.dueToday': 'Today',
     'tasks.dueUpcoming': 'Upcoming',
     'tasks.dueAny': 'With due date',
+    'tasks.filters': 'Filter tasks',
+    'tasks.clearFilters': 'Clear filters',
+    'tasks.removeFilter': 'Remove filter: {name}',
     'tasks.sortByDue': 'Sort by due date',
     'task.open': 'Mark complete',
 

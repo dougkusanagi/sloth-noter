@@ -1844,8 +1844,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           <TasksLibrary
             notes={data.notes}
             query=""
-            showDone={showDone}
-            onShowDone={setShowDone}
+            filters={{ showDone }}
             onJump={(id, offset) => {
               const note = current.current.notes.find((item) => item.id === id)
               if (note && Number.isInteger(offset)) {

@@ -79,8 +79,19 @@ test('the tasks view lists open tasks across notes, toggles and jumps to them', 
   await tasks.getByRole('checkbox', { name: 'Garantir exatidão', exact: true }).click()
   await expect(tasks.locator('.task-row')).toHaveCount(2)
   await expect(page.locator('.cm-task-checkbox').last()).toBeChecked()
-  await tasks.getByText('Mostrar concluídas').click()
+  await sidebar.getByRole('button', { name: 'Filtrar tarefas' }).click()
+  await page.getByRole('menuitemcheckbox', { name: 'Mostrar concluídas' }).click()
+  await page.keyboard.press('Escape')
   await expect(tasks.locator('.task-row')).toHaveCount(4)
+  await expect(
+    sidebar.getByRole('button', { name: 'Remover filtro: Mostrar concluídas' }),
+  ).toBeVisible()
+  // Each note and each heading shows the same progress pill the note does.
+  await expect(tasks.locator('.task-group-header .section-progress')).toHaveAttribute(
+    'aria-label',
+    '2 de 4 tarefas concluídas',
+  )
+  await expect(tasks.locator('.task-section-title')).toHaveText(['Estoque', 'Financeiro'])
   await sidebar.getByRole('textbox').fill('sub')
   await expect(tasks.locator('.task-row')).toHaveCount(1)
   const accordion = tasks.locator('.task-group-title').first()
@@ -106,6 +117,26 @@ test('the tasks view lists open tasks across notes, toggles and jumps to them', 
         .analyze()
     ).violations,
   ).toEqual([])
+})
+
+test('task filters live in one menu beside the search and show as removable chips', async ({
+  page,
+}) => {
+  const sidebar = page.getByRole('complementary', { name: 'Biblioteca' })
+  await sidebar.getByRole('button', { name: /^Tarefas/ }).click()
+  const tasks = sidebar.getByRole('region', { name: 'Tarefas', exact: true })
+  await expect(sidebar.locator('select')).toHaveCount(0)
+  await expect(tasks.locator('.task-row')).toHaveCount(3)
+  const trigger = sidebar.getByRole('button', { name: 'Filtrar tarefas' })
+  await trigger.click()
+  await page.getByRole('menuitemradio', { name: 'Fazendo' }).click()
+  await expect(tasks).toContainText('Nenhuma tarefa pendente')
+  await page.keyboard.press('Escape')
+  await expect(trigger).toBeFocused()
+  const chip = sidebar.getByRole('button', { name: 'Remover filtro: Fazendo' })
+  await chip.click()
+  await expect(chip).toHaveCount(0)
+  await expect(tasks.locator('.task-row')).toHaveCount(3)
 })
 
 test('open notes follow the tab order at the top of the library', async ({ page }) => {

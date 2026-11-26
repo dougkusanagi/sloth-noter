@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.64.0] — 2026-11-26
+
+Alterado o topo da aba Tarefas: os filtros foram para um botão ao lado da busca, como na aba Notas, e a lista de tarefas mostra a barra de progresso de cada nota e de cada título, no desktop e no celular. Veja os [detalhes da versão](changelog/0.64.0.md).
+
 ## [0.63.2] — 2026-11-26
 
 Corrigida a ordem das notas abertas no topo da biblioteca: agora elas seguem a ordem das abas, inclusive as fixadas. Veja os [detalhes da versão](changelog/0.63.2.md).
