@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.61.1] — 2026-11-26
+
+Corrigido o estilo mobile do card **Histórico de versões** em Configurações e alinhados o seletor de IA no aparelho e as folhas de sugestão (IA e OCR) ao padrão visual do app, além de registrar regras de consistência visual no `AGENTS.md`. Veja os [detalhes da versão](changelog/0.61.1.md).
+
 ## [0.61.0] — 2026-11-26
 
 Adicionados o ciclo seguro de propostas de seleção para IA local no desktop (C3) e o agregador de progresso do Hub de projetos (C5). Veja os [detalhes da versão](changelog/0.61.0.md).

@@ -19,3 +19,10 @@
 ## Compilação Android
 
 - Ao gerar um APK, produza a menor versão instalável possível. Compile a versão de depuração (debug) somente quando o usuário pedir explicitamente ou quando o agente precisar dela por um motivo concreto.
+
+## Padrão visual e consistência de interface
+
+- Antes de criar ou reutilizar qualquer card, seção de Configurações ou folha (sheet) no mobile ou desktop, siga os tokens CSS existentes (`--paper`, `--ink`, `--muted`, `--accent`, `--edge`, `--edge-strong`, `--line`, `--well-bg`, `--danger`, `--ok`, `--radius-md`) definidos em `src/ui.css` e `src/mobile/mobile.css`.
+- Nunca use `style={{ ... }}` inline para cores, espaçamentos de layout ou campos de formulário, nem `<input type="checkbox">` cru em telas de Configurações: reutilize os componentes compartilhados (`Switch`, `Segmented` de `src/components/controls.jsx`) e as classes do sistema (`.settings-card`, `.settings-row`, `.settings-row-title`, `.settings-note`, `.settings-action`).
+- Ao reutilizar um componente criado originalmente para o desktop (como `HistoryPanel` ou `SyncPanel`) dentro de um `.settings-card` mobile, adicione sempre estilos mobile dedicados sob `[data-platform='mobile']` em `src/mobile/mobile.css` garantindo: padding interno coerente (`14px 16px`), divisores `1px solid var(--line)`, empilhamento de controles segmentados e botões em telas estreitas (320–390 dp) e alvos de toque de no mínimo `44–48px`.
+- Confira visualmente o componente nos temas claro e escuro em largura mobile (390 px) antes de encerrar a entrega.

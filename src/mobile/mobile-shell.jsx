@@ -101,6 +101,7 @@ import {
 import { createFullBackup, readBackupBundle, restoreBackupImages } from '../backup.js'
 import { AboutPanel } from '../components/about-panel.jsx'
 import { HistoryPanel } from '../components/history-panel.jsx'
+import { Switch } from '../components/controls.jsx'
 import { SyncPanel } from '../components/sync-panel.jsx'
 import { useSync } from '../hooks/use-sync.js'
 import { ImageThumbnail } from '../components/image-library.jsx'
@@ -676,6 +677,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     }
     setOcrSuggestion({
       noteId: note.id,
+      mode: 'auto',
       raw: result.text,
       text: formatOcrToMarkdown(result.text, 'auto'),
     })
@@ -2009,7 +2011,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               <SyncPanel sync={sync} />
             </div>
             <h2>{t('history.title')}</h2>
-            <div className="settings-card">
+            <div className="settings-card settings-history">
               <HistoryPanel
                 prefs={prefs}
                 note={active}
@@ -2052,21 +2054,19 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   </>
                 )}
                 {getOnDeviceAiState() === 'available' && (
-                  <>
-                    <p className="settings-note">{t('mobile.aiHint')}</p>
-                    <div className="settings-card">
-                      <label className="settings-row settings-toggle">
-                        <span>{t('mobile.aiTitle')}</span>
-                        <input
-                          type="checkbox"
-                          checked={Boolean(prefs.mobileOnDeviceAi)}
-                          onChange={(event) =>
-                            updatePrefs({ ...prefs, mobileOnDeviceAi: event.target.checked })
-                          }
-                        />
+                  <div className="settings-card">
+                    <div className="settings-row">
+                      <label htmlFor="mobile-ai-toggle">
+                        <span className="settings-row-title">{t('mobile.aiTitle')}</span>
+                        <small>{t('mobile.aiHint')}</small>
                       </label>
+                      <Switch
+                        id="mobile-ai-toggle"
+                        checked={Boolean(prefs.mobileOnDeviceAi)}
+                        onChange={(mobileOnDeviceAi) => updatePrefs({ ...prefs, mobileOnDeviceAi })}
+                      />
                     </div>
-                  </>
+                  </div>
                 )}
               </>
             )}
@@ -2587,16 +2587,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 </button>
               </>
             ) : layer.name === 'ocr-suggestion' && ocrSuggestion ? (
-              <>
-                <p>{t('mobile.ocrTitle')}</p>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <div className="mobile-suggestion-sheet">
+                <p className="settings-note">{t('mobile.ocrTitle')}</p>
+                <div className="mobile-suggestion-modes" role="group" aria-label={t('mobile.ocrTitle')}>
                   {['text', 'list', 'table'].map((mode) => (
                     <button
                       key={mode}
                       type="button"
+                      aria-pressed={ocrSuggestion.mode === mode}
                       onClick={() =>
                         setOcrSuggestion((prev) =>
-                          prev ? { ...prev, text: formatOcrToMarkdown(prev.raw, mode) } : null,
+                          prev ? { ...prev, mode, text: formatOcrToMarkdown(prev.raw, mode) } : null,
                         )
                       }
                     >
@@ -2611,6 +2612,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   ))}
                 </div>
                 <textarea
+                  className="mobile-suggestion-input"
                   rows={8}
                   value={ocrSuggestion.text}
                   onChange={(event) =>
@@ -2618,75 +2620,84 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                       prev ? { ...prev, text: event.target.value } : null,
                     )
                   }
-                  style={{ width: '100%', minHeight: 160 }}
                 />
-                <button
-                  onClick={() => {
-                    setOcrSuggestion(null)
-                    back()
-                  }}
-                >
-                  {t('mobile.aiDiscard')}
-                </button>
-                <button
-                  onClick={() => {
-                    const target = current.current.notes.find((n) => n.id === ocrSuggestion.noteId)
-                    const snippet = ocrSuggestion.text.trim()
-                    if (target && snippet && !blocked) {
-                      const sep = target.body.endsWith('\n') ? '\n' : '\n\n'
-                      commit(
-                        updateMobileNote(
-                          current.current,
-                          target.id,
-                          `${target.body}${sep}${snippet}\n`,
-                        ),
-                      )
-                    }
-                    setOcrSuggestion(null)
-                    back()
-                  }}
-                >
-                  {t('mobile.ocrInsert')}
-                </button>
-              </>
+                <div className="mobile-suggestion-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOcrSuggestion(null)
+                      back()
+                    }}
+                  >
+                    {t('mobile.aiDiscard')}
+                  </button>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={() => {
+                      const target = current.current.notes.find((n) => n.id === ocrSuggestion.noteId)
+                      const snippet = ocrSuggestion.text.trim()
+                      if (target && snippet && !blocked) {
+                        const sep = target.body.endsWith('\n') ? '\n' : '\n\n'
+                        commit(
+                          updateMobileNote(
+                            current.current,
+                            target.id,
+                            `${target.body}${sep}${snippet}\n`,
+                          ),
+                        )
+                      }
+                      setOcrSuggestion(null)
+                      back()
+                    }}
+                  >
+                    {t('mobile.ocrInsert')}
+                  </button>
+                </div>
+              </div>
             ) : layer.name === 'ai-suggestion' && aiSuggestion ? (
-              <>
-                <p>{t('mobile.aiSuggestionTitle')}</p>
+              <div className="mobile-suggestion-sheet">
+                <p className="settings-note">{t('mobile.aiSuggestionTitle')}</p>
                 <textarea
+                  className="mobile-suggestion-input"
                   rows={8}
                   value={aiSuggestion.text}
                   onChange={(event) =>
                     setAiSuggestion((prev) => (prev ? { ...prev, text: event.target.value } : null))
                   }
-                  style={{ width: '100%', minHeight: 160 }}
                 />
-                <button
-                  onClick={() => {
-                    setAiSuggestion(null)
-                    back()
-                  }}
-                >
-                  {t('mobile.aiDiscard')}
-                </button>
-                <button
-                  onClick={() => {
-                    const target = current.current.notes.find((n) => n.id === aiSuggestion.noteId)
-                    if (target && !blocked) {
-                      const nextBody = applyAiSuggestion({
-                        body: target.body,
-                        action: aiSuggestion.action,
-                        suggestion: aiSuggestion.text,
-                        summaryHeading: t('mobile.aiSummaryHeading'),
-                      })
-                      commit(updateMobileNote(current.current, target.id, nextBody))
-                    }
-                    setAiSuggestion(null)
-                    back()
-                  }}
-                >
-                  {t('mobile.aiAccept')}
-                </button>
-              </>
+                <div className="mobile-suggestion-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiSuggestion(null)
+                      back()
+                    }}
+                  >
+                    {t('mobile.aiDiscard')}
+                  </button>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={() => {
+                      const target = current.current.notes.find((n) => n.id === aiSuggestion.noteId)
+                      if (target && !blocked) {
+                        const nextBody = applyAiSuggestion({
+                          body: target.body,
+                          action: aiSuggestion.action,
+                          suggestion: aiSuggestion.text,
+                          summaryHeading: t('mobile.aiSummaryHeading'),
+                        })
+                        commit(updateMobileNote(current.current, target.id, nextBody))
+                      }
+                      setAiSuggestion(null)
+                      back()
+                    }}
+                  >
+                    {t('mobile.aiAccept')}
+                  </button>
+                </div>
+              </div>
             ) : layer.name === 'dialog' && route.name === 'trash' && trashEmpty ? (
               <>
                 <p>{t('trash.emptyConfirm', { count: data.trash.length })}</p>
