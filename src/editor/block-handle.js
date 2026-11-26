@@ -366,9 +366,9 @@ export const blockHandle = ViewPlugin.fromClass(
       const offset = Number.parseFloat(style.getPropertyValue('--block-handle-offset'))
       const width = Number.parseFloat(style.getPropertyValue('--block-handle-width'))
       const height = Number.parseFloat(style.getPropertyValue('--block-handle-height'))
-      const left = content.left - host.left - offset - width
-      // In a column, the handle sits in the space beside the column.
-      if (left < 0 && !view.state.facet(embeddedDocument)) return this.hide()
+      const isEmbedded = view.state.facet(embeddedDocument)
+      const left = isEmbedded ? 0 : content.left - host.left - offset - width
+      if (left < 0 && !isEmbedded) return this.hide()
       const lineHeight = coords.bottom - coords.top
       this.block = block
       this.handle.innerHTML = `<span class="cm-block-handle-type">${blockIconMarkup[block.kind] ?? blockIconMarkup.other}</span>${gripMarkup}`
@@ -376,8 +376,11 @@ export const blockHandle = ViewPlugin.fromClass(
       this.handle.setAttribute('aria-label', label)
       this.handle.removeAttribute('title')
       this.handle.dataset.kind = block.kind
-      const topOffset =
-        block.kind === 'columns' || lineHeight > height * 2 ? 0 : (lineHeight - height) / 2
+      const topOffset = isEmbedded
+        ? -height - 4
+        : block.kind === 'columns' || lineHeight > height * 2
+          ? 0
+          : (lineHeight - height) / 2
       this.handle.style.left = `${left}px`
       this.handle.style.top = `${coords.top - host.top + topOffset}px`
       this.handle.hidden = false

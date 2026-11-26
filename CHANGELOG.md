@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.62.4] — 2026-11-26
+
+Igualado o espaçamento interno de blocos de código dentro de colunas ao bloco normal e movida a alça de blocos internos de colunas para cima do bloco, exibindo o ícone do tipo junto da alça de arraste. Veja os [detalhes da versão](changelog/0.62.4.md).
+
 ## [0.62.3] — 2026-11-26
 
 Ajustado o alinhamento superior exato (`top: 0`) da alça lateral esquerda em blocos de colunas e tabelas para ficar rente à borda superior como nos blocos sem colunas. Veja os [detalhes da versão](changelog/0.62.3.md).

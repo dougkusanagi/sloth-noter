@@ -760,17 +760,9 @@ textarea:focus-visible {
 .cm-columns:focus-within .cm-column-editor {
   outline-color: var(--edge);
 }
-.cm-column-editor .cm-editor {
-  --block-handle-width: 18px;
-  --block-handle-offset: 6px;
-}
-/* In a column only the grip shows; the block type is in its menu and tooltip. */
+/* Inside a column, the block handle sits above the block with its type icon and grip. */
 .cm-column-editor .cm-block-handle {
-  justify-content: center;
-  padding: 0;
-}
-.cm-column-editor .cm-block-handle-type {
-  display: none;
+  z-index: 6;
 }
 .cm-column-preview {
   min-width: 0;
@@ -858,13 +850,9 @@ textarea:focus-visible {
   min-height: 28px;
   padding: 0;
 }
-/* Inside columns, keep code block controls compact and reserve top room so they never
-   overlap the first line of code or spill into a neighboring column. */
+/* Inside columns, keep code block copy controls compact without altering code block spacing. */
 .cm-column-editor .code-copy-layer .copy-code span {
   display: none;
-}
-.cm-column-editor .cm-md-fence-start {
-  min-height: 36px;
 }
 .cm-column-editor .cm-code-copy-anchor {
   padding-right: 96px;
