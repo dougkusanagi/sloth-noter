@@ -314,7 +314,7 @@ Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e deta
 - [x] **B5 — Widget de lista fixada** (0.53.0): [ADR 0046](../adr/0046-widget-de-lista-fixada.md); `PinnedTasksWidgetProvider` e `WidgetTasksStore` no Android exibem até 8 tarefas de uma nota fixada, permitem marcar/desmarcar sem abrir o app e abrem a nota ao tocar no título; no lado web, `src/mobile/widget-tasks.js` publica o snapshot e aplica os toggles pendentes usando `applyStatus` de `src/tasks.js` na fila de gravação (`src/mobile/use-native-actions.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
 - [x] **B6 — Caneta** (0.54.0): escrita à mão convertida em texto onde o WebView suportar (`isAutoHandwritingEnabled = true` no WebView da `MainActivity` e nos campos da `QuickNoteActivity` no Android 14+, sem criar formato de desenho); `src/mobile/stylus.js` e `src/mobile/editor-gestures.js` impedem que traços de caneta acionem gestos de deslizar e posicionam o cursor no ponto tocado (`src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
 - [x] **B7 — IA no aparelho (opcional)** (0.55.0): [ADR 0047](../adr/0047-ia-no-aparelho-mobile.md); desligada por padrão (`prefs.mobileOnDeviceAi`), oculta quando `SlothSystem.getOnDeviceAiState()` não retorna `'available'`, com ações **Resumir com IA** e **Revisar com IA** exibidas como sugestão editável antes de alterar a nota (`src/mobile/on-device-ai.js`, `src/mobile/mobile-shell.jsx`, `MainActivity.kt`, `src/mobile-platform.test.js`).
-- [ ] **B17 — Captura por câmera com OCR local** (exige ADR).
+- [x] **B17 — Captura por câmera com OCR local** (0.56.0): [ADR 0048](../adr/0048-captura-camera-ocr-local.md); ponte sob demanda (`SlothSystem.isLocalOcrSupported` / `captureTextOcr`) mantendo zero peso extra no APK base, conversor puro `src/mobile/ocr-markdown.js` (Texto, Lista e Tabela) e folha de prévia editável antes de inserir (`src/mobile/mobile-shell.jsx`, `MainActivity.kt`, `src/mobile-platform.test.js`).
 
 ## Depois deste plano — Parte C: ideias para as duas plataformas
 
@@ -428,8 +428,8 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-Concluída **B7 — IA no aparelho (opcional)** (0.55.0, [ADR 0047](../adr/0047-ia-no-aparelho-mobile.md)).
-Próximo item da Parte B (último item da fila): **B17 — Captura por câmera com OCR local** (exige ADR).
+Concluída toda a fila do plano Android (A1–A19, S1–S4 e Parte B: B1–B17) em `0.56.0`.
+O plano permanece aberto apenas pelos itens de validação nativa em aparelho real listados acima ("Validação no aparelho (pendente)"). Próxima frente quando desejado: Parte C (ideias para as duas plataformas, cada uma com plano próprio) ou validação nativa no APK.
 
 Pendente no aparelho (de entregas anteriores): validar S4 nativo (conta única desktop Tauri ↔ APK
 real, conflito, lixeira/restauração e imagem), validar B4 na tela de bloqueio/caneta real e validar

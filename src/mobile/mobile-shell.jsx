@@ -138,6 +138,7 @@ import {
   getOnDeviceAiState,
   requestOnDeviceAi,
 } from './on-device-ai.js'
+import { formatOcrToMarkdown, isLocalOcrSupported, requestLocalOcr } from './ocr-markdown.js'
 import './mobile.css'
 
 const destinations = [
@@ -665,6 +666,21 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     }
   }
   const [aiSuggestion, setAiSuggestion] = useState(null)
+  const [ocrSuggestion, setOcrSuggestion] = useState(null)
+  async function runOcrCapture(note) {
+    if (!note || blocked) return
+    const result = await requestLocalOcr()
+    if (!result.ok) {
+      toast.error(t('mobile.ocrFailed'))
+      return
+    }
+    setOcrSuggestion({
+      noteId: note.id,
+      raw: result.text,
+      text: formatOcrToMarkdown(result.text, 'auto'),
+    })
+    dispatch({ type: 'layer', route: { name: 'ocr-suggestion' } })
+  }
   async function runAiAction(note, action) {
     if (!note || blocked) return
     const result = await requestOnDeviceAi({ action, text: note.body })
@@ -2570,6 +2586,69 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   {t('dialog.backupReplaceConfirm')}
                 </button>
               </>
+            ) : layer.name === 'ocr-suggestion' && ocrSuggestion ? (
+              <>
+                <p>{t('mobile.ocrTitle')}</p>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  {['text', 'list', 'table'].map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() =>
+                        setOcrSuggestion((prev) =>
+                          prev ? { ...prev, text: formatOcrToMarkdown(prev.raw, mode) } : null,
+                        )
+                      }
+                    >
+                      {t(
+                        mode === 'text'
+                          ? 'mobile.ocrModeText'
+                          : mode === 'list'
+                            ? 'mobile.ocrModeList'
+                            : 'mobile.ocrModeTable',
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  rows={8}
+                  value={ocrSuggestion.text}
+                  onChange={(event) =>
+                    setOcrSuggestion((prev) =>
+                      prev ? { ...prev, text: event.target.value } : null,
+                    )
+                  }
+                  style={{ width: '100%', minHeight: 160 }}
+                />
+                <button
+                  onClick={() => {
+                    setOcrSuggestion(null)
+                    back()
+                  }}
+                >
+                  {t('mobile.aiDiscard')}
+                </button>
+                <button
+                  onClick={() => {
+                    const target = current.current.notes.find((n) => n.id === ocrSuggestion.noteId)
+                    const snippet = ocrSuggestion.text.trim()
+                    if (target && snippet && !blocked) {
+                      const sep = target.body.endsWith('\n') ? '\n' : '\n\n'
+                      commit(
+                        updateMobileNote(
+                          current.current,
+                          target.id,
+                          `${target.body}${sep}${snippet}\n`,
+                        ),
+                      )
+                    }
+                    setOcrSuggestion(null)
+                    back()
+                  }}
+                >
+                  {t('mobile.ocrInsert')}
+                </button>
+              </>
             ) : layer.name === 'ai-suggestion' && aiSuggestion ? (
               <>
                 <p>{t('mobile.aiSuggestionTitle')}</p>
@@ -2776,6 +2855,12 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                       {t('mobile.aiProofread')}
                     </button>
                   </>
+                )}
+                {isLocalOcrSupported() && (
+                  <button disabled={blocked} onClick={() => runOcrCapture(actionsNote)}>
+                    <ImageIcon size={20} aria-hidden="true" />
+                    {t('mobile.ocrCapture')}
+                  </button>
                 )}
                 {!actionsNote.external && (
                   <button

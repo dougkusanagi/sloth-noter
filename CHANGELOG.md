@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.56.0] — 2026-11-26
+
+Adicionado suporte à captura de texto por câmera com OCR local no Android (B17, [ADR 0048](docs/adr/0048-captura-camera-ocr-local.md)), convertendo o texto reconhecido em Markdown (texto, lista ou tabela) como sugestão editável antes de inserir na nota. Veja os [detalhes da versão](changelog/0.56.0.md).
+
 ## [0.55.0] — 2026-11-26
 
 Adicionado suporte opcional à IA no aparelho no Android (B7, [ADR 0047](docs/adr/0047-ia-no-aparelho-mobile.md)): desligada por padrão, oculta quando não há modelo local disponível, com ações de resumir e revisar exibidas como sugestão editável antes de alterar a nota. Veja os [detalhes da versão](changelog/0.55.0.md).

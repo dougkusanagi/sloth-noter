@@ -209,6 +209,20 @@ class MainActivity : TauriActivity() {
     }
 
     @JavascriptInterface
+    fun isLocalOcrSupported(): Boolean = false
+
+    @JavascriptInterface
+    fun captureTextOcr(requestId: Int): Boolean {
+      runOnUiThread {
+        webView?.evaluateJavascript(
+          "window.__slothOcrResult?.($requestId,'{\"ok\":false,\"error\":\"unavailable\"}')",
+          null,
+        )
+      }
+      return true
+    }
+
+    @JavascriptInterface
     fun requestNotesRole(): Boolean {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
       val roleManager = getSystemService(RoleManager::class.java) ?: return false

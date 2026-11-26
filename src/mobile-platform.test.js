@@ -31,6 +31,13 @@ import {
   getOnDeviceAiState,
   requestOnDeviceAi,
 } from './mobile/on-device-ai.js'
+import {
+  formatOcrAsList,
+  formatOcrAsTable,
+  formatOcrToMarkdown,
+  isLocalOcrSupported,
+  requestLocalOcr,
+} from './mobile/ocr-markdown.js'
 
 test('B1: runNoteTransition uses View Transitions API when available and motion is not reduced', () => {
   let ran = 0
@@ -475,4 +482,33 @@ test('on-device AI stays hidden without model and only edits after explicit acce
     suggestion: 'Pontos discutidos.',
   })
   assert.equal(proofread, '# Reunião\n\nPontos discutidos.\n')
+})
+
+test('local OCR formats recognized text as list or table and requires native support (B17)', async () => {
+  assert.equal(isLocalOcrSupported({}), false)
+  assert.equal(isLocalOcrSupported({ SlothSystem: { isLocalOcrSupported: () => true } }), true)
+
+  assert.equal(formatOcrAsList('1. Leite\n• Pão\nCafé'), '- Leite\n- Pão\n- Café')
+  assert.equal(
+    formatOcrAsTable('Item  Qtd\nPão  2\nLeite  1'),
+    '| Item | Qtd |\n| --- | --- |\n| Pão | 2 |\n| Leite | 1 |',
+  )
+  assert.equal(
+    formatOcrToMarkdown('Item\tQtd\nPão\t2', 'auto'),
+    '| Item | Qtd |\n| --- | --- |\n| Pão | 2 |',
+  )
+  assert.equal(formatOcrToMarkdown('• Item A\n• Item B', 'auto'), '- Item A\n- Item B')
+
+  const env = {
+    SlothSystem: {
+      captureTextOcr(id) {
+        queueMicrotask(() =>
+          env.__slothOcrResult?.(id, JSON.stringify({ ok: true, text: '• A\n• B' })),
+        )
+        return true
+      },
+    },
+  }
+  const res = await requestLocalOcr({ env })
+  assert.deepEqual(res, { ok: true, text: '• A\n• B', error: null })
 })
