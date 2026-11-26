@@ -447,3 +447,34 @@ test('Enter in a column starts a new paragraph and continues lists', async ({ pa
   await page.keyboard.type('Mais')
   expect(await noteSource(page)).toBe(`# Nota\n\n${layout(['- um\n- dois', 'Texto\n\nMais'])}`)
 })
+
+test('code blocks in side-by-side columns keep their copy buttons inside their own column', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await fillNote(
+    page,
+    `# Nota\n\n${layout(['```\nbloco esquerda\n```', '```\nbloco direita\n```'])}`,
+  )
+  const columns = page.locator('.cm-column-editor')
+  await expect(columns).toHaveCount(2)
+  const leftCopy = columns.nth(0).locator('.code-copy-layer .copy-code:not(.code-editor-wrap):not(.code-editor-fold)')
+  const rightCopy = columns.nth(1).locator('.code-copy-layer .copy-code:not(.code-editor-wrap):not(.code-editor-fold)')
+  await expect(leftCopy).toHaveCount(1)
+  await expect(rightCopy).toHaveCount(1)
+  await expect(leftCopy).toBeVisible()
+  await expect(rightCopy).toBeVisible()
+  // Parent editor must not render duplicate copy buttons for code blocks inside columns.
+  await expect(
+    page.locator('.visual-editor > .cm-editor > .code-copy-layer .copy-code:not(.code-editor-wrap):not(.code-editor-fold)'),
+  ).toHaveCount(0)
+
+  const leftColBox = await columns.nth(0).boundingBox()
+  const rightColBox = await columns.nth(1).boundingBox()
+  const leftBtnBox = await leftCopy.boundingBox()
+  const rightBtnBox = await rightCopy.boundingBox()
+  expect(leftBtnBox.x).toBeGreaterThanOrEqual(leftColBox.x)
+  expect(leftBtnBox.x + leftBtnBox.width).toBeLessThanOrEqual(leftColBox.x + leftColBox.width + 2)
+  expect(rightBtnBox.x).toBeGreaterThanOrEqual(rightColBox.x)
+  expect(rightBtnBox.x + rightBtnBox.width).toBeLessThanOrEqual(rightColBox.x + rightColBox.width + 2)
+})

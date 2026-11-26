@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.62.1] — 2026-11-26
+
+Corrigido o posicionamento dos botões de blocos de código dentro de múltiplas colunas no editor visual: cada coluna agora exibe seus próprios controles de forma compacta sem duplicar nem sobrepor botões na coluna vizinha. Veja os [detalhes da versão](changelog/0.62.1.md).
+
 ## [0.62.0] — 2026-11-26
 
 Adicionada a interface completa de transferência por QR Code (geração no desktop/celular e leitura por câmera nativa no Android), integrados OCR local real (ML Kit Text Recognition) e IA no aparelho (ML Kit GenAI) no Android, e ocultada a largura do campo de texto em celulares compactos (exibindo 2 opções apenas em tablets ≥ 600 dp). Veja os [detalhes da versão](changelog/0.62.0.md).

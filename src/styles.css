@@ -791,8 +791,8 @@ textarea:focus-visible {
 }
 .cm-columns-controls {
   position: absolute;
-  z-index: 5;
-  top: -30px;
+  z-index: 6;
+  top: -34px;
   right: 0;
   display: flex;
   gap: 2px;
@@ -857,6 +857,17 @@ textarea:focus-visible {
 .visual-editor .cm-column-editor .cm-content {
   min-height: 28px;
   padding: 0;
+}
+/* Inside columns, keep code block controls compact and reserve top room so they never
+   overlap the first line of code or spill into a neighboring column. */
+.cm-column-editor .code-copy-layer .copy-code span {
+  display: none;
+}
+.cm-column-editor .cm-md-fence-start {
+  min-height: 36px;
+}
+.cm-column-editor .cm-code-copy-anchor {
+  padding-right: 96px;
 }
 .visual-editor[data-wrap-page='false'] .cm-column-editor .cm-content {
   white-space: pre;
