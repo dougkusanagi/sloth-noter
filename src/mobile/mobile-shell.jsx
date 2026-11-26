@@ -129,6 +129,7 @@ import { TaskBoard } from '../components/task-board.jsx'
 import { FormattingBar } from './formatting-bar.jsx'
 import { flushOnHide } from './lifecycle.js'
 import { saveTextFile } from './file-save.js'
+import { ingestPendingNotes } from './pending-notes.js'
 import './mobile.css'
 
 const destinations = [
@@ -608,8 +609,60 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     if (!body || body.length > 1_000_000) return
     receiveSharedText(body)
   }
+  const pendingBusy = useRef(false)
+  const [notesRoleState, setNotesRoleState] = useState(
+    () => window.SlothSystem?.getNotesRoleState?.() || 'unavailable',
+  )
+  useEffect(() => {
+    const refresh = (next) => {
+      if (typeof next === 'string') setNotesRoleState(next || 'unavailable')
+      else setNotesRoleState(window.SlothSystem?.getNotesRoleState?.() || 'unavailable')
+    }
+    window.__slothNotesRoleChanged = refresh
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      if (window.__slothNotesRoleChanged === refresh) delete window.__slothNotesRoleChanged
+    }
+  }, [])
+  async function receivePendingNotes(raw) {
+    if (!raw || blocked || pendingBusy.current) return
+    const {
+      document: nextDoc,
+      createdIds,
+      ackIds,
+      skippedTooLarge,
+      lastCreatedId,
+    } = ingestPendingNotes(current.current, raw, { fallbackTitle: t('mobile.quickNoteTitle') })
+    if (createdIds.length === 0) {
+      if (ackIds.length > 0) window.SlothSystem?.ackPendingNotes?.(JSON.stringify(ackIds))
+      if (skippedTooLarge) toast.error(t('mobile.sharedTooLarge'))
+      return
+    }
+    pendingBusy.current = true
+    try {
+      commit(nextDoc)
+      if (lastCreatedId) openNote(lastCreatedId, false)
+      const failure = await writer.current.whenIdle()
+      if (!failure) {
+        if (ackIds.length > 0) window.SlothSystem?.ackPendingNotes?.(JSON.stringify(ackIds))
+        toast.success(t('mobile.quickNoteImported', { count: createdIds.length }))
+        if (skippedTooLarge) toast.error(t('mobile.sharedTooLarge'))
+      }
+    } finally {
+      pendingBusy.current = false
+    }
+  }
   useNativeActions(
-    { newNote: () => createNote(), sharedText: receiveSharedText, openedFile: receiveOpenedFile },
+    {
+      newNote: () => createNote(),
+      sharedText: receiveSharedText,
+      openedFile: receiveOpenedFile,
+      pendingNotes: receivePendingNotes,
+    },
     !blocked,
   )
   function updateBody(body) {
@@ -1513,42 +1566,42 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 }}
               >
                 <VisualEditor
-                wrapLines={prefs.wrapLines !== false}
-                wrapPage={pageWrap}
-                key={active.id}
-                noteId={active.id}
-                starters
-                onTemplateMode={(mode) => {
-                  if (mode !== 'board') return
-                  // The task template marks the note as a task note (ADR 0033).
-                  const note = current.current.notes.find((item) => item.id === active.id)
-                  const next = note && makeTaskNote(note.body, { language: currentLanguage() })
-                  if (next && next !== note.body) updateBody(next)
-                  setBoardView(active.id, true)
-                }}
-                sourceMode={sourceMode}
-                outline={false}
-                notes={data.notes}
-                body={active.body}
-                onChange={updateBody}
-                onOpenWiki={openWiki}
-                onCopy={copy}
-                imageBusy={imageBusy}
-                onImageFiles={addMobileImages}
-                onImageUrl={(url, point) =>
-                  insertImageMarkdown(markdownImage(t('block.image'), url), point, active.id)
-                }
-                onSelectionChange={(selection) =>
-                  dispatch({ type: 'position', position: { cursor: selection.head } })
-                }
-                onReady={(view) => {
-                  editor.current = view
-                  if (view) {
-                    const cursor = Math.min(view.state.doc.length, Math.max(2, route.cursor ?? 2))
-                    view.dispatch({ selection: { anchor: cursor }, scrollIntoView: true })
-                    view.focus()
+                  wrapLines={prefs.wrapLines !== false}
+                  wrapPage={pageWrap}
+                  key={active.id}
+                  noteId={active.id}
+                  starters
+                  onTemplateMode={(mode) => {
+                    if (mode !== 'board') return
+                    // The task template marks the note as a task note (ADR 0033).
+                    const note = current.current.notes.find((item) => item.id === active.id)
+                    const next = note && makeTaskNote(note.body, { language: currentLanguage() })
+                    if (next && next !== note.body) updateBody(next)
+                    setBoardView(active.id, true)
+                  }}
+                  sourceMode={sourceMode}
+                  outline={false}
+                  notes={data.notes}
+                  body={active.body}
+                  onChange={updateBody}
+                  onOpenWiki={openWiki}
+                  onCopy={copy}
+                  imageBusy={imageBusy}
+                  onImageFiles={addMobileImages}
+                  onImageUrl={(url, point) =>
+                    insertImageMarkdown(markdownImage(t('block.image'), url), point, active.id)
                   }
-                }}
+                  onSelectionChange={(selection) =>
+                    dispatch({ type: 'position', position: { cursor: selection.head } })
+                  }
+                  onReady={(view) => {
+                    editor.current = view
+                    if (view) {
+                      const cursor = Math.min(view.state.doc.length, Math.max(2, route.cursor ?? 2))
+                      view.dispatch({ selection: { anchor: cursor }, scrollIntoView: true })
+                      view.focus()
+                    }
+                  }}
                 />
               </div>
             ) : boardView ? (
@@ -1889,6 +1942,31 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 }}
               />
             </div>
+            {(notesRoleState === 'available' || notesRoleState === 'held') && (
+              <>
+                <h2>{t('mobile.systemSection')}</h2>
+                <p className="settings-note">{t('mobile.notesRoleHint')}</p>
+                <div className="settings-card">
+                  {notesRoleState === 'held' ? (
+                    <div className="settings-row settings-status" role="status">
+                      <Check size={20} aria-hidden="true" />
+                      {t('mobile.notesRoleActive')}
+                    </div>
+                  ) : (
+                    <button
+                      className="settings-row settings-action"
+                      onClick={() => {
+                        if (!window.SlothSystem?.requestNotesRole?.())
+                          toast.error(t('mobile.notesRoleFailed'))
+                      }}
+                    >
+                      <NotebookPen size={20} aria-hidden="true" />
+                      {t('mobile.notesRoleSet')}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
             <h2>{t('settings.about')}</h2>
             <div className="settings-card">
               <button

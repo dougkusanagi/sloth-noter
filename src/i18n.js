@@ -164,6 +164,16 @@ const messages = {
     'mobile.confirmPurge': 'Confirmar exclusão',
     'mobile.copyFailed': 'Não foi possível copiar. Selecione o texto e tente de novo.',
     'mobile.missingNote': 'A nota “{name}” não foi encontrada.',
+    'mobile.quickNoteTitle': 'Nota rápida',
+    'mobile.quickNoteImported.one': 'Nota rápida importada',
+    'mobile.quickNoteImported.other': '{count} notas rápidas importadas',
+    'mobile.systemSection': 'Sistema',
+    'mobile.notesRoleTitle': 'App de notas padrão',
+    'mobile.notesRoleHint':
+      'Permite criar uma nota nova pela caneta ou pela tela de bloqueio sem exibir suas outras notas.',
+    'mobile.notesRoleSet': 'Definir como app de notas padrão',
+    'mobile.notesRoleActive': 'Ativo como app de notas padrão',
+    'mobile.notesRoleFailed': 'Não foi possível abrir a escolha do app de notas.',
 
     'wiki.open': 'Abrir {name}',
     'wiki.create': 'A nota “{name}” não existe. Criar agora?',
@@ -1283,6 +1293,16 @@ const messages = {
     'mobile.confirmPurge': 'Confirm deletion',
     'mobile.copyFailed': 'Could not copy. Select the text and try again.',
     'mobile.missingNote': 'The note “{name}” was not found.',
+    'mobile.quickNoteTitle': 'Quick note',
+    'mobile.quickNoteImported.one': 'Quick note imported',
+    'mobile.quickNoteImported.other': '{count} quick notes imported',
+    'mobile.systemSection': 'System',
+    'mobile.notesRoleTitle': 'Default notes app',
+    'mobile.notesRoleHint':
+      'Lets you create a new note from a stylus or the lock screen without showing your other notes.',
+    'mobile.notesRoleSet': 'Set as default notes app',
+    'mobile.notesRoleActive': 'Active as default notes app',
+    'mobile.notesRoleFailed': 'Could not open the default notes app chooser.',
 
     'wiki.open': 'Open {name}',
     'wiki.create': 'The note “{name}” does not exist. Create it?',

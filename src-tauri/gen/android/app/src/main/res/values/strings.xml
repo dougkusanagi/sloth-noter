@@ -2,4 +2,15 @@
     <string name="app_name">"Sloth Note"</string>
     <string name="main_activity_title">"Sloth Note"</string>
     <string name="shortcut_new_note">Nova nota</string>
+    <string name="quick_note_label">Nova nota rápida</string>
+    <string name="quick_note_locked_notice">Tela bloqueada — suas outras notas ficam protegidas.</string>
+    <string name="quick_note_title_hint">Título (opcional)</string>
+    <string name="quick_note_body_hint">Escreva sua nota…</string>
+    <string name="quick_note_save">Salvar</string>
+    <string name="quick_note_discard">Descartar</string>
+    <string name="quick_note_unlock_open">Desbloquear e abrir</string>
+    <string name="quick_note_saved_toast">Nota salva. Disponível ao desbloquear.</string>
+    <string name="quick_note_empty_toast">Nada para salvar.</string>
+    <string name="quick_note_too_large_toast">Texto grande demais para salvar.</string>
+    <string name="quick_note_save_failed_toast">Não foi possível salvar a nota.</string>
 </resources>

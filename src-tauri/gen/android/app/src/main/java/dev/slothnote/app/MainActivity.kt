@@ -1,7 +1,9 @@
 package dev.slothnote.app
 
+import android.app.role.RoleManager
 import android.content.ClipData
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.view.View
@@ -51,6 +53,18 @@ class MainActivity : TauriActivity() {
         }.start()
       }
     }
+  }
+
+  private val requestNotesRoleLauncher =
+    registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+      webView?.evaluateJavascript("window.__slothNotesRoleChanged?.('${notesRoleState()}')", null)
+    }
+
+  private fun notesRoleState(): String {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return "unavailable"
+    val roleManager = getSystemService(RoleManager::class.java) ?: return "unavailable"
+    if (!roleManager.isRoleAvailable(RoleManager.ROLE_NOTES)) return "unavailable"
+    return if (roleManager.isRoleHeld(RoleManager.ROLE_NOTES)) "held" else "available"
   }
 
   private fun reportFileResult(id: Int, status: String) {
@@ -138,6 +152,48 @@ class MainActivity : TauriActivity() {
         }
       }
     }
+
+    @JavascriptInterface
+    fun takePendingNotes(): String = PendingNotesStore.listJson(applicationContext)
+
+    @JavascriptInterface
+    fun ackPendingNotes(idsJson: String?): Boolean =
+      PendingNotesStore.ackJson(applicationContext, idsJson)
+
+    @JavascriptInterface
+    fun getNotesRoleState(): String = notesRoleState()
+
+    @JavascriptInterface
+    fun requestNotesRole(): Boolean {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
+      val roleManager = getSystemService(RoleManager::class.java) ?: return false
+      if (!roleManager.isRoleAvailable(RoleManager.ROLE_NOTES)) return false
+      if (roleManager.isRoleHeld(RoleManager.ROLE_NOTES)) {
+        runOnUiThread {
+          webView?.evaluateJavascript("window.__slothNotesRoleChanged?.('held')", null)
+        }
+        return true
+      }
+      val intent = try {
+        roleManager.createRequestRoleIntent(RoleManager.ROLE_NOTES)
+      } catch (_: Exception) {
+        return false
+      }
+      runOnUiThread {
+        try {
+          requestNotesRoleLauncher.launch(intent)
+        } catch (_: Exception) {
+          webView?.evaluateJavascript("window.__slothNotesRoleChanged?.('${notesRoleState()}')", null)
+        }
+      }
+      return true
+    }
+  }
+
+  override fun onResume() {
+    super.onResume()
+    webView?.evaluateJavascript("window.__nativeAction?.()", null)
+    webView?.evaluateJavascript("window.__slothNotesRoleChanged?.('${notesRoleState()}')", null)
   }
 
   override fun onNewIntent(intent: Intent) {

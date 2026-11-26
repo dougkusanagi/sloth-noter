@@ -12,6 +12,13 @@ import {
   classifyBoardColumnSwipe,
 } from './mobile/board-gestures.js'
 import { initialNavigation, navigate } from './mobile/nav-stack.js'
+import {
+  PENDING_NOTE_LIMIT,
+  formatPendingNoteBody,
+  ingestPendingNotes,
+  parsePendingNotes,
+} from './mobile/pending-notes.js'
+import { newDocument, validateDocument } from './storage.js'
 
 test('B1: runNoteTransition uses View Transitions API when available and motion is not reduced', () => {
   let ran = 0
@@ -188,10 +195,7 @@ test('B10: structureSwipeEdit indents/outdents list items and converts paragraph
 
   assert.equal(classifyEditorSwipe({ startX: 100, startY: 200, endX: 180, endY: 205 }), 'right')
   assert.equal(classifyEditorSwipe({ startX: 180, startY: 200, endX: 100, endY: 205 }), 'left')
-  assert.equal(
-    classifyEditorSwipe({ startX: 10, startY: 200, endX: 100, endY: 200 }),
-    null,
-  )
+  assert.equal(classifyEditorSwipe({ startX: 10, startY: 200, endX: 100, endY: 200 }), null)
   assert.equal(
     classifyEditorSwipe({ startX: 100, startY: 200, endX: 180, endY: 200, hasSelection: true }),
     null,
@@ -236,4 +240,97 @@ test('B15: board gestures move cards and switch columns safely away from edges',
   assert.equal(adjacentColumnIndex(3, 0, 1), 1)
   assert.equal(adjacentColumnIndex(3, 0, -1), -1)
   assert.equal(adjacentColumnIndex(3, 2, 1), -1)
+})
+
+test('B4: parsePendingNotes, formatPendingNoteBody, and ingestPendingNotes handle pending lock-screen notes idempotently', () => {
+  assert.deepEqual(parsePendingNotes(''), [])
+  assert.deepEqual(parsePendingNotes('{invalid'), [])
+  assert.deepEqual(parsePendingNotes([{ id: '', body: 'x' }, null, { id: 'q1', body: 'ok' }]), [
+    { id: 'q1', title: '', body: 'ok', createdAt: null },
+  ])
+
+  assert.equal(formatPendingNoteBody({ title: '  ', body: '\n' }), null)
+  assert.deepEqual(
+    formatPendingNoteBody({
+      title: '## Ideia\nRápida',
+      body: 'Primeiro ponto',
+      fallbackTitle: 'Nota rápida',
+    }),
+    { body: '# Ideia Rápida\n\nPrimeiro ponto' },
+  )
+  assert.deepEqual(
+    formatPendingNoteBody({
+      title: '',
+      body: '# Título próprio\n\nTexto',
+      fallbackTitle: 'Nota rápida',
+    }),
+    { body: '# Título próprio\n\nTexto' },
+  )
+  assert.deepEqual(
+    formatPendingNoteBody({ title: '', body: 'Anotação solta', fallbackTitle: 'Nota rápida' }),
+    { body: '# Nota rápida\n\nAnotação solta' },
+  )
+  assert.deepEqual(formatPendingNoteBody({ title: '', body: 'a'.repeat(PENDING_NOTE_LIMIT + 1) }), {
+    tooLarge: true,
+  })
+
+  const base = {
+    ...newDocument(),
+    notes: [
+      { id: 'existing-active', name: 'Ativa.md', body: '# Ativa', revision: 0, modifiedAt: 10 },
+    ],
+    trash: [
+      {
+        note: {
+          id: 'existing-trash',
+          name: 'Apagada.md',
+          body: '# Apagada',
+          revision: 0,
+          modifiedAt: 10,
+        },
+        index: 0,
+        deletedAt: 20,
+      },
+    ],
+    openIds: ['existing-active'],
+    activeId: 'existing-active',
+  }
+
+  const payload = JSON.stringify([
+    { id: 'q-title', title: 'Lista', body: '- [ ] Leite', createdAt: 1700000001000 },
+    { id: 'q-body', title: '', body: 'Ligar para Ana', createdAt: 1700000002000 },
+    { id: 'q-empty', title: '  ', body: '' },
+    { id: 'q-huge', title: '', body: 'x'.repeat(PENDING_NOTE_LIMIT + 1) },
+    { id: 'existing-active', title: 'Duplicada', body: 'Ignorar' },
+    { id: 'existing-trash', title: 'Na lixeira', body: 'Ignorar' },
+  ])
+
+  const first = ingestPendingNotes(base, payload, {
+    fallbackTitle: 'Nota rápida',
+    now: 1700000000000,
+  })
+  assert.deepEqual(first.createdIds, ['q-title', 'q-body'])
+  assert.deepEqual(first.ackIds, [
+    'q-title',
+    'q-body',
+    'q-empty',
+    'q-huge',
+    'existing-active',
+    'existing-trash',
+  ])
+  assert.equal(first.skippedTooLarge, true)
+  assert.equal(first.lastCreatedId, 'q-body')
+  assert.equal(first.document.notes.length, 3)
+  const importedTitle = first.document.notes.find((note) => note.id === 'q-title')
+  const importedBody = first.document.notes.find((note) => note.id === 'q-body')
+  assert.equal(importedTitle.body, '# Lista\n\n- [ ] Leite')
+  assert.equal(importedTitle.createdAt, 1700000001000)
+  assert.equal(importedTitle.modifiedAt, 1700000001000)
+  assert.equal(importedBody.body, '# Nota rápida\n\nLigar para Ana')
+  validateDocument(first.document)
+
+  // Re-running with the same payload before ack must not duplicate notes.
+  const second = ingestPendingNotes(first.document, payload, { fallbackTitle: 'Nota rápida' })
+  assert.deepEqual(second.createdIds, [])
+  assert.equal(second.document.notes.length, 3)
 })

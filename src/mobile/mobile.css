@@ -704,6 +704,14 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
 [data-platform='mobile'] .settings-action:active {
   background: var(--well-bg);
 }
+[data-platform='mobile'] .settings-status {
+  justify-content: flex-start;
+  gap: 12px;
+}
+[data-platform='mobile'] .settings-status svg {
+  flex-shrink: 0;
+  color: var(--ok);
+}
 [data-platform='mobile'] .settings-row .switch {
   flex-shrink: 0;
 }
@@ -1677,12 +1685,26 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   box-shadow: 0 4px 14px rgb(0 0 0 / 0.22);
   pointer-events: none;
 }
-[data-platform='mobile'] .mobile-reading-wrap[data-reading-zoom='headings'] .markdown > :not(h1, h2, h3, h4, h5, h6, section),
-[data-platform='mobile'] .mobile-reading-wrap[data-reading-zoom='headings'] .markdown section > :not(h1, h2, h3, h4, h5, h6, section) {
+[data-platform='mobile']
+  .mobile-reading-wrap[data-reading-zoom='headings']
+  .markdown
+  > :not(h1, h2, h3, h4, h5, h6, section),
+[data-platform='mobile']
+  .mobile-reading-wrap[data-reading-zoom='headings']
+  .markdown
+  section
+  > :not(h1, h2, h3, h4, h5, h6, section) {
   display: none;
 }
-[data-platform='mobile'] .mobile-reading-wrap[data-reading-zoom='outline'] .markdown > :not(h1, h2, h3, h4, h5, h6, section, p:first-of-type),
-[data-platform='mobile'] .mobile-reading-wrap[data-reading-zoom='outline'] .markdown section > :not(h1, h2, h3, h4, h5, h6, section, p:first-of-type) {
+[data-platform='mobile']
+  .mobile-reading-wrap[data-reading-zoom='outline']
+  .markdown
+  > :not(h1, h2, h3, h4, h5, h6, section, p:first-of-type),
+[data-platform='mobile']
+  .mobile-reading-wrap[data-reading-zoom='outline']
+  .markdown
+  section
+  > :not(h1, h2, h3, h4, h5, h6, section, p:first-of-type) {
   display: none;
 }
 [data-platform='mobile'] .mobile-reading-wrap[data-reading-zoom='outline'] .markdown p {

@@ -310,6 +310,11 @@ Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e deta
 - [x] **B14 — Trackpad estrutural** (0.49.0): controle dedicado na barra de formatação (`touch-action: none`) desliza o cursor bloco a bloco Markdown sem conflitar com a rolagem da barra (`src/mobile/structural-trackpad.js`, `src/mobile/formatting-bar.jsx`, `src/mobile-platform.test.js`).
 - [x] **B3 — Bloco nas Configurações rápidas** (0.49.0): `NewNoteTileService` (`TileService`) registrado no `AndroidManifest.xml`, reutilizando `dev.slothnote.app.NEW_NOTE` com app aberto ou fechado.
 - [x] **B15 — Quadro com gestos** (0.50.0): no modo compacto do Quadro, deslizar a área da coluna troca de coluna como carrossel e deslizar um cartão move a tarefa para a coluna seguinte/anterior com vibração, usando o mesmo `moveCardToColumn` do menu (`src/mobile/board-gestures.js`, `src/components/task-board.jsx`, `src/mobile-platform.test.js`).
+- [x] **B4 — App de notas do sistema (`ROLE_NOTES`)** (0.51.0): [ADR 0045](../adr/0045-app-de-notas-do-sistema-role-notes.md); `QuickNoteActivity` isolada para `ACTION_CREATE_NOTE` na tela de bloqueio com compositor nativo em branco sem leitura de notas existentes e fila privada `PendingNotesStore` ingerida de forma idempotente após confirmar gravação (`src/mobile/pending-notes.js`, `src/mobile/use-native-actions.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`, `e2e/mobile/notes-role.spec.js`), além de seção **Sistema** em Configurações no Android 14+ para pedir `RoleManager.ROLE_NOTES`.
+- [ ] **B5 — Widget de lista fixada** (exige ADR).
+- [ ] **B6 — Caneta** (escrita à mão no editor onde o WebView suportar).
+- [ ] **B7 — IA no aparelho (opcional)** (Gemini Nano / ML Kit GenAI, exige ADR).
+- [ ] **B17 — Captura por câmera com OCR local** (exige ADR).
 
 ## Depois deste plano — Parte C: ideias para as duas plataformas
 
@@ -348,6 +353,10 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 - A3: envio de notas e histórico ao sair com morte real do processo e gravação nativa lenta; falha
   de gravação e de histórico no WebView com as ações de backup; dados corrompidos baixados e
   substituídos no aparelho; retomada do editor após composição real do teclado.
+- B4 (`ROLE_NOTES`): definir o Sloth Note como app de notas padrão em Configurações → Sistema no
+  Android 14+, acionar `ACTION_CREATE_NOTE` com a tela bloqueada e desbloqueada, verificar
+  `QuickNoteActivity` isolada (sem exibir notas existentes), escrita por caneta e importação ao
+  desbloquear.
 
 ## Evidências registradas
 
@@ -413,15 +422,14 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-Iniciar **A7 — Grupos e ordenação da lista** (prioridade 3 da [fila central](prioridades.md)):
-mostrar os grupos do desktop recolhíveis, ordenação recentes/alfabética e mover nota de grupo pela
-folha de ações, reutilizando o modelo de grupos de `note-list.jsx` sem mudar o desktop.
+Concluída **B4 — App de notas do sistema (`ROLE_NOTES`)** (0.51.0, [ADR 0045](../adr/0045-app-de-notas-do-sistema-role-notes.md)).
+Próximo item da Parte B (Prioridade 6 da [fila central](prioridades.md)): **B5 — Widget de lista fixada** (definir ADR próprio para leitura/escrita sincronizada das tarefas entre widget nativo e fila do app) ou **B6 — Caneta** (escrita à mão no WebView).
 
 Pendente no aparelho (de entregas anteriores): validar S4 nativo (conta única desktop Tauri ↔ APK
-real, conflito, lixeira/restauração e imagem) e validar no APK Inserir, seletor de imagem,
-clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,
-aviso de gravação pendente, envio ao sair com morte do processo e recuperação de dados
-corrompidos. A matriz nativa permanece aberta.
+real, conflito, lixeira/restauração e imagem), validar B4 na tela de bloqueio/caneta real e validar
+no APK Inserir, seletor de imagem, clipboard, linguagem, IME real, teclado físico, lixeira,
+configurações, voltar preditivo, aviso de gravação pendente, envio ao sair com morte do processo e
+recuperação de dados corrompidos. A matriz nativa permanece aberta.
 
 ## Histórico de execução
 
