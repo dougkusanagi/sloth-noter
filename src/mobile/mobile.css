@@ -1990,6 +1990,99 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   border: 1px solid var(--line);
 }
 
+/* Note actions sheet: quick actions first, then labelled groups. */
+[data-platform='mobile'] .mobile-note-menu {
+  display: grid;
+  gap: 14px;
+  padding-top: 8px;
+}
+[data-platform='mobile'] .mobile-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+[data-platform='mobile'] .mobile-quick-actions button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 68px;
+  padding: 8px 4px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  background: var(--well-bg);
+  color: var(--ink);
+  font: 500 0.75rem/1.2 var(--ui);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+[data-platform='mobile'] .mobile-quick-actions button:disabled,
+[data-platform='mobile'] .mobile-menu-group button:disabled {
+  opacity: 0.45;
+}
+[data-platform='mobile'] .mobile-menu-group {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  background: var(--well-bg);
+}
+[data-platform='mobile'] .mobile-menu-group h3 {
+  margin: 0;
+  padding: 10px 16px 4px;
+  color: var(--muted);
+  font: 600 0.72rem var(--ui);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+[data-platform='mobile'] .mobile-menu-group > button,
+[data-platform='mobile'] .mobile-menu-pair > button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+[data-platform='mobile'] .mobile-menu-group h3 + button,
+[data-platform='mobile'] .mobile-menu-group h3 + .mobile-menu-pair > button {
+  border-top: 0;
+}
+[data-platform='mobile'] .mobile-menu-group > button > svg,
+[data-platform='mobile'] .mobile-menu-pair > button > svg {
+  color: var(--muted);
+}
+[data-platform='mobile'] .mobile-menu-group > button[aria-pressed='true'] > svg {
+  color: var(--accent-ink);
+}
+[data-platform='mobile'] .mobile-menu-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+}
+[data-platform='mobile'] .mobile-menu-pair > button + button {
+  border-left: 1px solid var(--line);
+}
+[data-platform='mobile'] .mobile-menu-group .mobile-export-hint {
+  margin: 0;
+  padding: 4px 16px 12px;
+}
+[data-platform='mobile'] .mobile-menu-danger > button.danger {
+  border-top: 0;
+  color: var(--danger);
+}
+[data-platform='mobile'] .mobile-menu-danger > button.danger > svg {
+  color: var(--danger);
+}
+
 /* Tasks screen: headings with the same progress pill the note shows. */
 [data-platform='mobile'] .task-section-title {
   min-height: 36px;
