@@ -51,6 +51,12 @@ Os planos específicos guardam escopo e critérios; as ideias deste roteiro não
 - **Decisão:** os artefatos não serão assinados (fora de escopo, sem previsão de mudar).
 - Rodada de uso real: edição longa, IME, zoom 200%, teclado, leitor de tela, nomes Unicode, pasta grande.
 
+### Espaços compartilhados
+
+- Notas compartilhadas entre contas, com níveis Dono, Editor e Leitor, sobre a sincronização
+  existente e sem colaboração em tempo real. Escopo e dúvidas em
+  [espaços compartilhados](plans/espacos-compartilhados.md); ainda fora da fila de prioridades.
+
 ### Rumo ao "Notepad com Markdown"
 
 Ideias avaliadas contra o contrato acima, para avaliação após as prioridades ativas:

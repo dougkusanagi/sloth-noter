@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.65.1] — 2026-11-26
+
+Registrado no roteiro o plano de espaços compartilhados entre contas; o recurso ainda não está disponível. Veja os [detalhes da versão](changelog/0.65.1.md).
+
 ## [0.65.0] — 2026-11-26
 
 Adicionado no celular o modo **Reordenar blocos**, para mudar a ordem de parágrafos, títulos e tarefas arrastando ou usando setas. Veja os [detalhes da versão](changelog/0.65.0.md).
