@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.59.0] — 2026-11-26
+
+Adicionado suporte portável em Markdown a recorrência (`🔁`), histórico de conclusões (`✅`) e lembretes locais (`⏰`) em tarefas (C4, [ADR 0051](docs/adr/0051-recorrencia-e-lembretes-em-tarefas.md)). Veja os [detalhes da versão](changelog/0.59.0.md).
+
 ## [0.58.0] — 2026-11-26
 
 Adicionada a compactação configurável de imagens em WebP (C6, [ADR 0050](docs/adr/0050-compactacao-imagens-webp.md)) com perfis Original, Equilibrada e Pequena, preservação de GIF/SVG e remoção de EXIF. Veja os [detalhes da versão](changelog/0.58.0.md).
