@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.65.2] — 2026-11-26
+
+Redesenho do menu principal no celular seguindo o visual de cards das Configurações e correção da sobreposição entre as opções de modelo e a barra de ações com o teclado aberto. Veja os [detalhes da versão](changelog/0.65.2.md).
+
 ## [0.65.1] — 2026-11-26
 
 Registrado no roteiro o plano de espaços compartilhados entre contas; o recurso ainda não está disponível. Veja os [detalhes da versão](changelog/0.65.1.md).

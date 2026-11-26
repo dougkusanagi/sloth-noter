@@ -174,7 +174,8 @@ function ThemeControl({ theme, onChange }) {
           title={t(`theme.${value}`)}
           onClick={() => onChange({ theme: value })}
         >
-          <Icon size={18} aria-hidden="true" />
+          <Icon size={17} aria-hidden="true" />
+          <span>{t(`theme.${value}`)}</span>
         </button>
       ))}
     </div>
@@ -3288,39 +3289,115 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 )
               })()
             ) : (
-              <>
-                <ThemeControl theme={prefs.theme} onChange={updatePrefs} />
-                <button onClick={() => noteInput.current?.click()}>
-                  <FileInput size={20} />
-                  {t('menu.import')}
-                </button>
-                <button
-                  disabled={blocked}
-                  onClick={() => {
-                    back()
-                    scanQrNote()
-                  }}
-                >
-                  <QrCode size={20} aria-hidden="true" />
-                  {t('qr.scan')}
-                </button>
-                <button onClick={() => dispatch({ type: 'push', route: { name: 'trash' } })}>
-                  <Trash2 size={20} />
-                  {t('trash.title')}
-                </button>
-                <button
-                  onClick={() => {
-                    dispatch({ type: 'push', route: { name: 'settings' } })
-                  }}
-                >
-                  <Settings size={20} />
-                  {t('menu.settings')}
-                </button>
-                <button onClick={() => dispatch({ type: 'push', route: { name: 'changelog' } })}>
-                  <NotebookPen size={20} />
-                  {t('settings.changelog')}
-                </button>
-              </>
+              <div className="mobile-drawer-body">
+                <div className="settings-card">
+                  <div className="settings-row stacked mobile-drawer-theme-row">
+                    <span className="mobile-drawer-label">{t('settings.theme')}</span>
+                    <ThemeControl theme={prefs.theme} onChange={updatePrefs} />
+                  </div>
+                </div>
+                <div className="settings-card">
+                  <button
+                    type="button"
+                    className="settings-row settings-submenu"
+                    aria-label={t('menu.import')}
+                    onClick={() => noteInput.current?.click()}
+                  >
+                    <FileInput size={20} className="settings-submenu-icon" aria-hidden="true" />
+                    <span className="settings-submenu-text">
+                      <span className="settings-row-title">{t('menu.import')}</span>
+                      <small>{t('mobile.drawerSub.import')}</small>
+                    </span>
+                    <ChevronRight
+                      size={18}
+                      className="settings-submenu-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    className="settings-row settings-submenu"
+                    aria-label={t('qr.scan')}
+                    disabled={blocked}
+                    onClick={() => {
+                      back()
+                      scanQrNote()
+                    }}
+                  >
+                    <QrCode size={20} className="settings-submenu-icon" aria-hidden="true" />
+                    <span className="settings-submenu-text">
+                      <span className="settings-row-title">{t('qr.scan')}</span>
+                      <small>{t('mobile.drawerSub.qr')}</small>
+                    </span>
+                    <ChevronRight
+                      size={18}
+                      className="settings-submenu-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
+                <div className="settings-card">
+                  <button
+                    type="button"
+                    className="settings-row settings-submenu"
+                    aria-label={t('trash.title')}
+                    onClick={() => dispatch({ type: 'push', route: { name: 'trash' } })}
+                  >
+                    <Trash2 size={20} className="settings-submenu-icon" aria-hidden="true" />
+                    <span className="settings-submenu-text">
+                      <span className="settings-row-title">{t('trash.title')}</span>
+                      <small>
+                        {data.trash.length === 0
+                          ? t('mobile.drawerSub.trashEmpty')
+                          : data.trash.length === 1
+                            ? t('mobile.drawerSub.trashCount.one')
+                            : t('mobile.drawerSub.trashCount.other', { count: data.trash.length })}
+                      </small>
+                    </span>
+                    <ChevronRight
+                      size={18}
+                      className="settings-submenu-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    className="settings-row settings-submenu"
+                    aria-label={t('menu.settings')}
+                    onClick={() => {
+                      dispatch({ type: 'push', route: { name: 'settings' } })
+                    }}
+                  >
+                    <Settings size={20} className="settings-submenu-icon" aria-hidden="true" />
+                    <span className="settings-submenu-text">
+                      <span className="settings-row-title">{t('menu.settings')}</span>
+                      <small>{t('mobile.drawerSub.settings')}</small>
+                    </span>
+                    <ChevronRight
+                      size={18}
+                      className="settings-submenu-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    className="settings-row settings-submenu"
+                    aria-label={t('settings.changelog')}
+                    onClick={() => dispatch({ type: 'push', route: { name: 'changelog' } })}
+                  >
+                    <NotebookPen size={20} className="settings-submenu-icon" aria-hidden="true" />
+                    <span className="settings-submenu-text">
+                      <span className="settings-row-title">{t('settings.changelog')}</span>
+                      <small>{t('mobile.drawerSub.changelog')}</small>
+                    </span>
+                    <ChevronRight
+                      size={18}
+                      className="settings-submenu-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
+              </div>
             )}
           </section>
         </div>
