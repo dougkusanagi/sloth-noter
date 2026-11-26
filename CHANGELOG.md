@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.62.2] — 2026-11-26
+
+Alinhada ao topo a alça lateral esquerda de tabelas e blocos de colunas (seguindo o padrão dos demais blocos) e corrigida a exibição da alça lateral ao passar o mouse sobre a área da coluna. Veja os [detalhes da versão](changelog/0.62.2.md).
+
 ## [0.62.1] — 2026-11-26
 
 Corrigido o posicionamento dos botões de blocos de código dentro de múltiplas colunas no editor visual: cada coluna agora exibe seus próprios controles de forma compacta sem duplicar nem sobrepor botões na coluna vizinha. Veja os [detalhes da versão](changelog/0.62.1.md).

@@ -328,10 +328,9 @@ export const blockHandle = ViewPlugin.fromClass(
     track(event) {
       if (this.dragging || this.menuOpen || this.view.state.readOnly) return
       if (this.handle.contains(event.target)) return clearTimeout(this.hideTimer)
-      // Tables have their own handle, and each column has its own handles for its blocks.
-      const column = event.target.closest?.('.cm-column-editor')
-      if (event.target.closest?.('.cm-md-table-row') || (column && !column.contains(this.view.dom)))
-        return this.hide()
+      // Tables have their own handle. Hovering inside a column still shows the parent
+      // columns block handle on the outer left gutter.
+      if (event.target.closest?.('.cm-md-table-row')) return this.hide()
       const lineElement = event.target.closest?.('.cm-line')
       const number =
         lineElement && this.view.contentDOM.contains(lineElement)
@@ -377,8 +376,10 @@ export const blockHandle = ViewPlugin.fromClass(
       this.handle.setAttribute('aria-label', label)
       this.handle.removeAttribute('title')
       this.handle.dataset.kind = block.kind
+      const topOffset =
+        block.kind === 'columns' || lineHeight > height * 2 ? 4 : (lineHeight - height) / 2
       this.handle.style.left = `${left}px`
-      this.handle.style.top = `${coords.top - host.top + (lineHeight - height) / 2}px`
+      this.handle.style.top = `${coords.top - host.top + topOffset}px`
       this.handle.hidden = false
       this.revealFold(line.from)
     }

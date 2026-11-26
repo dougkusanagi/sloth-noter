@@ -2249,7 +2249,7 @@ textarea:focus-visible {
 
 .cm-table-handle {
   position: absolute;
-  top: -26px;
+  top: 4px;
   left: -32px;
   z-index: 5;
   display: flex;
