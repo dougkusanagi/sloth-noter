@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.60.0] — 2026-11-26
+
+Adicionada a camada de provedores alternativos de sincronização e backup remoto (C2, [ADR 0052](docs/adr/0052-provedores-alternativos-sync-backup.md)), suportando servidor próprio, repositório GitHub e pasta local/rede com validação estrita. Veja os [detalhes da versão](changelog/0.60.0.md).
+
 ## [0.59.0] — 2026-11-26
 
 Adicionado suporte portável em Markdown a recorrência (`🔁`), histórico de conclusões (`✅`) e lembretes locais (`⏰`) em tarefas (C4, [ADR 0051](docs/adr/0051-recorrencia-e-lembretes-em-tarefas.md)). Veja os [detalhes da versão](changelog/0.59.0.md).
