@@ -312,7 +312,7 @@ Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e deta
 - [x] **B15 — Quadro com gestos** (0.50.0): no modo compacto do Quadro, deslizar a área da coluna troca de coluna como carrossel e deslizar um cartão move a tarefa para a coluna seguinte/anterior com vibração, usando o mesmo `moveCardToColumn` do menu (`src/mobile/board-gestures.js`, `src/components/task-board.jsx`, `src/mobile-platform.test.js`).
 - [x] **B4 — App de notas do sistema (`ROLE_NOTES`)** (0.51.0–0.52.0): [ADR 0045](../adr/0045-app-de-notas-do-sistema-role-notes.md); `QuickNoteActivity` isolada para `ACTION_CREATE_NOTE` na tela de bloqueio com compositor nativo em branco sem leitura de notas existentes e fila privada `PendingNotesStore` ingerida de forma idempotente após confirmar gravação (`src/mobile/pending-notes.js`, `src/mobile/use-native-actions.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`, `e2e/mobile/notes-role.spec.js`), além de seção **Sistema** em Configurações no Android 14+ para pedir `RoleManager.ROLE_NOTES`. Em `0.52.0`, `NewNoteTileService` (B3) também passou a abrir `QuickNoteActivity` quando o aparelho está bloqueado.
 - [x] **B5 — Widget de lista fixada** (0.53.0): [ADR 0046](../adr/0046-widget-de-lista-fixada.md); `PinnedTasksWidgetProvider` e `WidgetTasksStore` no Android exibem até 8 tarefas de uma nota fixada, permitem marcar/desmarcar sem abrir o app e abrem a nota ao tocar no título; no lado web, `src/mobile/widget-tasks.js` publica o snapshot e aplica os toggles pendentes usando `applyStatus` de `src/tasks.js` na fila de gravação (`src/mobile/use-native-actions.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
-- [ ] **B6 — Caneta** (escrita à mão no editor onde o WebView suportar).
+- [x] **B6 — Caneta** (0.54.0): escrita à mão convertida em texto onde o WebView suportar (`isAutoHandwritingEnabled = true` no WebView da `MainActivity` e nos campos da `QuickNoteActivity` no Android 14+, sem criar formato de desenho); `src/mobile/stylus.js` e `src/mobile/editor-gestures.js` impedem que traços de caneta acionem gestos de deslizar e posicionam o cursor no ponto tocado (`src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
 - [ ] **B7 — IA no aparelho (opcional)** (Gemini Nano / ML Kit GenAI, exige ADR).
 - [ ] **B17 — Captura por câmera com OCR local** (exige ADR).
 
@@ -360,6 +360,9 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 - B5 (Widget de lista fixada): adicionar o widget **Tarefas fixadas** à tela inicial no APK real,
   marcar e desmarcar tarefas com o app fechado e aberto, verificar que o Markdown e as datas de
   conclusão ficam idênticos e que tocar no título abre a nota fixada.
+- B6 (Caneta): escrever à mão com stylus real no editor e na `QuickNoteActivity` em aparelho
+  Android 14+ compatível, confirmando que o texto convertido entra na posição do cursor sem
+  acionar gestos de deslizar.
 
 ## Evidências registradas
 
@@ -425,8 +428,8 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-Concluída **B5 — Widget de lista fixada** (0.53.0, [ADR 0046](../adr/0046-widget-de-lista-fixada.md)).
-Próximo item da Parte B (Prioridade 6 da [fila central](prioridades.md)): **B6 — Caneta** (escrita à mão no editor onde o WebView suportar).
+Concluída **B6 — Caneta** (0.54.0).
+Próximo item da Parte B (Prioridade 6 da [fila central](prioridades.md)): **B7 — IA no aparelho (opcional)** (Gemini Nano / ML Kit GenAI, exige ADR) e **B17 — Captura por câmera com OCR local** (exige ADR).
 
 Pendente no aparelho (de entregas anteriores): validar S4 nativo (conta única desktop Tauri ↔ APK
 real, conflito, lixeira/restauração e imagem), validar B4 na tela de bloqueio/caneta real e validar

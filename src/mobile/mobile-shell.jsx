@@ -18,6 +18,7 @@ import { runNoteTransition } from './view-transition.js'
 import { triggerHaptic } from './haptics.js'
 import { adjacentOpenNoteId, classifyHeaderGesture } from './header-gestures.js'
 import { classifyEditorSwipe, structureSwipeEdit } from './editor-gestures.js'
+import { isStylusPointer, isStylusTouch } from './stylus.js'
 import { classifyPinch, stepReadingZoom } from './reading-zoom.js'
 import { HeadingRuler } from './heading-ruler.jsx'
 import {
@@ -1562,15 +1563,32 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               <div
                 className="mobile-editor-gestures"
                 style={{ display: 'contents' }}
+                onPointerDown={(event) => {
+                  if (!isStylusPointer(event)) return
+                  editorSwipe.current = null
+                  const view = editor.current
+                  if (!view) return
+                  const pos = view.posAtCoords({ x: event.clientX, y: event.clientY })
+                  if (pos != null) {
+                    view.dispatch({ selection: { anchor: pos } })
+                    view.focus()
+                  }
+                }}
                 onTouchStart={(event) => {
-                  if (sourceMode || event.touches.length !== 1) return
+                  if (sourceMode || event.touches.length !== 1 || isStylusTouch(event)) return
                   const touch = event.touches[0]
                   editorSwipe.current = { x: touch.clientX, y: touch.clientY }
                 }}
                 onTouchEnd={(event) => {
                   const start = editorSwipe.current
                   editorSwipe.current = null
-                  if (!start || sourceMode || event.changedTouches.length !== 1) return
+                  if (
+                    !start ||
+                    sourceMode ||
+                    event.changedTouches.length !== 1 ||
+                    isStylusTouch(event)
+                  )
+                    return
                   const view = editor.current
                   if (!view || view.composing || view.compositionStarted) return
                   const touch = event.changedTouches[0]

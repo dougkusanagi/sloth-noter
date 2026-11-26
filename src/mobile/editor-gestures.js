@@ -44,8 +44,9 @@ export function classifyEditorSwipe({
   endY,
   viewportWidth = 390,
   hasSelection = false,
+  isStylus = false,
 }) {
-  if (hasSelection) return null
+  if (hasSelection || isStylus) return null
   if (startX <= 24 || startX >= viewportWidth - 24) return null
   const dx = endX - startX
   const dy = endY - startY

@@ -24,6 +24,7 @@ import {
   buildPinnedTasksWidgetSnapshot,
   parsePendingWidgetToggles,
 } from './mobile/widget-tasks.js'
+import { isStylusHandwritingSupported, isStylusPointer, isStylusTouch } from './mobile/stylus.js'
 
 test('B1: runNoteTransition uses View Transitions API when available and motion is not reduced', () => {
   let ran = 0
@@ -391,4 +392,30 @@ test('pinned tasks widget snapshot and toggles follow tasks.js rules (B5)', () =
   assert.equal(applied.changedCount, 2)
   assert.deepEqual(applied.ackIds, ['t1', 't2'])
   assert.equal(applied.document.notes[0].body, '# Compras\nLinha extra\n- [x] Pão\n- [ ] Leite\n')
+})
+
+test('stylus handwriting detection keeps pen strokes free from editor swipes (B6)', () => {
+  assert.equal(isStylusPointer({ pointerType: 'pen' }), true)
+  assert.equal(isStylusPointer({ pointerType: 'touch' }), false)
+  assert.equal(isStylusTouch({ touches: [{ touchType: 'stylus' }] }), true)
+  assert.equal(isStylusTouch({ touches: [{ touchType: 'direct' }] }), false)
+  assert.equal(
+    isStylusHandwritingSupported({ SlothSystem: { isStylusHandwritingSupported: () => true } }),
+    true,
+  )
+  assert.equal(
+    isStylusHandwritingSupported({ SlothSystem: { isStylusHandwritingSupported: () => false } }),
+    false,
+  )
+  assert.equal(
+    classifyEditorSwipe({
+      startX: 60,
+      startY: 120,
+      endX: 180,
+      endY: 122,
+      viewportWidth: 390,
+      isStylus: true,
+    }),
+    null,
+  )
 })

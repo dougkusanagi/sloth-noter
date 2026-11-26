@@ -75,6 +75,9 @@ class MainActivity : TauriActivity() {
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
     this.webView = webView
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+      webView.isAutoHandwritingEnabled = true
+    }
     webView.addJavascriptInterface(ShareBridge(), "SlothShare")
     webView.addJavascriptInterface(SystemBridge(), "SlothSystem")
     webView.addJavascriptInterface(SecretsBridge(applicationContext), "SlothSecrets")
@@ -186,6 +189,10 @@ class MainActivity : TauriActivity() {
 
     @JavascriptInterface
     fun getNotesRoleState(): String = notesRoleState()
+
+    @JavascriptInterface
+    fun isStylusHandwritingSupported(): Boolean =
+      Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
     @JavascriptInterface
     fun requestNotesRole(): Boolean {

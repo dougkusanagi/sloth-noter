@@ -172,6 +172,9 @@ class QuickNoteActivity : AppCompatActivity() {
       inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
       minimumHeight = dp(48)
       setPadding(dp(16), dp(12), dp(16), dp(8))
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        isAutoHandwritingEnabled = true
+      }
     }
 
     bodyInput = EditText(this).apply {
@@ -187,6 +190,9 @@ class QuickNoteActivity : AppCompatActivity() {
           InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
       minHeight = dp(200)
       setPadding(dp(16), dp(8), dp(16), dp(16))
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        isAutoHandwritingEnabled = true
+      }
       layoutParams = LinearLayout.LayoutParams(
         ViewGroup.LayoutParams.MATCH_PARENT,
         ViewGroup.LayoutParams.MATCH_PARENT,

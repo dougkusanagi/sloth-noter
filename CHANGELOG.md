@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.54.0] — 2026-11-26
+
+Adicionado suporte à escrita à mão com caneta convertida em texto no editor mobile e na nota rápida (B6), habilitando o reconhecimento nativo do Android 14+ e evitando que traços de caneta acionem gestos de deslizar. Veja os [detalhes da versão](changelog/0.54.0.md).
+
 ## [0.53.0] — 2026-11-26
 
 Adicionado o widget **Tarefas fixadas** para a tela inicial do Android (B5, [ADR 0046](docs/adr/0046-widget-de-lista-fixada.md)), exibindo as tarefas de uma nota fixada e permitindo marcá-las ou desmarcá-las sem abrir o aplicativo. Veja os [detalhes da versão](changelog/0.53.0.md).
