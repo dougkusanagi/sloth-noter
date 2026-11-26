@@ -24,6 +24,9 @@ const layers = new Set([
   'sections',
   'image-detail',
   'image-insert',
+  'qr-paste',
+  'ocr-suggestion',
+  'ai-suggestion',
 ])
 
 export function initialNavigation(tab = 'notes') {

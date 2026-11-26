@@ -198,6 +198,29 @@ const messages = {
     'qr.importAction': 'Importar nota',
     'qr.imported': 'Nota importada por QR Code',
     'qr.invalid': 'QR Code inválido ou incompatível com o Sloth Note.',
+    'sync.qr.connectDevice': 'Conectar celular (QR)',
+    'sync.qr.connectDeviceTitle': 'Conectar outro dispositivo',
+    'sync.qr.connectDeviceHint':
+      'No outro dispositivo, abra Configurações → Sincronização → Entrar por QR e aponte a câmera. Expira em 2 minutos.',
+    'sync.qr.privacyWarning':
+      'Este QR contém o acesso à sua conta e à chave de criptografia. Mostre apenas para o seu próprio dispositivo.',
+    'sync.qr.scanComputer': 'Conectar computador (ler QR)',
+    'sync.qr.signInByQr': 'Entrar por QR',
+    'sync.qr.showReverse': 'Entrar com QR do celular',
+    'sync.qr.reverseTitle': 'Entrar com QR do celular',
+    'sync.qr.reverseHint':
+      'No celular já logado, abra Configurações → Sincronização → Conectar computador (ler QR) e aponte a câmera para este código.',
+    'sync.qr.pastePlaceholder': 'Cole o código slothnote:pair:v1:... ou slothnote:pair-req:v1:...',
+    'sync.qr.confirmCode': 'Conectar',
+    'sync.qr.expired': 'Este QR Code expirou. Gere um novo código.',
+    'sync.qr.invalid': 'QR Code de pareamento inválido ou expirado.',
+    'sync.qr.approved': 'Computador conectado com sucesso!',
+    'sync.qr.unavailable': 'Não foi possível gerar o QR Code de pareamento.',
+    'sync.qr.reverseUnavailable':
+      'O servidor de sincronização ainda não suporta pareamento reverso. Use "Conectar celular (QR)" no dispositivo logado.',
+    'mobile.settingsSub.editor': 'Quebra de linha e tarefas',
+    'mobile.settingsSub.data': 'Exportar, restaurar e página de ajuda',
+    'mobile.settingsSub.system': 'App de notas padrão e IA no aparelho',
     'mobile.notesRoleTitle': 'App de notas padrão',
     'mobile.notesRoleHint':
       'Permite criar uma nota nova pela caneta ou pela tela de bloqueio sem exibir suas outras notas.',
@@ -1357,6 +1380,29 @@ const messages = {
     'qr.importAction': 'Import note',
     'qr.imported': 'Note imported from QR Code',
     'qr.invalid': 'Invalid or incompatible Sloth Note QR Code.',
+    'sync.qr.connectDevice': 'Connect phone (QR)',
+    'sync.qr.connectDeviceTitle': 'Connect another device',
+    'sync.qr.connectDeviceHint':
+      'On your other device, open Settings → Sync → Sign in with QR and scan this code. Expires in 2 minutes.',
+    'sync.qr.privacyWarning':
+      'This QR contains your account session and encryption key. Only show it to your own device.',
+    'sync.qr.scanComputer': 'Connect computer (scan QR)',
+    'sync.qr.signInByQr': 'Sign in with QR',
+    'sync.qr.showReverse': 'Sign in with phone QR',
+    'sync.qr.reverseTitle': 'Sign in with phone QR',
+    'sync.qr.reverseHint':
+      'On your logged-in phone, open Settings → Sync → Connect computer (scan QR) and scan this code.',
+    'sync.qr.pastePlaceholder': 'Paste slothnote:pair:v1:... or slothnote:pair-req:v1:...',
+    'sync.qr.confirmCode': 'Connect',
+    'sync.qr.expired': 'This QR Code has expired. Generate a new one.',
+    'sync.qr.invalid': 'Invalid or expired pairing QR Code.',
+    'sync.qr.approved': 'Computer connected successfully!',
+    'sync.qr.unavailable': 'Could not generate pairing QR Code.',
+    'sync.qr.reverseUnavailable':
+      'The sync server does not support reverse pairing yet. Use "Connect phone (QR)" on the logged-in device.',
+    'mobile.settingsSub.editor': 'Line wrapping and tasks',
+    'mobile.settingsSub.data': 'Export, restore and help page',
+    'mobile.settingsSub.system': 'Default notes app and on-device AI',
     'mobile.notesRoleTitle': 'Default notes app',
     'mobile.notesRoleHint':
       'Lets you create a new note from a stylus or the lock screen without showing your other notes.',

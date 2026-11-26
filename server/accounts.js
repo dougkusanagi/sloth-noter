@@ -8,7 +8,9 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const KEY = /^[A-Za-z0-9_-]{43}$/
 const WRAPPED = /^[A-Za-z0-9_-]{40,200}$/
 const MAX_BODY = 4096
-const ACCOUNT_ROUTES = new Set(['/v1/accounts', '/v1/sessions', '/v1/recover'])
+const ACCOUNT_ROUTES = new Set(['/v1/accounts', '/v1/sessions', '/v1/recover', '/v1/pairing'])
+const PAIRING_TTL_MS = 2 * 60 * 1000
+const PAIRING_ID_RE = /^\/v1\/pairing\/([a-f0-9-]{8,64})(\/approve)?$/
 
 const json = (status, body) =>
   new Response(JSON.stringify(body), {
@@ -165,6 +167,13 @@ export function createServer({
     return json(200, { token, name: account.name, wrappedKey: body.wrappedKey })
   }
 
+  const pairings = new Map()
+  function prunePairings() {
+    const now = Date.now()
+    for (const [id, entry] of pairings) {
+      if (entry.expiresAt <= now) pairings.delete(id)
+    }
+  }
   return async function handle(request) {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
     const path = new URL(request.url).pathname
@@ -180,6 +189,22 @@ export function createServer({
       if (request.method === 'POST' && path === '/v1/accounts') return await signup(request)
       if (request.method === 'POST' && path === '/v1/sessions') return await login(request)
       if (request.method === 'POST' && path === '/v1/recover') return await recover(request)
+      if (request.method === 'POST' && path === '/v1/pairing') {
+        prunePairings()
+        const id = crypto.randomUUID()
+        const expiresAt = Date.now() + PAIRING_TTL_MS
+        pairings.set(id, { expiresAt, encrypted: null })
+        return json(201, { id, expiresAt })
+      }
+      const pairMatch = PAIRING_ID_RE.exec(path)
+      if (request.method === 'GET' && pairMatch && !pairMatch[2]) {
+        prunePairings()
+        const entry = pairings.get(pairMatch[1])
+        if (!entry) return fail(404, 'not_found')
+        if (!entry.encrypted) return json(200, { status: 'pending', expiresAt: entry.expiresAt })
+        pairings.delete(pairMatch[1])
+        return json(200, { status: 'approved', encrypted: entry.encrypted })
+      }
     } catch {
       return fail(500, 'server_error')
     }
@@ -198,6 +223,16 @@ export function createServer({
         if (request.method === 'DELETE' && path === '/v1/sessions/current') {
           await directory.revokeSession(tokenHash)
           return new Response(null, { status: 204, headers: CORS })
+        }
+        const approveMatch = PAIRING_ID_RE.exec(path)
+        if (request.method === 'POST' && approveMatch && approveMatch[2] === '/approve') {
+          prunePairings()
+          const entry = pairings.get(approveMatch[1])
+          if (!entry) return fail(404, 'not_found')
+          const body = await request.json().catch(() => null)
+          if (!body?.encrypted || typeof body.encrypted !== 'object') return fail(400, 'bad_request')
+          entry.encrypted = body.encrypted
+          return json(200, { ok: true })
         }
         return createApi({ store: storeFor(account), token, limit })(request)
       }

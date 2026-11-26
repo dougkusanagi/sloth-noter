@@ -57,6 +57,11 @@ import {
   Settings,
   Share2,
   SlidersHorizontal,
+  Smartphone,
+  ChevronRight,
+  Cloud,
+  History,
+  Palette,
   Sun,
   Trash2,
   Undo2,
@@ -984,7 +989,16 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             notes: 'menu.notes',
             tasks: 'tasks.title',
             images: 'images.title',
-            settings: 'menu.settings',
+            settings:
+              {
+                appearance: 'settings.appearance',
+                editor: 'settings.editor',
+                sync: 'settings.sync',
+                history: 'history.title',
+                data: 'settings.data',
+                system: 'mobile.systemSection',
+                about: 'settings.about',
+              }[route.id] ?? 'menu.settings',
             changelog: 'settings.changelog',
             guide: 'menu.welcome',
             trash: 'trash.title',
@@ -1989,9 +2003,86 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             />
           </section>
         )}
-        {route.name === 'settings' && (
+        {route.name === 'settings' && !route.id && (
           <section className="mobile-settings" aria-label={t('menu.settings')}>
-            <h2>{t('settings.appearance')}</h2>
+            <div className="settings-card">
+              {[
+                {
+                  id: 'appearance',
+                  icon: Palette,
+                  title: t('settings.appearance'),
+                  subtitle: `${LANGUAGES[prefs.language] ?? prefs.language} · ${prefs.fontSize}px`,
+                },
+                {
+                  id: 'editor',
+                  icon: SlidersHorizontal,
+                  title: t('settings.editor'),
+                  subtitle: t('mobile.settingsSub.editor'),
+                },
+                {
+                  id: 'sync',
+                  icon: Cloud,
+                  title: t('settings.sync'),
+                  subtitle:
+                    sync.status.state === 'off'
+                      ? t('sync.off')
+                      : sync.status.account?.email || t('sync.ready'),
+                },
+                {
+                  id: 'history',
+                  icon: History,
+                  title: t('history.title'),
+                  subtitle: prefs.historyEnabled ? t('history.keep') : t('history.off'),
+                },
+                {
+                  id: 'data',
+                  icon: FileOutput,
+                  title: t('settings.data'),
+                  subtitle: t('mobile.settingsSub.data'),
+                },
+                ...(notesRoleState === 'available' ||
+                notesRoleState === 'held' ||
+                onDeviceAiState === 'available'
+                  ? [
+                      {
+                        id: 'system',
+                        icon: Smartphone,
+                        title: t('mobile.systemSection'),
+                        subtitle: t('mobile.settingsSub.system'),
+                      },
+                    ]
+                  : []),
+                {
+                  id: 'about',
+                  icon: Info,
+                  title: t('settings.about'),
+                  subtitle: `${t('settings.changelog')} · ${t('menu.welcome')}`,
+                },
+              ].map((item) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="settings-row settings-submenu"
+                    onClick={() =>
+                      dispatch({ type: 'push', route: { name: 'settings', id: item.id } })
+                    }
+                  >
+                    <Icon size={20} className="settings-submenu-icon" aria-hidden="true" />
+                    <span className="settings-submenu-text">
+                      <span className="settings-row-title">{item.title}</span>
+                      <small>{item.subtitle}</small>
+                    </span>
+                    <ChevronRight size={18} className="settings-submenu-chevron" aria-hidden="true" />
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'appearance' && (
+          <section className="mobile-settings" aria-label={t('settings.appearance')}>
             <div className="settings-card">
               <div className="settings-row stacked">
                 <label htmlFor="mobile-language">{t('settings.language')}</label>
@@ -2026,11 +2117,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 <DocumentWidthPresets prefs={prefs} onChange={updatePrefs} compactTablet />
               </div>
             </div>
-            <h2>{t('settings.editor')}</h2>
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'editor' && (
+          <section className="mobile-settings" aria-label={t('settings.editor')}>
             <div className="settings-card">
               <EditorToggleSettings prefs={prefs} onChange={updatePrefs} variant="mobile" />
             </div>
-            <h2>{t('settings.data')}</h2>
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'data' && (
+          <section className="mobile-settings" aria-label={t('settings.data')}>
             <p className="settings-note">{t('mobile.backupDetails')}</p>
             <div className="settings-card">
               <button
@@ -2057,11 +2154,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               hidden
               onChange={(event) => chooseBackup(event.target.files?.[0])}
             />
-            <h2>{t('settings.sync')}</h2>
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'sync' && (
+          <section className="mobile-settings" aria-label={t('settings.sync')}>
             <div className="settings-card settings-sync">
               <SyncPanel sync={sync} />
             </div>
-            <h2>{t('history.title')}</h2>
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'history' && (
+          <section className="mobile-settings" aria-label={t('history.title')}>
             <div className="settings-card settings-history">
               <HistoryPanel
                 prefs={prefs}
@@ -2075,53 +2178,53 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 }}
               />
             </div>
-            {(notesRoleState === 'available' ||
-              notesRoleState === 'held' ||
-              onDeviceAiState === 'available') && (
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'system' && (
+          <section className="mobile-settings" aria-label={t('mobile.systemSection')}>
+            {(notesRoleState === 'available' || notesRoleState === 'held') && (
               <>
-                <h2>{t('mobile.systemSection')}</h2>
-                {(notesRoleState === 'available' || notesRoleState === 'held') && (
-                  <>
-                    <p className="settings-note">{t('mobile.notesRoleHint')}</p>
-                    <div className="settings-card">
-                      {notesRoleState === 'held' ? (
-                        <div className="settings-row settings-status" role="status">
-                          <Check size={20} aria-hidden="true" />
-                          {t('mobile.notesRoleActive')}
-                        </div>
-                      ) : (
-                        <button
-                          className="settings-row settings-action"
-                          onClick={() => {
-                            if (!window.SlothSystem?.requestNotesRole?.())
-                              toast.error(t('mobile.notesRoleFailed'))
-                          }}
-                        >
-                          <NotebookPen size={20} aria-hidden="true" />
-                          {t('mobile.notesRoleSet')}
-                        </button>
-                      )}
+                <p className="settings-note">{t('mobile.notesRoleHint')}</p>
+                <div className="settings-card">
+                  {notesRoleState === 'held' ? (
+                    <div className="settings-row settings-status" role="status">
+                      <Check size={20} aria-hidden="true" />
+                      {t('mobile.notesRoleActive')}
                     </div>
-                  </>
-                )}
-                {onDeviceAiState === 'available' && (
-                  <div className="settings-card">
-                    <div className="settings-row">
-                      <label htmlFor="mobile-ai-toggle">
-                        <span className="settings-row-title">{t('mobile.aiTitle')}</span>
-                        <small>{t('mobile.aiHint')}</small>
-                      </label>
-                      <Switch
-                        id="mobile-ai-toggle"
-                        checked={Boolean(prefs.mobileOnDeviceAi)}
-                        onChange={(mobileOnDeviceAi) => updatePrefs({ ...prefs, mobileOnDeviceAi })}
-                      />
-                    </div>
-                  </div>
-                )}
+                  ) : (
+                    <button
+                      className="settings-row settings-action"
+                      onClick={() => {
+                        if (!window.SlothSystem?.requestNotesRole?.())
+                          toast.error(t('mobile.notesRoleFailed'))
+                      }}
+                    >
+                      <NotebookPen size={20} aria-hidden="true" />
+                      {t('mobile.notesRoleSet')}
+                    </button>
+                  )}
+                </div>
               </>
             )}
-            <h2>{t('settings.about')}</h2>
+            {onDeviceAiState === 'available' && (
+              <div className="settings-card">
+                <div className="settings-row">
+                  <label htmlFor="mobile-ai-toggle">
+                    <span className="settings-row-title">{t('mobile.aiTitle')}</span>
+                    <small>{t('mobile.aiHint')}</small>
+                  </label>
+                  <Switch
+                    id="mobile-ai-toggle"
+                    checked={Boolean(prefs.mobileOnDeviceAi)}
+                    onChange={(mobileOnDeviceAi) => updatePrefs({ ...prefs, mobileOnDeviceAi })}
+                  />
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'about' && (
+          <section className="mobile-settings" aria-label={t('settings.about')}>
             <div className="settings-card">
               <button
                 className="settings-row settings-action"

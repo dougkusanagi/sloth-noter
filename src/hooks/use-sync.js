@@ -175,6 +175,29 @@ export function useSync({ current, commit, invoke, blocked, onImagesChanged }) {
       if (previous?.email) void signOut({ server: previous.server, token: previous.token })
       await run()
     },
+    /** Returns current vault credentials for short-lived QR device pairing. */
+    exportPairingCredentials() {
+      const saved = secrets.current
+      if (!saved?.server || !saved?.token || !saved?.key) return null
+      return {
+        server: saved.server,
+        token: saved.token,
+        key: saved.key,
+        email: saved.email ?? '',
+        name: saved.name ?? '',
+      }
+    },
+    /** Connects directly using credentials decoded from a pairing QR code. */
+    async connectFromPairing({ server, token, key, email, name }) {
+      const keyBytes = typeof key === 'string' ? fromBase64(key) : key
+      const previous = secrets.current
+      const value = { server, token, key: toBase64(keyBytes), email, name }
+      await writeSyncSecrets(vault.current, value)
+      secrets.current = value
+      retryUntil.current = 0
+      if (previous?.email) void signOut({ server: previous.server, token: previous.token })
+      await run()
+    },
     async disconnect() {
       const saved = secrets.current
       clearTimeout(live.current.timer)

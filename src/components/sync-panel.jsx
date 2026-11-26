@@ -1,8 +1,14 @@
 import { useId, useState } from 'react'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, QrCode } from 'lucide-react'
 import { t } from '../i18n.js'
 import { DEFAULT_SERVER, MIN_PASSWORD } from '../sync/account.js'
+import {
+  decodePairingPayload,
+  decodePairingRequest,
+  encryptPairingForRequester,
+} from '../sync/qr-pairing.js'
 import { Segmented } from './controls.jsx'
+import { SyncPairingModal } from './sync-pairing-modal.jsx'
 
 const ERRORS = new Set([
   'offline',
@@ -47,8 +53,76 @@ export function SyncPanel({ sync }) {
   return <SyncStatus sync={sync} />
 }
 
+function scanPairingQrCode() {
+  if (typeof window.SlothSystem?.scanQrCode !== 'function') return Promise.resolve(null)
+  return new Promise((resolve) => {
+    const requestId = Date.now() % 1000000
+    window.__slothQrScanResult = (id, raw) => {
+      if (id !== requestId) return
+      delete window.__slothQrScanResult
+      try {
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+        resolve(parsed?.ok && parsed.text ? String(parsed.text) : '')
+      } catch {
+        resolve('')
+      }
+    }
+    window.SlothSystem.scanQrCode(requestId)
+  })
+}
+
 function SyncStatus({ sync }) {
   const { status } = sync
+  const [pairingModal, setPairingModal] = useState(null)
+  const [pairingMsg, setPairingMsg] = useState('')
+  const [pasteMode, setPasteMode] = useState(false)
+  const [pasteCode, setPasteCode] = useState('')
+
+  async function approveReverseQr(raw) {
+    setPairingMsg('')
+    const parsed = decodePairingRequest(raw)
+    if (!parsed.ok) {
+      setPairingMsg(t('sync.qr.invalid'))
+      return false
+    }
+    const creds = sync.exportPairingCredentials?.()
+    if (!creds) {
+      setPairingMsg(t('sync.qr.unavailable'))
+      return false
+    }
+    try {
+      const encrypted = await encryptPairingForRequester(parsed.request.pub, creds)
+      const base = parsed.request.server.replace(/\/$/, '')
+      const res = await fetch(`${base}/v1/pairing/${encodeURIComponent(parsed.request.id)}/approve`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${creds.token}`,
+        },
+        body: JSON.stringify({ encrypted }),
+      })
+      if (!res.ok) {
+        setPairingMsg(t('sync.qr.expired'))
+        return false
+      }
+      setPairingMsg(t('sync.qr.approved'))
+      setPasteMode(false)
+      setPasteCode('')
+      return true
+    } catch {
+      setPairingMsg(t('sync.qr.invalid'))
+      return false
+    }
+  }
+
+  async function handleScanComputer() {
+    const scanned = await scanPairingQrCode()
+    if (scanned === null) {
+      setPasteMode((v) => !v)
+      return
+    }
+    if (scanned) await approveReverseQr(scanned)
+  }
 
   if (status.state === 'checking') return <p className="setting-empty">{t('sync.checking')}</p>
   if (status.state === 'unavailable')
@@ -96,6 +170,22 @@ function SyncStatus({ sync }) {
           </button>
           <button
             className="button"
+            type="button"
+            onClick={() => setPairingModal('direct')}
+          >
+            <QrCode size={15} aria-hidden="true" />
+            {t('sync.qr.connectDevice')}
+          </button>
+          <button
+            className="button"
+            type="button"
+            onClick={handleScanComputer}
+          >
+            <QrCode size={15} aria-hidden="true" />
+            {t('sync.qr.scanComputer')}
+          </button>
+          <button
+            className="button"
             onClick={async () => {
               if (window.confirm(t('sync.disconnectConfirm'))) await sync.disconnect()
             }}
@@ -103,7 +193,37 @@ function SyncStatus({ sync }) {
             {t(account ? 'sync.signOut' : 'sync.disconnect')}
           </button>
         </div>
+        {pasteMode && (
+          <div className="sync-field">
+            <input
+              type="text"
+              value={pasteCode}
+              placeholder={t('sync.qr.pastePlaceholder')}
+              onChange={(event) => setPasteCode(event.target.value)}
+            />
+            <button
+              type="button"
+              className="button primary"
+              onClick={() => void approveReverseQr(pasteCode)}
+            >
+              {t('sync.qr.confirmCode')}
+            </button>
+          </div>
+        )}
+        {pairingMsg && (
+          <p className="sync-status" role="status">
+            {pairingMsg}
+          </p>
+        )}
       </div>
+      {pairingModal && (
+        <SyncPairingModal
+          mode={pairingModal}
+          server={status.server}
+          sync={sync}
+          onClose={() => setPairingModal(null)}
+        />
+      )}
       {!account && <AccountForm sync={sync} server={status.server} />}
     </>
   )
@@ -149,6 +269,35 @@ function AccountForm({ sync, server: initialServer = DEFAULT_SERVER }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [prepared, setPrepared] = useState(null)
+  const [reverseModal, setReverseModal] = useState(false)
+  const [qrPasteOpen, setQrPasteOpen] = useState(false)
+  const [qrPasteCode, setQrPasteCode] = useState('')
+
+  async function applyDirectQr(raw) {
+    setError('')
+    const decoded = decodePairingPayload(raw)
+    if (!decoded.ok) {
+      setError(t(decoded.error === 'expired' ? 'sync.qr.expired' : 'sync.qr.invalid'))
+      return
+    }
+    setBusy(true)
+    try {
+      await sync.connectFromPairing(decoded.credentials)
+    } catch {
+      setError(t('sync.noVault'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleSignInByQr() {
+    const scanned = await scanPairingQrCode()
+    if (scanned === null) {
+      setQrPasteOpen((v) => !v)
+      return
+    }
+    if (scanned) await applyDirectQr(scanned)
+  }
   const field = (key, label, input, hint) => (
     <div className="sync-field">
       <label htmlFor={`${id}-${key}`}>{label}</label>
@@ -415,6 +564,47 @@ function AccountForm({ sync, server: initialServer = DEFAULT_SERVER }) {
           </button>
         )}
       </div>
+      <div className="sync-actions">
+        <button type="button" className="button" disabled={busy} onClick={handleSignInByQr}>
+          <QrCode size={15} aria-hidden="true" />
+          {t('sync.qr.signInByQr')}
+        </button>
+        <button
+          type="button"
+          className="button"
+          disabled={busy}
+          onClick={() => setReverseModal(true)}
+        >
+          <QrCode size={15} aria-hidden="true" />
+          {t('sync.qr.showReverse')}
+        </button>
+      </div>
+      {qrPasteOpen && (
+        <div className="sync-field">
+          <input
+            type="text"
+            value={qrPasteCode}
+            placeholder={t('sync.qr.pastePlaceholder')}
+            onChange={(event) => setQrPasteCode(event.target.value)}
+          />
+          <button
+            type="button"
+            className="button primary"
+            disabled={busy || !qrPasteCode.trim()}
+            onClick={() => void applyDirectQr(qrPasteCode)}
+          >
+            {t('sync.qr.confirmCode')}
+          </button>
+        </div>
+      )}
+      {reverseModal && (
+        <SyncPairingModal
+          mode="reverse"
+          server={server}
+          sync={sync}
+          onClose={() => setReverseModal(false)}
+        />
+      )}
       <details className="sync-advanced">
         <summary>{t('sync.advanced')}</summary>
         {field(

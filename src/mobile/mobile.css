@@ -704,6 +704,34 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
 [data-platform='mobile'] .settings-action:active {
   background: var(--well-bg);
 }
+[data-platform='mobile'] .settings-submenu {
+  justify-content: flex-start;
+  gap: 14px;
+  min-height: 62px;
+  cursor: pointer;
+}
+[data-platform='mobile'] .settings-submenu:active {
+  background: var(--well-bg);
+}
+[data-platform='mobile'] .settings-submenu-icon {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+[data-platform='mobile'] .settings-submenu-text {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+[data-platform='mobile'] .settings-submenu-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-platform='mobile'] .settings-submenu-chevron {
+  flex-shrink: 0;
+  color: var(--muted);
+}
 [data-platform='mobile'] .settings-status {
   justify-content: flex-start;
   gap: 12px;
