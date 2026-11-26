@@ -313,7 +313,7 @@ Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e deta
 - [x] **B4 — App de notas do sistema (`ROLE_NOTES`)** (0.51.0–0.52.0): [ADR 0045](../adr/0045-app-de-notas-do-sistema-role-notes.md); `QuickNoteActivity` isolada para `ACTION_CREATE_NOTE` na tela de bloqueio com compositor nativo em branco sem leitura de notas existentes e fila privada `PendingNotesStore` ingerida de forma idempotente após confirmar gravação (`src/mobile/pending-notes.js`, `src/mobile/use-native-actions.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`, `e2e/mobile/notes-role.spec.js`), além de seção **Sistema** em Configurações no Android 14+ para pedir `RoleManager.ROLE_NOTES`. Em `0.52.0`, `NewNoteTileService` (B3) também passou a abrir `QuickNoteActivity` quando o aparelho está bloqueado.
 - [x] **B5 — Widget de lista fixada** (0.53.0): [ADR 0046](../adr/0046-widget-de-lista-fixada.md); `PinnedTasksWidgetProvider` e `WidgetTasksStore` no Android exibem até 8 tarefas de uma nota fixada, permitem marcar/desmarcar sem abrir o app e abrem a nota ao tocar no título; no lado web, `src/mobile/widget-tasks.js` publica o snapshot e aplica os toggles pendentes usando `applyStatus` de `src/tasks.js` na fila de gravação (`src/mobile/use-native-actions.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
 - [x] **B6 — Caneta** (0.54.0): escrita à mão convertida em texto onde o WebView suportar (`isAutoHandwritingEnabled = true` no WebView da `MainActivity` e nos campos da `QuickNoteActivity` no Android 14+, sem criar formato de desenho); `src/mobile/stylus.js` e `src/mobile/editor-gestures.js` impedem que traços de caneta acionem gestos de deslizar e posicionam o cursor no ponto tocado (`src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
-- [ ] **B7 — IA no aparelho (opcional)** (Gemini Nano / ML Kit GenAI, exige ADR).
+- [x] **B7 — IA no aparelho (opcional)** (0.55.0): [ADR 0047](../adr/0047-ia-no-aparelho-mobile.md); desligada por padrão (`prefs.mobileOnDeviceAi`), oculta quando `SlothSystem.getOnDeviceAiState()` não retorna `'available'`, com ações **Resumir com IA** e **Revisar com IA** exibidas como sugestão editável antes de alterar a nota (`src/mobile/on-device-ai.js`, `src/mobile/mobile-shell.jsx`, `MainActivity.kt`, `src/mobile-platform.test.js`).
 - [ ] **B17 — Captura por câmera com OCR local** (exige ADR).
 
 ## Depois deste plano — Parte C: ideias para as duas plataformas
@@ -428,8 +428,8 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-Concluída **B6 — Caneta** (0.54.0).
-Próximo item da Parte B (Prioridade 6 da [fila central](prioridades.md)): **B7 — IA no aparelho (opcional)** (Gemini Nano / ML Kit GenAI, exige ADR) e **B17 — Captura por câmera com OCR local** (exige ADR).
+Concluída **B7 — IA no aparelho (opcional)** (0.55.0, [ADR 0047](../adr/0047-ia-no-aparelho-mobile.md)).
+Próximo item da Parte B (último item da fila): **B17 — Captura por câmera com OCR local** (exige ADR).
 
 Pendente no aparelho (de entregas anteriores): validar S4 nativo (conta única desktop Tauri ↔ APK
 real, conflito, lixeira/restauração e imagem), validar B4 na tela de bloqueio/caneta real e validar

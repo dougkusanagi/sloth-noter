@@ -195,6 +195,20 @@ class MainActivity : TauriActivity() {
       Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
     @JavascriptInterface
+    fun getOnDeviceAiState(): String = "unavailable"
+
+    @JavascriptInterface
+    fun runOnDeviceAi(requestId: Int, action: String?, text: String?): Boolean {
+      runOnUiThread {
+        webView?.evaluateJavascript(
+          "window.__slothAiResult?.($requestId,'{\"ok\":false,\"error\":\"unavailable\"}')",
+          null,
+        )
+      }
+      return true
+    }
+
+    @JavascriptInterface
     fun requestNotesRole(): Boolean {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
       val roleManager = getSystemService(RoleManager::class.java) ?: return false

@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.55.0] — 2026-11-26
+
+Adicionado suporte opcional à IA no aparelho no Android (B7, [ADR 0047](docs/adr/0047-ia-no-aparelho-mobile.md)): desligada por padrão, oculta quando não há modelo local disponível, com ações de resumir e revisar exibidas como sugestão editável antes de alterar a nota. Veja os [detalhes da versão](changelog/0.55.0.md).
+
 ## [0.54.0] — 2026-11-26
 
 Adicionado suporte à escrita à mão com caneta convertida em texto no editor mobile e na nota rápida (B6), habilitando o reconhecimento nativo do Android 14+ e evitando que traços de caneta acionem gestos de deslizar. Veja os [detalhes da versão](changelog/0.54.0.md).

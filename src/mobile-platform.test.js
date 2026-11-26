@@ -25,6 +25,12 @@ import {
   parsePendingWidgetToggles,
 } from './mobile/widget-tasks.js'
 import { isStylusHandwritingSupported, isStylusPointer, isStylusTouch } from './mobile/stylus.js'
+import {
+  applyAiSuggestion,
+  canShowOnDeviceAiAction,
+  getOnDeviceAiState,
+  requestOnDeviceAi,
+} from './mobile/on-device-ai.js'
 
 test('B1: runNoteTransition uses View Transitions API when available and motion is not reduced', () => {
   let ran = 0
@@ -418,4 +424,55 @@ test('stylus handwriting detection keeps pen strokes free from editor swipes (B6
     }),
     null,
   )
+})
+
+test('on-device AI stays hidden without model and only edits after explicit accept (B7)', async () => {
+  assert.equal(getOnDeviceAiState({}), 'unavailable')
+  assert.equal(
+    getOnDeviceAiState({ SlothSystem: { getOnDeviceAiState: () => 'available' } }),
+    'available',
+  )
+  assert.equal(
+    canShowOnDeviceAiAction({ state: 'unavailable', enabled: true, body: '# Nota\nTexto' }),
+    false,
+  )
+  assert.equal(
+    canShowOnDeviceAiAction({ state: 'available', enabled: false, body: '# Nota\nTexto' }),
+    false,
+  )
+  assert.equal(
+    canShowOnDeviceAiAction({ state: 'available', enabled: true, body: '# Nota\nTexto' }),
+    true,
+  )
+
+  const env = {
+    SlothSystem: {
+      runOnDeviceAi(id, action) {
+        queueMicrotask(() =>
+          env.__slothAiResult?.(id, JSON.stringify({ ok: true, text: `Resultado ${action}` })),
+        )
+        return true
+      },
+    },
+  }
+  const res = await requestOnDeviceAi({ action: 'summarize', text: 'Conteúdo', env })
+  assert.deepEqual(res, { ok: true, suggestion: 'Resultado summarize', error: null })
+
+  const summarized = applyAiSuggestion({
+    body: '# Reunião\n\nPontos discutidos.',
+    action: 'summarize',
+    suggestion: 'Decidimos lançar sexta.',
+    summaryHeading: 'Resumo',
+  })
+  assert.equal(
+    summarized,
+    '# Reunião\n\n> [!NOTE] Resumo\n> Decidimos lançar sexta.\n\nPontos discutidos.',
+  )
+
+  const proofread = applyAiSuggestion({
+    body: '# Reunião\n\nPontos discutido.',
+    action: 'proofread',
+    suggestion: 'Pontos discutidos.',
+  })
+  assert.equal(proofread, '# Reunião\n\nPontos discutidos.\n')
 })

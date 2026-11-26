@@ -132,6 +132,12 @@ import { flushOnHide } from './lifecycle.js'
 import { saveTextFile } from './file-save.js'
 import { ingestPendingNotes } from './pending-notes.js'
 import { applyWidgetToggles, buildPinnedTasksWidgetSnapshot } from './widget-tasks.js'
+import {
+  applyAiSuggestion,
+  canShowOnDeviceAiAction,
+  getOnDeviceAiState,
+  requestOnDeviceAi,
+} from './on-device-ai.js'
 import './mobile.css'
 
 const destinations = [
@@ -657,6 +663,17 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     } finally {
       pendingBusy.current = false
     }
+  }
+  const [aiSuggestion, setAiSuggestion] = useState(null)
+  async function runAiAction(note, action) {
+    if (!note || blocked) return
+    const result = await requestOnDeviceAi({ action, text: note.body })
+    if (!result.ok) {
+      toast.error(t(result.error === 'unavailable' ? 'mobile.aiUnavailable' : 'mobile.aiFailed'))
+      return
+    }
+    setAiSuggestion({ noteId: note.id, action, text: result.suggestion })
+    dispatch({ type: 'layer', route: { name: 'ai-suggestion' } })
   }
   const widgetBusy = useRef(false)
   async function receiveWidgetToggles(raw) {
@@ -1989,29 +2006,52 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 }}
               />
             </div>
-            {(notesRoleState === 'available' || notesRoleState === 'held') && (
+            {(notesRoleState === 'available' ||
+              notesRoleState === 'held' ||
+              getOnDeviceAiState() === 'available') && (
               <>
                 <h2>{t('mobile.systemSection')}</h2>
-                <p className="settings-note">{t('mobile.notesRoleHint')}</p>
-                <div className="settings-card">
-                  {notesRoleState === 'held' ? (
-                    <div className="settings-row settings-status" role="status">
-                      <Check size={20} aria-hidden="true" />
-                      {t('mobile.notesRoleActive')}
+                {(notesRoleState === 'available' || notesRoleState === 'held') && (
+                  <>
+                    <p className="settings-note">{t('mobile.notesRoleHint')}</p>
+                    <div className="settings-card">
+                      {notesRoleState === 'held' ? (
+                        <div className="settings-row settings-status" role="status">
+                          <Check size={20} aria-hidden="true" />
+                          {t('mobile.notesRoleActive')}
+                        </div>
+                      ) : (
+                        <button
+                          className="settings-row settings-action"
+                          onClick={() => {
+                            if (!window.SlothSystem?.requestNotesRole?.())
+                              toast.error(t('mobile.notesRoleFailed'))
+                          }}
+                        >
+                          <NotebookPen size={20} aria-hidden="true" />
+                          {t('mobile.notesRoleSet')}
+                        </button>
+                      )}
                     </div>
-                  ) : (
-                    <button
-                      className="settings-row settings-action"
-                      onClick={() => {
-                        if (!window.SlothSystem?.requestNotesRole?.())
-                          toast.error(t('mobile.notesRoleFailed'))
-                      }}
-                    >
-                      <NotebookPen size={20} aria-hidden="true" />
-                      {t('mobile.notesRoleSet')}
-                    </button>
-                  )}
-                </div>
+                  </>
+                )}
+                {getOnDeviceAiState() === 'available' && (
+                  <>
+                    <p className="settings-note">{t('mobile.aiHint')}</p>
+                    <div className="settings-card">
+                      <label className="settings-row settings-toggle">
+                        <span>{t('mobile.aiTitle')}</span>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(prefs.mobileOnDeviceAi)}
+                          onChange={(event) =>
+                            updatePrefs({ ...prefs, mobileOnDeviceAi: event.target.checked })
+                          }
+                        />
+                      </label>
+                    </div>
+                  </>
+                )}
               </>
             )}
             <h2>{t('settings.about')}</h2>
@@ -2530,6 +2570,44 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   {t('dialog.backupReplaceConfirm')}
                 </button>
               </>
+            ) : layer.name === 'ai-suggestion' && aiSuggestion ? (
+              <>
+                <p>{t('mobile.aiSuggestionTitle')}</p>
+                <textarea
+                  rows={8}
+                  value={aiSuggestion.text}
+                  onChange={(event) =>
+                    setAiSuggestion((prev) => (prev ? { ...prev, text: event.target.value } : null))
+                  }
+                  style={{ width: '100%', minHeight: 160 }}
+                />
+                <button
+                  onClick={() => {
+                    setAiSuggestion(null)
+                    back()
+                  }}
+                >
+                  {t('mobile.aiDiscard')}
+                </button>
+                <button
+                  onClick={() => {
+                    const target = current.current.notes.find((n) => n.id === aiSuggestion.noteId)
+                    if (target && !blocked) {
+                      const nextBody = applyAiSuggestion({
+                        body: target.body,
+                        action: aiSuggestion.action,
+                        suggestion: aiSuggestion.text,
+                        summaryHeading: t('mobile.aiSummaryHeading'),
+                      })
+                      commit(updateMobileNote(current.current, target.id, nextBody))
+                    }
+                    setAiSuggestion(null)
+                    back()
+                  }}
+                >
+                  {t('mobile.aiAccept')}
+                </button>
+              </>
             ) : layer.name === 'dialog' && route.name === 'trash' && trashEmpty ? (
               <>
                 <p>{t('trash.emptyConfirm', { count: data.trash.length })}</p>
@@ -2677,6 +2755,28 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                       {t('menu.properties')}
                     </button>
                   )}
+                {canShowOnDeviceAiAction({
+                  state: getOnDeviceAiState(),
+                  enabled: Boolean(prefs.mobileOnDeviceAi),
+                  body: actionsNote.body,
+                }) && (
+                  <>
+                    <button
+                      disabled={blocked}
+                      onClick={() => runAiAction(actionsNote, 'summarize')}
+                    >
+                      <FileText size={20} aria-hidden="true" />
+                      {t('mobile.aiSummarize')}
+                    </button>
+                    <button
+                      disabled={blocked}
+                      onClick={() => runAiAction(actionsNote, 'proofread')}
+                    >
+                      <FileText size={20} aria-hidden="true" />
+                      {t('mobile.aiProofread')}
+                    </button>
+                  </>
+                )}
                 {!actionsNote.external && (
                   <button
                     disabled={blocked}
