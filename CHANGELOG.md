@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.58.0] — 2026-11-26
+
+Adicionada a compactação configurável de imagens em WebP (C6, [ADR 0050](docs/adr/0050-compactacao-imagens-webp.md)) com perfis Original, Equilibrada e Pequena, preservação de GIF/SVG e remoção de EXIF. Veja os [detalhes da versão](changelog/0.58.0.md).
+
 ## [0.57.0] — 2026-11-26
 
 Adicionada a base da ponte por QR sem conta (C1, [ADR 0049](docs/adr/0049-ponte-por-qr-sem-conta.md)): codificação e decodificação offline de notas curtas em `slothnote:qr:v1:` com compressão, limite de tamanho e aviso para imagens. Veja os [detalhes da versão](changelog/0.57.0.md).
