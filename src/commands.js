@@ -39,6 +39,7 @@ import {
   ChevronsUpDown,
   WrapText,
   ListTree,
+  QrCode,
 } from 'lucide-react'
 import { t, LANGUAGES } from './i18n.js'
 import { shortcutKeys } from './shortcut-registry.js'
@@ -114,6 +115,7 @@ function commandGroups({ active, activePinned, prefs, trashCount, desktop, mode 
         ['addImage', 'images.import', Plus],
         ['import', 'menu.import', FileInput, 'O', false, true],
         ['export', 'menu.export', FileOutput, 'E', !active, true],
+        ['shareQr', 'qr.send', QrCode, undefined, !active, true],
         [
           'trash',
           trashCount ? t('menu.trash', { count: trashCount }) : t('menu.trashEmpty'),

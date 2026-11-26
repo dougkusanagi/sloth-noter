@@ -33,6 +33,7 @@ import { friendlyError } from './errors.js'
 import { ToastButtons } from './components/toast-buttons.jsx'
 import { CommandPalette } from './components/command-palette.jsx'
 import { SettingsDialog } from './components/settings-dialog.jsx'
+import { QrNoteDialog } from './components/qr-note-dialog.jsx'
 import { buildCommands } from './commands.js'
 import { MainMenu } from './components/main-menu.jsx'
 import { ShortcutButton, ShortcutHint } from './components/shortcut-button.jsx'
@@ -222,6 +223,7 @@ function Workspace({ persistence, loaded }) {
   const [selectedImage, setSelectedImage] = useState(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [qrOpen, setQrOpen] = useState(false)
   const [coverNoteId, setCoverNoteId] = useState(null)
   const [notePanel, setNotePanel] = useState(null)
   const [panelKey, setPanelKey] = useState('')
@@ -2195,6 +2197,7 @@ function Workspace({ persistence, loaded }) {
     addImage: () => runMenu(pickImages, false),
     import: () => runMenu(() => importInput.current?.click(), false),
     export: () => active && runMenu(() => download(active.name, active.body)),
+    shareQr: () => active && runMenu(() => setQrOpen(true)),
     backup: () => runMenu(downloadBackup),
     restoreBackup: () => runMenu(() => backupInput.current?.click(), false),
     folder: () => persistence.invoke && runMenu(() => setFolderOpen(true), false),
@@ -3145,6 +3148,7 @@ function Workspace({ persistence, loaded }) {
           onClose={closeCommands}
         />
       )}
+      {qrOpen && active && <QrNoteDialog note={active} onClose={() => setQrOpen(false)} />}
       {settingsOpen && (
         <SettingsDialog
           prefs={prefs}

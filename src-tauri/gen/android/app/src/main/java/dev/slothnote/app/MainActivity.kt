@@ -19,6 +19,13 @@ import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.WindowInsetsCompat
 import java.io.File
 import androidx.core.view.WindowInsetsControllerCompat
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import org.json.JSONObject
 
 class MainActivity : TauriActivity() {
   // One-shot action from a launcher shortcut. The web layer takes it once, so a repeated
@@ -34,6 +41,43 @@ class MainActivity : TauriActivity() {
   private var animating = false
   private var lastInsets: WindowInsetsCompat? = null
   private var pendingFile: Pair<Int, String>? = null
+  private var pendingOcrRequest: Pair<Int, File>? = null
+  private var onDeviceAi: OnDeviceAiManager? = null
+  private val takeOcrPhoto =
+    registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+      val pending = pendingOcrRequest
+      pendingOcrRequest = null
+      if (pending == null) return@registerForActivityResult
+      val (requestId, file) = pending
+      if (!success || !file.exists()) {
+        file.delete()
+        reportOcrResult(requestId, false, null, "cancelled")
+        return@registerForActivityResult
+      }
+      try {
+        val image = InputImage.fromFilePath(this, android.net.Uri.fromFile(file))
+        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        recognizer.process(image)
+          .addOnSuccessListener { visionText ->
+            file.delete()
+            recognizer.close()
+            val recognized = visionText.text.trim()
+            if (recognized.isNotEmpty()) {
+              reportOcrResult(requestId, true, recognized, null)
+            } else {
+              reportOcrResult(requestId, false, null, "empty")
+            }
+          }
+          .addOnFailureListener {
+            file.delete()
+            recognizer.close()
+            reportOcrResult(requestId, false, null, "failed")
+          }
+      } catch (_: Exception) {
+        file.delete()
+        reportOcrResult(requestId, false, null, "failed")
+      }
+    }
   private val createFile = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
     val pending = pendingFile
     pendingFile = null
@@ -72,6 +116,30 @@ class MainActivity : TauriActivity() {
     webView?.evaluateJavascript("window.__slothFileResult?.($id,'$status')", null)
   }
 
+  private fun reportJsonCallback(fnName: String, id: Int, ok: Boolean, text: String?, error: String?) {
+    val payload = JSONObject().apply {
+      put("ok", ok)
+      if (text != null) put("text", text)
+      if (error != null) put("error", error)
+    }.toString()
+    val quoted = JSONObject.quote(payload)
+    runOnUiThread {
+      webView?.evaluateJavascript("window.$fnName?.($id,$quoted)", null)
+    }
+  }
+
+  private fun reportOcrResult(id: Int, ok: Boolean, text: String?, error: String?) {
+    reportJsonCallback("__slothOcrResult", id, ok, text, error)
+  }
+
+  private fun reportAiResult(id: Int, ok: Boolean, text: String?, error: String?) {
+    reportJsonCallback("__slothAiResult", id, ok, text, error)
+  }
+
+  private fun reportQrScanResult(id: Int, ok: Boolean, text: String?, error: String?) {
+    reportJsonCallback("__slothQrScanResult", id, ok, text, error)
+  }
+
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
     this.webView = webView
@@ -87,6 +155,13 @@ class MainActivity : TauriActivity() {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
     activeInstance = java.lang.ref.WeakReference(this)
+    onDeviceAi = OnDeviceAiManager(applicationContext).also { manager ->
+      manager.refreshAvailability { state ->
+        runOnUiThread {
+          webView?.evaluateJavascript("window.__slothAiStateChanged?.('$state')", null)
+        }
+      }
+    }
     if (savedInstanceState == null) readAction(intent)
     File(cacheDir, "shared").listFiles()?.forEach { it.delete() }
     // Enabled until the web layer reports otherwise, and disabled at the root so Android can
@@ -195,29 +270,71 @@ class MainActivity : TauriActivity() {
       Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
     @JavascriptInterface
-    fun getOnDeviceAiState(): String = "unavailable"
+    fun getOnDeviceAiState(): String = onDeviceAi?.currentState() ?: "unavailable"
 
     @JavascriptInterface
     fun runOnDeviceAi(requestId: Int, action: String?, text: String?): Boolean {
-      runOnUiThread {
-        webView?.evaluateJavascript(
-          "window.__slothAiResult?.($requestId,'{\"ok\":false,\"error\":\"unavailable\"}')",
-          null,
-        )
+      val manager = onDeviceAi
+      if (manager == null || action.isNullOrBlank() || text.isNullOrBlank()) {
+        reportAiResult(requestId, false, null, "unavailable")
+        return true
+      }
+      manager.run(action, text) { ok, result, error ->
+        reportAiResult(requestId, ok, result, error)
       }
       return true
     }
 
     @JavascriptInterface
-    fun isLocalOcrSupported(): Boolean = false
+    fun isLocalOcrSupported(): Boolean = true
 
     @JavascriptInterface
     fun captureTextOcr(requestId: Int): Boolean {
       runOnUiThread {
-        webView?.evaluateJavascript(
-          "window.__slothOcrResult?.($requestId,'{\"ok\":false,\"error\":\"unavailable\"}')",
-          null,
-        )
+        if (pendingOcrRequest != null) {
+          reportOcrResult(requestId, false, null, "busy")
+          return@runOnUiThread
+        }
+        try {
+          val dir = File(cacheDir, "ocr").apply { mkdirs() }
+          val photo = File(dir, "capture-$requestId.jpg")
+          val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", photo)
+          pendingOcrRequest = Pair(requestId, photo)
+          takeOcrPhoto.launch(uri)
+        } catch (_: Exception) {
+          pendingOcrRequest = null
+          reportOcrResult(requestId, false, null, "failed")
+        }
+      }
+      return true
+    }
+
+    @JavascriptInterface
+    fun scanQrCode(requestId: Int): Boolean {
+      runOnUiThread {
+        try {
+          val options = GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+            .build()
+          GmsBarcodeScanning.getClient(this@MainActivity, options)
+            .startScan()
+            .addOnSuccessListener { barcode ->
+              val raw = barcode.rawValue
+              if (!raw.isNullOrBlank()) {
+                reportQrScanResult(requestId, true, raw, null)
+              } else {
+                reportQrScanResult(requestId, false, null, "empty")
+              }
+            }
+            .addOnCanceledListener {
+              reportQrScanResult(requestId, false, null, "cancelled")
+            }
+            .addOnFailureListener {
+              reportQrScanResult(requestId, false, null, "failed")
+            }
+        } catch (_: Exception) {
+          reportQrScanResult(requestId, false, null, "failed")
+        }
       }
       return true
     }
@@ -448,6 +565,8 @@ class MainActivity : TauriActivity() {
 
   override fun onDestroy() {
     if (activeInstance?.get() === this) activeInstance = null
+    onDeviceAi?.close()
+    onDeviceAi = null
     super.onDestroy()
   }
 

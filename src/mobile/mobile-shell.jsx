@@ -50,6 +50,7 @@ import {
   NotebookText,
   NotebookPen,
   Pin,
+  QrCode,
   Redo2,
   ScanSearch,
   Search,
@@ -102,6 +103,8 @@ import { createFullBackup, readBackupBundle, restoreBackupImages } from '../back
 import { AboutPanel } from '../components/about-panel.jsx'
 import { HistoryPanel } from '../components/history-panel.jsx'
 import { Switch } from '../components/controls.jsx'
+import { QrNoteDialog } from '../components/qr-note-dialog.jsx'
+import { decodeQrNotePayload } from '../qr-bridge.js'
 import { SyncPanel } from '../components/sync-panel.jsx'
 import { useSync } from '../hooks/use-sync.js'
 import { ImageThumbnail } from '../components/image-library.jsx'
@@ -665,6 +668,54 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     } finally {
       pendingBusy.current = false
     }
+  }
+  const [onDeviceAiState, setOnDeviceAiState] = useState(() => getOnDeviceAiState())
+  useEffect(() => {
+    window.__slothAiStateChanged = (state) => {
+      setOnDeviceAiState(state === 'available' ? 'available' : 'unavailable')
+    }
+    return () => {
+      delete window.__slothAiStateChanged
+    }
+  }, [])
+  const [qrNote, setQrNote] = useState(null)
+  const [qrPasteText, setQrPasteText] = useState('')
+  function importQrPayload(raw) {
+    const decoded = decodeQrNotePayload(String(raw ?? '').trim())
+    if (!decoded.ok) {
+      toast.error(t('qr.invalid'))
+      return false
+    }
+    const created = newMobileNote(current.current, '')
+    const next = updateMobileNote(created, created.activeId, decoded.body)
+    commit(next)
+    openNote(next.activeId, false)
+    toast.success(t('qr.imported'))
+    return true
+  }
+  function scanQrNote() {
+    if (blocked) return
+    if (typeof window.SlothSystem?.scanQrCode === 'function') {
+      const requestId = Date.now() % 1000000
+      window.__slothQrScanResult = (id, raw) => {
+        if (id !== requestId) return
+        delete window.__slothQrScanResult
+        try {
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+          if (parsed?.ok && parsed.text) {
+            importQrPayload(parsed.text)
+          } else if (parsed?.error && parsed.error !== 'cancelled') {
+            toast.error(t('qr.invalid'))
+          }
+        } catch {
+          toast.error(t('qr.invalid'))
+        }
+      }
+      window.SlothSystem.scanQrCode(requestId)
+      return
+    }
+    setQrPasteText('')
+    dispatch({ type: 'layer', route: { name: 'qr-paste' } })
   }
   const [aiSuggestion, setAiSuggestion] = useState(null)
   const [ocrSuggestion, setOcrSuggestion] = useState(null)
@@ -1970,9 +2021,9 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   onChange={(event) => updatePrefs({ fontSize: Number(event.target.value) })}
                 />
               </div>
-              <div className="settings-row stacked">
+              <div className="settings-row stacked settings-tablet-only">
                 <span className="settings-row-title">{t('settings.contentWidth')}</span>
-                <DocumentWidthPresets prefs={prefs} onChange={updatePrefs} />
+                <DocumentWidthPresets prefs={prefs} onChange={updatePrefs} compactTablet />
               </div>
             </div>
             <h2>{t('settings.editor')}</h2>
@@ -2026,7 +2077,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             </div>
             {(notesRoleState === 'available' ||
               notesRoleState === 'held' ||
-              getOnDeviceAiState() === 'available') && (
+              onDeviceAiState === 'available') && (
               <>
                 <h2>{t('mobile.systemSection')}</h2>
                 {(notesRoleState === 'available' || notesRoleState === 'held') && (
@@ -2053,7 +2104,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                     </div>
                   </>
                 )}
-                {getOnDeviceAiState() === 'available' && (
+                {onDeviceAiState === 'available' && (
                   <div className="settings-card">
                     <div className="settings-row">
                       <label htmlFor="mobile-ai-toggle">
@@ -2586,6 +2637,31 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   {t('dialog.backupReplaceConfirm')}
                 </button>
               </>
+            ) : layer.name === 'qr-paste' ? (
+              <div className="mobile-suggestion-sheet">
+                <p className="settings-note">{t('qr.scanHint')}</p>
+                <textarea
+                  className="mobile-suggestion-input"
+                  rows={5}
+                  value={qrPasteText}
+                  placeholder="slothnote:qr:v1:..."
+                  onChange={(event) => setQrPasteText(event.target.value)}
+                />
+                <div className="mobile-suggestion-actions">
+                  <button type="button" onClick={back}>
+                    {t('dialog.cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={() => {
+                      if (importQrPayload(qrPasteText)) back()
+                    }}
+                  >
+                    {t('qr.importAction')}
+                  </button>
+                </div>
+              </div>
             ) : layer.name === 'ocr-suggestion' && ocrSuggestion ? (
               <div className="mobile-suggestion-sheet">
                 <p className="settings-note">{t('mobile.ocrTitle')}</p>
@@ -2846,7 +2922,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                     </button>
                   )}
                 {canShowOnDeviceAiAction({
-                  state: getOnDeviceAiState(),
+                  state: onDeviceAiState,
                   enabled: Boolean(prefs.mobileOnDeviceAi),
                   body: actionsNote.body,
                 }) && (
@@ -2977,6 +3053,15 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   <FileOutput size={20} />
                   {t('menu.export')}
                 </button>
+                <button
+                  onClick={() => {
+                    setQrNote(actionsNote)
+                    back()
+                  }}
+                >
+                  <QrCode size={20} aria-hidden="true" />
+                  {t('qr.send')}
+                </button>
                 <p className="mobile-export-hint">{t('mobile.noteExportHint')}</p>
                 {groups.length > 0 && (
                   <button
@@ -3008,6 +3093,16 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 <button onClick={() => noteInput.current?.click()}>
                   <FileInput size={20} />
                   {t('menu.import')}
+                </button>
+                <button
+                  disabled={blocked}
+                  onClick={() => {
+                    back()
+                    scanQrNote()
+                  }}
+                >
+                  <QrCode size={20} aria-hidden="true" />
+                  {t('qr.scan')}
                 </button>
                 <button onClick={() => dispatch({ type: 'push', route: { name: 'trash' } })}>
                   <Trash2 size={20} />
@@ -3049,6 +3144,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         hidden
         onChange={(event) => importNote(event.target.files?.[0])}
       />
+      {qrNote && <QrNoteDialog note={qrNote} onClose={() => setQrNote(null)} />}
       {transferBusy && (
         <div className="mobile-transfer" role="status">
           {transferBusy}

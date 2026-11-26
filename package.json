@@ -1,6 +1,6 @@
 {
   "name": "sloth-note",
-  "version": "0.61.1",
+  "version": "0.62.0",
   "description": "Offline Markdown editor with notes in files the user controls",
   "private": true,
   "type": "module",
@@ -38,6 +38,7 @@
     "frimousse": "0.4.0",
     "lucide-react": "^1.48.0",
     "prismjs": "^1.30.0",
+    "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-markdown": "^10.1.0",

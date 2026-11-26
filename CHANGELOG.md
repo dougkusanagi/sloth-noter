@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.62.0] — 2026-11-26
+
+Adicionada a interface completa de transferência por QR Code (geração no desktop/celular e leitura por câmera nativa no Android), integrados OCR local real (ML Kit Text Recognition) e IA no aparelho (ML Kit GenAI) no Android, e ocultada a largura do campo de texto em celulares compactos (exibindo 2 opções apenas em tablets ≥ 600 dp). Veja os [detalhes da versão](changelog/0.62.0.md).
+
 ## [0.61.1] — 2026-11-26
 
 Corrigido o estilo mobile do card **Histórico de versões** em Configurações e alinhados o seletor de IA no aparelho e as folhas de sugestão (IA e OCR) ao padrão visual do app, além de registrar regras de consistência visual no `AGENTS.md`. Veja os [detalhes da versão](changelog/0.61.1.md).
