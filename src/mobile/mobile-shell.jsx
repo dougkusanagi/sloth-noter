@@ -68,6 +68,7 @@ import {
   WrapText,
   X,
   Zap,
+  GripVertical,
 } from 'lucide-react'
 import { redo, undo } from '@codemirror/commands'
 import { Toaster, toast } from 'sonner'
@@ -131,6 +132,7 @@ import { useNativeActions } from './use-native-actions.js'
 import { canShareFile, shareFile } from './share.js'
 import { useNavigation } from './use-navigation.js'
 import { newMobileNote, renameMobileNote, updateMobileNote } from './note-actions.js'
+import { BlockReorder } from './block-reorder.jsx'
 import { SwipeNoteRow } from './swipe-note-row.jsx'
 import { shareAndroidText } from './share.js'
 import { backEnabled, createMobileBack } from './back.js'
@@ -2378,9 +2380,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                         ? t('mobile.info')
                         : layer.name === 'sections'
                           ? t('mobile.moveSection')
-                          : actionsNote
-                            ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
-                            : t('mobile.more')
+                          : layer.name === 'reorder'
+                            ? t('mobile.reorder')
+                            : actionsNote
+                              ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
+                              : t('mobile.more')
             }
           >
             <div
@@ -2416,13 +2420,15 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                     ? t('mobile.commandsTitle')
                     : layer.name === 'cover'
                       ? t('cover.title')
-                      : layer.name === 'image-detail'
-                        ? selectedImage?.name || t('images.title')
-                        : layer.name === 'image-insert'
-                          ? t('mobile.insertInNote')
-                          : actionsNote
-                            ? displayName(actionsNote.name)
-                            : 'Sloth Note'}
+                      : layer.name === 'reorder'
+                        ? t('mobile.reorder')
+                        : layer.name === 'image-detail'
+                          ? selectedImage?.name || t('images.title')
+                          : layer.name === 'image-insert'
+                            ? t('mobile.insertInNote')
+                            : actionsNote
+                              ? displayName(actionsNote.name)
+                              : 'Sloth Note'}
               </h2>
               <button className="mobile-icon" aria-label={t('dialog.close')} onClick={back}>
                 <X size={22} />
@@ -2958,6 +2964,14 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   {t('menu.rename')}
                 </button>
               </form>
+            ) : layer.name === 'reorder' && active ? (
+              <BlockReorder
+                key={active.id}
+                body={active.body}
+                disabled={blocked || Boolean(active.external)}
+                onChange={updateBody}
+                scroller={dialog}
+              />
             ) : actionsNote ? (
               (() => {
                 const isActive = Boolean(active && actionsNote.id === active.id)
@@ -3142,6 +3156,18 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
 
                     <section className="mobile-menu-group" aria-labelledby="note-menu-organize">
                       <h3 id="note-menu-organize">{t('mobile.menuOrganize')}</h3>
+                      {isActive && (
+                        <button
+                          disabled={blocked || Boolean(actionsNote.external)}
+                          onClick={() => {
+                            setEditingId(null)
+                            dispatch({ type: 'layer', route: { name: 'reorder' } })
+                          }}
+                        >
+                          <GripVertical size={20} aria-hidden="true" />
+                          {t('mobile.reorder')}
+                        </button>
+                      )}
                       {isActive && (
                         <button
                           disabled={blocked}

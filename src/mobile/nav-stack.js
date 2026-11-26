@@ -22,6 +22,7 @@ const layers = new Set([
   'open-notes',
   'info',
   'sections',
+  'reorder',
   'image-detail',
   'image-insert',
   'qr-paste',
