@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.52.0] — 2026-11-26
+
+Ajustado o bloco "Nova nota" das Configurações rápidas no Android para abrir a tela protegida de nota rápida (`QuickNoteActivity`) quando o aparelho estiver bloqueado. Veja os [detalhes da versão](changelog/0.52.0.md).
+
 ## [0.51.0] — 2026-11-26
 
 Adicionado suporte ao papel de app de notas do sistema no Android 14+ (B4, `ROLE_NOTES`), com solicitação em Configurações → Sistema e tela isolada na tela de bloqueio para criar e salvar notas novas sem exibir suas notas existentes ([ADR 0045](docs/adr/0045-app-de-notas-do-sistema-role-notes.md)). Veja os [detalhes da versão](changelog/0.51.0.md).
