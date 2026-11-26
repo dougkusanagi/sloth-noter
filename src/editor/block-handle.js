@@ -377,7 +377,7 @@ export const blockHandle = ViewPlugin.fromClass(
       this.handle.removeAttribute('title')
       this.handle.dataset.kind = block.kind
       const topOffset =
-        block.kind === 'columns' || lineHeight > height * 2 ? 4 : (lineHeight - height) / 2
+        block.kind === 'columns' || lineHeight > height * 2 ? 0 : (lineHeight - height) / 2
       this.handle.style.left = `${left}px`
       this.handle.style.top = `${coords.top - host.top + topOffset}px`
       this.handle.hidden = false

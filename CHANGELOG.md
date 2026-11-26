@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.62.3] — 2026-11-26
+
+Ajustado o alinhamento superior exato (`top: 0`) da alça lateral esquerda em blocos de colunas e tabelas para ficar rente à borda superior como nos blocos sem colunas. Veja os [detalhes da versão](changelog/0.62.3.md).
+
 ## [0.62.2] — 2026-11-26
 
 Alinhada ao topo a alça lateral esquerda de tabelas e blocos de colunas (seguindo o padrão dos demais blocos) e corrigida a exibição da alça lateral ao passar o mouse sobre a área da coluna. Veja os [detalhes da versão](changelog/0.62.2.md).
