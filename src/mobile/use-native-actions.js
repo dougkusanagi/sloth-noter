@@ -20,6 +20,17 @@ export function useNativeActions(handlers, ready, env = window) {
         ? pending.length > 0
         : typeof pending === 'string' && pending.trim() !== '' && pending.trim() !== '[]'
       if (hasPending && latest.current.pendingNotes) latest.current.pendingNotes(pending)
+      const widgetToggles = env.SlothSystem?.takePendingWidgetToggles?.()
+      const hasWidgetToggles = Array.isArray(widgetToggles)
+        ? widgetToggles.length > 0
+        : typeof widgetToggles === 'string' &&
+          widgetToggles.trim() !== '' &&
+          widgetToggles.trim() !== '[]'
+      if (hasWidgetToggles && latest.current.widgetToggles) {
+        latest.current.widgetToggles(widgetToggles)
+      }
+      const openNoteId = env.SlothSystem?.takeOpenNoteId?.()
+      if (openNoteId && latest.current.openNote) latest.current.openNote(openNoteId)
     }
     take()
     env.__nativeAction = take

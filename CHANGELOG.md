@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.53.0] — 2026-11-26
+
+Adicionado o widget **Tarefas fixadas** para a tela inicial do Android (B5, [ADR 0046](docs/adr/0046-widget-de-lista-fixada.md)), exibindo as tarefas de uma nota fixada e permitindo marcá-las ou desmarcá-las sem abrir o aplicativo. Veja os [detalhes da versão](changelog/0.53.0.md).
+
 ## [0.52.0] — 2026-11-26
 
 Ajustado o bloco "Nova nota" das Configurações rápidas no Android para abrir a tela protegida de nota rápida (`QuickNoteActivity`) quando o aparelho estiver bloqueado. Veja os [detalhes da versão](changelog/0.52.0.md).

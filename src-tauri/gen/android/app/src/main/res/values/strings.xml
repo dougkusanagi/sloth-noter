@@ -13,4 +13,8 @@
     <string name="quick_note_empty_toast">Nada para salvar.</string>
     <string name="quick_note_too_large_toast">Texto grande demais para salvar.</string>
     <string name="quick_note_save_failed_toast">Não foi possível salvar a nota.</string>
+    <string name="widget_pinned_tasks_title">Tarefas fixadas</string>
+    <string name="widget_pinned_tasks_description">Exibe e permite marcar tarefas de uma nota fixada sem abrir o app.</string>
+    <string name="widget_pinned_tasks_empty_no_pinned">Fixe uma nota com tarefas no Sloth Note.</string>
+    <string name="widget_pinned_tasks_empty_no_tasks">Nenhuma tarefa na nota fixada.</string>
 </resources>

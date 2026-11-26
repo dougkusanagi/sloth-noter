@@ -19,6 +19,11 @@ import {
   parsePendingNotes,
 } from './mobile/pending-notes.js'
 import { newDocument, validateDocument } from './storage.js'
+import {
+  applyWidgetToggles,
+  buildPinnedTasksWidgetSnapshot,
+  parsePendingWidgetToggles,
+} from './mobile/widget-tasks.js'
 
 test('B1: runNoteTransition uses View Transitions API when available and motion is not reduced', () => {
   let ran = 0
@@ -333,4 +338,57 @@ test('B4: parsePendingNotes, formatPendingNoteBody, and ingestPendingNotes handl
   const second = ingestPendingNotes(first.document, payload, { fallbackTitle: 'Nota rápida' })
   assert.deepEqual(second.createdIds, [])
   assert.equal(second.document.notes.length, 3)
+})
+
+test('pinned tasks widget snapshot and toggles follow tasks.js rules (B5)', () => {
+  const doc = {
+    notes: [
+      { id: 'n1', pinned: false, body: '# Solta\n- [ ] Não fixada\n' },
+      { id: 'n2', pinned: true, body: '# Sem tarefas\nTexto comum\n' },
+      {
+        id: 'n3',
+        pinned: true,
+        body: '# Compras\n- [ ] Pão\n- [x] Leite\n- [-] Cancelada\n## Arquivo\n- [x] Antiga\n',
+      },
+    ],
+  }
+  const snapshot = buildPinnedTasksWidgetSnapshot(doc)
+  assert.equal(snapshot.noteId, 'n3')
+  assert.equal(snapshot.title, 'Compras')
+  assert.equal(snapshot.totalCount, 2)
+  assert.deepEqual(snapshot.tasks, [
+    { line: 2, status: 'todo', done: false, text: 'Pão' },
+    { line: 3, status: 'done', done: true, text: 'Leite' },
+  ])
+
+  const parsed = parsePendingWidgetToggles(
+    JSON.stringify([
+      { id: 't1', noteId: 'n3', line: 2, text: 'Pão', targetStatus: 'done' },
+      { id: '', noteId: 'n3', line: 2, targetStatus: 'done' },
+      { id: 't2', noteId: 'n3', line: 3, targetStatus: 'invalid' },
+    ]),
+  )
+  assert.deepEqual(parsed, [{ id: 't1', noteId: 'n3', line: 2, text: 'Pão', targetStatus: 'done' }])
+
+  const shiftedDoc = {
+    ...newDocument(),
+    notes: [
+      {
+        id: 'n3',
+        pinned: true,
+        body: '# Compras\nLinha extra\n- [ ] Pão\n- [x] Leite\n',
+      },
+    ],
+  }
+  const applied = applyWidgetToggles(
+    shiftedDoc,
+    [
+      { id: 't1', noteId: 'n3', line: 2, text: 'Pão', targetStatus: 'done' },
+      { id: 't2', noteId: 'n3', line: 4, text: 'Leite', targetStatus: 'todo' },
+    ],
+    { dates: false },
+  )
+  assert.equal(applied.changedCount, 2)
+  assert.deepEqual(applied.ackIds, ['t1', 't2'])
+  assert.equal(applied.document.notes[0].body, '# Compras\nLinha extra\n- [x] Pão\n- [ ] Leite\n')
 })

@@ -130,6 +130,7 @@ import { FormattingBar } from './formatting-bar.jsx'
 import { flushOnHide } from './lifecycle.js'
 import { saveTextFile } from './file-save.js'
 import { ingestPendingNotes } from './pending-notes.js'
+import { applyWidgetToggles, buildPinnedTasksWidgetSnapshot } from './widget-tasks.js'
 import './mobile.css'
 
 const destinations = [
@@ -656,12 +657,40 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       pendingBusy.current = false
     }
   }
+  const widgetBusy = useRef(false)
+  async function receiveWidgetToggles(raw) {
+    if (blocked || widgetBusy.current) return
+    const { document: nextDoc, ackIds, changedCount } = applyWidgetToggles(current.current, raw)
+    if (changedCount === 0) {
+      if (ackIds.length > 0) window.SlothSystem?.ackPendingWidgetToggles?.(JSON.stringify(ackIds))
+      return
+    }
+    widgetBusy.current = true
+    try {
+      commit(nextDoc)
+      const failure = await writer.current.whenIdle()
+      if (!failure && ackIds.length > 0) {
+        window.SlothSystem?.ackPendingWidgetToggles?.(JSON.stringify(ackIds))
+      }
+    } finally {
+      widgetBusy.current = false
+    }
+  }
+  useEffect(() => {
+    if (blocked || !window.SlothSystem?.syncWidgetSnapshot) return
+    const snapshot = buildPinnedTasksWidgetSnapshot(store.document)
+    window.SlothSystem.syncWidgetSnapshot(JSON.stringify(snapshot))
+  }, [store.document, blocked])
   useNativeActions(
     {
       newNote: () => createNote(),
       sharedText: receiveSharedText,
       openedFile: receiveOpenedFile,
       pendingNotes: receivePendingNotes,
+      widgetToggles: receiveWidgetToggles,
+      openNote: (id) => {
+        if (current.current.notes.some((note) => note.id === id)) openNote(id, false)
+      },
     },
     !blocked,
   )

@@ -25,6 +25,7 @@ class MainActivity : TauriActivity() {
   // intent (rotation, resume) never creates a second note.
   private var pendingAction: String? = null
   private var pendingText: String? = null
+  private var pendingOpenNoteId: String? = null
   private var webView: WebView? = null
   private var backEnabled = true
   private var backCallback: OnBackPressedCallback? = null
@@ -82,6 +83,7 @@ class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    activeInstance = java.lang.ref.WeakReference(this)
     if (savedInstanceState == null) readAction(intent)
     File(cacheDir, "shared").listFiles()?.forEach { it.delete() }
     // Enabled until the web layer reports otherwise, and disabled at the root so Android can
@@ -161,6 +163,28 @@ class MainActivity : TauriActivity() {
       PendingNotesStore.ackJson(applicationContext, idsJson)
 
     @JavascriptInterface
+    fun takeOpenNoteId(): String {
+      val id = pendingOpenNoteId ?: ""
+      pendingOpenNoteId = null
+      return id
+    }
+
+    @JavascriptInterface
+    fun syncWidgetSnapshot(json: String?): Boolean {
+      val saved = WidgetTasksStore.saveSnapshotJson(applicationContext, json)
+      if (saved) PinnedTasksWidgetProvider.updateAll(applicationContext)
+      return saved
+    }
+
+    @JavascriptInterface
+    fun takePendingWidgetToggles(): String =
+      WidgetTasksStore.listPendingTogglesJson(applicationContext)
+
+    @JavascriptInterface
+    fun ackPendingWidgetToggles(idsJson: String?): Boolean =
+      WidgetTasksStore.ackPendingTogglesJson(applicationContext, idsJson)
+
+    @JavascriptInterface
     fun getNotesRoleState(): String = notesRoleState()
 
     @JavascriptInterface
@@ -210,6 +234,11 @@ class MainActivity : TauriActivity() {
     }
     if (intent?.action == "dev.slothnote.app.NEW_NOTE") {
       pendingAction = "new-note"
+      intent.action = Intent.ACTION_MAIN
+    }
+    if (intent?.action == PinnedTasksWidgetProvider.ACTION_OPEN_NOTE) {
+      val id = intent.getStringExtra(PinnedTasksWidgetProvider.EXTRA_NOTE_ID)
+      if (!id.isNullOrBlank()) pendingOpenNoteId = id
       intent.action = Intent.ACTION_MAIN
     }
   }
@@ -380,5 +409,22 @@ class MainActivity : TauriActivity() {
       "left:${dp(bars.left)},right:${dp(bars.right)}," +
       "ime:${dp(imeHeight)},keyboard:'$keyboard',progress:$progress})"
     webView?.evaluateJavascript(script, null)
+  }
+
+  override fun onDestroy() {
+    if (activeInstance?.get() === this) activeInstance = null
+    super.onDestroy()
+  }
+
+  companion object {
+    @Volatile
+    private var activeInstance: java.lang.ref.WeakReference<MainActivity>? = null
+
+    fun notifyNativeAction() {
+      val activity = activeInstance?.get() ?: return
+      activity.runOnUiThread {
+        activity.webView?.evaluateJavascript("window.__nativeAction?.()", null)
+      }
+    }
   }
 }

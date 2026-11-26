@@ -311,7 +311,7 @@ Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e deta
 - [x] **B3 — Bloco nas Configurações rápidas** (0.49.0): `NewNoteTileService` (`TileService`) registrado no `AndroidManifest.xml`, reutilizando `dev.slothnote.app.NEW_NOTE` com app aberto ou fechado.
 - [x] **B15 — Quadro com gestos** (0.50.0): no modo compacto do Quadro, deslizar a área da coluna troca de coluna como carrossel e deslizar um cartão move a tarefa para a coluna seguinte/anterior com vibração, usando o mesmo `moveCardToColumn` do menu (`src/mobile/board-gestures.js`, `src/components/task-board.jsx`, `src/mobile-platform.test.js`).
 - [x] **B4 — App de notas do sistema (`ROLE_NOTES`)** (0.51.0–0.52.0): [ADR 0045](../adr/0045-app-de-notas-do-sistema-role-notes.md); `QuickNoteActivity` isolada para `ACTION_CREATE_NOTE` na tela de bloqueio com compositor nativo em branco sem leitura de notas existentes e fila privada `PendingNotesStore` ingerida de forma idempotente após confirmar gravação (`src/mobile/pending-notes.js`, `src/mobile/use-native-actions.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`, `e2e/mobile/notes-role.spec.js`), além de seção **Sistema** em Configurações no Android 14+ para pedir `RoleManager.ROLE_NOTES`. Em `0.52.0`, `NewNoteTileService` (B3) também passou a abrir `QuickNoteActivity` quando o aparelho está bloqueado.
-- [ ] **B5 — Widget de lista fixada** (exige ADR).
+- [x] **B5 — Widget de lista fixada** (0.53.0): [ADR 0046](../adr/0046-widget-de-lista-fixada.md); `PinnedTasksWidgetProvider` e `WidgetTasksStore` no Android exibem até 8 tarefas de uma nota fixada, permitem marcar/desmarcar sem abrir o app e abrem a nota ao tocar no título; no lado web, `src/mobile/widget-tasks.js` publica o snapshot e aplica os toggles pendentes usando `applyStatus` de `src/tasks.js` na fila de gravação (`src/mobile/use-native-actions.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
 - [ ] **B6 — Caneta** (escrita à mão no editor onde o WebView suportar).
 - [ ] **B7 — IA no aparelho (opcional)** (Gemini Nano / ML Kit GenAI, exige ADR).
 - [ ] **B17 — Captura por câmera com OCR local** (exige ADR).
@@ -357,6 +357,9 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
   Android 14+, acionar `ACTION_CREATE_NOTE` com a tela bloqueada e desbloqueada, verificar
   `QuickNoteActivity` isolada (sem exibir notas existentes), escrita por caneta e importação ao
   desbloquear.
+- B5 (Widget de lista fixada): adicionar o widget **Tarefas fixadas** à tela inicial no APK real,
+  marcar e desmarcar tarefas com o app fechado e aberto, verificar que o Markdown e as datas de
+  conclusão ficam idênticos e que tocar no título abre a nota fixada.
 
 ## Evidências registradas
 
@@ -422,8 +425,8 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-Concluída **B4 — App de notas do sistema (`ROLE_NOTES`)** (0.51.0, [ADR 0045](../adr/0045-app-de-notas-do-sistema-role-notes.md)).
-Próximo item da Parte B (Prioridade 6 da [fila central](prioridades.md)): **B5 — Widget de lista fixada** (definir ADR próprio para leitura/escrita sincronizada das tarefas entre widget nativo e fila do app) ou **B6 — Caneta** (escrita à mão no WebView).
+Concluída **B5 — Widget de lista fixada** (0.53.0, [ADR 0046](../adr/0046-widget-de-lista-fixada.md)).
+Próximo item da Parte B (Prioridade 6 da [fila central](prioridades.md)): **B6 — Caneta** (escrita à mão no editor onde o WebView suportar).
 
 Pendente no aparelho (de entregas anteriores): validar S4 nativo (conta única desktop Tauri ↔ APK
 real, conflito, lixeira/restauração e imagem), validar B4 na tela de bloqueio/caneta real e validar

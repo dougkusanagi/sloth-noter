@@ -83,6 +83,19 @@
             </intent-filter>
         </service>
 
+        <receiver
+            android:name=".PinnedTasksWidgetProvider"
+            android:label="@string/widget_pinned_tasks_title"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="dev.slothnote.app.WIDGET_TOGGLE_TASK" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/pinned_tasks_widget_info" />
+        </receiver>
+
         <provider
           android:name="androidx.core.content.FileProvider"
           android:authorities="${applicationId}.fileprovider"
