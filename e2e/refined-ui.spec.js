@@ -108,6 +108,26 @@ test('the tasks view lists open tasks across notes, toggles and jumps to them', 
   ).toEqual([])
 })
 
+test('open notes follow the tab order at the top of the library', async ({ page }) => {
+  // Notes edited most recently would come first; the tabs say Agenda, then Ideias.
+  // Runs after the fixture's init script on the reload.
+  await page.addInitScript((key) => {
+    const document = JSON.parse(localStorage.getItem(key))
+    document.openIds = [document.notes[0].id, 'Agenda', 'Ideias']
+    for (const [index, note] of document.notes.entries()) note.modifiedAt = 1000 + index
+    localStorage.setItem(key, JSON.stringify(document))
+  }, STORAGE_KEY)
+  await page.reload()
+  const sidebar = page.getByRole('complementary', { name: 'Biblioteca' })
+  await expect(page.locator('.tab-wrap')).toHaveCount(3)
+  const names = async () =>
+    (await sidebar.locator('.note-item .note-title').allTextContents()).slice(0, 4)
+  await expect.poll(names).toEqual(['À Fazer', 'Agenda', 'Ideias', 'Contas'])
+  await page.locator('.tab-wrap', { hasText: 'Ideias' }).click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Mover aba para a esquerda' }).click()
+  await expect.poll(names).toEqual(['À Fazer', 'Ideias', 'Agenda', 'Contas'])
+})
+
 test('the trash lives in the library footer and can be emptied at once', async ({ page }) => {
   const sidebar = page.getByRole('complementary', { name: 'Biblioteca' })
   for (const name of ['Ideias', 'Contas']) {

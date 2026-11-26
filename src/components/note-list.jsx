@@ -168,14 +168,17 @@ export function NoteList({
     action(target)
   }
 
+  // Open notes follow the tab strip's order; the rest come after them.
+  const tabRank = (id) => {
+    const index = openIds.indexOf(id)
+    return index < 0 ? Infinity : index
+  }
   const shown = notes
     .map((note) => ({ note, result: noteSearchResult(note, query) }))
     .filter(({ result }) => !searching || result.matches.length || result.titleMatches.length)
     .sort(
       (a, b) =>
-        (openFirst && !searching
-          ? Number(openIds.includes(b.note.id)) - Number(openIds.includes(a.note.id))
-          : 0) ||
+        (openFirst && !searching ? tabRank(a.note.id) - tabRank(b.note.id) : 0) ||
         (sort === 'alphabetical'
           ? displayName(a.note.name).localeCompare(displayName(b.note.name), undefined, {
               sensitivity: 'base',

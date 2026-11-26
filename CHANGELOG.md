@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.63.2] — 2026-11-26
+
+Corrigida a ordem das notas abertas no topo da biblioteca: agora elas seguem a ordem das abas, inclusive as fixadas. Veja os [detalhes da versão](changelog/0.63.2.md).
+
 ## [0.63.1] — 2026-11-26
 
 Ajustado o build Android para gerar por padrão um APK release compacto (com minificação e remoção de recursos não usados) e copiá-lo automaticamente para `~/Downloads`, conforme regra registrada no `AGENTS.md`. Veja os [detalhes da versão](changelog/0.63.1.md).
