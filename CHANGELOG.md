@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.57.0] — 2026-11-26
+
+Adicionada a base da ponte por QR sem conta (C1, [ADR 0049](docs/adr/0049-ponte-por-qr-sem-conta.md)): codificação e decodificação offline de notas curtas em `slothnote:qr:v1:` com compressão, limite de tamanho e aviso para imagens. Veja os [detalhes da versão](changelog/0.57.0.md).
+
 ## [0.56.0] — 2026-11-26
 
 Adicionado suporte à captura de texto por câmera com OCR local no Android (B17, [ADR 0048](docs/adr/0048-captura-camera-ocr-local.md)), convertendo o texto reconhecido em Markdown (texto, lista ou tabela) como sugestão editável antes de inserir na nota. Veja os [detalhes da versão](changelog/0.56.0.md).
