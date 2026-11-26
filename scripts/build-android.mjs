@@ -7,17 +7,20 @@ import { fileURLToPath } from 'node:url'
 const root = fileURLToPath(new URL('../', import.meta.url))
 const android = path.join(root, 'src-tauri', 'gen', 'android')
 const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version
+const isDebug = process.argv.includes('--debug')
 async function exportApk(source) {
-  const destination = path.join(
-    android,
-    'app',
-    'build',
-    'outputs',
-    'apk',
-    `sloth-note-${version}-android-arm64-debug.apk`,
-  )
+  const fileName = isDebug
+    ? `sloth-note-${version}-android-arm64-debug.apk`
+    : `sloth-note-${version}-android-arm64.apk`
+  const destination = path.join(android, 'app', 'build', 'outputs', 'apk', fileName)
   await copyFile(source, destination)
   console.log(`APK: ${destination}`)
+  const downloads = path.join(process.env.HOME || process.env.USERPROFILE || '', 'Downloads')
+  if (downloads && existsSync(downloads)) {
+    const dlDest = path.join(downloads, fileName)
+    await copyFile(source, dlDest)
+    console.log(`Downloads: ${dlDest}`)
+  }
 }
 const env = { ...process.env, VITE_TARGET: 'mobile' }
 // Android devices with 16 KB pages require ELF segments aligned to 16 KB.
@@ -58,29 +61,20 @@ async function run(command, args, cwd = root) {
   return { code, output }
 }
 
-const result = await run('bun', [
-  'tauri',
-  'android',
-  'build',
-  '--debug',
-  '--target',
-  'aarch64',
-  '--apk',
-  '--ci',
-])
+const tauriArgs = ['tauri', 'android', 'build', '--target', 'aarch64', '--apk', '--ci']
+if (isDebug) tauriArgs.push('--debug')
+const result = await run('bun', tauriArgs)
 if (result.code === 0) {
-  await exportApk(
-    path.join(
-      android,
-      'app',
-      'build',
-      'outputs',
-      'apk',
-      'universal',
-      'debug',
-      'app-universal-debug.apk',
-    ),
-  )
+  const apkDir = path.join(android, 'app', 'build', 'outputs', 'apk', 'universal', isDebug ? 'debug' : 'release')
+  const candidates = isDebug
+    ? ['app-universal-debug.apk']
+    : ['app-universal-release.apk', 'app-universal-release-unsigned.apk']
+  const found = candidates.map((name) => path.join(apkDir, name)).find((p) => existsSync(p))
+  if (!found) {
+    console.error(`APK não encontrado em ${apkDir}`)
+    process.exit(1)
+  }
+  await exportApk(found)
   process.exit(0)
 }
 if (

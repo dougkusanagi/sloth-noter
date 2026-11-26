@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.63.1] — 2026-11-26
+
+Ajustado o build Android para gerar por padrão um APK release compacto (com minificação e remoção de recursos não usados) e copiá-lo automaticamente para `~/Downloads`, conforme regra registrada no `AGENTS.md`. Veja os [detalhes da versão](changelog/0.63.1.md).
+
 ## [0.63.0] — 2026-11-26
 
 Adicionado pareamento de conta de sincronização por QR Code nos dois sentidos — Desktop → Celular e Celular → Desktop estilo WhatsApp Web com criptografia ECDH ponta a ponta ([ADR 0053](docs/adr/0053-pareamento-conta-por-qr.md)) — e reorganizada a tela de Configurações no celular em submenus com resumo de estado. Veja os [detalhes da versão](changelog/0.63.0.md).

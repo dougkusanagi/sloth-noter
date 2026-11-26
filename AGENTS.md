@@ -18,7 +18,7 @@
 
 ## Compilação Android
 
-- Ao gerar um APK, produza a menor versão instalável possível. Compile a versão de depuração (debug) somente quando o usuário pedir explicitamente ou quando o agente precisar dela por um motivo concreto.
+- Ao gerar um APK, produza sempre um APK **release limpo e compacto** (menor versão instalável possível, `aarch64`/`arm64-v8a`, sem símbolos de debug) e **copie automaticamente o APK gerado para `~/Downloads`**. Compile a versão de depuração (`--debug`) somente quando o usuário pedir explicitamente ou quando o agente precisar dela por um motivo concreto.
 
 ## Padrão visual e consistência de interface
 
