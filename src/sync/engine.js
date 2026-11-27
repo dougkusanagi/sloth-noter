@@ -11,6 +11,7 @@
 import { decryptBlob, decryptNote, encryptBlob, encryptNote } from './crypto.js'
 import { mergeLines } from './merge.js'
 import { SyncError } from './client.js'
+import { frontmatterEnd } from '../frontmatter.js'
 
 const ATTEMPTS = 3
 
@@ -36,18 +37,77 @@ function pick(base, ours, theirs, fallback) {
   return { value: fallback, conflict: true }
 }
 
+function splitLead(text) {
+  const fmEnd = frontmatterEnd(text)
+  const frontmatter = text.slice(0, fmEnd)
+  const afterFm = text.slice(fmEnd)
+  const titleMatch = /^# [ \t]*[^\n]*/.exec(afterFm)
+  if (!titleMatch) return { frontmatter, title: null, rest: afterFm }
+  const end = titleMatch[0].length
+  const rest = afterFm[end] === '\n' ? afterFm.slice(end + 1) : afterFm.slice(end)
+  return { frontmatter, title: titleMatch[0], rest }
+}
+
+function conflictBlock(oursLines, theirsLines, labels) {
+  return [
+    `**${labels.conflict} — ${labels.ours}:**`,
+    ...oursLines,
+    `**${labels.conflict} — ${labels.theirs}:**`,
+    ...theirsLines,
+    `**${labels.end}**`,
+  ]
+}
+
 function renderBody(base, ours, theirs, labels) {
+  const b = base === null || base === undefined ? null : splitLead(base)
+  const o = splitLead(ours)
+  const t = splitLead(theirs)
+  if (o.frontmatter || t.frontmatter || o.title !== null || t.title !== null) {
+    const fm = pick(b ? b.frontmatter : o.frontmatter, o.frontmatter, t.frontmatter, o.frontmatter)
+    const title = pick(b ? b.title : null, o.title, t.title, o.title)
+    const keptTitle = title.value ?? o.title ?? t.title
+    const result = mergeLines(b ? b.rest : null, o.rest, t.rest)
+    const bodyChunks = [...result.chunks]
+    const leadOurs = [
+      ...(fm.conflict && o.frontmatter ? [o.frontmatter.trimEnd()] : []),
+      ...(title.conflict && o.title ? [o.title] : []),
+    ]
+    const leadTheirs = [
+      ...(fm.conflict && t.frontmatter ? [t.frontmatter.trimEnd()] : []),
+      ...(title.conflict && t.title ? [t.title] : []),
+    ]
+    let lines = []
+    if (leadOurs.length || leadTheirs.length) {
+      if (bodyChunks[0]?.conflict) {
+        const first = bodyChunks.shift()
+        lines.push(
+          ...conflictBlock(
+            [...leadOurs, ...first.conflict.ours],
+            [...leadTheirs, ...first.conflict.theirs],
+            labels,
+          ),
+        )
+      } else {
+        lines.push(...conflictBlock(leadOurs, leadTheirs, labels))
+      }
+    }
+    lines.push(
+      ...bodyChunks.flatMap((chunk) =>
+        chunk.lines
+          ? chunk.lines
+          : conflictBlock(chunk.conflict.ours, chunk.conflict.theirs, labels),
+      ),
+    )
+    const restText = lines.join('\n')
+    const hasRest = Boolean(restText || o.rest || t.rest)
+    const body =
+      fm.value +
+      (keptTitle !== null ? (hasRest ? `${keptTitle}\n${restText}` : keptTitle) : restText)
+    return { body, conflict: Boolean(result.conflict || title.conflict || fm.conflict) }
+  }
   const result = mergeLines(base, ours, theirs)
   const lines = result.chunks.flatMap((chunk) =>
-    chunk.lines
-      ? chunk.lines
-      : [
-          `**${labels.conflict} — ${labels.ours}:**`,
-          ...chunk.conflict.ours,
-          `**${labels.conflict} — ${labels.theirs}:**`,
-          ...chunk.conflict.theirs,
-          `**${labels.end}**`,
-        ],
+    chunk.lines ? chunk.lines : conflictBlock(chunk.conflict.ours, chunk.conflict.theirs, labels),
   )
   return { body: lines.join('\n'), conflict: result.conflict }
 }
@@ -79,18 +139,25 @@ export async function runSync({
   state,
   labels,
   images = null,
+  deferConflicts = false,
   newId = () => crypto.randomUUID(),
 }) {
   const working = new Map(local.map((note) => [note.id, note.payload]))
   const bases = { ...state.bases }
   const blobs = { ...state.blobs }
+  const pendingConflicts = { ...(state.conflicts ?? {}) }
   let cursor = state.cursor
   const upsert = new Map()
   const remove = new Set()
-  const conflicts = new Set()
+  const conflicts = new Set(Object.keys(pendingConflicts))
   const result = (error, retryAfter) => ({
     apply: { upsert: [...upsert].map(([id, payload]) => ({ id, payload })), remove: [...remove] },
-    state: { cursor, bases, blobs },
+    state: {
+      cursor,
+      bases,
+      blobs,
+      ...(Object.keys(pendingConflicts).length ? { conflicts: pendingConflicts } : {}),
+    },
     conflicts: [...conflicts],
     ...(error ? { error } : {}),
     ...(retryAfter ? { retryAfter } : {}),
@@ -157,11 +224,28 @@ export async function runSync({
         set(copy, ours)
         conflicts.add(copy)
       } else if (ours) drop(id)
-    } else if (!ours || same(ours, base) || same(ours, theirs)) set(id, theirs)
-    else {
-      const merged = mergePayload(base ?? { name: ours.name, body: '' }, ours, theirs, labels)
-      set(id, merged.payload)
-      if (merged.conflict) conflicts.add(id)
+    } else if (!ours || same(ours, base) || same(ours, theirs)) {
+      delete pendingConflicts[id]
+      conflicts.delete(id)
+      set(id, theirs)
+    } else {
+      const merged = mergePayload(base ?? { name: ours.name, body: null }, ours, theirs, labels)
+      if (merged.conflict && deferConflicts) {
+        pendingConflicts[id] = {
+          base: base?.body ?? null,
+          ours: ours.body,
+          theirs: theirs.body,
+          oursName: ours.name,
+          theirsName: theirs.name,
+          remoteRevision: remote.revision,
+          detectedAt: Date.now(),
+        }
+        conflicts.add(id)
+      } else {
+        delete pendingConflicts[id]
+        set(id, merged.payload)
+        if (merged.conflict) conflicts.add(id)
+      }
     }
     bases[id] = { revision: remote.revision, payload: theirs }
   }
@@ -178,6 +262,7 @@ export async function runSync({
       let stale = false
       let quota = false
       for (const [id, payload] of working) {
+        if (pendingConflicts[id]) continue
         const base = bases[id]
         if (base && same(payload, base.payload)) continue
         let images

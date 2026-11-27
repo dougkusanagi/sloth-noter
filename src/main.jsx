@@ -5,6 +5,8 @@ import { useAppUpdates, UpdateButton } from './components/app-updates.jsx'
 import { changelogDocument, changelogTarget } from './components/changelog-panel.jsx'
 import { pasteGesture } from './paste-intent.js'
 import { quickOpenNotes } from './quick-open.js'
+import { ConflictBanner, ConflictDiffModal } from './components/conflict-diff.jsx'
+import { resolveSyncConflict } from './sync/document.js'
 import { textStatistics } from './text-statistics.js'
 import { ChangeSet } from '@codemirror/state'
 import { documentChanges, mapSearchScope } from './search-scope.js'
@@ -256,6 +258,7 @@ function Workspace({ persistence, loaded }) {
   const imagePoint = useRef(null)
   const [palette, setPalette] = useState(false)
   const [query, setQuery] = useState('')
+  const [reviewingConflictId, setReviewingConflictId] = useState(null)
   const [selected, setSelected] = useState(0)
   const [folderError, setFolderError] = useState('')
   const [folderOpen, setFolderOpen] = useState(false)
@@ -2264,6 +2267,11 @@ function Workspace({ persistence, loaded }) {
         setSettingsSection('appearance')
         setSettingsOpen(true)
       }, false),
+    about: () =>
+      runMenu(() => {
+        setSettingsSection('about')
+        setSettingsOpen(true)
+      }, false),
     commands: () =>
       runMenu(() => {
         returnFocus.current = document.activeElement
@@ -2790,6 +2798,28 @@ function Workspace({ persistence, loaded }) {
               )}
               {active && !releaseDoc && (mode === 'visual' || mode === 'reading') && (
                 <div className="note-top">
+                  {data.sync?.conflicts?.[active.id] && (
+                    <ConflictBanner
+                      onReview={() => setReviewingConflictId(active.id)}
+                      onAcceptRemote={() => {
+                        const conflict = data.sync.conflicts[active.id]
+                        commit(
+                          resolveSyncConflict(current.current, active.id, {
+                            body: ensureTitle(conflict.theirs),
+                          }),
+                          'sistema',
+                        )
+                        void sync.run()
+                      }}
+                      onKeepLocal={() => {
+                        commit(
+                          resolveSyncConflict(current.current, active.id, { body: active.body }),
+                          'sistema',
+                        )
+                        void sync.run()
+                      }}
+                    />
+                  )}
                   <NoteCoverBanner
                     body={active.body}
                     onChange={noteEditable ? () => setNotePanel('cover') : undefined}
@@ -3193,6 +3223,25 @@ function Workspace({ persistence, loaded }) {
           }}
         />
       )}
+      {reviewingConflictId &&
+        data.sync?.conflicts?.[reviewingConflictId] &&
+        data.notes.find((n) => n.id === reviewingConflictId) && (
+          <ConflictDiffModal
+            note={data.notes.find((n) => n.id === reviewingConflictId)}
+            conflict={data.sync.conflicts[reviewingConflictId]}
+            onClose={() => setReviewingConflictId(null)}
+            onResolve={(resolvedBody) => {
+              commit(
+                resolveSyncConflict(current.current, reviewingConflictId, {
+                  body: ensureTitle(resolvedBody),
+                }),
+                'sistema',
+              )
+              setReviewingConflictId(null)
+              void sync.run()
+            }}
+          />
+        )}
       {palette && (
         <PaletteDialog
           inputRef={search}

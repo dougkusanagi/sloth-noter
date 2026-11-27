@@ -3,7 +3,9 @@ import assert from 'node:assert/strict'
 import { createApi } from '../server/api.js'
 import { memoryStore } from '../server/memory-store.js'
 import { createClient } from './sync/client.js'
-import { emptyState, previewFirstSync, runSync } from './sync/engine.js'
+import { emptyState, mergePayload, previewFirstSync, runSync } from './sync/engine.js'
+import { ensureTitle } from './title.js'
+import { reconcileHeadingNames } from './notes.js'
 import { generateKeyBytes } from './sync/crypto.js'
 
 const TOKEN = 't'.repeat(40)
@@ -334,4 +336,56 @@ test('429 rate_limited preserves retryAfter and keeps local notes intact', async
   assert.equal(out.error, 'rate_limited')
   assert.equal(out.retryAfter, 42)
   assert.deepEqual(desktop.notes.get('a'), note('mantida', 'A'))
+})
+
+test('conflicts keep the note title on the first line so reconciliation never renames it', () => {
+  const conflictLabels = {
+    conflict: 'Conflito de sincronização',
+    end: 'Fim do conflito de sincronização',
+    ours: 'versão deste aparelho',
+    theirs: 'versão do outro aparelho',
+  }
+  const sameTitle = mergePayload(
+    { name: 'Prompts.md', body: '', trashed: false },
+    { name: 'Prompts.md', body: '# Prompts\nLinha A', trashed: false },
+    { name: 'Prompts.md', body: '# Prompts\nLinha B', trashed: false },
+    conflictLabels,
+  )
+  assert.equal(sameTitle.conflict, true)
+  assert.ok(sameTitle.payload.body.startsWith('# Prompts\n**Conflito de sincronização'))
+  assert.equal(ensureTitle(sameTitle.payload.body), sameTitle.payload.body)
+
+  const differentTitle = mergePayload(
+    { name: 'Sloth Noter.md', body: '', trashed: false },
+    { name: 'Sloth Noter.md', body: '# Sloth Noter\nLocal', trashed: false },
+    { name: 'o Sloth Noter.md', body: '# o Sloth Noter\nRemoto', trashed: false },
+    conflictLabels,
+  )
+  assert.equal(differentTitle.conflict, true)
+  assert.ok(differentTitle.payload.body.startsWith('# Sloth Noter\n**Conflito de sincronização'))
+  assert.ok(differentTitle.payload.body.includes('# o Sloth Noter\nRemoto'))
+  const doc = reconcileHeadingNames({
+    notes: [
+      {
+        id: 'a',
+        name: differentTitle.payload.name,
+        body: ensureTitle(differentTitle.payload.body),
+        revision: 0,
+      },
+    ],
+  })
+  assert.equal(doc.notes[0].name, 'Sloth Noter.md')
+
+  const withFrontmatter = mergePayload(
+    { name: 'Contas.md', body: '', trashed: false },
+    { name: 'Contas.md', body: '---\nicon: 👀\n---\n# 👀 Contas\nLocal', trashed: false },
+    { name: 'Contas.md', body: '---\nicon: 👀\n---\n# 👀 Contas\nRemoto', trashed: false },
+    conflictLabels,
+  )
+  assert.equal(withFrontmatter.conflict, true)
+  assert.ok(
+    withFrontmatter.payload.body.startsWith(
+      '---\nicon: 👀\n---\n# 👀 Contas\n**Conflito de sincronização',
+    ),
+  )
 })

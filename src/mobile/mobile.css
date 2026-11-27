@@ -2264,3 +2264,23 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
 [data-platform='mobile'] .task-group-header .section-progress {
   font-size: 0.75rem;
 }
+
+[data-platform='mobile'] .sync-conflict-banner {
+  margin: 10px 14px 4px;
+  padding: 14px 16px;
+}
+[data-platform='mobile'] .sync-conflict-banner-actions,
+[data-platform='mobile'] .sync-conflict-toolbar,
+[data-platform='mobile'] .sync-conflict-hunk-actions {
+  width: 100%;
+}
+[data-platform='mobile'] .sync-conflict-btn,
+[data-platform='mobile'] .sync-conflict-chip {
+  min-height: 44px;
+  flex: 1 1 auto;
+}
+[data-platform='mobile'] .sync-conflict-modal {
+  width: calc(100vw - 16px);
+  max-height: 90vh;
+  padding: 14px;
+}

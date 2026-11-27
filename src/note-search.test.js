@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { matchesNote, noteSearchResult } from './note-search.js'
+import { compareNoteSearch, matchesNote, noteSearchResult, titleMatchRank } from './note-search.js'
 
 test('global search finds body content far below the preview and ignores accents', () => {
   const note = {
@@ -43,4 +43,26 @@ test('finds a completion date by its Brazilian display format', () => {
   assert.equal(noteSearchResult(note, '2026-11-23').matches.length, 2)
   assert.equal(noteSearchResult(note, 'concluída:23/11').snippet.hit, '✅ 2026-11-23')
   assert.equal(noteSearchResult(note, 'cancelada:24/11').snippet.hit, '❌ 2026-11-24')
+})
+
+test('search ranking prioritizes exact title, prefix, word start, substring, then body matches', () => {
+  const notes = [
+    { id: 'body-1', name: 'Diário.md', body: '# Diário\nUma menção a contas.' },
+    { id: 'body-2', name: 'Resumo.md', body: '# Resumo\nContas do mês e contas futuras.' },
+    { id: 'sub', name: 'Descontas.md', body: '# Descontas\nNada.' },
+    { id: 'word', name: 'Minhas Contas.md', body: '# Minhas Contas\nNada.' },
+    { id: 'prefix', name: 'Contas a pagar.md', body: '# Contas a pagar\nNada.' },
+    { id: 'exact', name: '👀 Contas.md', body: '# 👀 Contas\nNada.' },
+  ]
+  const ordered = notes
+    .map((note) => ({ note, result: noteSearchResult(note, 'contas') }))
+    .filter(({ result }) => result.matches.length || result.titleMatches.length)
+    .sort((a, b) => compareNoteSearch(a, b, 'contas'))
+    .map(({ note }) => note.id)
+  assert.deepEqual(ordered, ['exact', 'prefix', 'word', 'sub', 'body-2', 'body-1'])
+  assert.equal(titleMatchRank('Prompts.md', 'md'), 0)
+  assert.equal(
+    noteSearchResult({ name: 'Prompts.md', body: '# Prompts' }, 'md').titleMatches.length,
+    0,
+  )
 })

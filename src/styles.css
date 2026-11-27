@@ -3301,6 +3301,10 @@ body.cm-section-dragging * {
   white-space: nowrap;
 }
 
+.cm-task-move-hint[data-empty] {
+  margin-inline-start: 0;
+}
+
 .cm-editor:not(.cm-focused) .cm-task-move-hint {
   display: none;
 }

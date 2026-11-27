@@ -1,5 +1,8 @@
 import { CoverPicker } from '../components/cover-picker.jsx'
 import { NoteCoverBanner } from '../components/note-cover-banner.jsx'
+import { ConflictBanner, ConflictDiffModal } from '../components/conflict-diff.jsx'
+import { resolveSyncConflict } from '../sync/document.js'
+import { ensureTitle } from '../title.js'
 import { EditorToggleSettings } from '../components/settings-sections.jsx'
 import { noteCover } from '../note-cover.js'
 import {
@@ -89,7 +92,7 @@ import { VisualEditor } from '../visual-editor.jsx'
 import { DocumentOutline } from '../components/document-outline.jsx'
 import { EditorView } from '@codemirror/view'
 import { displayName, notePreview } from '../note-title.js'
-import { noteSearchResult } from '../note-search.js'
+import { compareNoteSearch, noteSearchResult } from '../note-search.js'
 import { findNote, wikiParts } from '../markdown-model.js'
 import {
   moveToTrash,
@@ -208,6 +211,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const [renameError, setRenameError] = useState('')
   const [purgeId, setPurgeId] = useState(null)
   const [trashEmpty, setTrashEmpty] = useState(false)
+  const [reviewingConflictId, setReviewingConflictId] = useState(null)
   const [backupCandidate, setBackupCandidate] = useState(null)
   const [transferBusy, setTransferBusy] = useState('')
   const headerGesture = useRef(null)
@@ -957,10 +961,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     .filter(({ result }) => !query.trim() || result.titleMatches.length || result.matches.length)
     .sort((a, b) => {
       if (query.trim()) {
-        return (
-          Number(Boolean(b.result.titleMatches.length)) -
-            Number(Boolean(a.result.titleMatches.length)) || a.index - b.index
-        )
+        return compareNoteSearch(a, b, query) || a.index - b.index
       }
       const pinDiff =
         Number(data.pinnedIds?.includes(b.note.id) ?? false) -
@@ -983,6 +984,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const groupedResults = groups
     .map((name) => ({ name, items: results.filter(({ note }) => groupOf(note) === name) }))
     .filter(({ items }) => !query.trim() || items.length > 0)
+    .sort((a, b) =>
+      query.trim() && a.items[0] && b.items[0]
+        ? compareNoteSearch(a.items[0], b.items[0], query)
+        : 0,
+    )
   const title = active
     ? displayName(active.name)
     : route.name === 'note'
@@ -1794,6 +1800,28 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   }
                 }}
               >
+                {data.sync?.conflicts?.[active.id] && (
+                  <ConflictBanner
+                    onReview={() => setReviewingConflictId(active.id)}
+                    onAcceptRemote={() => {
+                      const conflict = data.sync.conflicts[active.id]
+                      commit(
+                        resolveSyncConflict(current.current, active.id, {
+                          body: ensureTitle(conflict.theirs),
+                        }),
+                        'sistema',
+                      )
+                      void sync.run()
+                    }}
+                    onKeepLocal={() => {
+                      commit(
+                        resolveSyncConflict(current.current, active.id, { body: active.body }),
+                        'sistema',
+                      )
+                      void sync.run()
+                    }}
+                  />
+                )}
                 <NoteCoverBanner
                   body={active.body}
                   onChange={
@@ -3436,6 +3464,25 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           closeButtonAriaLabel: t('dialog.close'),
         }}
       />
+      {reviewingConflictId &&
+        data.sync?.conflicts?.[reviewingConflictId] &&
+        data.notes.find((n) => n.id === reviewingConflictId) && (
+          <ConflictDiffModal
+            note={data.notes.find((n) => n.id === reviewingConflictId)}
+            conflict={data.sync.conflicts[reviewingConflictId]}
+            onClose={() => setReviewingConflictId(null)}
+            onResolve={(resolvedBody) => {
+              commit(
+                resolveSyncConflict(current.current, reviewingConflictId, {
+                  body: ensureTitle(resolvedBody),
+                }),
+                'sistema',
+              )
+              setReviewingConflictId(null)
+              void sync.run()
+            }}
+          />
+        )}
     </main>
   )
 }

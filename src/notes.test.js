@@ -135,3 +135,22 @@ test('names and previews skip the YAML block', async () => {
   assert.equal(headingFileName(body), 'Meu projeto.md')
   assert.equal(notePreview(body), 'Primeira linha.')
 })
+
+test('sync conflict marker headings never rename a note file', () => {
+  assert.equal(
+    headingFileName('# **Conflito de sincronização — versão deste aparelho:**\n# Real'),
+    null,
+  )
+  assert.equal(headingFileName('# **Sync conflict — this device:**\n# Real'), null)
+  const doc = {
+    notes: [
+      {
+        id: 'a',
+        name: 'Prompts.md',
+        body: '# **Conflito de sincronização — versão deste aparelho:**\n# Prompts',
+        revision: 0,
+      },
+    ],
+  }
+  assert.strictEqual(reconcileHeadingNames(doc), doc)
+})

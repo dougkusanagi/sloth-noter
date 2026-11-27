@@ -241,9 +241,17 @@ class TaskDateWidget extends WidgetType {
 }
 
 class TaskMoveHint extends WidgetType {
+  constructor(empty = false) {
+    super()
+    this.empty = empty
+  }
+  eq(other) {
+    return this.empty === other.empty
+  }
   toDOM() {
     const hint = document.createElement('kbd')
     hint.className = 'cm-task-move-hint'
+    if (this.empty) hint.dataset.empty = ''
     hint.textContent = 'Ctrl+Shift+↑/↓'
     hint.setAttribute('aria-label', t('task.moveHint'))
     return hint
@@ -789,7 +797,10 @@ export function decorationsFor(view) {
             (direction) => moveListItems(text, line.from, line.from, direction)?.changes.length,
           )
         ) {
-          ranges.push(Decoration.widget({ widget: new TaskMoveHint(), side: 1 }).range(line.to))
+          const empty = !/^\s*[-*+]\s+\[[ xX~?-]\]\s+\S/.test(line.text)
+          ranges.push(
+            Decoration.widget({ widget: new TaskMoveHint(empty), side: 1 }).range(line.to),
+          )
         }
         const stamps = active ? [] : taskDates(line.text)
         for (const stamp of stamps)

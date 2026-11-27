@@ -14,7 +14,7 @@ import { noteTasks } from '../tasks.js'
 import { notePreview, displayName } from '../note-title.js'
 import { t } from '../i18n.js'
 
-import { noteSearchResult } from '../note-search.js'
+import { compareNoteSearch, noteSearchResult } from '../note-search.js'
 export { matchesNote } from '../note-search.js'
 
 /** Rename field shown in place of a folder's title; Enter or blur commits, Escape cancels. */
@@ -178,6 +178,7 @@ export function NoteList({
     .filter(({ result }) => !searching || result.matches.length || result.titleMatches.length)
     .sort(
       (a, b) =>
+        (searching ? compareNoteSearch(a, b, query) : 0) ||
         (openFirst && !searching ? tabRank(a.note.id) - tabRank(b.note.id) : 0) ||
         (sort === 'alphabetical'
           ? displayName(a.note.name).localeCompare(displayName(b.note.name), undefined, {
@@ -242,9 +243,14 @@ export function NoteList({
   }
 
   const loose = shown.filter(({ note }) => !groupOf(note))
-  const visibleGroups = groups.filter(
-    (group) => !searching || shown.some(({ note }) => groupOf(note) === group),
-  )
+  const visibleGroups = groups
+    .filter((group) => !searching || shown.some(({ note }) => groupOf(note) === group))
+    .sort((a, b) => {
+      if (!searching) return 0
+      const bestA = shown.find(({ note }) => groupOf(note) === a)
+      const bestB = shown.find(({ note }) => groupOf(note) === b)
+      return bestA && bestB ? compareNoteSearch(bestA, bestB, query) : 0
+    })
   if (!loose.length && !visibleGroups.length)
     return (
       <div

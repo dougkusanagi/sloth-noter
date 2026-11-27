@@ -31,6 +31,7 @@ import {
   Columns3,
   Keyboard,
   Settings,
+  Info,
   Command,
   LifeBuoy,
   NotebookPen,
@@ -164,6 +165,7 @@ function commandGroups({ active, activePinned, prefs, trashCount, desktop, mode 
       [
         ['commands', 'menu.commands', Command, 'Shift+P', false, true],
         ['settings', 'menu.settings', Settings, ',', false, true],
+        ['about', 'settings.about', Info, 'F1'],
         ['shortcuts', 'menu.shortcuts', Keyboard, 'Shift+/'],
         ['welcome', 'menu.welcome', LifeBuoy, undefined, false, true],
         ['changelog', 'settings.changelog', NotebookPen, undefined, false, true],

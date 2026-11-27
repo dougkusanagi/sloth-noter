@@ -7,7 +7,7 @@ import { platformVault, probeVault, readSyncSecrets, writeSyncSecrets } from '..
 import { t } from '../i18n.js'
 
 const INTERVAL = 5 * 60 * 1000
-const AFTER_EDIT = 15 * 1000
+const AFTER_EDIT = 3 * 1000
 const toBase64 = (bytes) => btoa(String.fromCharCode(...bytes))
 const fromBase64 = (text) => Uint8Array.from(atob(text), (char) => char.charCodeAt(0))
 // The sync state belongs to one server space: an account, or the old shared key.
@@ -69,6 +69,7 @@ export function useSync({ current, commit, invoke, blocked, onImagesChanged }) {
           key: fromBase64(saved.key),
           local: snapshot,
           state: before,
+          deferConflicts: true,
           images: imageAdapter(live.current.invoke, () => {
             wroteImage = true
           }),
@@ -136,13 +137,19 @@ export function useSync({ current, commit, invoke, blocked, onImagesChanged }) {
     return () => clearInterval(timer)
   }, [run, status.state])
 
-  // Back in the foreground, and shortly after the notes change.
+  // Sync when returning to foreground AND flush when leaving/hiding the app.
   useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') void run({ auto: true })
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' || document.visibilityState === 'hidden')
+        void run({ auto: true })
     }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
+    const onPageHide = () => void run({ auto: true })
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', onPageHide)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', onPageHide)
+    }
   }, [run])
 
   return {
