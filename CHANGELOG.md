@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.67.0] — 2026-11-27
+
+Revisão de conflitos de sincronização movida para exibição inline diretamente na nota e redesenho da seção **Conta e sincronização** nas Configurações (desktop e celular). Veja os [detalhes da versão](changelog/0.67.0.md).
+
 ## [0.66.0] — 2026-11-27
 
 Adicionada a revisão de conflitos de sincronização por diferenças (estilo VS Code), atalho `F1` para abrir a seção **Sobre**, melhoria na priorização da pesquisa de notas e correções no alinhamento e no ícone de tarefas vazias. Veja os [detalhes da versão](changelog/0.66.0.md).

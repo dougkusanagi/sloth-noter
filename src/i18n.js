@@ -351,6 +351,15 @@ const messages = {
     'sync.conflictPickBoth': 'Ambas',
     'sync.conflictEmptySide': '(trecho removido)',
     'sync.conflictNoDiff': 'Nenhuma diferença pendente nesta nota.',
+    'sync.conflictInlineTitle': 'Revisando diferenças na nota',
+    'sync.conflictSelected': 'Selecionada',
+    'sync.pairingSection': 'Parear outro aparelho',
+    'sync.sessionSection': 'Sessão',
+    'sync.signOutHint': 'As notas continuam salvas neste aparelho e no servidor.',
+    'sync.qr.connectDeviceDesc': 'Gere um QR Code para conectar sua conta no celular.',
+    'sync.qr.scanComputerDesc': 'Escaneie ou cole o código exibido em outro computador.',
+    'sync.qr.showButton': 'Mostrar QR',
+    'sync.qr.scanButton': 'Ler QR',
     'sync.error.offline':
       'Sem conexão com o servidor. As notas continuam salvas aqui; a sincronização tenta de novo mais tarde.',
     'sync.error.unauthorized':
@@ -1571,6 +1580,15 @@ const messages = {
     'sync.conflictPickBoth': 'Both',
     'sync.conflictEmptySide': '(removed lines)',
     'sync.conflictNoDiff': 'No pending differences in this note.',
+    'sync.conflictInlineTitle': 'Reviewing differences in note',
+    'sync.conflictSelected': 'Selected',
+    'sync.pairingSection': 'Pair another device',
+    'sync.sessionSection': 'Session',
+    'sync.signOutHint': 'Your notes stay saved on this device and on the server.',
+    'sync.qr.connectDeviceDesc': 'Show a QR code to connect your account on your phone.',
+    'sync.qr.scanComputerDesc': 'Scan or paste the code shown on another computer.',
+    'sync.qr.showButton': 'Show QR',
+    'sync.qr.scanButton': 'Scan QR',
     'sync.error.offline':
       'Cannot reach the server. Your notes are saved here; sync will try again later.',
     'sync.error.unauthorized':

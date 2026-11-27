@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { Eye, EyeOff, QrCode } from 'lucide-react'
+import { Cloud, Eye, EyeOff, LogOut, Monitor, QrCode, RefreshCw, Smartphone } from 'lucide-react'
 import { t } from '../i18n.js'
 import { DEFAULT_SERVER, MIN_PASSWORD } from '../sync/account.js'
 import {
@@ -93,14 +93,17 @@ function SyncStatus({ sync }) {
     try {
       const encrypted = await encryptPairingForRequester(parsed.request.pub, creds)
       const base = parsed.request.server.replace(/\/$/, '')
-      const res = await fetch(`${base}/v1/pairing/${encodeURIComponent(parsed.request.id)}/approve`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${creds.token}`,
+      const res = await fetch(
+        `${base}/v1/pairing/${encodeURIComponent(parsed.request.id)}/approve`,
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${creds.token}`,
+          },
+          body: JSON.stringify({ encrypted }),
         },
-        body: JSON.stringify({ encrypted }),
-      })
+      )
       if (!res.ok) {
         setPairingMsg(t('sync.qr.expired'))
         return false
@@ -134,87 +137,149 @@ function SyncStatus({ sync }) {
   if (status.state === 'off') return <AccountForm sync={sync} />
 
   const { account } = status
+  const avatarLetter = account?.name?.trim()?.[0]?.toUpperCase()
+  const statusKind =
+    status.state === 'syncing' ? 'syncing' : status.state === 'error' ? 'error' : 'ok'
   return (
     <>
-      <div className="sync-panel">
-        <div className="setting">
-          <div className="setting-text">
-            <span>{t(account ? 'sync.account' : 'sync.oldConnection')}</span>
-            {account ? (
-              <p className="sync-server">
-                {account.name} · {account.email}
-              </p>
-            ) : (
-              <p className="setting-hint">{t('sync.oldConnectionHint')}</p>
-            )}
-            {status.server !== DEFAULT_SERVER && (
-              <p className="sync-server setting-hint">
-                {t('sync.serverAt', { server: status.server })}
-              </p>
-            )}
+      <div className="sync-panel sync-connected">
+        <div className="sync-account-card">
+          <div className="sync-account-head">
+            <div className="sync-avatar" aria-hidden="true">
+              {avatarLetter || <Cloud size={18} />}
+            </div>
+            <div className="sync-account-meta">
+              <strong className="sync-account-name">
+                {account ? account.name : t('sync.oldConnection')}
+              </strong>
+              {account ? (
+                <span className="sync-account-email">{account.email}</span>
+              ) : (
+                <span className="sync-account-email">{t('sync.oldConnectionHint')}</span>
+              )}
+              {status.server !== DEFAULT_SERVER && (
+                <span className="sync-account-server">
+                  {t('sync.serverAt', { server: status.server })}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        <p className="sync-status" role="status" aria-live="polite">
-          {status.state === 'syncing'
-            ? t('sync.syncing')
-            : status.state === 'error'
-              ? errorText(status.error)
-              : status.at
-                ? t('sync.doneAt', { time: formatTime(status.at) })
-                : t('sync.ready')}
-          {status.conflicts > 0 && ` ${t('sync.conflicts', { count: status.conflicts })}`}
-        </p>
-        <div className="sync-actions">
-          <button className="button" disabled={status.state === 'syncing'} onClick={sync.run}>
-            {t('sync.now')}
-          </button>
-          <button
-            className="button"
-            type="button"
-            onClick={() => setPairingModal('direct')}
-          >
-            <QrCode size={15} aria-hidden="true" />
-            {t('sync.qr.connectDevice')}
-          </button>
-          <button
-            className="button"
-            type="button"
-            onClick={handleScanComputer}
-          >
-            <QrCode size={15} aria-hidden="true" />
-            {t('sync.qr.scanComputer')}
-          </button>
-          <button
-            className="button"
-            onClick={async () => {
-              if (window.confirm(t('sync.disconnectConfirm'))) await sync.disconnect()
-            }}
-          >
-            {t(account ? 'sync.signOut' : 'sync.disconnect')}
-          </button>
-        </div>
-        {pasteMode && (
-          <div className="sync-field">
-            <input
-              type="text"
-              value={pasteCode}
-              placeholder={t('sync.qr.pastePlaceholder')}
-              onChange={(event) => setPasteCode(event.target.value)}
-            />
+
+          <div className="sync-account-footer">
+            <p className="sync-status-pill" data-kind={statusKind} role="status" aria-live="polite">
+              <span className="sync-status-dot" aria-hidden="true" />
+              <span>
+                {status.state === 'syncing'
+                  ? t('sync.syncing')
+                  : status.state === 'error'
+                    ? errorText(status.error)
+                    : status.at
+                      ? t('sync.doneAt', { time: formatTime(status.at) })
+                      : t('sync.ready')}
+                {status.conflicts > 0 && ` ${t('sync.conflicts', { count: status.conflicts })}`}
+              </span>
+            </p>
             <button
               type="button"
-              className="button primary"
-              onClick={() => void approveReverseQr(pasteCode)}
+              className="button primary sync-now-btn"
+              disabled={status.state === 'syncing'}
+              onClick={sync.run}
             >
-              {t('sync.qr.confirmCode')}
+              <RefreshCw
+                size={14}
+                className={status.state === 'syncing' ? 'sync-spin' : undefined}
+                aria-hidden="true"
+              />
+              <span>{t('sync.now')}</span>
             </button>
           </div>
-        )}
-        {pairingMsg && (
-          <p className="sync-status" role="status">
-            {pairingMsg}
-          </p>
-        )}
+        </div>
+
+        <section className="sync-group" aria-label={t('sync.pairingSection')}>
+          <h4 className="sync-group-title">{t('sync.pairingSection')}</h4>
+          <div className="sync-card-list">
+            <div className="sync-row">
+              <span className="sync-row-icon" aria-hidden="true">
+                <Smartphone size={17} />
+              </span>
+              <div className="sync-row-copy">
+                <span className="sync-row-title">{t('sync.qr.connectDevice')}</span>
+                <span className="sync-row-desc">{t('sync.qr.connectDeviceDesc')}</span>
+              </div>
+              <button
+                className="button sync-row-btn"
+                type="button"
+                onClick={() => setPairingModal('direct')}
+              >
+                <QrCode size={14} aria-hidden="true" />
+                <span>{t('sync.qr.showButton')}</span>
+              </button>
+            </div>
+
+            <div className="sync-row">
+              <span className="sync-row-icon" aria-hidden="true">
+                <Monitor size={17} />
+              </span>
+              <div className="sync-row-copy">
+                <span className="sync-row-title">{t('sync.qr.scanComputer')}</span>
+                <span className="sync-row-desc">{t('sync.qr.scanComputerDesc')}</span>
+              </div>
+              <button className="button sync-row-btn" type="button" onClick={handleScanComputer}>
+                <QrCode size={14} aria-hidden="true" />
+                <span>{t('sync.qr.scanButton')}</span>
+              </button>
+            </div>
+
+            {pasteMode && (
+              <div className="sync-row sync-row-paste">
+                <div className="sync-field sync-paste-field">
+                  <input
+                    type="text"
+                    value={pasteCode}
+                    placeholder={t('sync.qr.pastePlaceholder')}
+                    onChange={(event) => setPasteCode(event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="button primary"
+                    onClick={() => void approveReverseQr(pasteCode)}
+                  >
+                    {t('sync.qr.confirmCode')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          {pairingMsg && (
+            <p className="sync-status" role="status">
+              {pairingMsg}
+            </p>
+          )}
+        </section>
+
+        <section className="sync-group" aria-label={t('sync.sessionSection')}>
+          <h4 className="sync-group-title">{t('sync.sessionSection')}</h4>
+          <div className="sync-card-list">
+            <div className="sync-row">
+              <div className="sync-row-copy">
+                <span className="sync-row-title">
+                  {t(account ? 'sync.signOut' : 'sync.disconnect')}
+                </span>
+                <span className="sync-row-desc">{t('sync.signOutHint')}</span>
+              </div>
+              <button
+                type="button"
+                className="button sync-row-btn sync-danger-btn"
+                onClick={async () => {
+                  if (window.confirm(t('sync.disconnectConfirm'))) await sync.disconnect()
+                }}
+              >
+                <LogOut size={14} aria-hidden="true" />
+                <span>{t(account ? 'sync.signOut' : 'sync.disconnect')}</span>
+              </button>
+            </div>
+          </div>
+        </section>
       </div>
       {pairingModal && (
         <SyncPairingModal

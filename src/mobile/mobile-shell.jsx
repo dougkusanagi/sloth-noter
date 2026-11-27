@@ -1,6 +1,6 @@
 import { CoverPicker } from '../components/cover-picker.jsx'
 import { NoteCoverBanner } from '../components/note-cover-banner.jsx'
-import { ConflictBanner, ConflictDiffModal } from '../components/conflict-diff.jsx'
+import { ConflictBanner, InlineConflictReview } from '../components/conflict-diff.jsx'
 import { resolveSyncConflict } from '../sync/document.js'
 import { ensureTitle } from '../title.js'
 import { EditorToggleSettings } from '../components/settings-sections.jsx'
@@ -1800,69 +1800,90 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   }
                 }}
               >
-                {data.sync?.conflicts?.[active.id] && (
-                  <ConflictBanner
-                    onReview={() => setReviewingConflictId(active.id)}
-                    onAcceptRemote={() => {
-                      const conflict = data.sync.conflicts[active.id]
+                {data.sync?.conflicts?.[active.id] && reviewingConflictId === active.id ? (
+                  <InlineConflictReview
+                    note={active}
+                    conflict={data.sync.conflicts[active.id]}
+                    onClose={() => setReviewingConflictId(null)}
+                    onResolve={(resolvedBody) => {
                       commit(
                         resolveSyncConflict(current.current, active.id, {
-                          body: ensureTitle(conflict.theirs),
+                          body: ensureTitle(resolvedBody),
                         }),
                         'sistema',
                       )
-                      void sync.run()
-                    }}
-                    onKeepLocal={() => {
-                      commit(
-                        resolveSyncConflict(current.current, active.id, { body: active.body }),
-                        'sistema',
-                      )
+                      setReviewingConflictId(null)
                       void sync.run()
                     }}
                   />
+                ) : (
+                  <>
+                    {data.sync?.conflicts?.[active.id] && (
+                      <ConflictBanner
+                        onReview={() => setReviewingConflictId(active.id)}
+                        onAcceptRemote={() => {
+                          const conflict = data.sync.conflicts[active.id]
+                          commit(
+                            resolveSyncConflict(current.current, active.id, {
+                              body: ensureTitle(conflict.theirs),
+                            }),
+                            'sistema',
+                          )
+                          void sync.run()
+                        }}
+                        onKeepLocal={() => {
+                          commit(
+                            resolveSyncConflict(current.current, active.id, { body: active.body }),
+                            'sistema',
+                          )
+                          void sync.run()
+                        }}
+                      />
+                    )}
+                    <NoteCoverBanner
+                      body={active.body}
+                      onChange={
+                        !blocked && !active.external
+                          ? () =>
+                              dispatch({ type: 'layer', route: { name: 'cover', id: active.id } })
+                          : undefined
+                      }
+                    />
+                    <PropertiesDock
+                      body={active.body}
+                      readOnly={blocked || Boolean(active.external)}
+                      onApply={updateBody}
+                    />
+                    <Markdown
+                      wrapLines={prefs.wrapLines !== false}
+                      wrapPage={pageWrap}
+                      text={active.body}
+                      modifiedAt={active.modifiedAt}
+                      createdAt={active.createdAt}
+                      notes={data.notes}
+                      onChange={blocked ? undefined : updateBody}
+                      onOpenWiki={openWiki}
+                      onCopy={copy}
+                      focusableTables
+                      folds={
+                        fold.id === active.id && fold.body === active.body ? fold.lines : undefined
+                      }
+                      onToggleFold={(line) => {
+                        const same = fold.id === active.id && fold.body === active.body
+                        const lines = new Set(same ? fold.lines : [])
+                        if (!lines.delete(line)) lines.add(line)
+                        setFold({ id: active.id, body: active.body, lines })
+                      }}
+                    />
+                    <HeadingRuler
+                      headings={headingSections(active.body).filter((item) => item.level >= 2)}
+                      onJump={(item) => {
+                        const target = document.querySelector(`[data-source-line="${item.line}"]`)
+                        target?.scrollIntoView?.({ block: 'start' })
+                      }}
+                    />
+                  </>
                 )}
-                <NoteCoverBanner
-                  body={active.body}
-                  onChange={
-                    !blocked && !active.external
-                      ? () => dispatch({ type: 'layer', route: { name: 'cover', id: active.id } })
-                      : undefined
-                  }
-                />
-                <PropertiesDock
-                  body={active.body}
-                  readOnly={blocked || Boolean(active.external)}
-                  onApply={updateBody}
-                />
-                <Markdown
-                  wrapLines={prefs.wrapLines !== false}
-                  wrapPage={pageWrap}
-                  text={active.body}
-                  modifiedAt={active.modifiedAt}
-                  createdAt={active.createdAt}
-                  notes={data.notes}
-                  onChange={blocked ? undefined : updateBody}
-                  onOpenWiki={openWiki}
-                  onCopy={copy}
-                  focusableTables
-                  folds={
-                    fold.id === active.id && fold.body === active.body ? fold.lines : undefined
-                  }
-                  onToggleFold={(line) => {
-                    const same = fold.id === active.id && fold.body === active.body
-                    const lines = new Set(same ? fold.lines : [])
-                    if (!lines.delete(line)) lines.add(line)
-                    setFold({ id: active.id, body: active.body, lines })
-                  }}
-                />
-                <HeadingRuler
-                  headings={headingSections(active.body).filter((item) => item.level >= 2)}
-                  onJump={(item) => {
-                    const target = document.querySelector(`[data-source-line="${item.line}"]`)
-                    target?.scrollIntoView?.({ block: 'start' })
-                  }}
-                />
               </div>
             )
           ) : (
@@ -3464,25 +3485,6 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           closeButtonAriaLabel: t('dialog.close'),
         }}
       />
-      {reviewingConflictId &&
-        data.sync?.conflicts?.[reviewingConflictId] &&
-        data.notes.find((n) => n.id === reviewingConflictId) && (
-          <ConflictDiffModal
-            note={data.notes.find((n) => n.id === reviewingConflictId)}
-            conflict={data.sync.conflicts[reviewingConflictId]}
-            onClose={() => setReviewingConflictId(null)}
-            onResolve={(resolvedBody) => {
-              commit(
-                resolveSyncConflict(current.current, reviewingConflictId, {
-                  body: ensureTitle(resolvedBody),
-                }),
-                'sistema',
-              )
-              setReviewingConflictId(null)
-              void sync.run()
-            }}
-          />
-        )}
     </main>
   )
 }

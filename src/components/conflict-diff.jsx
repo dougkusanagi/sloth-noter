@@ -1,11 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AlertTriangle, Check, GitCompareArrows, X } from 'lucide-react'
-import { Modal } from './dialogs.jsx'
 import { applyHunkChoices, mergeLines } from '../sync/merge.js'
-import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
-
-const CONTEXT_LINES = 2
 
 /**
  * Discrete banner shown above a note that has a pending sync conflict.
@@ -38,35 +34,23 @@ export function ConflictBanner({ onReview, onKeepLocal, onAcceptRemote }) {
 }
 
 /**
- * VS Code-inspired hunk-by-hunk diff reviewer for sync conflicts.
- * Lets the user accept/reject each difference individually or all at once.
+ * Inline VS Code-inspired conflict reviewer rendered directly inside the note page.
+ * Shows untouched sections of the note in place and highlights each conflicting hunk
+ * with modern CodeLens-style actions to keep local, accept remote, or keep both.
  */
-export function ConflictDiffModal({ note, conflict, onResolve, onClose }) {
+export function InlineConflictReview({ note, conflict, onResolve, onClose }) {
   const merged = useMemo(
     () => mergeLines(conflict.base ?? null, note.body, conflict.theirs),
     [conflict.base, note.body, conflict.theirs],
   )
-  const hunks = useMemo(() => {
-    const list = []
-    let hunkIndex = 0
-    merged.chunks.forEach((chunk, chunkIndex) => {
-      if (!chunk.conflict) return
-      const prev = merged.chunks[chunkIndex - 1]?.lines ?? []
-      const next = merged.chunks[chunkIndex + 1]?.lines ?? []
-      list.push({
-        index: hunkIndex++,
-        before: prev.slice(-CONTEXT_LINES),
-        after: next.slice(0, CONTEXT_LINES),
-        ours: chunk.conflict.ours,
-        theirs: chunk.conflict.theirs,
-      })
-    })
-    return list
-  }, [merged.chunks])
+  const hunkCount = useMemo(
+    () => merged.chunks.filter((chunk) => Boolean(chunk.conflict)).length,
+    [merged.chunks],
+  )
 
-  const [choices, setChoices] = useState(() => hunks.map(() => 'theirs'))
+  const [choices, setChoices] = useState(() => Array.from({ length: hunkCount }, () => 'theirs'))
 
-  const setAll = (choice) => setChoices(hunks.map(() => choice))
+  const setAll = (choice) => setChoices(Array.from({ length: hunkCount }, () => choice))
   const setOne = (index, choice) =>
     setChoices((prev) => prev.map((value, i) => (i === index ? choice : value)))
 
@@ -75,120 +59,142 @@ export function ConflictDiffModal({ note, conflict, onResolve, onClose }) {
     onResolve(resolvedBody)
   }
 
+  let hunkCursor = 0
+
   return (
-    <Modal
-      label={t('sync.conflictDialogTitle', { name: displayName(note.name) })}
-      className="sync-conflict-modal"
-      backdropClose={onClose}
-      onEscape={onClose}
+    <section
+      className="inline-conflict-view"
+      aria-label={t('sync.conflictDialogTitle', { name: note.name })}
     >
-      <div className="sync-conflict-head">
-        <div className="sync-conflict-head-title">
-          <GitCompareArrows size={18} aria-hidden="true" />
+      <header className="inline-conflict-bar">
+        <div className="inline-conflict-bar-title">
+          <GitCompareArrows size={16} aria-hidden="true" />
           <div>
-            <h2>{t('sync.conflictDialogTitle', { name: displayName(note.name) })}</h2>
-            <p>
-              {t(hunks.length === 1 ? 'sync.conflictCount.one' : 'sync.conflictCount.other', {
-                count: hunks.length,
+            <strong>{t('sync.conflictInlineTitle')}</strong>
+            <span>
+              {t(hunkCount === 1 ? 'sync.conflictCount.one' : 'sync.conflictCount.other', {
+                count: hunkCount,
               })}
-            </p>
+            </span>
           </div>
         </div>
-        <button
-          type="button"
-          className="sync-conflict-close"
-          aria-label={t('dialog.close')}
-          onClick={onClose}
-        >
-          <X size={18} aria-hidden="true" />
-        </button>
-      </div>
+        <div className="inline-conflict-bar-actions">
+          <button type="button" className="sync-conflict-btn" onClick={() => setAll('ours')}>
+            {t('sync.conflictKeepAllLocal')}
+          </button>
+          <button type="button" className="sync-conflict-btn" onClick={() => setAll('theirs')}>
+            {t('sync.conflictAcceptAllRemote')}
+          </button>
+          <button type="button" className="sync-conflict-btn primary" onClick={apply}>
+            <Check size={14} aria-hidden="true" />
+            <span>{t('sync.conflictApply')}</span>
+          </button>
+          <button
+            type="button"
+            className="sync-conflict-close"
+            aria-label={t('dialog.close')}
+            onClick={onClose}
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
 
-      <div className="sync-conflict-toolbar">
-        <button type="button" className="sync-conflict-btn" onClick={() => setAll('ours')}>
-          {t('sync.conflictKeepAllLocal')}
-        </button>
-        <button type="button" className="sync-conflict-btn" onClick={() => setAll('theirs')}>
-          {t('sync.conflictAcceptAllRemote')}
-        </button>
-        <button type="button" className="sync-conflict-btn primary" onClick={apply}>
-          <Check size={14} aria-hidden="true" />
-          <span>{t('sync.conflictApply')}</span>
-        </button>
-      </div>
-
-      <div className="sync-conflict-list">
-        {hunks.length === 0 ? (
+      <div className="inline-conflict-doc">
+        {hunkCount === 0 ? (
           <p className="sync-conflict-empty">{t('sync.conflictNoDiff')}</p>
         ) : (
-          hunks.map((hunk) => {
-            const current = choices[hunk.index] ?? 'theirs'
+          merged.chunks.map((chunk, chunkIndex) => {
+            if (chunk.lines) {
+              return (
+                <pre key={`ctx-${chunkIndex}`} className="inline-conflict-unchanged">
+                  {chunk.lines.join('\n')}
+                </pre>
+              )
+            }
+            const index = hunkCursor++
+            const current = choices[index] ?? 'theirs'
+            const oursActive = current === 'ours' || current === 'both'
+            const theirsActive = current === 'theirs' || current === 'both'
             return (
-              <section key={hunk.index} className="sync-conflict-hunk">
-                <div className="sync-conflict-hunk-bar">
-                  <span className="sync-conflict-hunk-label">
-                    {t('sync.conflictHunkLabel', { number: hunk.index + 1 })}
+              <div key={`hunk-${index}`} className="inline-conflict-hunk">
+                <div className="inline-conflict-codelens">
+                  <span className="inline-conflict-hunk-badge">
+                    {t('sync.conflictHunkLabel', { number: index + 1 })}
                   </span>
-                  <div className="sync-conflict-hunk-actions" role="group">
+                  <div className="inline-conflict-lens-group" role="group">
                     <button
                       type="button"
-                      className={`sync-conflict-chip${current === 'ours' ? ' is-selected' : ''}`}
+                      className={`inline-conflict-lens${current === 'ours' ? ' is-selected' : ''}`}
                       aria-pressed={current === 'ours'}
-                      onClick={() => setOne(hunk.index, 'ours')}
+                      onClick={() => setOne(index, 'ours')}
                     >
-                      {t('sync.conflictPickLocal')}
+                      {current === 'ours' && <Check size={12} aria-hidden="true" />}
+                      <span>{t('sync.conflictPickLocal')}</span>
                     </button>
                     <button
                       type="button"
-                      className={`sync-conflict-chip${current === 'theirs' ? ' is-selected' : ''}`}
+                      className={`inline-conflict-lens${current === 'theirs' ? ' is-selected' : ''}`}
                       aria-pressed={current === 'theirs'}
-                      onClick={() => setOne(hunk.index, 'theirs')}
+                      onClick={() => setOne(index, 'theirs')}
                     >
-                      {t('sync.conflictPickRemote')}
+                      {current === 'theirs' && <Check size={12} aria-hidden="true" />}
+                      <span>{t('sync.conflictPickRemote')}</span>
                     </button>
                     <button
                       type="button"
-                      className={`sync-conflict-chip${current === 'both' ? ' is-selected' : ''}`}
+                      className={`inline-conflict-lens${current === 'both' ? ' is-selected' : ''}`}
                       aria-pressed={current === 'both'}
-                      onClick={() => setOne(hunk.index, 'both')}
+                      onClick={() => setOne(index, 'both')}
                     >
-                      {t('sync.conflictPickBoth')}
+                      {current === 'both' && <Check size={12} aria-hidden="true" />}
+                      <span>{t('sync.conflictPickBoth')}</span>
                     </button>
                   </div>
                 </div>
 
-                {hunk.before.length > 0 && (
-                  <pre className="sync-conflict-context">{hunk.before.join('\n')}</pre>
-                )}
-
                 <div
-                  className={`sync-conflict-pane is-ours${
-                    current === 'ours' || current === 'both' ? ' is-active' : ' is-dim'
-                  }`}
+                  className={`inline-conflict-side is-ours${oursActive ? ' is-active' : ' is-dim'}`}
                 >
-                  <div className="sync-conflict-pane-tag">{t('sync.thisDevice')}</div>
-                  <pre>{hunk.ours.length ? hunk.ours.join('\n') : t('sync.conflictEmptySide')}</pre>
-                </div>
-
-                <div
-                  className={`sync-conflict-pane is-theirs${
-                    current === 'theirs' || current === 'both' ? ' is-active' : ' is-dim'
-                  }`}
-                >
-                  <div className="sync-conflict-pane-tag">{t('sync.otherDevice')}</div>
+                  <div className="inline-conflict-side-head">
+                    <span>{t('sync.thisDevice')}</span>
+                    {oursActive && (
+                      <span className="inline-conflict-selected-tag">
+                        <Check size={11} aria-hidden="true" />
+                        {t('sync.conflictSelected')}
+                      </span>
+                    )}
+                  </div>
                   <pre>
-                    {hunk.theirs.length ? hunk.theirs.join('\n') : t('sync.conflictEmptySide')}
+                    {chunk.conflict.ours.length
+                      ? chunk.conflict.ours.join('\n')
+                      : t('sync.conflictEmptySide')}
                   </pre>
                 </div>
 
-                {hunk.after.length > 0 && (
-                  <pre className="sync-conflict-context">{hunk.after.join('\n')}</pre>
-                )}
-              </section>
+                <div
+                  className={`inline-conflict-side is-theirs${theirsActive ? ' is-active' : ' is-dim'}`}
+                >
+                  <div className="inline-conflict-side-head">
+                    <span>{t('sync.otherDevice')}</span>
+                    {theirsActive && (
+                      <span className="inline-conflict-selected-tag">
+                        <Check size={11} aria-hidden="true" />
+                        {t('sync.conflictSelected')}
+                      </span>
+                    )}
+                  </div>
+                  <pre>
+                    {chunk.conflict.theirs.length
+                      ? chunk.conflict.theirs.join('\n')
+                      : t('sync.conflictEmptySide')}
+                  </pre>
+                </div>
+              </div>
             )
           })
         )}
       </div>
-    </Modal>
+    </section>
   )
 }

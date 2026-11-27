@@ -2284,3 +2284,44 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   max-height: 90vh;
   padding: 14px;
 }
+
+[data-platform='mobile'] .inline-conflict-view {
+  padding: 10px 14px 32px;
+}
+[data-platform='mobile'] .inline-conflict-bar {
+  top: 4px;
+  padding: 12px 14px;
+}
+[data-platform='mobile'] .inline-conflict-bar-actions,
+[data-platform='mobile'] .inline-conflict-lens-group {
+  width: 100%;
+}
+[data-platform='mobile'] .inline-conflict-lens {
+  min-height: 44px;
+  flex: 1 1 auto;
+  justify-content: center;
+}
+[data-platform='mobile'] .sync-connected {
+  padding: 14px 16px;
+  gap: 16px;
+}
+[data-platform='mobile'] .sync-account-card {
+  padding: 14px 16px;
+}
+[data-platform='mobile'] .sync-account-footer {
+  flex-direction: column;
+  align-items: stretch;
+}
+[data-platform='mobile'] .sync-now-btn {
+  width: 100%;
+  min-height: 44px;
+}
+[data-platform='mobile'] .sync-row {
+  flex-wrap: wrap;
+  padding: 14px 16px;
+}
+[data-platform='mobile'] .sync-row-btn {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
+}

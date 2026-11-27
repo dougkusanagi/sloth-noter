@@ -5,7 +5,7 @@ import { useAppUpdates, UpdateButton } from './components/app-updates.jsx'
 import { changelogDocument, changelogTarget } from './components/changelog-panel.jsx'
 import { pasteGesture } from './paste-intent.js'
 import { quickOpenNotes } from './quick-open.js'
-import { ConflictBanner, ConflictDiffModal } from './components/conflict-diff.jsx'
+import { ConflictBanner, InlineConflictReview } from './components/conflict-diff.jsx'
 import { resolveSyncConflict } from './sync/document.js'
 import { textStatistics } from './text-statistics.js'
 import { ChangeSet } from '@codemirror/state'
@@ -2796,56 +2796,81 @@ function Workspace({ persistence, loaded }) {
                   </button>
                 </div>
               )}
-              {active && !releaseDoc && (mode === 'visual' || mode === 'reading') && (
-                <div className="note-top">
-                  {data.sync?.conflicts?.[active.id] && (
-                    <ConflictBanner
-                      onReview={() => setReviewingConflictId(active.id)}
-                      onAcceptRemote={() => {
-                        const conflict = data.sync.conflicts[active.id]
-                        commit(
-                          resolveSyncConflict(current.current, active.id, {
-                            body: ensureTitle(conflict.theirs),
-                          }),
-                          'sistema',
-                        )
-                        void sync.run()
-                      }}
-                      onKeepLocal={() => {
-                        commit(
-                          resolveSyncConflict(current.current, active.id, { body: active.body }),
-                          'sistema',
-                        )
-                        void sync.run()
-                      }}
+              {active &&
+                !releaseDoc &&
+                reviewingConflictId !== active.id &&
+                (mode === 'visual' || mode === 'reading') && (
+                  <div className="note-top">
+                    {data.sync?.conflicts?.[active.id] && (
+                      <ConflictBanner
+                        onReview={() => setReviewingConflictId(active.id)}
+                        onAcceptRemote={() => {
+                          const conflict = data.sync.conflicts[active.id]
+                          commit(
+                            resolveSyncConflict(current.current, active.id, {
+                              body: ensureTitle(conflict.theirs),
+                            }),
+                            'sistema',
+                          )
+                          void sync.run()
+                        }}
+                        onKeepLocal={() => {
+                          commit(
+                            resolveSyncConflict(current.current, active.id, { body: active.body }),
+                            'sistema',
+                          )
+                          void sync.run()
+                        }}
+                      />
+                    )}
+                    <NoteCoverBanner
+                      body={active.body}
+                      onChange={noteEditable ? () => setNotePanel('cover') : undefined}
                     />
-                  )}
-                  <NoteCoverBanner
+                    <NoteHeader
+                      key={active.id}
+                      body={active.body}
+                      readOnly={!noteEditable}
+                      images={images}
+                      invoke={persistence.invoke}
+                      panel={notePanel}
+                      onPanel={setNotePanel}
+                      actions={noteActions}
+                      onCover={(image, imported) => applyCoverTo(active.id, image, imported)}
+                      onIcon={(emoji) => applyIcon(active.id, emoji)}
+                    />
+                  </div>
+                )}
+              {active &&
+                !releaseDoc &&
+                reviewingConflictId !== active.id &&
+                (mode === 'visual' || mode === 'reading') && (
+                  <PropertiesDock
                     body={active.body}
-                    onChange={noteEditable ? () => setNotePanel('cover') : undefined}
+                    readOnly={mode === 'reading'}
+                    onApply={(body) => updateBody(body)}
                   />
-                  <NoteHeader
-                    key={active.id}
-                    body={active.body}
-                    readOnly={!noteEditable}
-                    images={images}
-                    invoke={persistence.invoke}
-                    panel={notePanel}
-                    onPanel={setNotePanel}
-                    actions={noteActions}
-                    onCover={(image, imported) => applyCoverTo(active.id, image, imported)}
-                    onIcon={(emoji) => applyIcon(active.id, emoji)}
-                  />
-                </div>
-              )}
-              {active && !releaseDoc && (mode === 'visual' || mode === 'reading') && (
-                <PropertiesDock
-                  body={active.body}
-                  readOnly={mode === 'reading'}
-                  onApply={(body) => updateBody(body)}
+                )}
+              {active &&
+              !releaseDoc &&
+              reviewingConflictId === active.id &&
+              data.sync?.conflicts?.[active.id] ? (
+                <InlineConflictReview
+                  note={active}
+                  conflict={data.sync.conflicts[active.id]}
+                  onClose={() => setReviewingConflictId(null)}
+                  onResolve={(resolvedBody) => {
+                    commit(
+                      resolveSyncConflict(current.current, active.id, {
+                        body: ensureTitle(resolvedBody),
+                      }),
+                      'sistema',
+                    )
+                    setReviewingConflictId(null)
+                    void sync.run()
+                  }}
                 />
-              )}
-              {releaseDoc ? (
+              ) : releaseDoc ? (
                 <div className="release-doc">
                   <div className="external-bar">
                     <span className="external-path">
@@ -3223,25 +3248,6 @@ function Workspace({ persistence, loaded }) {
           }}
         />
       )}
-      {reviewingConflictId &&
-        data.sync?.conflicts?.[reviewingConflictId] &&
-        data.notes.find((n) => n.id === reviewingConflictId) && (
-          <ConflictDiffModal
-            note={data.notes.find((n) => n.id === reviewingConflictId)}
-            conflict={data.sync.conflicts[reviewingConflictId]}
-            onClose={() => setReviewingConflictId(null)}
-            onResolve={(resolvedBody) => {
-              commit(
-                resolveSyncConflict(current.current, reviewingConflictId, {
-                  body: ensureTitle(resolvedBody),
-                }),
-                'sistema',
-              )
-              setReviewingConflictId(null)
-              void sync.run()
-            }}
-          />
-        )}
       {palette && (
         <PaletteDialog
           inputRef={search}
