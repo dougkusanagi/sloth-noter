@@ -5,6 +5,8 @@ import { useAppUpdates, UpdateButton } from './components/app-updates.jsx'
 import { changelogDocument, changelogTarget } from './components/changelog-panel.jsx'
 import { pasteGesture } from './paste-intent.js'
 import { quickOpenNotes } from './quick-open.js'
+import { ConflictBanner, InlineConflictReview } from './components/conflict-diff.jsx'
+import { resolveSyncConflict } from './sync/document.js'
 import { textStatistics } from './text-statistics.js'
 import { ChangeSet } from '@codemirror/state'
 import { documentChanges, mapSearchScope } from './search-scope.js'
@@ -28,11 +30,18 @@ import { WidthFeedback } from './components/width-feedback.jsx'
 import { TrashLibrary } from './components/trash-library.jsx'
 import { CompletedLibrary } from './components/completed-library.jsx'
 import { NoteList } from './components/note-list.jsx'
-import { NewMenu, SortMenu } from './components/library-menus.jsx'
+import {
+  DEFAULT_TASK_FILTERS,
+  NewMenu,
+  SortMenu,
+  TaskFilterChips,
+  TaskFilterMenu,
+} from './components/library-menus.jsx'
 import { friendlyError } from './errors.js'
 import { ToastButtons } from './components/toast-buttons.jsx'
 import { CommandPalette } from './components/command-palette.jsx'
 import { SettingsDialog } from './components/settings-dialog.jsx'
+import { QrNoteDialog } from './components/qr-note-dialog.jsx'
 import { buildCommands } from './commands.js'
 import { MainMenu } from './components/main-menu.jsx'
 import { ShortcutButton, ShortcutHint } from './components/shortcut-button.jsx'
@@ -106,6 +115,7 @@ import {
   allNotes,
   clearImageCache,
   markdownImage,
+  formatImageInsertion,
   replaceDocumentImage,
   removeDocumentImage,
   dataUrlBytes,
@@ -215,13 +225,15 @@ function Workspace({ persistence, loaded }) {
   const [renamingGroup, setRenamingGroup] = useState(null)
   const sidebarSearchRef = useRef(null)
   const [sidebarSection, setSidebarSection] = useState('notes')
-  const [showDoneTasks, setShowDoneTasks] = useState(false)
+  const [taskFilters, setTaskFilters] = useState(DEFAULT_TASK_FILTERS)
+  const changeTaskFilters = (change) => setTaskFilters((previous) => ({ ...previous, ...change }))
   const [diskImages, setDiskImages] = useState([])
   const [imageVersion, setImageVersion] = useState(0)
   const [imagesLoading, setImagesLoading] = useState(false)
   const [selectedImage, setSelectedImage] = useState(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [qrOpen, setQrOpen] = useState(false)
   const [coverNoteId, setCoverNoteId] = useState(null)
   const [notePanel, setNotePanel] = useState(null)
   const [panelKey, setPanelKey] = useState('')
@@ -247,6 +259,7 @@ function Workspace({ persistence, loaded }) {
   const imagePoint = useRef(null)
   const [palette, setPalette] = useState(false)
   const [query, setQuery] = useState('')
+  const [reviewingConflictId, setReviewingConflictId] = useState(null)
   const [selected, setSelected] = useState(0)
   const [folderError, setFolderError] = useState('')
   const [folderOpen, setFolderOpen] = useState(false)
@@ -1078,7 +1091,7 @@ function Workspace({ persistence, loaded }) {
     const titleEnd = noteTitleEnd(note.body)
     const from = Math.max(titleEnd, Math.min(point.from, note.body.length)),
       to = Math.max(from, Math.min(point.to, note.body.length))
-    const insert = `${from && note.body[from - 1] !== '\n' ? '\n' : ''}${text}\n`
+    const insert = formatImageInsertion(note.body, from, to, text)
     if (mode === 'visual' && current.current.activeId === noteId && visualRef.current) {
       visualRef.current.dispatch({
         changes: { from, to, insert },
@@ -2195,6 +2208,7 @@ function Workspace({ persistence, loaded }) {
     addImage: () => runMenu(pickImages, false),
     import: () => runMenu(() => importInput.current?.click(), false),
     export: () => active && runMenu(() => download(active.name, active.body)),
+    shareQr: () => active && runMenu(() => setQrOpen(true)),
     backup: () => runMenu(downloadBackup),
     restoreBackup: () => runMenu(() => backupInput.current?.click(), false),
     folder: () => persistence.invoke && runMenu(() => setFolderOpen(true), false),
@@ -2252,6 +2266,11 @@ function Workspace({ persistence, loaded }) {
     settings: () =>
       runMenu(() => {
         setSettingsSection('appearance')
+        setSettingsOpen(true)
+      }, false),
+    about: () =>
+      runMenu(() => {
+        setSettingsSection('about')
         setSettingsOpen(true)
       }, false),
     commands: () =>
@@ -2566,6 +2585,9 @@ function Workspace({ persistence, loaded }) {
                   <NewMenu onNote={() => createNote()} onFolder={createGroup} />
                 </>
               )}
+              {sidebarSection === 'tasks' && (
+                <TaskFilterMenu filters={taskFilters} onChange={changeTaskFilters} />
+              )}
               {sidebarSection === 'images' && (
                 <ShortcutButton
                   className="button sidebar-add sidebar-add-image"
@@ -2577,6 +2599,9 @@ function Workspace({ persistence, loaded }) {
                 </ShortcutButton>
               )}
             </div>
+            {sidebarSection === 'tasks' && (
+              <TaskFilterChips filters={taskFilters} onChange={changeTaskFilters} />
+            )}
             <div className="sidebar-items">
               {sidebarSection === 'notes' ? (
                 <>
@@ -2623,8 +2648,7 @@ function Workspace({ persistence, loaded }) {
                 <TasksLibrary
                   notes={data.notes}
                   query={sidebarQuery}
-                  showDone={showDoneTasks}
-                  onShowDone={setShowDoneTasks}
+                  filters={taskFilters}
                   onToggle={toggleNoteTask}
                   onJump={jumpToTask}
                 />
@@ -2773,34 +2797,81 @@ function Workspace({ persistence, loaded }) {
                   </button>
                 </div>
               )}
-              {active && !releaseDoc && (mode === 'visual' || mode === 'reading') && (
-                <div className="note-top">
-                  <NoteCoverBanner
+              {active &&
+                !releaseDoc &&
+                reviewingConflictId !== active.id &&
+                (mode === 'visual' || mode === 'reading') && (
+                  <div className="note-top">
+                    {data.sync?.conflicts?.[active.id] && (
+                      <ConflictBanner
+                        onReview={() => setReviewingConflictId(active.id)}
+                        onAcceptRemote={() => {
+                          const conflict = data.sync.conflicts[active.id]
+                          commit(
+                            resolveSyncConflict(current.current, active.id, {
+                              body: ensureTitle(conflict.theirs),
+                            }),
+                            'sistema',
+                          )
+                          void sync.run()
+                        }}
+                        onKeepLocal={() => {
+                          commit(
+                            resolveSyncConflict(current.current, active.id, { body: active.body }),
+                            'sistema',
+                          )
+                          void sync.run()
+                        }}
+                      />
+                    )}
+                    <NoteCoverBanner
+                      body={active.body}
+                      onChange={noteEditable ? () => setNotePanel('cover') : undefined}
+                    />
+                    <NoteHeader
+                      key={active.id}
+                      body={active.body}
+                      readOnly={!noteEditable}
+                      images={images}
+                      invoke={persistence.invoke}
+                      panel={notePanel}
+                      onPanel={setNotePanel}
+                      actions={noteActions}
+                      onCover={(image, imported) => applyCoverTo(active.id, image, imported)}
+                      onIcon={(emoji) => applyIcon(active.id, emoji)}
+                    />
+                  </div>
+                )}
+              {active &&
+                !releaseDoc &&
+                reviewingConflictId !== active.id &&
+                (mode === 'visual' || mode === 'reading') && (
+                  <PropertiesDock
                     body={active.body}
-                    onChange={noteEditable ? () => setNotePanel('cover') : undefined}
+                    readOnly={mode === 'reading'}
+                    onApply={(body) => updateBody(body)}
                   />
-                  <NoteHeader
-                    key={active.id}
-                    body={active.body}
-                    readOnly={!noteEditable}
-                    images={images}
-                    invoke={persistence.invoke}
-                    panel={notePanel}
-                    onPanel={setNotePanel}
-                    actions={noteActions}
-                    onCover={(image, imported) => applyCoverTo(active.id, image, imported)}
-                    onIcon={(emoji) => applyIcon(active.id, emoji)}
-                  />
-                </div>
-              )}
-              {active && !releaseDoc && (mode === 'visual' || mode === 'reading') && (
-                <PropertiesDock
-                  body={active.body}
-                  readOnly={mode === 'reading'}
-                  onApply={(body) => updateBody(body)}
+                )}
+              {active &&
+              !releaseDoc &&
+              reviewingConflictId === active.id &&
+              data.sync?.conflicts?.[active.id] ? (
+                <InlineConflictReview
+                  note={active}
+                  conflict={data.sync.conflicts[active.id]}
+                  onClose={() => setReviewingConflictId(null)}
+                  onResolve={(resolvedBody) => {
+                    commit(
+                      resolveSyncConflict(current.current, active.id, {
+                        body: ensureTitle(resolvedBody),
+                      }),
+                      'sistema',
+                    )
+                    setReviewingConflictId(null)
+                    void sync.run()
+                  }}
                 />
-              )}
-              {releaseDoc ? (
+              ) : releaseDoc ? (
                 <div className="release-doc">
                   <div className="external-bar">
                     <span className="external-path">
@@ -3145,6 +3216,7 @@ function Workspace({ persistence, loaded }) {
           onClose={closeCommands}
         />
       )}
+      {qrOpen && active && <QrNoteDialog note={active} onClose={() => setQrOpen(false)} />}
       {settingsOpen && (
         <SettingsDialog
           prefs={prefs}

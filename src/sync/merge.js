@@ -44,11 +44,74 @@ function matches(base, other) {
 
 const same = (a, b) => a.length === b.length && a.every((line, index) => line === b[index])
 
+const TASK_LINE = /^(\s*[-*+]\s+)\[([ xX~?-])\](\s+)(.*)$/
+const TASK_STAMP = /\s+[✅❌]\s+\d{4}-\d{2}-\d{2}\s*$/
+
+/**
+ * When both sides edited the exact same single task line and one side only
+ * marked it completed/canceled while the other kept it open, keep the
+ * completed/canceled line automatically instead of raising a conflict.
+ */
+function autoResolveTask(ours, theirs) {
+  if (ours.length !== 1 || theirs.length !== 1) return null
+  const mOurs = TASK_LINE.exec(ours[0])
+  const mTheirs = TASK_LINE.exec(theirs[0])
+  if (!mOurs || !mTheirs) return null
+  if (mOurs[1] !== mTheirs[1]) return null
+  const textOurs = mOurs[4].replace(TASK_STAMP, '').trim()
+  const textTheirs = mTheirs[4].replace(TASK_STAMP, '').trim()
+  if (!textOurs || textOurs !== textTheirs) return null
+  const doneOurs = mOurs[2] === 'x' || mOurs[2] === 'X' || mOurs[2] === '-'
+  const doneTheirs = mTheirs[2] === 'x' || mTheirs[2] === 'X' || mTheirs[2] === '-'
+  if (doneOurs && mTheirs[2] === ' ') return ours
+  if (doneTheirs && mOurs[2] === ' ') return theirs
+  return null
+}
+
+/**
+ * Two-way line merge (LCS) used when no common base is available (e.g. first
+ * sync or reconnected account): identical lines merge cleanly and only truly
+ * differing spans become conflict chunks.
+ */
+export function mergeTwoWay(oursText, theirsText) {
+  const ours = oursText.split('\n')
+  const theirs = theirsText.split('\n')
+  const toTheirs = matches(ours, theirs)
+  const chunks = []
+  const push = (lines) => {
+    if (!lines.length) return
+    const last = chunks.at(-1)
+    if (last?.lines) last.lines.push(...lines)
+    else chunks.push({ lines: [...lines] })
+  }
+  let o = 0
+  let t = 0
+  for (;;) {
+    let k = o
+    while (k < ours.length && toTheirs[k] < 0) k++
+    const end = k === ours.length
+    const x = ours.slice(o, k)
+    const y = theirs.slice(t, end ? theirs.length : toTheirs[k])
+    if (x.length || y.length) {
+      const resolved = autoResolveTask(x, y)
+      if (resolved) push(resolved)
+      else chunks.push({ conflict: { base: [], ours: x, theirs: y } })
+    }
+    if (end) break
+    push([ours[k]])
+    o = k + 1
+    t = toTheirs[k] + 1
+  }
+  return { conflict: chunks.some((chunk) => chunk.conflict), chunks }
+}
+
 /**
  * Returns `{ conflict, chunks }`. Each chunk is `{ lines }` or
  * `{ conflict: { base, ours, theirs } }`, all as arrays of lines.
+ * When `baseText` is null/undefined, falls back to two-way LCS merge.
  */
 export function mergeLines(baseText, oursText, theirsText) {
+  if (baseText === null || baseText === undefined) return mergeTwoWay(oursText, theirsText)
   const base = baseText.split('\n')
   const ours = oursText.split('\n')
   const theirs = theirsText.split('\n')
@@ -73,7 +136,11 @@ export function mergeLines(baseText, oursText, theirsText) {
     const y = theirs.slice(t, end ? theirs.length : toTheirs[k])
     if (same(x, b)) push(y)
     else if (same(y, b) || same(x, y)) push(x)
-    else chunks.push({ conflict: { base: b, ours: x, theirs: y } })
+    else {
+      const resolved = autoResolveTask(x, y)
+      if (resolved) push(resolved)
+      else chunks.push({ conflict: { base: b, ours: x, theirs: y } })
+    }
     if (end) break
     push([base[k]])
     i = k + 1
@@ -81,4 +148,24 @@ export function mergeLines(baseText, oursText, theirsText) {
     t = toTheirs[k] + 1
   }
   return { conflict: chunks.some((chunk) => chunk.conflict), chunks }
+}
+
+/**
+ * Applies per-hunk decisions (`'ours' | 'theirs' | 'both'`) to `mergeLines` chunks
+ * and returns the resolved text.
+ */
+export function applyHunkChoices(chunks, choices) {
+  let hunkIndex = 0
+  const lines = []
+  for (const chunk of chunks) {
+    if (chunk.lines) {
+      lines.push(...chunk.lines)
+      continue
+    }
+    const choice = choices[hunkIndex++] ?? 'ours'
+    if (choice === 'theirs') lines.push(...chunk.conflict.theirs)
+    else if (choice === 'both') lines.push(...chunk.conflict.ours, ...chunk.conflict.theirs)
+    else lines.push(...chunk.conflict.ours)
+  }
+  return lines.join('\n')
 }

@@ -1,6 +1,7 @@
 import { Facet, StateEffect, StateField } from '@codemirror/state'
 import { Decoration, EditorView, ViewPlugin, WidgetType } from '@codemirror/view'
 import { markdownTree, walk } from '../markdown-model.js'
+import { columnBlocks } from '../columns.js'
 import { codeLanguageName } from '../syntax-highlight.js'
 import { t } from '../i18n.js'
 import { foldField } from './folding.js'
@@ -207,10 +208,17 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
       this.inlineButton.hidden = true
       this.inlineNodes = []
       const doc = this.view.state.doc
-      walk(markdownTree(doc.toString()), (node) => {
-        if (node.type === 'inlineCode') this.inlineNodes.push(node)
+      const text = doc.toString()
+      const columns = columnBlocks(text)
+      const insideColumns = (pos) => columns.some((block) => pos >= block.from && pos < block.to)
+      walk(markdownTree(text), (node) => {
+        if (node.type === 'inlineCode') {
+          if (!insideColumns(node.position.start.offset)) this.inlineNodes.push(node)
+          return
+        }
         if (node.type !== 'code') return
         const first = doc.line(node.position.start.line)
+        if (insideColumns(first.from)) return
         if (!/^\s{0,3}(`{3,}|~{3,})/.test(first.text)) return
         const button = new CodeCopyWidget(node.value, node.lang ?? '').toDOM(this.view)
         button.hidden = true
@@ -296,7 +304,10 @@ export const stickyCodeCopy = ViewPlugin.fromClass(
     }
     measure() {
       const view = this.view
-      const scroller = view.scrollDOM.getBoundingClientRect()
+      const outerScroller = view.dom.closest('.cm-column-editor')
+        ? view.dom.closest('.visual-editor > .cm-editor')?.querySelector(':scope > .cm-scroller')
+        : null
+      const scroller = (outerScroller ?? view.scrollDOM).getBoundingClientRect()
       const content = view.contentDOM.getBoundingClientRect()
       const headerBottom =
         document.querySelector('.app-header')?.getBoundingClientRect().bottom ?? 0

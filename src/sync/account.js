@@ -5,12 +5,15 @@
 import { SyncError, serverRoot } from './client.js'
 import {
   accountKeys,
+  generateAccountKeyPair,
   generateKeyBytes,
   keyFromRecovery,
   recoveryKey,
   recoveryProof,
   unwrapNoteKey,
+  unwrapPrivateKey,
   wrapNoteKey,
+  wrapPrivateKey,
 } from './crypto.js'
 
 /** The project's server. A build can point elsewhere with VITE_SYNC_SERVER. */
@@ -41,12 +44,12 @@ function checkPassword(password) {
   if (String(password ?? '').length < MIN_PASSWORD) throw new SyncError('weak_password')
 }
 
-async function post(server, path, body, { fetch = globalThis.fetch, token } = {}) {
+async function post(server, path, body, { fetch = globalThis.fetch, token, method } = {}) {
   const root = serverRoot(server)
   let response
   try {
     response = await fetch(`${root}${path}`, {
-      method: body ? 'POST' : 'DELETE',
+      method: method ?? (body ? 'POST' : 'DELETE'),
       redirect: 'manual',
       signal: AbortSignal.timeout(TIMEOUT),
       headers: {
@@ -86,6 +89,7 @@ export async function signUp({ server, name, email, password, invite, fetch, ite
   if (!String(invite ?? '').trim()) throw new SyncError('invalid_invite')
   const key = generateKeyBytes()
   const { authKey, wrapKey } = await accountKeys(email, password, iterations)
+  const { publicKeyJwk, privateKeyPkcs8 } = await generateAccountKeyPair()
   const result = await post(
     server,
     '/v1/accounts',
@@ -96,10 +100,20 @@ export async function signUp({ server, name, email, password, invite, fetch, ite
       authKey,
       wrappedKey: await wrapNoteKey(wrapKey, key, email),
       recoveryAuth: await recoveryProof(key),
+      publicKey: publicKeyJwk,
+      wrappedPrivateKey: await wrapPrivateKey(wrapKey, privateKeyPkcs8, email),
     },
     { fetch },
   )
-  return { token: result.token, name: result.name, email, key, recovery: await recoveryKey(key) }
+  return {
+    token: result.token,
+    name: result.name,
+    email,
+    key,
+    publicKey: publicKeyJwk,
+    privateKey: privateKeyPkcs8,
+    recovery: await recoveryKey(key),
+  }
 }
 
 export async function signIn({ server, email, password, fetch, iterations }) {
@@ -114,7 +128,35 @@ export async function signIn({ server, email, password, fetch, iterations }) {
   } catch {
     throw new SyncError('invalid_login')
   }
-  return { token: result.token, name: result.name, email, key }
+  let publicKey = result.publicKey ?? null
+  let privateKey = null
+  if (publicKey && result.wrappedPrivateKey) {
+    try {
+      privateKey = await unwrapPrivateKey(wrapKey, result.wrappedPrivateKey, email)
+    } catch {
+      publicKey = null
+    }
+  }
+  // Transparent migration for accounts created before shared spaces (ADR 0054).
+  if (!publicKey || !privateKey) {
+    try {
+      const pair = await generateAccountKeyPair()
+      await post(
+        server,
+        '/v1/accounts/me/keys',
+        {
+          publicKey: pair.publicKeyJwk,
+          wrappedPrivateKey: await wrapPrivateKey(wrapKey, pair.privateKeyPkcs8, email),
+        },
+        { fetch, token: result.token, method: 'PUT' },
+      )
+      publicKey = pair.publicKeyJwk
+      privateKey = pair.privateKeyPkcs8
+    } catch {
+      // Older server without shared spaces support: sign-in still succeeds.
+    }
+  }
+  return { token: result.token, name: result.name, email, key, publicKey, privateKey }
 }
 
 /** Sets a new password with the recovery key; every other session of the account ends. */

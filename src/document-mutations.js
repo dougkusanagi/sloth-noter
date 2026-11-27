@@ -20,6 +20,7 @@ export function createNoteDocument(
     group = undefined,
     prepend = false,
     modifiedAt = Date.now(),
+    createdAt = modifiedAt,
   } = {},
 ) {
   let content = body
@@ -36,6 +37,7 @@ export function createNoteDocument(
     name: uniqueName(document.notes, headingName ?? name),
     body: content,
     revision: 0,
+    createdAt,
     modifiedAt,
     ...(group && document.groups?.includes(group) ? { group } : {}),
   }

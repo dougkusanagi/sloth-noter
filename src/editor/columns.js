@@ -25,7 +25,7 @@ import { columnHosts, embeddedDocument } from './embedded.js'
 import { blockGaps } from './block-gaps.js'
 import { blockHandle } from './block-handle.js'
 import { documentColors } from './document-colors.js'
-import { codeCopyHandler } from './code-copy.js'
+import { codeCopyHandler, codeFold, codeWrap, stickyCodeCopy } from './code-copy.js'
 import { continueList, indentList } from './keys.js'
 import { addColumn, removeColumn, unwrapColumns } from '../column-drop.js'
 import { blockIconMarkup } from './block-icons.js'
@@ -520,6 +520,9 @@ class ColumnsWidget extends WidgetType {
             embeddedDocument.of(true),
             taskNotes.of(parent.state.facet(taskNotes)),
             codeCopyHandler.of((text) => parent.state.facet(codeCopyHandler)[0]?.(text)),
+            codeFold,
+            codeWrap,
+            stickyCodeCopy,
             foldField,
             documentColors,
             blockGaps,

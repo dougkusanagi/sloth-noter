@@ -19,7 +19,7 @@ const error = (status, code, headers) => json(status, { error: code }, headers)
 // Auth is a Bearer header, never a cookie, so any origin may call with it.
 export const CORS = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, PUT, POST, DELETE',
+  'access-control-allow-methods': 'GET, PUT, POST, PATCH, DELETE',
   'access-control-allow-headers': 'authorization, content-type, if-match, if-none-match',
   'access-control-expose-headers': 'etag, retry-after',
   'access-control-max-age': '86400',

@@ -22,8 +22,12 @@ const layers = new Set([
   'open-notes',
   'info',
   'sections',
+  'reorder',
   'image-detail',
   'image-insert',
+  'qr-paste',
+  'ocr-suggestion',
+  'ai-suggestion',
 ])
 
 export function initialNavigation(tab = 'notes') {
@@ -71,7 +75,13 @@ export function navigate(state, action) {
       if (!validRoute(action.route, details)) return state
       if (['note', 'history', 'table', 'image'].includes(action.route.name) && !action.route.id)
         return state
-      return { screens: [...state.screens, copyRoute(action.route)], layers: [] }
+      return {
+        screens:
+          action.replace && state.screens.length > 1
+            ? [...state.screens.slice(0, -1), copyRoute(action.route)]
+            : [...state.screens, copyRoute(action.route)],
+        layers: [],
+      }
     case 'layer':
       return validRoute(action.route, layers)
         ? {

@@ -1,21 +1,29 @@
 import { CONTENT_WIDTH, contentWidth } from '../storage.js'
 import { t } from '../i18n.js'
-export function DocumentWidthPresets({ prefs, onChange, inMenu = false }) {
+export function DocumentWidthPresets({ prefs, onChange, inMenu = false, compactTablet = false }) {
+  const presets = compactTablet
+    ? [
+        ['default', CONTENT_WIDTH.default],
+        ['full', CONTENT_WIDTH.max],
+      ]
+    : [
+        ['default', CONTENT_WIDTH.default],
+        ['wide', 1100],
+        ['full', CONTENT_WIDTH.max],
+      ]
   return (
     <div
       className="document-width-presets menu-theme"
       role="group"
       aria-label={t('settings.widthPresets')}
     >
-      {[
-        ['default', CONTENT_WIDTH.default],
-        ['wide', 1100],
-        ['full', CONTENT_WIDTH.max],
-      ].map(([name, width], index) => {
+      {presets.map(([name, width], index) => {
         const checked =
           name === 'full'
             ? prefs.documentWidth === 'full'
-            : prefs.documentWidth !== 'full' && contentWidth(prefs) === width
+            : compactTablet
+              ? prefs.documentWidth !== 'full'
+              : prefs.documentWidth !== 'full' && contentWidth(prefs) === width
         return (
           <button
             key={name}

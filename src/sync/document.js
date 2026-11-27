@@ -9,6 +9,7 @@ const payloadOf = (note, trashed) => ({
   name: note.name,
   body: note.body,
   ...(note.group ? { group: note.group } : {}),
+  ...(note.createdAt !== undefined ? { createdAt: note.createdAt } : {}),
   trashed,
 })
 
@@ -16,6 +17,7 @@ const samePayload = (a, b) =>
   a.name === b.name &&
   a.body === b.body &&
   (a.group ?? null) === (b.group ?? null) &&
+  (a.createdAt ?? null) === (b.createdAt ?? null) &&
   a.trashed === b.trashed
 
 /** Notes that sync: active and trashed ones. Files opened in place stay out (ADR 0001). */
@@ -37,7 +39,14 @@ export function localNotes(document) {
 export function syncState(document, server) {
   const saved = document.sync
   return saved?.server === server
-    ? { cursor: saved.cursor, bases: saved.bases, blobs: saved.blobs ?? {} }
+    ? {
+        cursor: saved.cursor,
+        bases: saved.bases,
+        blobs: saved.blobs ?? {},
+        ...(saved.conflicts && Object.keys(saved.conflicts).length
+          ? { conflicts: saved.conflicts }
+          : {}),
+      }
     : emptyState()
 }
 
@@ -88,6 +97,11 @@ export function applySync(document, { server, snapshot, before, result, now = Da
       name: payload.name,
       body: payload.body,
       revision: old ? old.revision + 1 : 0,
+      ...(payload.createdAt !== undefined
+        ? { createdAt: payload.createdAt }
+        : old?.createdAt !== undefined
+          ? { createdAt: old.createdAt }
+          : {}),
       modifiedAt: now,
     }
     if (payload.group) {
@@ -114,15 +128,48 @@ export function applySync(document, { server, snapshot, before, result, now = Da
   const activeId = openIds.includes(document.activeId)
     ? document.activeId
     : (openIds.at(-1) ?? null)
+  const conflicts = result.state.conflicts ?? {}
   const next = {
     ...document,
     notes,
     trash,
     openIds,
     activeId,
-    sync: { server, cursor: result.state.cursor, bases, blobs: result.state.blobs },
+    sync: {
+      server,
+      cursor: result.state.cursor,
+      bases,
+      blobs: result.state.blobs,
+      ...(Object.keys(conflicts).length ? { conflicts } : {}),
+    },
   }
   if (document.pinnedIds) next.pinnedIds = document.pinnedIds.filter((id) => openIds.includes(id))
   if (groups.size) next.groups = [...groups]
   return next
+}
+
+/**
+ * Applies the user's resolved text for a pending sync conflict and clears it so
+ * the next sync pushes the resolved version cleanly.
+ */
+export function resolveSyncConflict(document, id, { body, name, now = Date.now() }) {
+  const pending = document.sync?.conflicts?.[id]
+  if (!pending) return document
+  const restConflicts = { ...document.sync.conflicts }
+  delete restConflicts[id]
+  const notes = document.notes.map((note) =>
+    note.id === id
+      ? {
+          ...note,
+          ...(name ? { name } : {}),
+          body,
+          revision: note.revision + 1,
+          modifiedAt: now,
+        }
+      : note,
+  )
+  const sync = { ...document.sync }
+  if (Object.keys(restConflicts).length) sync.conflicts = restConflicts
+  else delete sync.conflicts
+  return { ...document, notes, sync }
 }

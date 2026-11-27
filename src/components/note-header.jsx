@@ -75,12 +75,12 @@ function CoverPanel({ images, invoke, selected, onApply }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const mounted = useRef(true)
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mounted.current = true
+    return () => {
       mounted.current = false
-    },
-    [],
-  )
+    }
+  }, [])
   async function choose(item) {
     if (busy) return
     const name = `capa-${item.id}.webp`

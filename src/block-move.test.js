@@ -117,6 +117,12 @@ test('moving a rule below tasks does not insert an empty line', () => {
   assert.equal(documentBlocks(down).filter((block) => block.kind === 'task').length, 2)
 })
 
+test('empty and custom-status task items are classified as task blocks, not bullet lists', () => {
+  const text = '# Crônicas\n\n- [ ] Criar conta\n- [ ] \n- [~] Em andamento\n- [-] Cancelada\n'
+  const kinds = documentBlocks(text).map((block) => block.kind)
+  assert.deepEqual(kinds, ['task', 'task', 'task', 'task'])
+})
+
 test('a list item dropped right below its list joins it, without a blank line', () => {
   const text = ['# N', '', '- [ ] um', '- [ ] dois', '- [ ] tres', '', 'fim'].join('\n')
   // "dois" (line 4) dropped between the list and "fim" (line 7).

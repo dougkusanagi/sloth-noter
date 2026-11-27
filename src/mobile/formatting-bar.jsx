@@ -3,7 +3,9 @@ import { colorDocument, colorBlock } from '../editor/document-colors.js'
 import { documentBlocks } from '../block-move.js'
 import { setTableCellColor, tableFlags } from '../editor/table.js'
 import { blockColorMetadata, selectedColors } from '../document-colors.js'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { nextBlockCursor } from './structural-trackpad.js'
+import { triggerHaptic } from './haptics.js'
 import {
   ArrowDown,
   ArrowUp,
@@ -76,6 +78,63 @@ function Button({ label, pressed, onClick, children }) {
       onClick={onClick}
     >
       {children}
+    </button>
+  )
+}
+
+/** B14: Compact structural trackpad pill — slide horizontally to jump block by block without scrolling the bar. */
+function TrackpadButton({ view, composing }) {
+  const drag = useRef(null)
+  const step = (direction) => {
+    if (!view || composing) return
+    const next = nextBlockCursor(
+      view.state.doc.toString(),
+      view.state.selection.main.head,
+      direction,
+    )
+    if (next === null) return
+    view.dispatch({
+      selection: EditorSelection.cursor(next),
+      scrollIntoView: true,
+    })
+    triggerHaptic('heading')
+  }
+  return (
+    <button
+      type="button"
+      className="mobile-trackpad"
+      aria-label={t('mobile.trackpad')}
+      title={t('mobile.trackpad')}
+      style={{ touchAction: 'none' }}
+      onPointerDown={(event) => {
+        event.preventDefault()
+        drag.current = { x: event.clientX, moved: false }
+        try {
+          event.currentTarget.setPointerCapture(event.pointerId)
+        } catch {
+          // Ignore when pointer capture is unavailable.
+        }
+      }}
+      onPointerMove={(event) => {
+        if (!drag.current) return
+        const dx = event.clientX - drag.current.x
+        if (Math.abs(dx) >= 28) {
+          drag.current.x = event.clientX
+          drag.current.moved = true
+          step(dx > 0 ? 1 : -1)
+        }
+      }}
+      onPointerUp={() => {
+        const wasMoved = drag.current?.moved
+        drag.current = null
+        if (!wasMoved) step(1)
+      }}
+      onPointerCancel={() => {
+        drag.current = null
+      }}
+    >
+      <ArrowLeft size={14} aria-hidden="true" />
+      <ArrowRight size={14} aria-hidden="true" />
     </button>
   )
 }
@@ -426,6 +485,7 @@ export function FormattingBar({ view, onHideKeyboard, onInsert }) {
       >
         <Plus size={20} aria-hidden="true" />
       </Button>
+      <TrackpadButton view={view} composing={composing} />
       <Button label="colors.title" pressed={colors} onClick={() => setColors(!colors)}>
         <Palette size={20} aria-hidden="true" />
       </Button>

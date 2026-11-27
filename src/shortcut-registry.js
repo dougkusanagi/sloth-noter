@@ -42,6 +42,7 @@ export const SHORTCUT_ACTIONS = [
   app('folder', ['Shift+O'], 'menu.folder'),
   app('commands', ['Shift+P'], 'menu.commands'),
   app('settings', [','], 'menu.settings'),
+  app('about', ['F1'], 'settings.about'),
   app('sidebar', ['Alt+B'], 'sidebar.toggle'),
   app('outline', ['Alt+T'], 'outline.label'),
   app('visual', ['Alt+1'], 'mode.visual'),

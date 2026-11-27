@@ -18,3 +18,17 @@ test('filtering retains tab positions and supports accents', () => {
   assert.equal(quickOpenNotes([{ id: 'x', name: 'Inventário.md' }], [], 'inventario').length, 1)
   assert.equal(quickOpenNotes(notes, ['missing'], 'missing').length, 0)
 })
+
+test('filtering prioritizes exact and prefix title matches over partial matches', () => {
+  const list = [
+    { id: 'sub', name: 'Descontas.md' },
+    { id: 'word', name: 'Minhas Contas.md' },
+    { id: 'prefix', name: 'Contas a pagar.md' },
+    { id: 'exact', name: '👀 Contas.md' },
+  ]
+  assert.deepEqual(
+    quickOpenNotes(list, [], 'contas').map((note) => note.id),
+    ['exact', 'prefix', 'word', 'sub'],
+  )
+  assert.equal(quickOpenNotes(list, [], 'md').length, 0)
+})

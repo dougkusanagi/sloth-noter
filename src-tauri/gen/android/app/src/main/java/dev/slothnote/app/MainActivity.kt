@@ -1,7 +1,9 @@
 package dev.slothnote.app
 
+import android.app.role.RoleManager
 import android.content.ClipData
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.view.View
@@ -17,12 +19,20 @@ import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.WindowInsetsCompat
 import java.io.File
 import androidx.core.view.WindowInsetsControllerCompat
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import org.json.JSONObject
 
 class MainActivity : TauriActivity() {
   // One-shot action from a launcher shortcut. The web layer takes it once, so a repeated
   // intent (rotation, resume) never creates a second note.
   private var pendingAction: String? = null
   private var pendingText: String? = null
+  private var pendingOpenNoteId: String? = null
   private var webView: WebView? = null
   private var backEnabled = true
   private var backCallback: OnBackPressedCallback? = null
@@ -31,6 +41,43 @@ class MainActivity : TauriActivity() {
   private var animating = false
   private var lastInsets: WindowInsetsCompat? = null
   private var pendingFile: Pair<Int, String>? = null
+  private var pendingOcrRequest: Pair<Int, File>? = null
+  private var onDeviceAi: OnDeviceAiManager? = null
+  private val takeOcrPhoto =
+    registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+      val pending = pendingOcrRequest
+      pendingOcrRequest = null
+      if (pending == null) return@registerForActivityResult
+      val (requestId, file) = pending
+      if (!success || !file.exists()) {
+        file.delete()
+        reportOcrResult(requestId, false, null, "cancelled")
+        return@registerForActivityResult
+      }
+      try {
+        val image = InputImage.fromFilePath(this, android.net.Uri.fromFile(file))
+        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        recognizer.process(image)
+          .addOnSuccessListener { visionText ->
+            file.delete()
+            recognizer.close()
+            val recognized = visionText.text.trim()
+            if (recognized.isNotEmpty()) {
+              reportOcrResult(requestId, true, recognized, null)
+            } else {
+              reportOcrResult(requestId, false, null, "empty")
+            }
+          }
+          .addOnFailureListener {
+            file.delete()
+            recognizer.close()
+            reportOcrResult(requestId, false, null, "failed")
+          }
+      } catch (_: Exception) {
+        file.delete()
+        reportOcrResult(requestId, false, null, "failed")
+      }
+    }
   private val createFile = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
     val pending = pendingFile
     pendingFile = null
@@ -53,13 +100,52 @@ class MainActivity : TauriActivity() {
     }
   }
 
+  private val requestNotesRoleLauncher =
+    registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+      webView?.evaluateJavascript("window.__slothNotesRoleChanged?.('${notesRoleState()}')", null)
+    }
+
+  private fun notesRoleState(): String {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return "unavailable"
+    val roleManager = getSystemService(RoleManager::class.java) ?: return "unavailable"
+    if (!roleManager.isRoleAvailable(RoleManager.ROLE_NOTES)) return "unavailable"
+    return if (roleManager.isRoleHeld(RoleManager.ROLE_NOTES)) "held" else "available"
+  }
+
   private fun reportFileResult(id: Int, status: String) {
     webView?.evaluateJavascript("window.__slothFileResult?.($id,'$status')", null)
+  }
+
+  private fun reportJsonCallback(fnName: String, id: Int, ok: Boolean, text: String?, error: String?) {
+    val payload = JSONObject().apply {
+      put("ok", ok)
+      if (text != null) put("text", text)
+      if (error != null) put("error", error)
+    }.toString()
+    val quoted = JSONObject.quote(payload)
+    runOnUiThread {
+      webView?.evaluateJavascript("window.$fnName?.($id,$quoted)", null)
+    }
+  }
+
+  private fun reportOcrResult(id: Int, ok: Boolean, text: String?, error: String?) {
+    reportJsonCallback("__slothOcrResult", id, ok, text, error)
+  }
+
+  private fun reportAiResult(id: Int, ok: Boolean, text: String?, error: String?) {
+    reportJsonCallback("__slothAiResult", id, ok, text, error)
+  }
+
+  private fun reportQrScanResult(id: Int, ok: Boolean, text: String?, error: String?) {
+    reportJsonCallback("__slothQrScanResult", id, ok, text, error)
   }
 
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
     this.webView = webView
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+      webView.isAutoHandwritingEnabled = true
+    }
     webView.addJavascriptInterface(ShareBridge(), "SlothShare")
     webView.addJavascriptInterface(SystemBridge(), "SlothSystem")
     webView.addJavascriptInterface(SecretsBridge(applicationContext), "SlothSecrets")
@@ -68,6 +154,14 @@ class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    activeInstance = java.lang.ref.WeakReference(this)
+    onDeviceAi = OnDeviceAiManager(applicationContext).also { manager ->
+      manager.refreshAvailability { state ->
+        runOnUiThread {
+          webView?.evaluateJavascript("window.__slothAiStateChanged?.('$state')", null)
+        }
+      }
+    }
     if (savedInstanceState == null) readAction(intent)
     File(cacheDir, "shared").listFiles()?.forEach { it.delete() }
     // Enabled until the web layer reports otherwise, and disabled at the root so Android can
@@ -138,6 +232,144 @@ class MainActivity : TauriActivity() {
         }
       }
     }
+
+    @JavascriptInterface
+    fun takePendingNotes(): String = PendingNotesStore.listJson(applicationContext)
+
+    @JavascriptInterface
+    fun ackPendingNotes(idsJson: String?): Boolean =
+      PendingNotesStore.ackJson(applicationContext, idsJson)
+
+    @JavascriptInterface
+    fun takeOpenNoteId(): String {
+      val id = pendingOpenNoteId ?: ""
+      pendingOpenNoteId = null
+      return id
+    }
+
+    @JavascriptInterface
+    fun syncWidgetSnapshot(json: String?): Boolean {
+      val saved = WidgetTasksStore.saveSnapshotJson(applicationContext, json)
+      if (saved) PinnedTasksWidgetProvider.updateAll(applicationContext)
+      return saved
+    }
+
+    @JavascriptInterface
+    fun takePendingWidgetToggles(): String =
+      WidgetTasksStore.listPendingTogglesJson(applicationContext)
+
+    @JavascriptInterface
+    fun ackPendingWidgetToggles(idsJson: String?): Boolean =
+      WidgetTasksStore.ackPendingTogglesJson(applicationContext, idsJson)
+
+    @JavascriptInterface
+    fun getNotesRoleState(): String = notesRoleState()
+
+    @JavascriptInterface
+    fun isStylusHandwritingSupported(): Boolean =
+      Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+
+    @JavascriptInterface
+    fun getOnDeviceAiState(): String = onDeviceAi?.currentState() ?: "unavailable"
+
+    @JavascriptInterface
+    fun runOnDeviceAi(requestId: Int, action: String?, text: String?): Boolean {
+      val manager = onDeviceAi
+      if (manager == null || action.isNullOrBlank() || text.isNullOrBlank()) {
+        reportAiResult(requestId, false, null, "unavailable")
+        return true
+      }
+      manager.run(action, text) { ok, result, error ->
+        reportAiResult(requestId, ok, result, error)
+      }
+      return true
+    }
+
+    @JavascriptInterface
+    fun isLocalOcrSupported(): Boolean = true
+
+    @JavascriptInterface
+    fun captureTextOcr(requestId: Int): Boolean {
+      runOnUiThread {
+        if (pendingOcrRequest != null) {
+          reportOcrResult(requestId, false, null, "busy")
+          return@runOnUiThread
+        }
+        try {
+          val dir = File(cacheDir, "ocr").apply { mkdirs() }
+          val photo = File(dir, "capture-$requestId.jpg")
+          val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", photo)
+          pendingOcrRequest = Pair(requestId, photo)
+          takeOcrPhoto.launch(uri)
+        } catch (_: Exception) {
+          pendingOcrRequest = null
+          reportOcrResult(requestId, false, null, "failed")
+        }
+      }
+      return true
+    }
+
+    @JavascriptInterface
+    fun scanQrCode(requestId: Int): Boolean {
+      runOnUiThread {
+        try {
+          val options = GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+            .build()
+          GmsBarcodeScanning.getClient(this@MainActivity, options)
+            .startScan()
+            .addOnSuccessListener { barcode ->
+              val raw = barcode.rawValue
+              if (!raw.isNullOrBlank()) {
+                reportQrScanResult(requestId, true, raw, null)
+              } else {
+                reportQrScanResult(requestId, false, null, "empty")
+              }
+            }
+            .addOnCanceledListener {
+              reportQrScanResult(requestId, false, null, "cancelled")
+            }
+            .addOnFailureListener {
+              reportQrScanResult(requestId, false, null, "failed")
+            }
+        } catch (_: Exception) {
+          reportQrScanResult(requestId, false, null, "failed")
+        }
+      }
+      return true
+    }
+
+    @JavascriptInterface
+    fun requestNotesRole(): Boolean {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
+      val roleManager = getSystemService(RoleManager::class.java) ?: return false
+      if (!roleManager.isRoleAvailable(RoleManager.ROLE_NOTES)) return false
+      if (roleManager.isRoleHeld(RoleManager.ROLE_NOTES)) {
+        runOnUiThread {
+          webView?.evaluateJavascript("window.__slothNotesRoleChanged?.('held')", null)
+        }
+        return true
+      }
+      val intent = try {
+        roleManager.createRequestRoleIntent(RoleManager.ROLE_NOTES)
+      } catch (_: Exception) {
+        return false
+      }
+      runOnUiThread {
+        try {
+          requestNotesRoleLauncher.launch(intent)
+        } catch (_: Exception) {
+          webView?.evaluateJavascript("window.__slothNotesRoleChanged?.('${notesRoleState()}')", null)
+        }
+      }
+      return true
+    }
+  }
+
+  override fun onResume() {
+    super.onResume()
+    webView?.evaluateJavascript("window.__nativeAction?.()", null)
+    webView?.evaluateJavascript("window.__slothNotesRoleChanged?.('${notesRoleState()}')", null)
   }
 
   override fun onNewIntent(intent: Intent) {
@@ -154,6 +386,11 @@ class MainActivity : TauriActivity() {
     }
     if (intent?.action == "dev.slothnote.app.NEW_NOTE") {
       pendingAction = "new-note"
+      intent.action = Intent.ACTION_MAIN
+    }
+    if (intent?.action == PinnedTasksWidgetProvider.ACTION_OPEN_NOTE) {
+      val id = intent.getStringExtra(PinnedTasksWidgetProvider.EXTRA_NOTE_ID)
+      if (!id.isNullOrBlank()) pendingOpenNoteId = id
       intent.action = Intent.ACTION_MAIN
     }
   }
@@ -252,6 +489,22 @@ class MainActivity : TauriActivity() {
     }
 
     @JavascriptInterface
+    fun haptic(kind: String) {
+      runOnUiThread {
+        val code = when (kind) {
+          "heading" -> android.view.HapticFeedbackConstants.CLOCK_TICK
+          "task-done", "threshold" ->
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R)
+              android.view.HapticFeedbackConstants.CONFIRM
+            else
+              android.view.HapticFeedbackConstants.KEYBOARD_TAP
+          else -> return@runOnUiThread
+        }
+        webView?.performHapticFeedback(code)
+      }
+    }
+
+    @JavascriptInterface
     fun finishActivity() {
       runOnUiThread { finish() }
     }
@@ -308,5 +561,24 @@ class MainActivity : TauriActivity() {
       "left:${dp(bars.left)},right:${dp(bars.right)}," +
       "ime:${dp(imeHeight)},keyboard:'$keyboard',progress:$progress})"
     webView?.evaluateJavascript(script, null)
+  }
+
+  override fun onDestroy() {
+    if (activeInstance?.get() === this) activeInstance = null
+    onDeviceAi?.close()
+    onDeviceAi = null
+    super.onDestroy()
+  }
+
+  companion object {
+    @Volatile
+    private var activeInstance: java.lang.ref.WeakReference<MainActivity>? = null
+
+    fun notifyNativeAction() {
+      val activity = activeInstance?.get() ?: return
+      activity.runOnUiThread {
+        activity.webView?.evaluateJavascript("window.__nativeAction?.()", null)
+      }
+    }
   }
 }

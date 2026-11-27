@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FilePlus, FileText, Hash, Search, Zap } from 'lucide-react'
 import { markdownTree } from '../markdown-model.js'
-import { noteSearchResult } from '../note-search.js'
+import { compareNoteSearch, noteSearchResult } from '../note-search.js'
 import { displayName } from '../note-title.js'
 import { t } from '../i18n.js'
 
@@ -67,8 +67,9 @@ export function CommandSheet({
     if (mode !== 'notes') return []
     if (!needle) return notes.map((note) => ({ note, result: { matches: [], snippet: null } }))
     return notes
-      .map((note) => ({ note, result: noteSearchResult(note, needle) }))
+      .map((note, index) => ({ note, index, result: noteSearchResult(note, needle) }))
       .filter(({ result }) => result.matches.length || result.titleMatches.length)
+      .sort((a, b) => compareNoteSearch(a, b, needle) || a.index - b.index)
   }, [mode, needle, notes])
 
   const commandResults = useMemo(() => {

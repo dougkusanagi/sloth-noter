@@ -2,6 +2,178 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.69.0] — 2026-11-27
+
+Imagens citadas no meio ou no final de uma linha de texto ou tarefa agora aparecem como **miniaturas inline (thumbs)** clicáveis com visualização ampliada, sem ocupar um bloco inteiro. Veja os [detalhes da versão](changelog/0.69.0.md).
+
+## [0.68.0] — 2026-11-27
+
+Adicionados **espaços compartilhados entre contas** com criptografia de ponta a ponta (ECDH P-256), níveis de acesso (Dono, Editor e Leitor), convites por e-mail, remoção de membros com rotação de chave e gerenciamento nas Configurações do desktop e do celular. Veja os [detalhes da versão](changelog/0.68.0.md).
+
+## [0.67.0] — 2026-11-27
+
+Revisão de conflitos de sincronização movida para exibição inline diretamente na nota e redesenho da seção **Conta e sincronização** nas Configurações (desktop e celular). Veja os [detalhes da versão](changelog/0.67.0.md).
+
+## [0.66.0] — 2026-11-27
+
+Adicionada a revisão de conflitos de sincronização por diferenças (estilo VS Code), atalho `F1` para abrir a seção **Sobre**, melhoria na priorização da pesquisa de notas e correções no alinhamento e no ícone de tarefas vazias. Veja os [detalhes da versão](changelog/0.66.0.md).
+
+## [0.65.2] — 2026-11-26
+
+Redesenho do menu principal no celular seguindo o visual de cards das Configurações e correção da sobreposição entre as opções de modelo e a barra de ações com o teclado aberto. Veja os [detalhes da versão](changelog/0.65.2.md).
+
+## [0.65.1] — 2026-11-26
+
+Registrado no roteiro o plano de espaços compartilhados entre contas; o recurso ainda não está disponível. Veja os [detalhes da versão](changelog/0.65.1.md).
+
+## [0.65.0] — 2026-11-26
+
+Adicionado no celular o modo **Reordenar blocos**, para mudar a ordem de parágrafos, títulos e tarefas arrastando ou usando setas. Veja os [detalhes da versão](changelog/0.65.0.md).
+
+## [0.64.1] — 2026-11-26
+
+Alterado o menu de ações da nota no celular: atalhos rápidos no topo e as demais opções em grupos (Exibição, Organizar, Ferramentas, Enviar e exportar). Veja os [detalhes da versão](changelog/0.64.1.md).
+
+## [0.64.0] — 2026-11-26
+
+Alterado o topo da aba Tarefas: os filtros foram para um botão ao lado da busca, como na aba Notas, e a lista de tarefas mostra a barra de progresso de cada nota e de cada título, no desktop e no celular. Veja os [detalhes da versão](changelog/0.64.0.md).
+
+## [0.63.2] — 2026-11-26
+
+Corrigida a ordem das notas abertas no topo da biblioteca: agora elas seguem a ordem das abas, inclusive as fixadas. Veja os [detalhes da versão](changelog/0.63.2.md).
+
+## [0.63.1] — 2026-11-26
+
+Ajustado o build Android para gerar por padrão um APK release compacto (com minificação e remoção de recursos não usados) e copiá-lo automaticamente para `~/Downloads`, conforme regra registrada no `AGENTS.md`. Veja os [detalhes da versão](changelog/0.63.1.md).
+
+## [0.63.0] — 2026-11-26
+
+Adicionado pareamento de conta de sincronização por QR Code nos dois sentidos — Desktop → Celular e Celular → Desktop estilo WhatsApp Web com criptografia ECDH ponta a ponta ([ADR 0053](docs/adr/0053-pareamento-conta-por-qr.md)) — e reorganizada a tela de Configurações no celular em submenus com resumo de estado. Veja os [detalhes da versão](changelog/0.63.0.md).
+
+## [0.62.4] — 2026-11-26
+
+Igualado o espaçamento interno de blocos de código dentro de colunas ao bloco normal e movida a alça de blocos internos de colunas para cima do bloco, exibindo o ícone do tipo junto da alça de arraste. Veja os [detalhes da versão](changelog/0.62.4.md).
+
+## [0.62.3] — 2026-11-26
+
+Ajustado o alinhamento superior exato (`top: 0`) da alça lateral esquerda em blocos de colunas e tabelas para ficar rente à borda superior como nos blocos sem colunas. Veja os [detalhes da versão](changelog/0.62.3.md).
+
+## [0.62.2] — 2026-11-26
+
+Alinhada ao topo a alça lateral esquerda de tabelas e blocos de colunas (seguindo o padrão dos demais blocos) e corrigida a exibição da alça lateral ao passar o mouse sobre a área da coluna. Veja os [detalhes da versão](changelog/0.62.2.md).
+
+## [0.62.1] — 2026-11-26
+
+Corrigido o posicionamento dos botões de blocos de código dentro de múltiplas colunas no editor visual: cada coluna agora exibe seus próprios controles de forma compacta sem duplicar nem sobrepor botões na coluna vizinha. Veja os [detalhes da versão](changelog/0.62.1.md).
+
+## [0.62.0] — 2026-11-26
+
+Adicionada a interface completa de transferência por QR Code (geração no desktop/celular e leitura por câmera nativa no Android), integrados OCR local real (ML Kit Text Recognition) e IA no aparelho (ML Kit GenAI) no Android, e ocultada a largura do campo de texto em celulares compactos (exibindo 2 opções apenas em tablets ≥ 600 dp). Veja os [detalhes da versão](changelog/0.62.0.md).
+
+## [0.61.1] — 2026-11-26
+
+Corrigido o estilo mobile do card **Histórico de versões** em Configurações e alinhados o seletor de IA no aparelho e as folhas de sugestão (IA e OCR) ao padrão visual do app, além de registrar regras de consistência visual no `AGENTS.md`. Veja os [detalhes da versão](changelog/0.61.1.md).
+
+## [0.61.0] — 2026-11-26
+
+Adicionados o ciclo seguro de propostas de seleção para IA local no desktop (C3) e o agregador de progresso do Hub de projetos (C5). Veja os [detalhes da versão](changelog/0.61.0.md).
+
+## [0.60.0] — 2026-11-26
+
+Adicionada a camada de provedores alternativos de sincronização e backup remoto (C2, [ADR 0052](docs/adr/0052-provedores-alternativos-sync-backup.md)), suportando servidor próprio, repositório GitHub e pasta local/rede com validação estrita. Veja os [detalhes da versão](changelog/0.60.0.md).
+
+## [0.59.0] — 2026-11-26
+
+Adicionado suporte portável em Markdown a recorrência (`🔁`), histórico de conclusões (`✅`) e lembretes locais (`⏰`) em tarefas (C4, [ADR 0051](docs/adr/0051-recorrencia-e-lembretes-em-tarefas.md)). Veja os [detalhes da versão](changelog/0.59.0.md).
+
+## [0.58.0] — 2026-11-26
+
+Adicionada a compactação configurável de imagens em WebP (C6, [ADR 0050](docs/adr/0050-compactacao-imagens-webp.md)) com perfis Original, Equilibrada e Pequena, preservação de GIF/SVG e remoção de EXIF. Veja os [detalhes da versão](changelog/0.58.0.md).
+
+## [0.57.0] — 2026-11-26
+
+Adicionada a base da ponte por QR sem conta (C1, [ADR 0049](docs/adr/0049-ponte-por-qr-sem-conta.md)): codificação e decodificação offline de notas curtas em `slothnote:qr:v1:` com compressão, limite de tamanho e aviso para imagens. Veja os [detalhes da versão](changelog/0.57.0.md).
+
+## [0.56.0] — 2026-11-26
+
+Adicionado suporte à captura de texto por câmera com OCR local no Android (B17, [ADR 0048](docs/adr/0048-captura-camera-ocr-local.md)), convertendo o texto reconhecido em Markdown (texto, lista ou tabela) como sugestão editável antes de inserir na nota. Veja os [detalhes da versão](changelog/0.56.0.md).
+
+## [0.55.0] — 2026-11-26
+
+Adicionado suporte opcional à IA no aparelho no Android (B7, [ADR 0047](docs/adr/0047-ia-no-aparelho-mobile.md)): desligada por padrão, oculta quando não há modelo local disponível, com ações de resumir e revisar exibidas como sugestão editável antes de alterar a nota. Veja os [detalhes da versão](changelog/0.55.0.md).
+
+## [0.54.0] — 2026-11-26
+
+Adicionado suporte à escrita à mão com caneta convertida em texto no editor mobile e na nota rápida (B6), habilitando o reconhecimento nativo do Android 14+ e evitando que traços de caneta acionem gestos de deslizar. Veja os [detalhes da versão](changelog/0.54.0.md).
+
+## [0.53.0] — 2026-11-26
+
+Adicionado o widget **Tarefas fixadas** para a tela inicial do Android (B5, [ADR 0046](docs/adr/0046-widget-de-lista-fixada.md)), exibindo as tarefas de uma nota fixada e permitindo marcá-las ou desmarcá-las sem abrir o aplicativo. Veja os [detalhes da versão](changelog/0.53.0.md).
+
+## [0.52.0] — 2026-11-26
+
+Ajustado o bloco "Nova nota" das Configurações rápidas no Android para abrir a tela protegida de nota rápida (`QuickNoteActivity`) quando o aparelho estiver bloqueado. Veja os [detalhes da versão](changelog/0.52.0.md).
+
+## [0.51.0] — 2026-11-26
+
+Adicionado suporte ao papel de app de notas do sistema no Android 14+ (B4, `ROLE_NOTES`), com solicitação em Configurações → Sistema e tela isolada na tela de bloqueio para criar e salvar notas novas sem exibir suas notas existentes ([ADR 0045](docs/adr/0045-app-de-notas-do-sistema-role-notes.md)). Veja os [detalhes da versão](changelog/0.51.0.md).
+
+## [0.50.0] — 2026-11-25
+
+Adicionados gestos no modo Quadro compacto do celular (B15): deslizar um cartão move a tarefa para a coluna seguinte ou anterior com vibração curta usando o mesmo Markdown do menu, e deslizar a área da coluna navega entre as colunas como carrossel. Veja os [detalhes da versão](changelog/0.50.0.md).
+
+## [0.49.1] — 2026-11-25
+
+Corrigida a referência de rótulo `@string/shortcut_new_note` no `NewNoteTileService` do `AndroidManifest.xml`. Veja os [detalhes da versão](changelog/0.49.1.md).
+
+## [0.49.0] — 2026-11-25
+
+Adicionados a lupa de tabela por toque longo (B13), o trackpad estrutural na barra de formatação (B14) e o bloco "Nova nota" nas Configurações rápidas do Android (B3, `TileService`). Veja os [detalhes da versão](changelog/0.49.0.md).
+
+## [0.48.0] — 2026-11-25
+
+Adicionados a régua de títulos na leitura mobile (B11, com feedback háptico por seção) e o zoom semântico por pinça ou botão (B12: Completo → Esboço → Só títulos, preservando o zoom de acessibilidade). Veja os [detalhes da versão](changelog/0.48.0.md).
+
+## [0.47.0] — 2026-11-25
+
+Adicionados gestos de estrutura no editor visual do celular (B10): deslizar um item de lista para a direita/esquerda recua ou desrecua o item, e deslizar um parágrafo comum para a direita o transforma em tarefa, usando o mesmo Markdown e histórico de desfazer dos botões da barra. Confirmado também B16 (modelos ao criar nota). Veja os [detalhes da versão](changelog/0.47.0.md).
+
+## [0.46.3] — 2026-11-25
+
+Trocar de nota pelo gesto horizontal no cabeçalho mobile (B9) agora substitui a nota atual na pilha de navegação em vez de empilhar histórico, para que o botão Voltar retorne direto à lista de notas. Veja os [detalhes da versão](changelog/0.46.3.md).
+
+## [0.46.2] — 2026-11-25
+
+Corrigida a seleção de capas da galeria (gradientes) em modo estrito do React, adicionada a remoção completa da seção de propriedades YAML (inclusive ao excluir a última propriedade) e ampliado o gesto de baralho de notas no cabeçalho mobile para alternar pela lista quando houver menos de duas notas abertas. Veja os [detalhes da versão](changelog/0.46.2.md).
+
+## [0.46.1] — 2026-11-25
+
+Corrigida a captura de toque nos gestos do cabeçalho no Android (B8 e B9): adicionado `touch-action: none` e `setPointerCapture` para que arrastar o cabeçalho para baixo ou na horizontal não seja cancelado pelo WebView nem perdido ao sair da área do cabeçalho. Veja os [detalhes da versão](changelog/0.46.1.md).
+
+## [0.46.0] — 2026-11-25
+
+Novos gestos no cabeçalho do celular (Parte B: B8 e B9): puxar o cabeçalho para baixo abre Buscar e comandos, e deslizar o cabeçalho da nota na horizontal alterna entre notas abertas preservando cursor, rolagem e modo. Veja os [detalhes da versão](changelog/0.46.0.md).
+
+## [0.45.1] — 2026-11-25
+
+Corrigida a referência qualificada `android.os.Build` na ponte háptica nativa (`MainActivity.kt`) para compilação do APK Android. Veja os [detalhes da versão](changelog/0.45.1.md).
+
+## [0.45.0] — 2026-11-25
+
+Iniciada a Parte B no Android (Prioridade 6): transições suaves ao abrir notas (View Transitions API respeitando movimento reduzido, B1) e resposta háptica discreta no limite do gesto de exclusão e na conclusão de tarefas (B2). Veja os [detalhes da versão](changelog/0.45.0.md).
+
+## [0.44.1] — 2026-11-25
+
+Corrigido o seletor estrito de título `h1` no teste E2E de leitura mobile (`reading-interactions.spec.js`). Veja os [detalhes da versão](changelog/0.44.1.md).
+
+## [0.44.0] — 2026-11-25
+
+Adicionado suporte a prazos e datas em tarefas (`📅`, `⏳`, `🛫`) com chips relativos por situação nos modos Padrão e Leitura e filtro/ordenação por prazo na biblioteca de tarefas (ADR 0044). Veja os [detalhes da versão](changelog/0.44.0.md).
+
+## [0.43.0] — 2026-11-25
+
+Concluídas as pendências funcionais de leitura, modelos e variáveis: variáveis renderizadas no modo Leitura, criação de propriedades direto pelo seletor de variáveis, painel de propriedades, "Variável…" e "Usar como modelo" no celular, além de `createdAt` e a variável `{{created}}` (ADR 0043). Veja os [detalhes da versão](changelog/0.43.0.md).
+
 ## [0.42.4] — 2026-11-25
 
 Corrigida a renderização de tabelas no celular: removida a faixa cinza no cabeçalho causada por conflito de variável CSS e ajustadas tabelas de 2–3 colunas para caberem na largura da tela sem cortar texto. Veja os [detalhes da versão](changelog/0.42.4.md).

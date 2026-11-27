@@ -328,10 +328,9 @@ export const blockHandle = ViewPlugin.fromClass(
     track(event) {
       if (this.dragging || this.menuOpen || this.view.state.readOnly) return
       if (this.handle.contains(event.target)) return clearTimeout(this.hideTimer)
-      // Tables have their own handle, and each column has its own handles for its blocks.
-      const column = event.target.closest?.('.cm-column-editor')
-      if (event.target.closest?.('.cm-md-table-row') || (column && !column.contains(this.view.dom)))
-        return this.hide()
+      // Tables have their own handle. Hovering inside a column still shows the parent
+      // columns block handle on the outer left gutter.
+      if (event.target.closest?.('.cm-md-table-row')) return this.hide()
       const lineElement = event.target.closest?.('.cm-line')
       const number =
         lineElement && this.view.contentDOM.contains(lineElement)
@@ -367,9 +366,9 @@ export const blockHandle = ViewPlugin.fromClass(
       const offset = Number.parseFloat(style.getPropertyValue('--block-handle-offset'))
       const width = Number.parseFloat(style.getPropertyValue('--block-handle-width'))
       const height = Number.parseFloat(style.getPropertyValue('--block-handle-height'))
-      const left = content.left - host.left - offset - width
-      // In a column, the handle sits in the space beside the column.
-      if (left < 0 && !view.state.facet(embeddedDocument)) return this.hide()
+      const isEmbedded = view.state.facet(embeddedDocument)
+      const left = isEmbedded ? 0 : content.left - host.left - offset - width
+      if (left < 0 && !isEmbedded) return this.hide()
       const lineHeight = coords.bottom - coords.top
       this.block = block
       this.handle.innerHTML = `<span class="cm-block-handle-type">${blockIconMarkup[block.kind] ?? blockIconMarkup.other}</span>${gripMarkup}`
@@ -377,8 +376,13 @@ export const blockHandle = ViewPlugin.fromClass(
       this.handle.setAttribute('aria-label', label)
       this.handle.removeAttribute('title')
       this.handle.dataset.kind = block.kind
+      const topOffset = isEmbedded
+        ? -height - 4
+        : block.kind === 'columns' || lineHeight > height * 2
+          ? 0
+          : (lineHeight - height) / 2
       this.handle.style.left = `${left}px`
-      this.handle.style.top = `${coords.top - host.top + (lineHeight - height) / 2}px`
+      this.handle.style.top = `${coords.top - host.top + topOffset}px`
       this.handle.hidden = false
       this.revealFold(line.from)
     }

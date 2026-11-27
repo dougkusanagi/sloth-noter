@@ -8,6 +8,7 @@ import { ShortcutButton } from './components/shortcut-button.jsx'
 import { openExternalLink } from './external-links.js'
 import { TemplatePicker } from './components/template-picker.jsx'
 import { VariablePicker } from './components/variable-picker.jsx'
+import { writeProperty } from './frontmatter.js'
 import { variableInsertEdit } from './variables.js'
 import { renderTemplate, templateInsertEdit, templateList } from './templates.js'
 import { TemplateStarters } from './components/template-starters.jsx'
@@ -1929,9 +1930,33 @@ export function VisualEditor({
               .facet(taskNotes)
               .find((note) => note.id === viewRef.current.state.facet(activeNoteId))?.modifiedAt
           }
+          createdAt={
+            viewRef.current?.state
+              .facet(taskNotes)
+              .find((note) => note.id === viewRef.current.state.facet(activeNoteId))?.createdAt
+          }
           onClose={() => {
             setVariablePanel(null)
             viewRef.current?.focus()
+          }}
+          onCreateProperty={(key, choice) => {
+            const view = viewRef.current
+            const range = variablePanel
+            setVariablePanel(null)
+            if (!view) return
+            const doc = view.state.doc.toString()
+            const withProp = writeProperty(doc, key, '')
+            if (withProp === null) return
+            const delta = withProp.length - doc.length
+            const edit = variableInsertEdit(range.from + delta, range.to + delta, choice)
+            const next = withProp.slice(0, edit.from) + edit.insert + withProp.slice(edit.to)
+            view.dispatch({
+              changes: { from: 0, to: doc.length, insert: next },
+              selection: EditorSelection.single(edit.selectionFrom, edit.selectionTo),
+              userEvent: 'bloco',
+              scrollIntoView: true,
+            })
+            view.focus()
           }}
           onPick={(choice) => {
             const view = viewRef.current

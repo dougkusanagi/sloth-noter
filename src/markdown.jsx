@@ -13,6 +13,7 @@ import { ChevronDown, Copy, WrapText } from 'lucide-react'
 import { remarkTags, remarkWikiLinks, findNote } from './markdown-model.js'
 import { remarkSections, remarkSourceLayout } from './sections.js'
 import { resolveImage } from './images.js'
+import { openImageLightbox } from './image-lightbox.js'
 import {
   sectionProgress,
   resolvedTasks,
@@ -27,6 +28,8 @@ import { TaskDateBadge } from './components/task-date-badge.jsx'
 import { openTaskMenu } from './editor/task-menu.js'
 import { unarchiveTask } from './task-archive.js'
 import { progressLabel, progressShares } from './progress-badge.js'
+import { remarkVariables } from './variables.js'
+import { triggerHaptic } from './mobile/haptics.js'
 
 function highlightedCode(tokens) {
   return tokens.map((token, index) =>
@@ -44,8 +47,28 @@ export function safeHref(value) {
   if (/^(https?:|mailto:)/i.test(href) || /^(#|\/|\.\/|\.\.\/)/.test(href)) return href
   return null
 }
+const InlineImageContext = createContext(false)
+
+function Paragraph({ children }) {
+  const meaningful = React.Children.toArray(children).filter(
+    (child) => !(typeof child === 'string' && !child.trim()),
+  )
+  const isStandaloneImage =
+    meaningful.length === 1 &&
+    React.isValidElement(meaningful[0]) &&
+    (meaningful[0].type === Image || meaningful[0].props?.node?.tagName === 'img')
+  return (
+    <p>
+      <InlineImageContext.Provider value={!isStandaloneImage}>
+        {children}
+      </InlineImageContext.Provider>
+    </p>
+  )
+}
+
 function Image({ src, alt, title, node }) {
   const { coverOffset } = useContext(MarkdownContext)
+  const inline = useContext(InlineImageContext)
   const cover = coverOffset !== undefined && coverOffset === node?.position?.start.offset
   const [failed, setFailed] = useState(false)
   const [resolved, setResolved] = useState(null)
@@ -73,6 +96,11 @@ function Image({ src, alt, title, node }) {
       alt={alt ?? ''}
       title={cover ? undefined : title}
       loading="lazy"
+      onClick={
+        !cover && resolved
+          ? () => openImageLightbox({ src: resolved, alt: alt ?? '', title: title ?? '' })
+          : undefined
+      }
       onError={() => {
         setResolved(null)
         setFailed(true)
@@ -87,6 +115,31 @@ function Image({ src, alt, title, node }) {
           : failed && <span className="image-missing">{t('cover.unavailable')}</span>}
       </span>
     )
+  if (inline) {
+    if (!resolved)
+      return <span className="inline-image-thumb-missing">{alt || t('images.unavailable')}</span>
+    const label = title || alt || t('images.zoom')
+    return (
+      <button
+        type="button"
+        className="inline-image-thumb"
+        title={label}
+        aria-label={`${t('images.zoom')}: ${label}`}
+        onClick={() => openImageLightbox({ src: resolved, alt: alt ?? '', title: title ?? '' })}
+      >
+        <img
+          src={resolved}
+          alt={alt ?? ''}
+          className="inline-image-thumb-img"
+          loading="lazy"
+          onError={() => {
+            setResolved(null)
+            setFailed(true)
+          }}
+        />
+      </button>
+    )
+  }
   return resolved ? (
     title ? (
       <span className="image-figure">
@@ -203,7 +256,9 @@ function ListItem({ children, className, node, style }) {
           }}
         />
       )}
-      {task ? withDateBadge(dropLeadingSpace(children)) : children}
+      <InlineImageContext.Provider value={true}>
+        {task ? withDateBadge(dropLeadingSpace(children)) : children}
+      </InlineImageContext.Provider>
       {task?.progress && <ProgressBadge {...task.progress} />}
     </li>
   )
@@ -402,6 +457,9 @@ function Table({ node, children, ...props }) {
   const { focusableTables } = useContext(MarkdownContext)
   const [view, setView] = useState('table')
   const [fullscreen, setFullscreen] = useState(false)
+  const [loupeRow, setLoupeRow] = useState(null)
+  const loupeTimer = React.useRef(null)
+  const loupeStart = React.useRef(null)
   if (!focusableTables) return <table {...props}>{children}</table>
   const thead = node.children.find((part) => part.tagName === 'thead')
   const tbody = node.children.find((part) => part.tagName === 'tbody')
@@ -416,9 +474,43 @@ function Table({ node, children, ...props }) {
     )
   const totalRows = (headRow ? 1 : 0) + bodyRows.length
   const cols = headerCells.length || (bodyRows[0]?.length ?? 0)
+  const clearLoupeTimer = () => {
+    if (loupeTimer.current) {
+      clearTimeout(loupeTimer.current)
+      loupeTimer.current = null
+    }
+    loupeStart.current = null
+  }
   const meta = t('mobile.tableMeta', { rows: bodyRows.length, cols })
   const tableEl = (
-    <div className="mobile-table-wrap" data-wide={cols >= 4 ? '' : undefined}>
+    <div
+      className="mobile-table-wrap"
+      data-wide={cols >= 4 ? '' : undefined}
+      onPointerDown={(event) => {
+        if (!event.isPrimary) return
+        const tr = event.target.closest('tbody tr')
+        if (!tr) return
+        const rows = [...tr.parentElement.children]
+        const index = rows.indexOf(tr)
+        if (index < 0 || !bodyRows[index]) return
+        loupeStart.current = { x: event.clientX, y: event.clientY }
+        loupeTimer.current = setTimeout(() => {
+          loupeTimer.current = null
+          triggerHaptic('threshold')
+          setLoupeRow(index)
+        }, 480)
+      }}
+      onPointerMove={(event) => {
+        if (!loupeStart.current) return
+        if (
+          Math.abs(event.clientX - loupeStart.current.x) > 10 ||
+          Math.abs(event.clientY - loupeStart.current.y) > 10
+        )
+          clearLoupeTimer()
+      }}
+      onPointerUp={clearLoupeTimer}
+      onPointerCancel={clearLoupeTimer}
+    >
       <table {...props} tabIndex={0} aria-label={t('mobile.tableLabel', { rows: totalRows })}>
         {children}
       </table>
@@ -477,11 +569,44 @@ function Table({ node, children, ...props }) {
           <div className="mobile-table-fullscreen-body">{content}</div>
         </div>
       )}
+      {loupeRow !== null && bodyRows[loupeRow] && (
+        <div
+          className="mobile-table-loupe"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('mobile.tableLoupe')}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setLoupeRow(null)
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.stopPropagation()
+              setLoupeRow(null)
+            }
+          }}
+        >
+          <div className="mobile-table-loupe-card">
+            <div className="mobile-table-fullscreen-bar">
+              <span className="mobile-table-meta">{t('mobile.tableLoupe')}</span>
+              <button
+                type="button"
+                className="mobile-table-btn"
+                onClick={() => setLoupeRow(null)}
+                autoFocus
+              >
+                {t('dialog.close')}
+              </button>
+            </div>
+            <TableCards headers={headerCells} rows={[bodyRows[loupeRow]]} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 const components = {
   table: Table,
+  p: Paragraph,
   img: Image,
   a: Link,
   li: ListItem,
@@ -497,6 +622,9 @@ const components = {
 }
 export function Markdown({
   text,
+  fullBody,
+  modifiedAt,
+  createdAt,
   onCopy,
   onChange,
   onOpenWiki,
@@ -507,6 +635,10 @@ export function Markdown({
   wrapLines = true,
   wrapPage = wrapLines,
 }) {
+  const variableContext = useMemo(
+    () => ({ body: fullBody ?? text, modifiedAt, createdAt }),
+    [fullBody, text, modifiedAt, createdAt],
+  )
   const coverOffset = useMemo(() => noteCover(text)?.position.start.offset, [text])
   const tasks = useMemo(
     () => new Map(resolvedTasks(text, notes).map((task) => [task.line, task])),
@@ -546,6 +678,7 @@ export function Markdown({
             remarkWikiLinks,
             remarkPartialTasks,
             remarkTags,
+            [remarkVariables, variableContext],
             remarkSections,
             remarkSourceLayout,
           ]}

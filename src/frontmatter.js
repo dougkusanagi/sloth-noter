@@ -137,10 +137,16 @@ export function writeProperty(text, key, value) {
   if (document.contents === null) document.contents = document.createNode({})
   if (value === undefined) document.delete(key)
   else document.set(key, value)
+  if (value === undefined && !document.contents?.items?.length) return body
   const out = document.toString().trimEnd()
   const newline = raw.includes('\r\n') ? '\r\n' : '\n'
   const block = out ? `---${newline}${out}${newline}---${newline}` : `---${newline}---${newline}`
   return block + body
+}
+
+/** Removes the entire leading YAML frontmatter block, returning only the Markdown body. */
+export function removeFrontmatter(text) {
+  return splitFrontmatter(text).body
 }
 
 /** Line number (1-based) of the title in a CodeMirror document: 1, or the line after the YAML block. */

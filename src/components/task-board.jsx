@@ -8,6 +8,12 @@ import { plain } from './tasks-library.jsx'
 import { TaskDateBadge } from './task-date-badge.jsx'
 import { taskDate } from '../task-dates.js'
 import { currentLanguage, t } from '../i18n.js'
+import {
+  adjacentColumnIndex,
+  classifyBoardCardSwipe,
+  classifyBoardColumnSwipe,
+} from '../mobile/board-gestures.js'
+import { triggerHaptic } from '../mobile/haptics.js'
 
 const CARD_TYPE = 'application/x-sloth-card'
 
@@ -216,7 +222,37 @@ export function TaskBoard({ body, onChange, compact = false, readOnly = false })
           ))}
         </div>
       )}
-      <div className="board-columns">
+      <div
+        className="board-columns"
+        onTouchStart={(event) => {
+          if (!compact || event.touches.length !== 1) return
+          if (event.target.closest('.board-card')) return
+          const touch = event.touches[0]
+          event.currentTarget.dataset.swipeX = String(touch.clientX)
+          event.currentTarget.dataset.swipeY = String(touch.clientY)
+        }}
+        onTouchEnd={(event) => {
+          if (!compact || event.changedTouches.length !== 1) return
+          const sx = Number(event.currentTarget.dataset.swipeX)
+          const sy = Number(event.currentTarget.dataset.swipeY)
+          delete event.currentTarget.dataset.swipeX
+          delete event.currentTarget.dataset.swipeY
+          if (!Number.isFinite(sx) || !Number.isFinite(sy)) return
+          const touch = event.changedTouches[0]
+          const delta = classifyBoardColumnSwipe({
+            startX: sx,
+            startY: sy,
+            endX: touch.clientX,
+            endY: touch.clientY,
+            viewportWidth: window.innerWidth,
+          })
+          const next = adjacentColumnIndex(columns.length, current, delta)
+          if (next >= 0) {
+            triggerHaptic('heading')
+            setTab(next)
+          }
+        }}
+      >
         {visible.map((column) => {
           const cards = column.cards
           const cell = column.title
@@ -282,6 +318,36 @@ export function TaskBoard({ body, onChange, compact = false, readOnly = false })
                         data-status={card.status}
                         data-dragged={dragged || undefined}
                         draggable={!compact && !readOnly && editing !== card.mark}
+                        onTouchStart={(event) => {
+                          if (!compact || readOnly || editing === card.mark) return
+                          if (event.touches.length !== 1) return
+                          const touch = event.touches[0]
+                          event.currentTarget.dataset.cardX = String(touch.clientX)
+                          event.currentTarget.dataset.cardY = String(touch.clientY)
+                        }}
+                        onTouchEnd={(event) => {
+                          if (!compact || readOnly || editing === card.mark) return
+                          if (event.changedTouches.length !== 1) return
+                          const sx = Number(event.currentTarget.dataset.cardX)
+                          const sy = Number(event.currentTarget.dataset.cardY)
+                          delete event.currentTarget.dataset.cardX
+                          delete event.currentTarget.dataset.cardY
+                          if (!Number.isFinite(sx) || !Number.isFinite(sy)) return
+                          const touch = event.changedTouches[0]
+                          const delta = classifyBoardCardSwipe({
+                            startX: sx,
+                            startY: sy,
+                            endX: touch.clientX,
+                            endY: touch.clientY,
+                            viewportWidth: window.innerWidth,
+                          })
+                          const next = adjacentColumnIndex(columns.length, current, delta)
+                          if (next >= 0) {
+                            triggerHaptic('threshold')
+                            moveCard(card.mark, columns[next].title, null)
+                            setTab(next)
+                          }
+                        }}
                         onDragStart={(event) => {
                           event.dataTransfer.setData(CARD_TYPE, String(card.mark))
                           event.dataTransfer.effectAllowed = 'move'

@@ -1,5 +1,8 @@
 import { CoverPicker } from '../components/cover-picker.jsx'
 import { NoteCoverBanner } from '../components/note-cover-banner.jsx'
+import { ConflictBanner, InlineConflictReview } from '../components/conflict-diff.jsx'
+import { resolveSyncConflict } from '../sync/document.js'
+import { ensureTitle } from '../title.js'
 import { EditorToggleSettings } from '../components/settings-sections.jsx'
 import { noteCover } from '../note-cover.js'
 import {
@@ -13,6 +16,14 @@ import { useWorkspaceBoot } from '../hooks/use-workspace-boot.js'
 import { useTheme } from '../hooks/use-theme.js'
 import { DocumentWidthPresets } from '../components/document-width-presets.jsx'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
+import { runNoteTransition } from './view-transition.js'
+import { triggerHaptic } from './haptics.js'
+import { adjacentOpenNoteId, classifyHeaderGesture } from './header-gestures.js'
+import { classifyEditorSwipe, structureSwipeEdit } from './editor-gestures.js'
+import { isStylusPointer, isStylusTouch } from './stylus.js'
+import { classifyPinch, stepReadingZoom } from './reading-zoom.js'
+import { HeadingRuler } from './heading-ruler.jsx'
 import {
   ArrowDown,
   ArrowLeft,
@@ -42,17 +53,25 @@ import {
   NotebookText,
   NotebookPen,
   Pin,
+  QrCode,
   Redo2,
   ScanSearch,
   Search,
   Settings,
   Share2,
+  SlidersHorizontal,
+  Smartphone,
+  ChevronRight,
+  Cloud,
+  History,
+  Palette,
   Sun,
   Trash2,
   Undo2,
   WrapText,
   X,
   Zap,
+  GripVertical,
 } from 'lucide-react'
 import { redo, undo } from '@codemirror/commands'
 import { Toaster, toast } from 'sonner'
@@ -73,7 +92,7 @@ import { VisualEditor } from '../visual-editor.jsx'
 import { DocumentOutline } from '../components/document-outline.jsx'
 import { EditorView } from '@codemirror/view'
 import { displayName, notePreview } from '../note-title.js'
-import { noteSearchResult } from '../note-search.js'
+import { compareNoteSearch, noteSearchResult } from '../note-search.js'
 import { findNote, wikiParts } from '../markdown-model.js'
 import {
   moveToTrash,
@@ -87,12 +106,17 @@ import {
   importImage,
   libraryImages,
   markdownImage,
+  formatImageInsertion,
   removeDocumentImage,
 } from '../images.js'
 import { createFullBackup, readBackupBundle, restoreBackupImages } from '../backup.js'
 import { AboutPanel } from '../components/about-panel.jsx'
 import { HistoryPanel } from '../components/history-panel.jsx'
+import { Switch } from '../components/controls.jsx'
+import { QrNoteDialog } from '../components/qr-note-dialog.jsx'
+import { decodeQrNotePayload } from '../qr-bridge.js'
 import { SyncPanel } from '../components/sync-panel.jsx'
+import { SpacesPanel } from '../components/spaces-panel.jsx'
 import { useSync } from '../hooks/use-sync.js'
 import { ImageThumbnail } from '../components/image-library.jsx'
 import { TasksLibrary } from '../components/tasks-library.jsx'
@@ -104,6 +128,8 @@ import { GuideLibrary, guideDocument, guideTarget } from '../components/guide-li
 import { LANGUAGES, currentLanguage, t } from '../i18n.js'
 import { isTaskNote, makeTaskNote } from '../task-note.js'
 import { setOwnTemplates, setTemplateProfile } from '../templates.js'
+import { PropertiesDock } from '../components/properties-panel.jsx'
+import { frontmatterEnd } from '../frontmatter.js'
 import { FONT_SIZE } from '../storage.js'
 import { useInsets, useKeyboardOpen } from './use-insets.js'
 import { useSystemBars } from './use-system-bars.js'
@@ -111,6 +137,7 @@ import { useNativeActions } from './use-native-actions.js'
 import { canShareFile, shareFile } from './share.js'
 import { useNavigation } from './use-navigation.js'
 import { newMobileNote, renameMobileNote, updateMobileNote } from './note-actions.js'
+import { BlockReorder } from './block-reorder.jsx'
 import { SwipeNoteRow } from './swipe-note-row.jsx'
 import { shareAndroidText } from './share.js'
 import { backEnabled, createMobileBack } from './back.js'
@@ -119,6 +146,15 @@ import { TaskBoard } from '../components/task-board.jsx'
 import { FormattingBar } from './formatting-bar.jsx'
 import { flushOnHide } from './lifecycle.js'
 import { saveTextFile } from './file-save.js'
+import { ingestPendingNotes } from './pending-notes.js'
+import { applyWidgetToggles, buildPinnedTasksWidgetSnapshot } from './widget-tasks.js'
+import {
+  applyAiSuggestion,
+  canShowOnDeviceAiAction,
+  getOnDeviceAiState,
+  requestOnDeviceAi,
+} from './on-device-ai.js'
+import { formatOcrToMarkdown, isLocalOcrSupported, requestLocalOcr } from './ocr-markdown.js'
 import './mobile.css'
 
 const destinations = [
@@ -143,7 +179,8 @@ function ThemeControl({ theme, onChange }) {
           title={t(`theme.${value}`)}
           onClick={() => onChange({ theme: value })}
         >
-          <Icon size={18} aria-hidden="true" />
+          <Icon size={17} aria-hidden="true" />
+          <span>{t(`theme.${value}`)}</span>
         </button>
       ))}
     </div>
@@ -176,8 +213,13 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const [renameError, setRenameError] = useState('')
   const [purgeId, setPurgeId] = useState(null)
   const [trashEmpty, setTrashEmpty] = useState(false)
+  const [reviewingConflictId, setReviewingConflictId] = useState(null)
   const [backupCandidate, setBackupCandidate] = useState(null)
   const [transferBusy, setTransferBusy] = useState('')
+  const headerGesture = useRef(null)
+  const editorSwipe = useRef(null)
+  const pinchStart = useRef(null)
+  const [readingZoom, setReadingZoom] = useState('full')
   const transferPending = useRef(false)
   const [replaceConfirm, setReplaceConfirm] = useState(false)
   const [replaceBusy, setReplaceBusy] = useState(false)
@@ -472,7 +514,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
       cursor: editor.current?.state.selection.main.head ?? route.cursor ?? 2,
     })
   }
-  function openNote(id, edit = undefined) {
+  function openNote(id, edit = undefined, { replace = false } = {}) {
     saveActiveNoteView()
     document.activeElement?.blur?.()
     const saved = noteViewState.current.get(id)
@@ -500,10 +542,15 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         },
       })
     }
-    dispatch({
-      type: 'push',
-      route: { name: 'note', id, scroll: saved?.scroll ?? 0, cursor: saved?.cursor },
-    })
+    runNoteTransition(() =>
+      flushSync(() =>
+        dispatch({
+          type: 'push',
+          replace,
+          route: { name: 'note', id, scroll: saved?.scroll ?? 0, cursor: saved?.cursor },
+        }),
+      ),
+    )
   }
   function foldAllSections() {
     if (!active) return
@@ -589,8 +636,163 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     if (!body || body.length > 1_000_000) return
     receiveSharedText(body)
   }
+  const pendingBusy = useRef(false)
+  const [notesRoleState, setNotesRoleState] = useState(
+    () => window.SlothSystem?.getNotesRoleState?.() || 'unavailable',
+  )
+  useEffect(() => {
+    const refresh = (next) => {
+      if (typeof next === 'string') setNotesRoleState(next || 'unavailable')
+      else setNotesRoleState(window.SlothSystem?.getNotesRoleState?.() || 'unavailable')
+    }
+    window.__slothNotesRoleChanged = refresh
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      if (window.__slothNotesRoleChanged === refresh) delete window.__slothNotesRoleChanged
+    }
+  }, [])
+  async function receivePendingNotes(raw) {
+    if (!raw || blocked || pendingBusy.current) return
+    const {
+      document: nextDoc,
+      createdIds,
+      ackIds,
+      skippedTooLarge,
+      lastCreatedId,
+    } = ingestPendingNotes(current.current, raw, { fallbackTitle: t('mobile.quickNoteTitle') })
+    if (createdIds.length === 0) {
+      if (ackIds.length > 0) window.SlothSystem?.ackPendingNotes?.(JSON.stringify(ackIds))
+      if (skippedTooLarge) toast.error(t('mobile.sharedTooLarge'))
+      return
+    }
+    pendingBusy.current = true
+    try {
+      commit(nextDoc)
+      if (lastCreatedId) openNote(lastCreatedId, false)
+      const failure = await writer.current.whenIdle()
+      if (!failure) {
+        if (ackIds.length > 0) window.SlothSystem?.ackPendingNotes?.(JSON.stringify(ackIds))
+        toast.success(t('mobile.quickNoteImported', { count: createdIds.length }))
+        if (skippedTooLarge) toast.error(t('mobile.sharedTooLarge'))
+      }
+    } finally {
+      pendingBusy.current = false
+    }
+  }
+  const [onDeviceAiState, setOnDeviceAiState] = useState(() => getOnDeviceAiState())
+  useEffect(() => {
+    window.__slothAiStateChanged = (state) => {
+      setOnDeviceAiState(state === 'available' ? 'available' : 'unavailable')
+    }
+    return () => {
+      delete window.__slothAiStateChanged
+    }
+  }, [])
+  const [qrNote, setQrNote] = useState(null)
+  const [qrPasteText, setQrPasteText] = useState('')
+  function importQrPayload(raw) {
+    const decoded = decodeQrNotePayload(String(raw ?? '').trim())
+    if (!decoded.ok) {
+      toast.error(t('qr.invalid'))
+      return false
+    }
+    const created = newMobileNote(current.current, '')
+    const next = updateMobileNote(created, created.activeId, decoded.body)
+    commit(next)
+    openNote(next.activeId, false)
+    toast.success(t('qr.imported'))
+    return true
+  }
+  function scanQrNote() {
+    if (blocked) return
+    if (typeof window.SlothSystem?.scanQrCode === 'function') {
+      const requestId = Date.now() % 1000000
+      window.__slothQrScanResult = (id, raw) => {
+        if (id !== requestId) return
+        delete window.__slothQrScanResult
+        try {
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+          if (parsed?.ok && parsed.text) {
+            importQrPayload(parsed.text)
+          } else if (parsed?.error && parsed.error !== 'cancelled') {
+            toast.error(t('qr.invalid'))
+          }
+        } catch {
+          toast.error(t('qr.invalid'))
+        }
+      }
+      window.SlothSystem.scanQrCode(requestId)
+      return
+    }
+    setQrPasteText('')
+    dispatch({ type: 'layer', route: { name: 'qr-paste' } })
+  }
+  const [aiSuggestion, setAiSuggestion] = useState(null)
+  const [ocrSuggestion, setOcrSuggestion] = useState(null)
+  async function runOcrCapture(note) {
+    if (!note || blocked) return
+    const result = await requestLocalOcr()
+    if (!result.ok) {
+      toast.error(t('mobile.ocrFailed'))
+      return
+    }
+    setOcrSuggestion({
+      noteId: note.id,
+      mode: 'auto',
+      raw: result.text,
+      text: formatOcrToMarkdown(result.text, 'auto'),
+    })
+    dispatch({ type: 'layer', route: { name: 'ocr-suggestion' } })
+  }
+  async function runAiAction(note, action) {
+    if (!note || blocked) return
+    const result = await requestOnDeviceAi({ action, text: note.body })
+    if (!result.ok) {
+      toast.error(t(result.error === 'unavailable' ? 'mobile.aiUnavailable' : 'mobile.aiFailed'))
+      return
+    }
+    setAiSuggestion({ noteId: note.id, action, text: result.suggestion })
+    dispatch({ type: 'layer', route: { name: 'ai-suggestion' } })
+  }
+  const widgetBusy = useRef(false)
+  async function receiveWidgetToggles(raw) {
+    if (blocked || widgetBusy.current) return
+    const { document: nextDoc, ackIds, changedCount } = applyWidgetToggles(current.current, raw)
+    if (changedCount === 0) {
+      if (ackIds.length > 0) window.SlothSystem?.ackPendingWidgetToggles?.(JSON.stringify(ackIds))
+      return
+    }
+    widgetBusy.current = true
+    try {
+      commit(nextDoc)
+      const failure = await writer.current.whenIdle()
+      if (!failure && ackIds.length > 0) {
+        window.SlothSystem?.ackPendingWidgetToggles?.(JSON.stringify(ackIds))
+      }
+    } finally {
+      widgetBusy.current = false
+    }
+  }
+  useEffect(() => {
+    if (blocked || !window.SlothSystem?.syncWidgetSnapshot) return
+    const snapshot = buildPinnedTasksWidgetSnapshot(store.document)
+    window.SlothSystem.syncWidgetSnapshot(JSON.stringify(snapshot))
+  }, [store.document, blocked])
   useNativeActions(
-    { newNote: () => createNote(), sharedText: receiveSharedText, openedFile: receiveOpenedFile },
+    {
+      newNote: () => createNote(),
+      sharedText: receiveSharedText,
+      openedFile: receiveOpenedFile,
+      pendingNotes: receivePendingNotes,
+      widgetToggles: receiveWidgetToggles,
+      openNote: (id) => {
+        if (current.current.notes.some((note) => note.id === id)) openNote(id, false)
+      },
+    },
     !blocked,
   )
   function updateBody(body) {
@@ -614,7 +816,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     if (!note) return point
     const from = Math.min(Math.max(2, point.from), note.body.length)
     const to = Math.min(Math.max(from, point.to), note.body.length)
-    const insert = `${from && note.body[from - 1] !== '\n' ? '\n' : ''}${text}\n`
+    const insert = formatImageInsertion(note.body, from, to, text)
     const view = editor.current
     if (view?.dom.isConnected && current.current.activeId === noteId) {
       view.dispatch({
@@ -761,10 +963,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     .filter(({ result }) => !query.trim() || result.titleMatches.length || result.matches.length)
     .sort((a, b) => {
       if (query.trim()) {
-        return (
-          Number(Boolean(b.result.titleMatches.length)) -
-            Number(Boolean(a.result.titleMatches.length)) || a.index - b.index
-        )
+        return compareNoteSearch(a, b, query) || a.index - b.index
       }
       const pinDiff =
         Number(data.pinnedIds?.includes(b.note.id) ?? false) -
@@ -787,6 +986,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
   const groupedResults = groups
     .map((name) => ({ name, items: results.filter(({ note }) => groupOf(note) === name) }))
     .filter(({ items }) => !query.trim() || items.length > 0)
+    .sort((a, b) =>
+      query.trim() && a.items[0] && b.items[0]
+        ? compareNoteSearch(a.items[0], b.items[0], query)
+        : 0,
+    )
   const title = active
     ? displayName(active.name)
     : route.name === 'note'
@@ -796,7 +1000,16 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             notes: 'menu.notes',
             tasks: 'tasks.title',
             images: 'images.title',
-            settings: 'menu.settings',
+            settings:
+              {
+                appearance: 'settings.appearance',
+                editor: 'settings.editor',
+                sync: 'settings.sync',
+                history: 'history.title',
+                data: 'settings.data',
+                system: 'mobile.systemSection',
+                about: 'settings.about',
+              }[route.id] ?? 'menu.settings',
             changelog: 'settings.changelog',
             guide: 'menu.welcome',
             trash: 'trash.title',
@@ -1013,7 +1226,49 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           prefs.documentWidth === 'full' ? '100%' : `${prefs.contentWidth || 760}px`,
       }}
     >
-      <header className="mobile-header">
+      <header
+        className="mobile-header"
+        onPointerDown={(event) => {
+          if (!event.isPrimary || event.button !== 0) return
+          if (event.target.closest('button, input, a')) return
+          headerGesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY }
+          try {
+            event.currentTarget.setPointerCapture(event.pointerId)
+          } catch {
+            // Ignore when pointer capture is unavailable (e.g. synthetic events).
+          }
+        }}
+        onPointerUp={(event) => {
+          const start = headerGesture.current
+          headerGesture.current = null
+          if (!start || start.id !== event.pointerId) return
+          const selection = window.getSelection?.()
+          const hasSelection = Boolean(selection && !selection.isCollapsed)
+          const gesture = classifyHeaderGesture({
+            startX: start.x,
+            startY: start.y,
+            endX: event.clientX,
+            endY: event.clientY,
+            viewportWidth: window.innerWidth,
+            canSwitchNotes: route.name === 'note' && Boolean(active),
+            hasSelection,
+          })
+          if (gesture === 'commands') {
+            dispatch({ type: 'layer', route: { name: 'commands', prefix: '' } })
+          } else if (gesture === 'next' || gesture === 'prev') {
+            const deckIds =
+              data.openIds.length >= 2 ? data.openIds : data.notes.map((item) => item.id)
+            const targetId = adjacentOpenNoteId(deckIds, active?.id, gesture)
+            if (targetId) {
+              triggerHaptic('heading')
+              openNote(targetId, undefined, { replace: true })
+            }
+          }
+        }}
+        onPointerCancel={() => {
+          headerGesture.current = null
+        }}
+      >
         {!root && (
           <button
             className="mobile-icon"
@@ -1416,44 +1671,97 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         {route.name === 'note' &&
           (active ? (
             editing ? (
-              <VisualEditor
-                wrapLines={prefs.wrapLines !== false}
-                wrapPage={pageWrap}
-                key={active.id}
-                noteId={active.id}
-                starters
-                onTemplateMode={(mode) => {
-                  if (mode !== 'board') return
-                  // The task template marks the note as a task note (ADR 0033).
-                  const note = current.current.notes.find((item) => item.id === active.id)
-                  const next = note && makeTaskNote(note.body, { language: currentLanguage() })
-                  if (next && next !== note.body) updateBody(next)
-                  setBoardView(active.id, true)
-                }}
-                sourceMode={sourceMode}
-                outline={false}
-                notes={data.notes}
-                body={active.body}
-                onChange={updateBody}
-                onOpenWiki={openWiki}
-                onCopy={copy}
-                imageBusy={imageBusy}
-                onImageFiles={addMobileImages}
-                onImageUrl={(url, point) =>
-                  insertImageMarkdown(markdownImage(t('block.image'), url), point, active.id)
-                }
-                onSelectionChange={(selection) =>
-                  dispatch({ type: 'position', position: { cursor: selection.head } })
-                }
-                onReady={(view) => {
-                  editor.current = view
-                  if (view) {
-                    const cursor = Math.min(view.state.doc.length, Math.max(2, route.cursor ?? 2))
-                    view.dispatch({ selection: { anchor: cursor }, scrollIntoView: true })
+              <div
+                className="mobile-editor-gestures"
+                style={{ display: 'contents' }}
+                onPointerDown={(event) => {
+                  if (!isStylusPointer(event)) return
+                  editorSwipe.current = null
+                  const view = editor.current
+                  if (!view) return
+                  const pos = view.posAtCoords({ x: event.clientX, y: event.clientY })
+                  if (pos != null) {
+                    view.dispatch({ selection: { anchor: pos } })
                     view.focus()
                   }
                 }}
-              />
+                onTouchStart={(event) => {
+                  if (sourceMode || event.touches.length !== 1 || isStylusTouch(event)) return
+                  const touch = event.touches[0]
+                  editorSwipe.current = { x: touch.clientX, y: touch.clientY }
+                }}
+                onTouchEnd={(event) => {
+                  const start = editorSwipe.current
+                  editorSwipe.current = null
+                  if (
+                    !start ||
+                    sourceMode ||
+                    event.changedTouches.length !== 1 ||
+                    isStylusTouch(event)
+                  )
+                    return
+                  const view = editor.current
+                  if (!view || view.composing || view.compositionStarted) return
+                  const touch = event.changedTouches[0]
+                  const direction = classifyEditorSwipe({
+                    startX: start.x,
+                    startY: start.y,
+                    endX: touch.clientX,
+                    endY: touch.clientY,
+                    viewportWidth: window.innerWidth,
+                    hasSelection: !view.state.selection.main.empty,
+                  })
+                  if (!direction) return
+                  const pos = view.posAtCoords({ x: start.x, y: start.y })
+                  if (pos === null) return
+                  const changes = structureSwipeEdit(view.state.doc.toString(), pos, direction)
+                  if (!changes) return
+                  view.dispatch({ changes, userEvent: 'input', scrollIntoView: true })
+                  triggerHaptic('heading')
+                }}
+                onTouchCancel={() => {
+                  editorSwipe.current = null
+                }}
+              >
+                <VisualEditor
+                  wrapLines={prefs.wrapLines !== false}
+                  wrapPage={pageWrap}
+                  key={active.id}
+                  noteId={active.id}
+                  starters
+                  onTemplateMode={(mode) => {
+                    if (mode !== 'board') return
+                    // The task template marks the note as a task note (ADR 0033).
+                    const note = current.current.notes.find((item) => item.id === active.id)
+                    const next = note && makeTaskNote(note.body, { language: currentLanguage() })
+                    if (next && next !== note.body) updateBody(next)
+                    setBoardView(active.id, true)
+                  }}
+                  sourceMode={sourceMode}
+                  outline={false}
+                  notes={data.notes}
+                  body={active.body}
+                  onChange={updateBody}
+                  onOpenWiki={openWiki}
+                  onCopy={copy}
+                  imageBusy={imageBusy}
+                  onImageFiles={addMobileImages}
+                  onImageUrl={(url, point) =>
+                    insertImageMarkdown(markdownImage(t('block.image'), url), point, active.id)
+                  }
+                  onSelectionChange={(selection) =>
+                    dispatch({ type: 'position', position: { cursor: selection.head } })
+                  }
+                  onReady={(view) => {
+                    editor.current = view
+                    if (view) {
+                      const cursor = Math.min(view.state.doc.length, Math.max(2, route.cursor ?? 2))
+                      view.dispatch({ selection: { anchor: cursor }, scrollIntoView: true })
+                      view.focus()
+                    }
+                  }}
+                />
+              </div>
             ) : boardView ? (
               <div className="board-wrap">
                 <TaskBoard
@@ -1465,35 +1773,120 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 />
               </div>
             ) : (
-              <>
-                <NoteCoverBanner
-                  body={active.body}
-                  onChange={
-                    !blocked && !active.external
-                      ? () => dispatch({ type: 'layer', route: { name: 'cover', id: active.id } })
-                      : undefined
+              <div
+                className="mobile-reading-wrap"
+                data-reading-zoom={readingZoom}
+                onTouchStart={(event) => {
+                  if (event.touches.length === 2) {
+                    const [a, b] = event.touches
+                    pinchStart.current = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
                   }
-                />
-                <Markdown
-                  wrapLines={prefs.wrapLines !== false}
-                  wrapPage={pageWrap}
-                  text={active.body}
-                  notes={data.notes}
-                  onChange={blocked ? undefined : updateBody}
-                  onOpenWiki={openWiki}
-                  onCopy={copy}
-                  focusableTables
-                  folds={
-                    fold.id === active.id && fold.body === active.body ? fold.lines : undefined
+                }}
+                onTouchEnd={(event) => {
+                  if (pinchStart.current !== null && event.touches.length < 2) {
+                    pinchStart.current = null
                   }
-                  onToggleFold={(line) => {
-                    const same = fold.id === active.id && fold.body === active.body
-                    const lines = new Set(same ? fold.lines : [])
-                    if (!lines.delete(line)) lines.add(line)
-                    setFold({ id: active.id, body: active.body, lines })
-                  }}
-                />
-              </>
+                }}
+                onTouchMove={(event) => {
+                  if (pinchStart.current === null || event.touches.length !== 2) return
+                  const [a, b] = event.touches
+                  const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+                  const dir = classifyPinch(pinchStart.current, dist)
+                  if (dir) {
+                    pinchStart.current = null
+                    setReadingZoom((prev) => {
+                      const next = stepReadingZoom(prev, dir)
+                      if (next !== prev) triggerHaptic('heading')
+                      return next
+                    })
+                  }
+                }}
+              >
+                {data.sync?.conflicts?.[active.id] && reviewingConflictId === active.id ? (
+                  <InlineConflictReview
+                    note={active}
+                    conflict={data.sync.conflicts[active.id]}
+                    onClose={() => setReviewingConflictId(null)}
+                    onResolve={(resolvedBody) => {
+                      commit(
+                        resolveSyncConflict(current.current, active.id, {
+                          body: ensureTitle(resolvedBody),
+                        }),
+                        'sistema',
+                      )
+                      setReviewingConflictId(null)
+                      void sync.run()
+                    }}
+                  />
+                ) : (
+                  <>
+                    {data.sync?.conflicts?.[active.id] && (
+                      <ConflictBanner
+                        onReview={() => setReviewingConflictId(active.id)}
+                        onAcceptRemote={() => {
+                          const conflict = data.sync.conflicts[active.id]
+                          commit(
+                            resolveSyncConflict(current.current, active.id, {
+                              body: ensureTitle(conflict.theirs),
+                            }),
+                            'sistema',
+                          )
+                          void sync.run()
+                        }}
+                        onKeepLocal={() => {
+                          commit(
+                            resolveSyncConflict(current.current, active.id, { body: active.body }),
+                            'sistema',
+                          )
+                          void sync.run()
+                        }}
+                      />
+                    )}
+                    <NoteCoverBanner
+                      body={active.body}
+                      onChange={
+                        !blocked && !active.external
+                          ? () =>
+                              dispatch({ type: 'layer', route: { name: 'cover', id: active.id } })
+                          : undefined
+                      }
+                    />
+                    <PropertiesDock
+                      body={active.body}
+                      readOnly={blocked || Boolean(active.external)}
+                      onApply={updateBody}
+                    />
+                    <Markdown
+                      wrapLines={prefs.wrapLines !== false}
+                      wrapPage={pageWrap}
+                      text={active.body}
+                      modifiedAt={active.modifiedAt}
+                      createdAt={active.createdAt}
+                      notes={data.notes}
+                      onChange={blocked ? undefined : updateBody}
+                      onOpenWiki={openWiki}
+                      onCopy={copy}
+                      focusableTables
+                      folds={
+                        fold.id === active.id && fold.body === active.body ? fold.lines : undefined
+                      }
+                      onToggleFold={(line) => {
+                        const same = fold.id === active.id && fold.body === active.body
+                        const lines = new Set(same ? fold.lines : [])
+                        if (!lines.delete(line)) lines.add(line)
+                        setFold({ id: active.id, body: active.body, lines })
+                      }}
+                    />
+                    <HeadingRuler
+                      headings={headingSections(active.body).filter((item) => item.level >= 2)}
+                      onJump={(item) => {
+                        const target = document.querySelector(`[data-source-line="${item.line}"]`)
+                        target?.scrollIntoView?.({ block: 'start' })
+                      }}
+                    />
+                  </>
+                )}
+              </div>
             )
           ) : (
             <div className="mobile-empty">
@@ -1505,8 +1898,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           <TasksLibrary
             notes={data.notes}
             query=""
-            showDone={showDone}
-            onShowDone={setShowDone}
+            filters={{ showDone }}
             onJump={(id, offset) => {
               const note = current.current.notes.find((item) => item.id === id)
               if (note && Number.isInteger(offset)) {
@@ -1521,6 +1913,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             }}
             onToggle={(id, mark) => {
               if (!blocked) {
+                triggerHaptic('task-done')
                 const note = current.current.notes.find((item) => item.id === id)
                 if (note) {
                   const updated = toggleTask(note.body, mark)
@@ -1663,9 +2056,90 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
             />
           </section>
         )}
-        {route.name === 'settings' && (
+        {route.name === 'settings' && !route.id && (
           <section className="mobile-settings" aria-label={t('menu.settings')}>
-            <h2>{t('settings.appearance')}</h2>
+            <div className="settings-card">
+              {[
+                {
+                  id: 'appearance',
+                  icon: Palette,
+                  title: t('settings.appearance'),
+                  subtitle: `${LANGUAGES[prefs.language] ?? prefs.language} · ${prefs.fontSize}px`,
+                },
+                {
+                  id: 'editor',
+                  icon: SlidersHorizontal,
+                  title: t('settings.editor'),
+                  subtitle: t('mobile.settingsSub.editor'),
+                },
+                {
+                  id: 'sync',
+                  icon: Cloud,
+                  title: t('settings.sync'),
+                  subtitle:
+                    sync.status.state === 'off'
+                      ? t('sync.off')
+                      : sync.status.account?.email || t('sync.ready'),
+                },
+                {
+                  id: 'history',
+                  icon: History,
+                  title: t('history.title'),
+                  subtitle: prefs.historyEnabled ? t('history.keep') : t('history.off'),
+                },
+                {
+                  id: 'data',
+                  icon: FileOutput,
+                  title: t('settings.data'),
+                  subtitle: t('mobile.settingsSub.data'),
+                },
+                ...(notesRoleState === 'available' ||
+                notesRoleState === 'held' ||
+                onDeviceAiState === 'available'
+                  ? [
+                      {
+                        id: 'system',
+                        icon: Smartphone,
+                        title: t('mobile.systemSection'),
+                        subtitle: t('mobile.settingsSub.system'),
+                      },
+                    ]
+                  : []),
+                {
+                  id: 'about',
+                  icon: Info,
+                  title: t('settings.about'),
+                  subtitle: `${t('settings.changelog')} · ${t('menu.welcome')}`,
+                },
+              ].map((item) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="settings-row settings-submenu"
+                    onClick={() =>
+                      dispatch({ type: 'push', route: { name: 'settings', id: item.id } })
+                    }
+                  >
+                    <Icon size={20} className="settings-submenu-icon" aria-hidden="true" />
+                    <span className="settings-submenu-text">
+                      <span className="settings-row-title">{item.title}</span>
+                      <small>{item.subtitle}</small>
+                    </span>
+                    <ChevronRight
+                      size={18}
+                      className="settings-submenu-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'appearance' && (
+          <section className="mobile-settings" aria-label={t('settings.appearance')}>
             <div className="settings-card">
               <div className="settings-row stacked">
                 <label htmlFor="mobile-language">{t('settings.language')}</label>
@@ -1695,16 +2169,22 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   onChange={(event) => updatePrefs({ fontSize: Number(event.target.value) })}
                 />
               </div>
-              <div className="settings-row stacked">
+              <div className="settings-row stacked settings-tablet-only">
                 <span className="settings-row-title">{t('settings.contentWidth')}</span>
-                <DocumentWidthPresets prefs={prefs} onChange={updatePrefs} />
+                <DocumentWidthPresets prefs={prefs} onChange={updatePrefs} compactTablet />
               </div>
             </div>
-            <h2>{t('settings.editor')}</h2>
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'editor' && (
+          <section className="mobile-settings" aria-label={t('settings.editor')}>
             <div className="settings-card">
               <EditorToggleSettings prefs={prefs} onChange={updatePrefs} variant="mobile" />
             </div>
-            <h2>{t('settings.data')}</h2>
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'data' && (
+          <section className="mobile-settings" aria-label={t('settings.data')}>
             <p className="settings-note">{t('mobile.backupDetails')}</p>
             <div className="settings-card">
               <button
@@ -1731,12 +2211,21 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               hidden
               onChange={(event) => chooseBackup(event.target.files?.[0])}
             />
-            <h2>{t('settings.sync')}</h2>
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'sync' && (
+          <section className="mobile-settings" aria-label={t('settings.sync')}>
             <div className="settings-card settings-sync">
               <SyncPanel sync={sync} />
             </div>
-            <h2>{t('history.title')}</h2>
-            <div className="settings-card">
+            <div className="settings-card settings-spaces">
+              <SpacesPanel sync={sync} />
+            </div>
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'history' && (
+          <section className="mobile-settings" aria-label={t('history.title')}>
+            <div className="settings-card settings-history">
               <HistoryPanel
                 prefs={prefs}
                 note={active}
@@ -1749,7 +2238,53 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                 }}
               />
             </div>
-            <h2>{t('settings.about')}</h2>
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'system' && (
+          <section className="mobile-settings" aria-label={t('mobile.systemSection')}>
+            {(notesRoleState === 'available' || notesRoleState === 'held') && (
+              <>
+                <p className="settings-note">{t('mobile.notesRoleHint')}</p>
+                <div className="settings-card">
+                  {notesRoleState === 'held' ? (
+                    <div className="settings-row settings-status" role="status">
+                      <Check size={20} aria-hidden="true" />
+                      {t('mobile.notesRoleActive')}
+                    </div>
+                  ) : (
+                    <button
+                      className="settings-row settings-action"
+                      onClick={() => {
+                        if (!window.SlothSystem?.requestNotesRole?.())
+                          toast.error(t('mobile.notesRoleFailed'))
+                      }}
+                    >
+                      <NotebookPen size={20} aria-hidden="true" />
+                      {t('mobile.notesRoleSet')}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+            {onDeviceAiState === 'available' && (
+              <div className="settings-card">
+                <div className="settings-row">
+                  <label htmlFor="mobile-ai-toggle">
+                    <span className="settings-row-title">{t('mobile.aiTitle')}</span>
+                    <small>{t('mobile.aiHint')}</small>
+                  </label>
+                  <Switch
+                    id="mobile-ai-toggle"
+                    checked={Boolean(prefs.mobileOnDeviceAi)}
+                    onChange={(mobileOnDeviceAi) => updatePrefs({ ...prefs, mobileOnDeviceAi })}
+                  />
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+        {route.name === 'settings' && route.id === 'about' && (
+          <section className="mobile-settings" aria-label={t('settings.about')}>
             <div className="settings-card">
               <button
                 className="settings-row settings-action"
@@ -1900,9 +2435,11 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                         ? t('mobile.info')
                         : layer.name === 'sections'
                           ? t('mobile.moveSection')
-                          : actionsNote
-                            ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
-                            : t('mobile.more')
+                          : layer.name === 'reorder'
+                            ? t('mobile.reorder')
+                            : actionsNote
+                              ? t('mobile.noteActions', { name: displayName(actionsNote.name) })
+                              : t('mobile.more')
             }
           >
             <div
@@ -1938,13 +2475,15 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                     ? t('mobile.commandsTitle')
                     : layer.name === 'cover'
                       ? t('cover.title')
-                      : layer.name === 'image-detail'
-                        ? selectedImage?.name || t('images.title')
-                        : layer.name === 'image-insert'
-                          ? t('mobile.insertInNote')
-                          : actionsNote
-                            ? displayName(actionsNote.name)
-                            : 'Sloth Note'}
+                      : layer.name === 'reorder'
+                        ? t('mobile.reorder')
+                        : layer.name === 'image-detail'
+                          ? selectedImage?.name || t('images.title')
+                          : layer.name === 'image-insert'
+                            ? t('mobile.insertInNote')
+                            : actionsNote
+                              ? displayName(actionsNote.name)
+                              : 'Sloth Note'}
               </h2>
               <button className="mobile-icon" aria-label={t('dialog.close')} onClick={back}>
                 <X size={22} />
@@ -2040,6 +2579,8 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
               <EditingSheet
                 view={editor.current}
                 notes={data.notes}
+                modifiedAt={active?.modifiedAt}
+                createdAt={active?.createdAt}
                 onClose={back}
                 onImage={() => {
                   imagePoint.current = editor.current.state.selection.main
@@ -2263,6 +2804,151 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   {t('dialog.backupReplaceConfirm')}
                 </button>
               </>
+            ) : layer.name === 'qr-paste' ? (
+              <div className="mobile-suggestion-sheet">
+                <p className="settings-note">{t('qr.scanHint')}</p>
+                <textarea
+                  className="mobile-suggestion-input"
+                  rows={5}
+                  value={qrPasteText}
+                  placeholder="slothnote:qr:v1:..."
+                  onChange={(event) => setQrPasteText(event.target.value)}
+                />
+                <div className="mobile-suggestion-actions">
+                  <button type="button" onClick={back}>
+                    {t('dialog.cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={() => {
+                      if (importQrPayload(qrPasteText)) back()
+                    }}
+                  >
+                    {t('qr.importAction')}
+                  </button>
+                </div>
+              </div>
+            ) : layer.name === 'ocr-suggestion' && ocrSuggestion ? (
+              <div className="mobile-suggestion-sheet">
+                <p className="settings-note">{t('mobile.ocrTitle')}</p>
+                <div
+                  className="mobile-suggestion-modes"
+                  role="group"
+                  aria-label={t('mobile.ocrTitle')}
+                >
+                  {['text', 'list', 'table'].map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      aria-pressed={ocrSuggestion.mode === mode}
+                      onClick={() =>
+                        setOcrSuggestion((prev) =>
+                          prev
+                            ? { ...prev, mode, text: formatOcrToMarkdown(prev.raw, mode) }
+                            : null,
+                        )
+                      }
+                    >
+                      {t(
+                        mode === 'text'
+                          ? 'mobile.ocrModeText'
+                          : mode === 'list'
+                            ? 'mobile.ocrModeList'
+                            : 'mobile.ocrModeTable',
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  className="mobile-suggestion-input"
+                  rows={8}
+                  value={ocrSuggestion.text}
+                  onChange={(event) =>
+                    setOcrSuggestion((prev) =>
+                      prev ? { ...prev, text: event.target.value } : null,
+                    )
+                  }
+                />
+                <div className="mobile-suggestion-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOcrSuggestion(null)
+                      back()
+                    }}
+                  >
+                    {t('mobile.aiDiscard')}
+                  </button>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={() => {
+                      const target = current.current.notes.find(
+                        (n) => n.id === ocrSuggestion.noteId,
+                      )
+                      const snippet = ocrSuggestion.text.trim()
+                      if (target && snippet && !blocked) {
+                        const sep = target.body.endsWith('\n') ? '\n' : '\n\n'
+                        commit(
+                          updateMobileNote(
+                            current.current,
+                            target.id,
+                            `${target.body}${sep}${snippet}\n`,
+                          ),
+                        )
+                      }
+                      setOcrSuggestion(null)
+                      back()
+                    }}
+                  >
+                    {t('mobile.ocrInsert')}
+                  </button>
+                </div>
+              </div>
+            ) : layer.name === 'ai-suggestion' && aiSuggestion ? (
+              <div className="mobile-suggestion-sheet">
+                <p className="settings-note">{t('mobile.aiSuggestionTitle')}</p>
+                <textarea
+                  className="mobile-suggestion-input"
+                  rows={8}
+                  value={aiSuggestion.text}
+                  onChange={(event) =>
+                    setAiSuggestion((prev) => (prev ? { ...prev, text: event.target.value } : null))
+                  }
+                />
+                <div className="mobile-suggestion-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiSuggestion(null)
+                      back()
+                    }}
+                  >
+                    {t('mobile.aiDiscard')}
+                  </button>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={() => {
+                      const target = current.current.notes.find((n) => n.id === aiSuggestion.noteId)
+                      if (target && !blocked) {
+                        const nextBody = applyAiSuggestion({
+                          body: target.body,
+                          action: aiSuggestion.action,
+                          suggestion: aiSuggestion.text,
+                          summaryHeading: t('mobile.aiSummaryHeading'),
+                        })
+                        commit(updateMobileNote(current.current, target.id, nextBody))
+                      }
+                      setAiSuggestion(null)
+                      back()
+                    }}
+                  >
+                    {t('mobile.aiAccept')}
+                  </button>
+                </div>
+              </div>
             ) : layer.name === 'dialog' && route.name === 'trash' && trashEmpty ? (
               <>
                 <p>{t('trash.emptyConfirm', { count: data.trash.length })}</p>
@@ -2333,11 +3019,29 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                   {t('menu.rename')}
                 </button>
               </form>
+            ) : layer.name === 'reorder' && active ? (
+              <BlockReorder
+                key={active.id}
+                body={active.body}
+                disabled={blocked || Boolean(active.external)}
+                onChange={updateBody}
+                scroller={dialog}
+              />
             ) : actionsNote ? (
-              <>
-                {active && actionsNote.id === active.id && (
-                  <>
+              (() => {
+                const isActive = Boolean(active && actionsNote.id === active.id)
+                const canShare = Boolean(window.SlothShare || navigator.share)
+                const aiActions = canShowOnDeviceAiAction({
+                  state: onDeviceAiState,
+                  enabled: Boolean(prefs.mobileOnDeviceAi),
+                  body: actionsNote.body,
+                })
+                const canAddProperties =
+                  isActive && !frontmatterEnd(actionsNote.body) && !blocked && !actionsNote.external
+                const toolItems = [
+                  isActive && (
                     <button
+                      key="commands"
                       onClick={() =>
                         dispatch({
                           type: 'layer',
@@ -2349,175 +3053,405 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
                       <Zap size={20} aria-hidden="true" />
                       {t('mobile.commandsTitle')}
                     </button>
+                  ),
+                  aiActions && (
                     <button
-                      aria-pressed={boardView}
-                      onClick={() => {
-                        setBoardView(active.id, !boardView)
-                        back()
-                      }}
+                      key="ai-summarize"
+                      disabled={blocked}
+                      onClick={() => runAiAction(actionsNote, 'summarize')}
                     >
-                      {boardView ? (
-                        <FileText size={20} aria-hidden="true" />
-                      ) : (
-                        <Columns3 size={20} aria-hidden="true" />
+                      <FileText size={20} aria-hidden="true" />
+                      {t('mobile.aiSummarize')}
+                    </button>
+                  ),
+                  aiActions && (
+                    <button
+                      key="ai-proofread"
+                      disabled={blocked}
+                      onClick={() => runAiAction(actionsNote, 'proofread')}
+                    >
+                      <FileText size={20} aria-hidden="true" />
+                      {t('mobile.aiProofread')}
+                    </button>
+                  ),
+                  isLocalOcrSupported() && (
+                    <button key="ocr" disabled={blocked} onClick={() => runOcrCapture(actionsNote)}>
+                      <ImageIcon size={20} aria-hidden="true" />
+                      {t('mobile.ocrCapture')}
+                    </button>
+                  ),
+                ].filter(Boolean)
+                return (
+                  <div className="mobile-note-menu">
+                    <div className="mobile-quick-actions">
+                      <button disabled={blocked} onClick={() => pinNote(actionsNote.id)}>
+                        <Pin size={20} aria-hidden="true" />
+                        {t(
+                          data.pinnedIds?.includes(actionsNote.id) ? 'mobile.unpin' : 'mobile.pin',
+                        )}
+                      </button>
+                      <button disabled={shareBusy} onClick={() => shareNote(actionsNote)}>
+                        {canShare ? (
+                          <Share2 size={20} aria-hidden="true" />
+                        ) : (
+                          <Copy size={20} aria-hidden="true" />
+                        )}
+                        {t(canShare ? 'mobile.share' : 'mobile.copyText')}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setFindOpen(true)
+                          back()
+                        }}
+                      >
+                        <ScanSearch size={20} aria-hidden="true" />
+                        {t('mobile.readingFind')}
+                      </button>
+                      <button
+                        data-rename-trigger
+                        disabled={blocked || Boolean(actionsNote.external)}
+                        onClick={() => {
+                          setRename(displayName(actionsNote.name))
+                          setRenameError('')
+                          dispatch({ type: 'layer', route: { name: 'dialog', id: actionsNote.id } })
+                        }}
+                      >
+                        <Pencil size={20} aria-hidden="true" />
+                        {t('menu.rename')}
+                      </button>
+                    </div>
+
+                    <section className="mobile-menu-group" aria-labelledby="note-menu-view">
+                      <h3 id="note-menu-view">{t('mobile.menuView')}</h3>
+                      {isActive && (
+                        <button
+                          aria-pressed={boardView}
+                          onClick={() => {
+                            setBoardView(active.id, !boardView)
+                            back()
+                          }}
+                        >
+                          {boardView ? (
+                            <FileText size={20} aria-hidden="true" />
+                          ) : (
+                            <Columns3 size={20} aria-hidden="true" />
+                          )}
+                          {t(boardView ? 'mobile.boardOff' : 'mobile.boardOn')}
+                        </button>
                       )}
-                      {t(boardView ? 'mobile.boardOff' : 'mobile.boardOn')}
-                    </button>
-                    <button
-                      disabled={blocked}
-                      onClick={() => {
-                        const nextCode = !sourceMode
-                        setNoteMode(active.id, nextCode)
-                        if (nextCode) setEditingId(active.id)
-                        back()
-                      }}
-                    >
-                      {sourceMode ? <FileText size={20} /> : <Code2 size={20} />}
-                      {t(sourceMode ? 'mobile.visualMode' : 'mobile.codeMode')}
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={() => {
-                    updatePrefs(toggleNoteWrap(prefs, actionsNote.id))
-                    back()
-                  }}
-                >
-                  <WrapText size={20} />
-                  {t('menu.wrapPage')}
-                </button>
-                <button
-                  disabled={blocked || Boolean(actionsNote.external)}
-                  onClick={() =>
-                    dispatch({ type: 'layer', route: { name: 'cover', id: actionsNote.id } })
-                  }
-                >
-                  <ImageIcon size={20} aria-hidden="true" />
-                  {t('cover.title')}
-                </button>
-                <button
-                  data-rename-trigger
-                  disabled={blocked || Boolean(actionsNote.external)}
-                  onClick={() => {
-                    setRename(displayName(actionsNote.name))
-                    setRenameError('')
-                    dispatch({ type: 'layer', route: { name: 'dialog', id: actionsNote.id } })
-                  }}
-                >
-                  <Pencil size={20} />
-                  {t('menu.rename')}
-                </button>
-                {active && actionsNote.id === active.id && (
-                  <>
-                    <button onClick={() => dispatch({ type: 'layer', route: { name: 'info' } })}>
-                      <Info size={20} aria-hidden="true" />
-                      {t('mobile.info')}
-                    </button>
-                    <button
-                      onClick={() => {
-                        foldAllSections()
-                        back()
-                      }}
-                    >
-                      <ChevronsDownUp size={20} aria-hidden="true" />
-                      {t('menu.foldAll')}
-                    </button>
-                    <button
-                      onClick={() => {
-                        unfoldAllSections()
-                        back()
-                      }}
-                    >
-                      <ChevronsUpDown size={20} aria-hidden="true" />
-                      {t('menu.unfoldAll')}
-                    </button>
-                    <button
-                      disabled={blocked}
-                      onClick={() => dispatch({ type: 'layer', route: { name: 'sections' } })}
-                    >
-                      <ArrowUpDown size={20} aria-hidden="true" />
-                      {t('mobile.moveSection')}
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={() => {
-                    setFindOpen(true)
-                    back()
-                  }}
-                >
-                  <ScanSearch size={20} />
-                  {t('mobile.readingFind')}
-                </button>
-                {canShareFile() && (
-                  <button
-                    onClick={() =>
-                      shareFile({ name: actionsNote.name, text: actionsNote.body }).catch(() =>
-                        toast.error(t('mobile.shareFailed')),
-                      )
-                    }
-                  >
-                    <FileText size={20} />
-                    {t('mobile.shareFile')}
-                  </button>
-                )}
-                <button disabled={shareBusy} onClick={() => shareNote(actionsNote)}>
-                  {window.SlothShare || navigator.share ? <Share2 size={20} /> : <Copy size={20} />}
-                  {t(window.SlothShare || navigator.share ? 'mobile.share' : 'mobile.copyText')}
-                </button>
-                <button disabled={Boolean(transferBusy)} onClick={() => exportNote(actionsNote)}>
-                  <FileOutput size={20} />
-                  {t('menu.export')}
-                </button>
-                <p className="mobile-export-hint">{t('mobile.noteExportHint')}</p>
-                {groups.length > 0 && (
-                  <button
-                    disabled={blocked}
-                    onClick={() =>
-                      dispatch({ type: 'layer', route: { name: 'group', id: actionsNote.id } })
-                    }
-                  >
-                    <Folder size={20} aria-hidden="true" />
-                    {t('mobile.moveToGroup')}
-                  </button>
-                )}
-                <button disabled={blocked} onClick={() => pinNote(actionsNote.id)}>
-                  <Pin size={20} />
-                  {t(data.pinnedIds?.includes(actionsNote.id) ? 'mobile.unpin' : 'mobile.pin')}
-                </button>
-                <button
-                  className="danger"
-                  disabled={blocked}
-                  onClick={() => removeNote(actionsNote.id)}
-                >
-                  <Trash2 size={20} />
-                  {t('mobile.trash')}
-                </button>
-              </>
+                      {isActive && (
+                        <button
+                          disabled={blocked}
+                          onClick={() => {
+                            const nextCode = !sourceMode
+                            setNoteMode(active.id, nextCode)
+                            if (nextCode) setEditingId(active.id)
+                            back()
+                          }}
+                        >
+                          {sourceMode ? (
+                            <FileText size={20} aria-hidden="true" />
+                          ) : (
+                            <Code2 size={20} aria-hidden="true" />
+                          )}
+                          {t(sourceMode ? 'mobile.visualMode' : 'mobile.codeMode')}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          updatePrefs(toggleNoteWrap(prefs, actionsNote.id))
+                          back()
+                        }}
+                      >
+                        <WrapText size={20} aria-hidden="true" />
+                        {t('menu.wrapPage')}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setReadingZoom((prev) => stepReadingZoom(prev))
+                          back()
+                        }}
+                      >
+                        <ScanSearch size={20} aria-hidden="true" />
+                        {t('mobile.readingZoom', {
+                          level: t(`mobile.readingZoom.${readingZoom}`),
+                        })}
+                      </button>
+                      {isActive && (
+                        <div className="mobile-menu-pair">
+                          <button
+                            onClick={() => {
+                              foldAllSections()
+                              back()
+                            }}
+                          >
+                            <ChevronsDownUp size={20} aria-hidden="true" />
+                            {t('menu.foldAll')}
+                          </button>
+                          <button
+                            onClick={() => {
+                              unfoldAllSections()
+                              back()
+                            }}
+                          >
+                            <ChevronsUpDown size={20} aria-hidden="true" />
+                            {t('menu.unfoldAll')}
+                          </button>
+                        </div>
+                      )}
+                      {isActive && (
+                        <button
+                          onClick={() => dispatch({ type: 'layer', route: { name: 'info' } })}
+                        >
+                          <Info size={20} aria-hidden="true" />
+                          {t('mobile.info')}
+                        </button>
+                      )}
+                    </section>
+
+                    <section className="mobile-menu-group" aria-labelledby="note-menu-organize">
+                      <h3 id="note-menu-organize">{t('mobile.menuOrganize')}</h3>
+                      {isActive && (
+                        <button
+                          disabled={blocked || Boolean(actionsNote.external)}
+                          onClick={() => {
+                            setEditingId(null)
+                            dispatch({ type: 'layer', route: { name: 'reorder' } })
+                          }}
+                        >
+                          <GripVertical size={20} aria-hidden="true" />
+                          {t('mobile.reorder')}
+                        </button>
+                      )}
+                      {isActive && (
+                        <button
+                          disabled={blocked}
+                          onClick={() => dispatch({ type: 'layer', route: { name: 'sections' } })}
+                        >
+                          <ArrowUpDown size={20} aria-hidden="true" />
+                          {t('mobile.moveSection')}
+                        </button>
+                      )}
+                      {groups.length > 0 && (
+                        <button
+                          disabled={blocked}
+                          onClick={() =>
+                            dispatch({
+                              type: 'layer',
+                              route: { name: 'group', id: actionsNote.id },
+                            })
+                          }
+                        >
+                          <Folder size={20} aria-hidden="true" />
+                          {t('mobile.moveToGroup')}
+                        </button>
+                      )}
+                      <button
+                        disabled={blocked || Boolean(actionsNote.external)}
+                        onClick={() =>
+                          dispatch({ type: 'layer', route: { name: 'cover', id: actionsNote.id } })
+                        }
+                      >
+                        <ImageIcon size={20} aria-hidden="true" />
+                        {t('cover.title')}
+                      </button>
+                      {canAddProperties && (
+                        <button
+                          onClick={() => {
+                            updateBody(`---\npropriedade: valor\n---\n${actionsNote.body}`)
+                            back()
+                          }}
+                        >
+                          <SlidersHorizontal size={20} aria-hidden="true" />
+                          {t('properties.add')}
+                        </button>
+                      )}
+                      {!actionsNote.external && (
+                        <button
+                          disabled={blocked}
+                          onClick={() => {
+                            const templateNotes = { ...prefs.templateNotes }
+                            const marked = Boolean(templateNotes[actionsNote.id])
+                            if (marked) delete templateNotes[actionsNote.id]
+                            else templateNotes[actionsNote.id] = true
+                            updatePrefs({ templateNotes })
+                            toast(t(marked ? 'templates.removedToast' : 'templates.addedToast'))
+                            back()
+                          }}
+                        >
+                          <FileText size={20} aria-hidden="true" />
+                          {t(
+                            prefs.templateNotes?.[actionsNote.id]
+                              ? 'menu.removeTemplate'
+                              : 'menu.useAsTemplate',
+                          )}
+                        </button>
+                      )}
+                    </section>
+
+                    {toolItems.length > 0 && (
+                      <section className="mobile-menu-group" aria-labelledby="note-menu-tools">
+                        <h3 id="note-menu-tools">{t('mobile.menuTools')}</h3>
+                        {toolItems}
+                      </section>
+                    )}
+
+                    <section className="mobile-menu-group" aria-labelledby="note-menu-send">
+                      <h3 id="note-menu-send">{t('mobile.menuSend')}</h3>
+                      {canShareFile() && (
+                        <button
+                          onClick={() =>
+                            shareFile({ name: actionsNote.name, text: actionsNote.body }).catch(
+                              () => toast.error(t('mobile.shareFailed')),
+                            )
+                          }
+                        >
+                          <FileText size={20} aria-hidden="true" />
+                          {t('mobile.shareFile')}
+                        </button>
+                      )}
+                      <button
+                        disabled={Boolean(transferBusy)}
+                        onClick={() => exportNote(actionsNote)}
+                      >
+                        <FileOutput size={20} aria-hidden="true" />
+                        {t('menu.export')}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setQrNote(actionsNote)
+                          back()
+                        }}
+                      >
+                        <QrCode size={20} aria-hidden="true" />
+                        {t('qr.send')}
+                      </button>
+                      <p className="mobile-export-hint">{t('mobile.noteExportHint')}</p>
+                    </section>
+
+                    <section className="mobile-menu-group mobile-menu-danger">
+                      <button
+                        className="danger"
+                        disabled={blocked}
+                        onClick={() => removeNote(actionsNote.id)}
+                      >
+                        <Trash2 size={20} aria-hidden="true" />
+                        {t('mobile.trash')}
+                      </button>
+                    </section>
+                  </div>
+                )
+              })()
             ) : (
-              <>
-                <ThemeControl theme={prefs.theme} onChange={updatePrefs} />
-                <button onClick={() => noteInput.current?.click()}>
-                  <FileInput size={20} />
-                  {t('menu.import')}
-                </button>
-                <button onClick={() => dispatch({ type: 'push', route: { name: 'trash' } })}>
-                  <Trash2 size={20} />
-                  {t('trash.title')}
-                </button>
-                <button
-                  onClick={() => {
-                    dispatch({ type: 'push', route: { name: 'settings' } })
-                  }}
-                >
-                  <Settings size={20} />
-                  {t('menu.settings')}
-                </button>
-                <button onClick={() => dispatch({ type: 'push', route: { name: 'changelog' } })}>
-                  <NotebookPen size={20} />
-                  {t('settings.changelog')}
-                </button>
-              </>
+              <div className="mobile-drawer-body">
+                <div className="settings-card">
+                  <div className="settings-row stacked mobile-drawer-theme-row">
+                    <span className="mobile-drawer-label">{t('settings.theme')}</span>
+                    <ThemeControl theme={prefs.theme} onChange={updatePrefs} />
+                  </div>
+                </div>
+                <div className="settings-card">
+                  <button
+                    type="button"
+                    className="settings-row settings-submenu"
+                    aria-label={t('menu.import')}
+                    onClick={() => noteInput.current?.click()}
+                  >
+                    <FileInput size={20} className="settings-submenu-icon" aria-hidden="true" />
+                    <span className="settings-submenu-text">
+                      <span className="settings-row-title">{t('menu.import')}</span>
+                      <small>{t('mobile.drawerSub.import')}</small>
+                    </span>
+                    <ChevronRight
+                      size={18}
+                      className="settings-submenu-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    className="settings-row settings-submenu"
+                    aria-label={t('qr.scan')}
+                    disabled={blocked}
+                    onClick={() => {
+                      back()
+                      scanQrNote()
+                    }}
+                  >
+                    <QrCode size={20} className="settings-submenu-icon" aria-hidden="true" />
+                    <span className="settings-submenu-text">
+                      <span className="settings-row-title">{t('qr.scan')}</span>
+                      <small>{t('mobile.drawerSub.qr')}</small>
+                    </span>
+                    <ChevronRight
+                      size={18}
+                      className="settings-submenu-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
+                <div className="settings-card">
+                  <button
+                    type="button"
+                    className="settings-row settings-submenu"
+                    aria-label={t('trash.title')}
+                    onClick={() => dispatch({ type: 'push', route: { name: 'trash' } })}
+                  >
+                    <Trash2 size={20} className="settings-submenu-icon" aria-hidden="true" />
+                    <span className="settings-submenu-text">
+                      <span className="settings-row-title">{t('trash.title')}</span>
+                      <small>
+                        {data.trash.length === 0
+                          ? t('mobile.drawerSub.trashEmpty')
+                          : data.trash.length === 1
+                            ? t('mobile.drawerSub.trashCount.one')
+                            : t('mobile.drawerSub.trashCount.other', { count: data.trash.length })}
+                      </small>
+                    </span>
+                    <ChevronRight
+                      size={18}
+                      className="settings-submenu-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    className="settings-row settings-submenu"
+                    aria-label={t('menu.settings')}
+                    onClick={() => {
+                      dispatch({ type: 'push', route: { name: 'settings' } })
+                    }}
+                  >
+                    <Settings size={20} className="settings-submenu-icon" aria-hidden="true" />
+                    <span className="settings-submenu-text">
+                      <span className="settings-row-title">{t('menu.settings')}</span>
+                      <small>{t('mobile.drawerSub.settings')}</small>
+                    </span>
+                    <ChevronRight
+                      size={18}
+                      className="settings-submenu-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    className="settings-row settings-submenu"
+                    aria-label={t('settings.changelog')}
+                    onClick={() => dispatch({ type: 'push', route: { name: 'changelog' } })}
+                  >
+                    <NotebookPen size={20} className="settings-submenu-icon" aria-hidden="true" />
+                    <span className="settings-submenu-text">
+                      <span className="settings-row-title">{t('settings.changelog')}</span>
+                      <small>{t('mobile.drawerSub.changelog')}</small>
+                    </span>
+                    <ChevronRight
+                      size={18}
+                      className="settings-submenu-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
+              </div>
             )}
           </section>
         </div>
@@ -2541,6 +3475,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
         hidden
         onChange={(event) => importNote(event.target.files?.[0])}
       />
+      {qrNote && <QrNoteDialog note={qrNote} onClose={() => setQrNote(null)} />}
       {transferBusy && (
         <div className="mobile-transfer" role="status">
           {transferBusy}

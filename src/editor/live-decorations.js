@@ -16,6 +16,7 @@ import {
 import { parseTableLine } from '../markdown-table.js'
 import { addInlineDecorations } from './inline-decorations.js'
 import { resolveImage } from '../images.js'
+import { openImageLightbox } from '../image-lightbox.js'
 import { currentLanguage, t } from '../i18n.js'
 import { Decoration, EditorView, ViewPlugin, WidgetType } from '@codemirror/view'
 import { classifyLine, inlineSyntax } from '../live-markdown.js'
@@ -32,7 +33,7 @@ import {
 } from '../tasks.js'
 import { Facet } from '@codemirror/state'
 import { progressBadge } from '../progress-badge.js'
-import { formatTaskDate, taskDate, taskDateLabel } from '../task-dates.js'
+import { taskDateLabel, taskDates, taskDueState, taskStampText } from '../task-dates.js'
 import { onLongPress, openTaskMenu } from './task-menu.js'
 import { unarchiveTask } from '../task-archive.js'
 import { documentChanges } from '../search-scope.js'
@@ -228,10 +229,11 @@ class TaskDateWidget extends WidgetType {
     const badge = document.createElement('time')
     badge.className = 'task-date'
     badge.dataset.kind = this.stamp.kind
+    if (this.stamp.kind === 'due') badge.dataset.state = taskDueState(this.stamp.iso)
     badge.dateTime = this.stamp.iso
     badge.title = taskDateLabel(this.stamp)
     badge.setAttribute('aria-label', badge.title)
-    badge.textContent = formatTaskDate(this.stamp.iso)
+    badge.textContent = taskStampText(this.stamp)
     return badge
   }
   ignoreEvent() {
@@ -240,9 +242,17 @@ class TaskDateWidget extends WidgetType {
 }
 
 class TaskMoveHint extends WidgetType {
+  constructor(empty = false) {
+    super()
+    this.empty = empty
+  }
+  eq(other) {
+    return this.empty === other.empty
+  }
   toDOM() {
     const hint = document.createElement('kbd')
     hint.className = 'cm-task-move-hint'
+    if (this.empty) hint.dataset.empty = ''
     hint.textContent = 'Ctrl+Shift+↑/↓'
     hint.setAttribute('aria-label', t('task.moveHint'))
     return hint
@@ -380,11 +390,21 @@ class ImageWidget extends WidgetType {
       }, missing)
       return frame
     }
+    let resolvedSrc = null
     resolve
       .then((src) => {
-        if (src) image.src = src
+        if (src) {
+          resolvedSrc = src
+          image.src = src
+        }
       })
       .catch(() => {})
+    image.addEventListener('click', (event) => {
+      if (!resolvedSrc) return
+      event.preventDefault()
+      event.stopPropagation()
+      openImageLightbox({ src: resolvedSrc, alt: this.alt, title: this.title })
+    })
     if (!this.title) return image
     // The Markdown title is the caption: the same text appears under the image in Leitura.
     const figure = document.createElement('span')
@@ -640,6 +660,7 @@ export function decorationsFor(view) {
   const variableContext = () => ({
     body: text,
     modifiedAt: noteInfo?.modifiedAt,
+    createdAt: noteInfo?.createdAt,
     language: currentLanguage(),
   })
   for (const visible of view.visibleRanges) {
@@ -731,7 +752,7 @@ export function decorationsFor(view) {
               side: -2,
             }).range(line.from),
           )
-          addInlineDecorations(ranges, line, { prefix: 0 }, active)
+          addInlineDecorations(ranges, line, { prefix: 0 }, active, view.state.selection.main)
         } else if (!active) {
           ranges.push(
             Decoration.line({ attributes: { class: 'cm-md-accordion-meta' } }).range(line.from),
@@ -787,10 +808,13 @@ export function decorationsFor(view) {
             (direction) => moveListItems(text, line.from, line.from, direction)?.changes.length,
           )
         ) {
-          ranges.push(Decoration.widget({ widget: new TaskMoveHint(), side: 1 }).range(line.to))
+          const empty = !/^\s*[-*+]\s+\[[ xX~?-]\]\s+\S/.test(line.text)
+          ranges.push(
+            Decoration.widget({ widget: new TaskMoveHint(empty), side: 1 }).range(line.to),
+          )
         }
-        const stamp = active ? null : taskDate(line.text)
-        if (stamp)
+        const stamps = active ? [] : taskDates(line.text)
+        for (const stamp of stamps)
           ranges.push(
             Decoration.replace({ widget: new TaskDateWidget(stamp) }).range(
               line.from + stamp.index,
@@ -805,7 +829,7 @@ export function decorationsFor(view) {
               side: 1,
             }).range(line.to),
           )
-        addInlineDecorations(ranges, line, { prefix: task[0].length }, active)
+        addInlineDecorations(ranges, line, { prefix: task[0].length }, active, view.state.selection.main)
         continue
       }
       // The note pane shows the cover above the note: its line takes no space and no caret.
@@ -911,14 +935,14 @@ export function decorationsFor(view) {
           ranges.push(Decoration.replace({}).range(line.from, line.from + 2))
         ranges.push(Decoration.line({ attributes: attrs }).range(line.from))
         if (shape.kind !== 'fence' && shape.kind !== 'table')
-          addInlineDecorations(ranges, line, shape, true)
+          addInlineDecorations(ranges, line, shape, true, view.state.selection.main)
         continue
       }
       ranges.push(Decoration.line({ attributes: attrs }).range(line.from))
       if (shape.prefix)
         ranges.push(Decoration.replace({}).range(line.from, line.from + shape.prefix))
       if (shape.kind === 'fence') continue
-      addInlineDecorations(ranges, line, shape, false)
+      addInlineDecorations(ranges, line, shape, false, view.state.selection.main)
       if (number !== titleLine && line.text.includes('{{')) {
         for (const variable of lineVariables(line.text)) {
           const raw = line.text.slice(variable.from, variable.to)

@@ -84,3 +84,38 @@ test('Information, fold/unfold all, and move section with undo work from note ac
   await expect(headings.nth(0)).toHaveText('Primeira')
   await expect(headings.nth(1)).toHaveText('Segunda')
 })
+
+test('Reorder blocks moves blocks with arrows, by dragging, and undoes the last move', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Ações de Relatório', exact: true }).tap()
+  await page.getByRole('button', { name: 'Reordenar blocos', exact: true }).tap()
+  const sheet = page.getByRole('dialog', { name: 'Reordenar blocos' })
+  await expect(sheet).toBeVisible()
+  const labels = sheet.locator('.mobile-reorder-label')
+  await expect(labels).toHaveText(['Primeira', 'Texto alfa e alfa.', 'Segunda', 'Texto beta.'])
+
+  await sheet.getByRole('button', { name: 'Mover para baixo: Texto alfa e alfa.' }).tap()
+  await expect(labels).toHaveText(['Primeira', 'Segunda', 'Texto alfa e alfa.', 'Texto beta.'])
+  await expect(sheet.getByRole('status')).toHaveText('Bloco movido para a posição 3 de 4.')
+
+  await sheet.getByRole('button', { name: 'Desfazer', exact: true }).tap()
+  await expect(labels).toHaveText(['Primeira', 'Texto alfa e alfa.', 'Segunda', 'Texto beta.'])
+
+  // Dragging the last card by its handle to the top.
+  const grip = sheet.locator('.mobile-reorder-grip').nth(3)
+  const from = await grip.boundingBox()
+  const to = await sheet.locator('.mobile-reorder-item').first().boundingBox()
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+  await page.mouse.down()
+  for (let step = 1; step <= 8; step++)
+    await page.mouse.move(
+      from.x + from.width / 2,
+      from.y + from.height / 2 + ((to.y + 4 - from.y - from.height / 2) * step) / 8,
+    )
+  await page.mouse.up()
+  await expect(labels).toHaveText(['Texto beta.', 'Primeira', 'Texto alfa e alfa.', 'Segunda'])
+
+  await sheet.getByRole('button', { name: 'Fechar', exact: true }).tap()
+  await expect(page.locator('.markdown')).toContainText(/Texto beta\.[\s\S]*Primeira/)
+})

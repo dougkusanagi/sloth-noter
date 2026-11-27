@@ -5,12 +5,17 @@ import { markdownTree } from './markdown-model.js'
 import { columnBlocks } from './columns.js'
 
 const LIST_ITEM = /^\s*(?:[-*+]|\d+[.)])\s/
+const TASK_ITEM = /^\s*[-*+]\s+\[[ xX~?-]\](?:\s|$)/
 const TABLE_FLAGS = /^<!--\s*sloth:table\b/
 
-function kindOf(node, list) {
+function kindOf(node, list, firstLine = '') {
   if (node.type === 'heading') return `h${node.depth}`
   if (node.type === 'listItem')
-    return node.checked != null ? 'task' : list.ordered ? 'numbered' : 'list'
+    return node.checked != null || TASK_ITEM.test(firstLine)
+      ? 'task'
+      : list.ordered
+        ? 'numbered'
+        : 'list'
   if (node.type === 'code') return 'code'
   if (node.type === 'blockquote') return 'quote'
   if (node.type === 'table') return 'table'
@@ -60,7 +65,7 @@ export function documentBlocks(text, { title = true } = {}) {
       blocks.push({
         first,
         last,
-        kind: readCallout(text, item) ? 'callout' : kindOf(item, node),
+        kind: readCallout(text, item) ? 'callout' : kindOf(item, node, lineAt(text, first)),
         depth: item.depth ?? 0,
       })
     }

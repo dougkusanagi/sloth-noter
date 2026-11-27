@@ -12,6 +12,11 @@ export const ACCOUNT_TABLES = {
   blobs: 'account_blob_sizes',
   prefix: 'accounts',
 }
+export const SHARED_SPACE_TABLES = {
+  notes: 'shared_space_notes',
+  blobs: 'shared_space_blob_sizes',
+  prefix: 'shared',
+}
 
 export function profileStore(
   db,

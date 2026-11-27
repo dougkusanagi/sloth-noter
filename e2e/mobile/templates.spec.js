@@ -79,3 +79,45 @@ test('Inserir adds a template to the open note without a second title', async ({
   const doc = (await bodies(page)).find((body) => body.startsWith('# Doc'))
   expect(doc.match(/^# /gm)).toHaveLength(1)
 })
+
+test('template starters stay inside the scrollable area and never overlap the formatting bar when the keyboard is open', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('button', { name: 'Nova nota', exact: true }).tap()
+  await openKeyboard(page)
+  const starters = page.getByRole('group', { name: 'Modelos para começar a nota' })
+  const formatBar = bar(page)
+  const saveFooter = page.locator('.mobile-save')
+  const content = page.locator('.mobile-content')
+
+  await expect(starters).toBeVisible()
+  await expect(formatBar).toBeVisible()
+  await expect(saveFooter).toBeVisible()
+
+  const position = await starters.evaluate((el) => getComputedStyle(el).position)
+  expect(position).toBe('static')
+
+  const [contentBox, barBox, footerBox] = await Promise.all([
+    content.boundingBox(),
+    formatBar.boundingBox(),
+    saveFooter.boundingBox(),
+  ])
+  expect(contentBox.y + contentBox.height).toBeLessThanOrEqual(barBox.y + 1)
+  expect(barBox.y + barBox.height).toBeLessThanOrEqual(footerBox.y + 1)
+
+  // Verify the formatting bar sits on top (not overlapped by template starters).
+  const hitAtBar = await page.evaluate(
+    ({ x, y }) => {
+      const el = document.elementFromPoint(x, y)
+      return Boolean(el?.closest('.mobile-format-bar'))
+    },
+    { x: barBox.x + barBox.width / 2, y: barBox.y + barBox.height / 2 },
+  )
+  expect(hitAtBar).toBe(true)
+
+  // Scrolling inside .mobile-content reaches the last starter button cleanly.
+  const lastStarter = starters.getByRole('button', { name: /Diário/ })
+  await lastStarter.scrollIntoViewIfNeeded()
+  await expect(lastStarter).toBeVisible()
+})

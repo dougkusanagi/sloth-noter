@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '../sync/client.js'
+import { createSpacesClient } from '../sync/spaces.js'
 import { runSync, previewFirstSync } from '../sync/engine.js'
 import { recoverAccount, signIn, signOut, signUp } from '../sync/account.js'
 import { applySync, localNotes, syncState } from '../sync/document.js'
@@ -7,7 +8,7 @@ import { platformVault, probeVault, readSyncSecrets, writeSyncSecrets } from '..
 import { t } from '../i18n.js'
 
 const INTERVAL = 5 * 60 * 1000
-const AFTER_EDIT = 15 * 1000
+const AFTER_EDIT = 3 * 1000
 const toBase64 = (bytes) => btoa(String.fromCharCode(...bytes))
 const fromBase64 = (text) => Uint8Array.from(atob(text), (char) => char.charCodeAt(0))
 // The sync state belongs to one server space: an account, or the old shared key.
@@ -69,6 +70,7 @@ export function useSync({ current, commit, invoke, blocked, onImagesChanged }) {
           key: fromBase64(saved.key),
           local: snapshot,
           state: before,
+          deferConflicts: true,
           images: imageAdapter(live.current.invoke, () => {
             wroteImage = true
           }),
@@ -136,13 +138,19 @@ export function useSync({ current, commit, invoke, blocked, onImagesChanged }) {
     return () => clearInterval(timer)
   }, [run, status.state])
 
-  // Back in the foreground, and shortly after the notes change.
+  // Sync when returning to foreground AND flush when leaving/hiding the app.
   useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') void run({ auto: true })
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' || document.visibilityState === 'hidden')
+        void run({ auto: true })
     }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
+    const onPageHide = () => void run({ auto: true })
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', onPageHide)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', onPageHide)
+    }
   }, [run])
 
   return {
@@ -166,9 +174,59 @@ export function useSync({ current, commit, invoke, blocked, onImagesChanged }) {
       return previewFirstSync({ client, key, local: localNotes(current.current) })
     },
     /** Saves the session in the vault (replacing an old key, if any) and syncs. */
-    async connect({ server, token, key, email, name }) {
+    async connect({ server, token, key, email, name, publicKey, privateKey }) {
       const previous = secrets.current
-      const value = { server, token, key: toBase64(key), email, name }
+      const value = {
+        server,
+        token,
+        key: toBase64(key),
+        email,
+        name,
+        ...(publicKey && privateKey
+          ? {
+              publicKey,
+              privateKey: typeof privateKey === 'string' ? privateKey : toBase64(privateKey),
+            }
+          : {}),
+      }
+      await writeSyncSecrets(vault.current, value)
+      secrets.current = value
+      retryUntil.current = 0
+      if (previous?.email) void signOut({ server: previous.server, token: previous.token })
+      await run()
+    },
+    /** Returns a shared-spaces API client when signed in with an account, or null. */
+    spacesClient() {
+      const saved = secrets.current
+      if (!saved?.server || !saved?.token || !saved?.email) return null
+      return createSpacesClient({ server: saved.server, token: saved.token })
+    },
+    /** Returns the account's ECDH P-256 key pair when available, or null. */
+    accountKeys() {
+      const saved = secrets.current
+      if (!saved?.publicKey || !saved?.privateKey) return null
+      return {
+        publicKey: saved.publicKey,
+        privateKey: fromBase64(saved.privateKey),
+      }
+    },
+    /** Returns current vault credentials for short-lived QR device pairing. */
+    exportPairingCredentials() {
+      const saved = secrets.current
+      if (!saved?.server || !saved?.token || !saved?.key) return null
+      return {
+        server: saved.server,
+        token: saved.token,
+        key: saved.key,
+        email: saved.email ?? '',
+        name: saved.name ?? '',
+      }
+    },
+    /** Connects directly using credentials decoded from a pairing QR code. */
+    async connectFromPairing({ server, token, key, email, name }) {
+      const keyBytes = typeof key === 'string' ? fromBase64(key) : key
+      const previous = secrets.current
+      const value = { server, token, key: toBase64(keyBytes), email, name }
       await writeSyncSecrets(vault.current, value)
       secrets.current = value
       retryUntil.current = 0

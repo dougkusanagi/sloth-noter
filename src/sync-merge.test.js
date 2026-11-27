@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mergeLines } from './sync/merge.js'
+import { applyHunkChoices, mergeLines } from './sync/merge.js'
 
 const text = (result) => {
   assert.equal(result.conflict, false)
@@ -54,4 +54,34 @@ test('huge differing middles fall back to one conflict that keeps both texts', (
   assert.equal(result.chunks.length, 3)
   assert.equal(result.chunks[1].conflict.ours.length, 2500)
   assert.equal(result.chunks[1].conflict.theirs.length, 2500)
+})
+
+test('missing base uses two-way LCS so identical lines do not conflict', () => {
+  const result = mergeLines(
+    null,
+    '# Nota\nigual 1\nlocal\nigual 2',
+    '# Nota\nigual 1\nremoto\nigual 2',
+  )
+  assert.equal(result.conflict, true)
+  assert.deepEqual(result.chunks, [
+    { lines: ['# Nota', 'igual 1'] },
+    { conflict: { base: [], ours: ['local'], theirs: ['remoto'] } },
+    { lines: ['igual 2'] },
+  ])
+  assert.equal(applyHunkChoices(result.chunks, ['theirs']), '# Nota\nigual 1\nremoto\nigual 2')
+  assert.equal(applyHunkChoices(result.chunks, ['ours']), '# Nota\nigual 1\nlocal\nigual 2')
+  assert.equal(applyHunkChoices(result.chunks, ['both']), '# Nota\nigual 1\nlocal\nremoto\nigual 2')
+})
+
+test('completing the same task on one side resolves automatically without conflict', () => {
+  const result = mergeLines(
+    null,
+    '# Tarefas\n- [ ] Pagar conta\n- [ ] Revisar PR',
+    '# Tarefas\n- [x] Pagar conta ✅ 2026-11-27\n- [ ] Revisar PR',
+  )
+  assert.equal(result.conflict, false)
+  assert.equal(
+    result.chunks.flatMap((c) => c.lines).join('\n'),
+    '# Tarefas\n- [x] Pagar conta ✅ 2026-11-27\n- [ ] Revisar PR',
+  )
 })

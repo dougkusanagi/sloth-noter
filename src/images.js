@@ -177,3 +177,21 @@ export function removeDocumentImage(document, source) {
 export function markdownImage(name, src) {
   return `![${name.replace(/[[\]\\]/g, '')}](${src.includes(' ') ? '<' + src + '>' : src})`
 }
+
+/**
+ * Formats an image insertion: inline when the current line already has text
+ * (e.g. a task or paragraph), or as a standalone block on an empty line.
+ */
+export function formatImageInsertion(body, from, to, markdown) {
+  const lineStart = body.lastIndexOf('\n', Math.max(0, from - 1)) + 1
+  const nextBreak = body.indexOf('\n', to)
+  const lineEnd = nextBreak === -1 ? body.length : nextBreak
+  const before = body.slice(lineStart, from)
+  const after = body.slice(to, lineEnd)
+  if (before.trim() || after.trim()) {
+    const lead = before && !/\s$/.test(before) ? ' ' : ''
+    const trail = after && !/^\s/.test(after) ? ' ' : ''
+    return `${lead}${markdown}${trail}`
+  }
+  return `${from && body[from - 1] !== '\n' ? '\n' : ''}${markdown}\n`
+}

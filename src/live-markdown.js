@@ -28,6 +28,27 @@ export function inlineSyntax(text, definitions = '') {
     const start = node.position?.start.offset,
       end = node.position?.end.offset
     if (node.type !== 'root' && (start === undefined || end > text.length)) return
+    if (node.type === 'image' || node.type === 'imageReference') {
+      const src = node.url ?? definitionMap(tree).get(node.identifier)
+      if (
+        !src ||
+        !/^(?:https?:\/\/|sloth-note:\/\/|data:image\/(?:png|jpeg|gif|webp|avif|bmp);base64,|\/|\.\/|\.\.\/|assets\/|[^:\s]+\.(?:png|jpe?g|gif|webp|avif|bmp)(?:$|[?#]))/i.test(
+          src.trim(),
+        )
+      )
+        return
+      result.push({
+        kind: 'image',
+        start,
+        end,
+        contentStart: start,
+        contentEnd: end,
+        src: src.trim(),
+        alt: node.alt ?? '',
+        title: node.title ?? '',
+      })
+      return
+    }
     let kind = {
       strong: 'strong',
       emphasis: 'em',
@@ -99,7 +120,9 @@ export function inlineSyntax(text, definitions = '') {
     if (
       !result.some(
         (token) =>
-          ['code', 'link', 'wiki'].includes(token.kind) && start < token.end && end > token.start,
+          ['code', 'link', 'wiki', 'image'].includes(token.kind) &&
+          start < token.end &&
+          end > token.start,
       )
     )
       result.push({ kind: 'tag', start, end, contentStart: start, contentEnd: end })

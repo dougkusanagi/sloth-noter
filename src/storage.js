@@ -55,6 +55,8 @@ function validateNote(note, ids) {
     throw new Error('Invalid saved note')
   if (note.group !== undefined && (typeof note.group !== 'string' || !note.group.trim()))
     throw new Error('Invalid note group')
+  if (note.createdAt !== undefined && (!Number.isSafeInteger(note.createdAt) || note.createdAt < 0))
+    throw new Error('Invalid note creation date')
   if (
     note.modifiedAt !== undefined &&
     (!Number.isSafeInteger(note.modifiedAt) || note.modifiedAt < 0)

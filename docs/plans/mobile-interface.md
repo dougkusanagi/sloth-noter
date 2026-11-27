@@ -298,6 +298,24 @@ Começa só com o critério da seção 4.3 dos requisitos cumprido. Ordem e deta
 9.2 dos requisitos: B1, B2 → B8, B9, B10 → B16 (modelos de nota ao criar, pedido do usuário em
 2026-11-09: Tarefas, Tabelas e outros) → B11–B14 → B3 → B15 → B4–B7, B17 (essas exigem ADR).
 
+- [x] **B1 — Transições compartilhadas** (0.45.0): `src/mobile/view-transition.js` com View Transitions API ao abrir notas, respeitando `prefers-reduced-motion` e com fallback instantâneo (`src/mobile-platform.test.js`).
+- [x] **B2 — Háptica com significado** (0.45.0): `src/mobile/haptics.js` + ponte nativa `SlothSystem.haptic(kind)` em `MainActivity.kt` (`HapticFeedbackConstants`, respeitando a configuração de vibração do sistema), disparada no limite do gesto de exclusão (`SwipeNoteRow`) e na conclusão de tarefas (`TasksLibrary`) (`src/mobile-platform.test.js`).
+- [x] **B8 — Barra de comando puxada do topo** (0.46.0): arrastar o cabeçalho para baixo abre a folha **Buscar e comandos** (`src/mobile/header-gestures.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
+- [x] **B9 — Notas abertas como baralho** (0.46.0–0.46.3): deslizar o cabeçalho na horizontal (longe das bordas e sem seleção ativa) alterna entre as notas abertas (ou lista) substituindo a rota na pilha para que Voltar retorne à lista (`src/mobile/header-gestures.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
+- [x] **B10 — Gestos de estrutura no editor** (0.47.0): deslizar item de lista recua/desrecua (`listIndentChanges`) e deslizar parágrafo para a direita transforma em tarefa (`blockEdit`), gerando o mesmo Markdown e desfazer dos botões da barra (`src/mobile/editor-gestures.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
+- [x] **B16 — Modelos de nota ao criar** (entregue em 0.19.0 / confirmado em 0.47.0): notas novas exibem os botões "Começar com" (`TemplateStarters`) abaixo do título e a folha Inserir inclui "Modelo…", mantendo criação sem modelo em um toque.
+- [x] **B11 — Régua de títulos** (0.48.0): trilha lateral a 28 px da borda (`> 24 dp`) em modo Leitura exibe o nome do título H2+ atual, vibra (B2) a cada mudança de seção e rola até a seção (`src/mobile/heading-ruler.jsx`, `src/mobile/reading-zoom.js`).
+- [x] **B12 — Zoom semântico por pinça** (0.48.0): alterna entre Completo → Esboço → Só títulos tanto por pinça sem bloquear zoom de acessibilidade quanto pelo botão na folha de ações da nota (`src/mobile/reading-zoom.js`, `src/mobile/mobile-shell.jsx`, `src/mobile/mobile.css`).
+- [x] **B13 — Lupa de tabela** (0.49.0): toque longo em uma célula no modo Leitura abre um cartão flutuante com `cabeçalho: valor` de todas as colunas da linha, fechando por Voltar/Escape/Fechar (`src/markdown.jsx`, `src/mobile/mobile.css`).
+- [x] **B14 — Trackpad estrutural** (0.49.0): controle dedicado na barra de formatação (`touch-action: none`) desliza o cursor bloco a bloco Markdown sem conflitar com a rolagem da barra (`src/mobile/structural-trackpad.js`, `src/mobile/formatting-bar.jsx`, `src/mobile-platform.test.js`).
+- [x] **B3 — Bloco nas Configurações rápidas** (0.49.0): `NewNoteTileService` (`TileService`) registrado no `AndroidManifest.xml`, reutilizando `dev.slothnote.app.NEW_NOTE` com app aberto ou fechado.
+- [x] **B15 — Quadro com gestos** (0.50.0): no modo compacto do Quadro, deslizar a área da coluna troca de coluna como carrossel e deslizar um cartão move a tarefa para a coluna seguinte/anterior com vibração, usando o mesmo `moveCardToColumn` do menu (`src/mobile/board-gestures.js`, `src/components/task-board.jsx`, `src/mobile-platform.test.js`).
+- [x] **B4 — App de notas do sistema (`ROLE_NOTES`)** (0.51.0–0.52.0): [ADR 0045](../adr/0045-app-de-notas-do-sistema-role-notes.md); `QuickNoteActivity` isolada para `ACTION_CREATE_NOTE` na tela de bloqueio com compositor nativo em branco sem leitura de notas existentes e fila privada `PendingNotesStore` ingerida de forma idempotente após confirmar gravação (`src/mobile/pending-notes.js`, `src/mobile/use-native-actions.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`, `e2e/mobile/notes-role.spec.js`), além de seção **Sistema** em Configurações no Android 14+ para pedir `RoleManager.ROLE_NOTES`. Em `0.52.0`, `NewNoteTileService` (B3) também passou a abrir `QuickNoteActivity` quando o aparelho está bloqueado.
+- [x] **B5 — Widget de lista fixada** (0.53.0): [ADR 0046](../adr/0046-widget-de-lista-fixada.md); `PinnedTasksWidgetProvider` e `WidgetTasksStore` no Android exibem até 8 tarefas de uma nota fixada, permitem marcar/desmarcar sem abrir o app e abrem a nota ao tocar no título; no lado web, `src/mobile/widget-tasks.js` publica o snapshot e aplica os toggles pendentes usando `applyStatus` de `src/tasks.js` na fila de gravação (`src/mobile/use-native-actions.js`, `src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
+- [x] **B6 — Caneta** (0.54.0): escrita à mão convertida em texto onde o WebView suportar (`isAutoHandwritingEnabled = true` no WebView da `MainActivity` e nos campos da `QuickNoteActivity` no Android 14+, sem criar formato de desenho); `src/mobile/stylus.js` e `src/mobile/editor-gestures.js` impedem que traços de caneta acionem gestos de deslizar e posicionam o cursor no ponto tocado (`src/mobile/mobile-shell.jsx`, `src/mobile-platform.test.js`).
+- [x] **B7 — IA no aparelho (opcional)** (0.55.0): [ADR 0047](../adr/0047-ia-no-aparelho-mobile.md); desligada por padrão (`prefs.mobileOnDeviceAi`), oculta quando `SlothSystem.getOnDeviceAiState()` não retorna `'available'`, com ações **Resumir com IA** e **Revisar com IA** exibidas como sugestão editável antes de alterar a nota (`src/mobile/on-device-ai.js`, `src/mobile/mobile-shell.jsx`, `MainActivity.kt`, `src/mobile-platform.test.js`).
+- [x] **B17 — Captura por câmera com OCR local** (0.56.0): [ADR 0048](../adr/0048-captura-camera-ocr-local.md); ponte sob demanda (`SlothSystem.isLocalOcrSupported` / `captureTextOcr`) mantendo zero peso extra no APK base, conversor puro `src/mobile/ocr-markdown.js` (Texto, Lista e Tabela) e folha de prévia editável antes de inserir (`src/mobile/mobile-shell.jsx`, `MainActivity.kt`, `src/mobile-platform.test.js`).
+
 ## Depois deste plano — Parte C: ideias para as duas plataformas
 
 Começa só depois da Parte B. As propostas C1–C6 (seção 9.3 dos requisitos) mudam desktop e
@@ -335,6 +353,16 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 - A3: envio de notas e histórico ao sair com morte real do processo e gravação nativa lenta; falha
   de gravação e de histórico no WebView com as ações de backup; dados corrompidos baixados e
   substituídos no aparelho; retomada do editor após composição real do teclado.
+- B4 (`ROLE_NOTES`): definir o Sloth Note como app de notas padrão em Configurações → Sistema no
+  Android 14+, acionar `ACTION_CREATE_NOTE` com a tela bloqueada e desbloqueada, verificar
+  `QuickNoteActivity` isolada (sem exibir notas existentes), escrita por caneta e importação ao
+  desbloquear.
+- B5 (Widget de lista fixada): adicionar o widget **Tarefas fixadas** à tela inicial no APK real,
+  marcar e desmarcar tarefas com o app fechado e aberto, verificar que o Markdown e as datas de
+  conclusão ficam idênticos e que tocar no título abre a nota fixada.
+- B6 (Caneta): escrever à mão com stylus real no editor e na `QuickNoteActivity` em aparelho
+  Android 14+ compatível, confirmando que o texto convertido entra na posição do cursor sem
+  acionar gestos de deslizar.
 
 ## Evidências registradas
 
@@ -400,15 +428,14 @@ Itens que o navegador e o emulador não comprovam. Registre ambiente e resultado
 
 ## Próximo passo
 
-Iniciar **A7 — Grupos e ordenação da lista** (prioridade 3 da [fila central](prioridades.md)):
-mostrar os grupos do desktop recolhíveis, ordenação recentes/alfabética e mover nota de grupo pela
-folha de ações, reutilizando o modelo de grupos de `note-list.jsx` sem mudar o desktop.
+Concluída toda a fila do plano Android (A1–A19, S1–S4 e Parte B: B1–B17) em `0.56.0`.
+O plano permanece aberto apenas pelos itens de validação nativa em aparelho real listados acima ("Validação no aparelho (pendente)"). Próxima frente quando desejado: Parte C (ideias para as duas plataformas, cada uma com plano próprio) ou validação nativa no APK.
 
 Pendente no aparelho (de entregas anteriores): validar S4 nativo (conta única desktop Tauri ↔ APK
-real, conflito, lixeira/restauração e imagem) e validar no APK Inserir, seletor de imagem,
-clipboard, linguagem, IME real, teclado físico, lixeira, configurações, voltar preditivo,
-aviso de gravação pendente, envio ao sair com morte do processo e recuperação de dados
-corrompidos. A matriz nativa permanece aberta.
+real, conflito, lixeira/restauração e imagem), validar B4 na tela de bloqueio/caneta real e validar
+no APK Inserir, seletor de imagem, clipboard, linguagem, IME real, teclado físico, lixeira,
+configurações, voltar preditivo, aviso de gravação pendente, envio ao sair com morte do processo e
+recuperação de dados corrompidos. A matriz nativa permanece aberta.
 
 ## Histórico de execução
 

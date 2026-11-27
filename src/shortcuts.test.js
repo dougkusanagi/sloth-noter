@@ -80,6 +80,13 @@ test('F10 toggles the main menu without taking the tab context menu shortcut', (
   assert.ok(SHORTCUTS.some(([keys, label]) => keys === 'Alt+B' && label === 'sidebar.toggle'))
 })
 
+test('F1 opens the About section without modifiers', () => {
+  assert.equal(appShortcut({ key: 'F1' }), 'about')
+  for (const modifier of ['ctrlKey', 'metaKey', 'altKey', 'shiftKey', 'isComposing'])
+    assert.equal(appShortcut({ key: 'F1', [modifier]: true }), null)
+  assert.ok(SHORTCUTS.some(([keys, label]) => keys === 'F1' && label === 'settings.about'))
+})
+
 // Combinations owned by the browser or webview: developer tools, hard reload, view source,
 // downloads and bookmarks. Ctrl+H intentionally opens replacement, as in VS Code.
 const RESERVED = ['Shift+I', 'Alt+I', 'Shift+R', 'Shift+C', 'Shift+J', 'R', 'U', 'J', 'D']

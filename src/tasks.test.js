@@ -363,3 +363,22 @@ test('the Reading view treats [/], [>] and [-] as unchecked task items with a st
   )
   assert.equal(items[0].children[0].children[0].value, 'a')
 })
+
+test('taskHeadings maps each task to its innermost heading below the title', async () => {
+  const { taskHeadings, noteTasks } = await import('./tasks.js')
+  const body = '# Nota\n\n- [ ] Solta\n\n## Casa\n\n- [ ] Lavar\n\n### Cozinha ##\n\n- [x] Pia'
+  const map = taskHeadings(body, noteTasks(body))
+  assert.deepEqual(
+    [...map.values()].map((heading) => heading && heading.title),
+    [null, 'Casa', 'Cozinha'],
+  )
+})
+
+test('tasksProgress counts like a section badge and leaves canceled tasks out', async () => {
+  const { tasksProgress, noteTasks } = await import('./tasks.js')
+  assert.deepEqual(tasksProgress(noteTasks('- [x] a\n- [/] b\n- [-] c\n- [ ] d')), {
+    done: 1,
+    total: 3,
+    doing: 1,
+  })
+})

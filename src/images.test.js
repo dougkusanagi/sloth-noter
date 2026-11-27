@@ -4,6 +4,7 @@ import {
   importImage,
   bytesDataUrl,
   markdownImage,
+  formatImageInsertion,
   libraryImages,
   resolveImage,
   removeDocumentImage,
@@ -95,4 +96,20 @@ test('release-note illustrations resolve offline without reading the vault', asy
     await resolveImage('/changelog/insert-block-shortcuts.png'),
     '/changelog/insert-block-shortcuts.png',
   )
+})
+
+test('formatImageInsertion inserts inline on a line with text and as a block on an empty line', () => {
+  const md = '![print](assets/print.png)'
+  // End of a task line -> inline with leading space
+  const task = '# Crônicas\n- [ ] Configurar email'
+  assert.equal(formatImageInsertion(task, task.length, task.length, md), ` ${md}`)
+
+  // Middle of a sentence -> inline with spaces around
+  const mid = '# Nota\nVeja o print aqui'
+  const pos = mid.indexOf('aqui')
+  assert.equal(formatImageInsertion(mid, pos, pos, md), `${md} `)
+
+  // Empty line -> block with trailing newline
+  const empty = '# Nota\n\n'
+  assert.equal(formatImageInsertion(empty, empty.length, empty.length, md), `${md}\n`)
 })

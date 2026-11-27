@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">"Sloth Note"</string>
+    <string name="main_activity_title">"Sloth Note"</string>
+    <string name="shortcut_new_note">New note</string>
+    <string name="quick_note_label">Quick note</string>
+    <string name="quick_note_locked_notice">Screen locked — your other notes stay protected.</string>
+    <string name="quick_note_title_hint">Title (optional)</string>
+    <string name="quick_note_body_hint">Write your note…</string>
+    <string name="quick_note_save">Save</string>
+    <string name="quick_note_discard">Discard</string>
+    <string name="quick_note_unlock_open">Unlock and open</string>
+    <string name="quick_note_saved_toast">Note saved. Available when unlocked.</string>
+    <string name="quick_note_empty_toast">Nothing to save.</string>
+    <string name="quick_note_too_large_toast">Text is too large to save.</string>
+    <string name="quick_note_save_failed_toast">Could not save the note.</string>
+    <string name="widget_pinned_tasks_title">Pinned tasks</string>
+    <string name="widget_pinned_tasks_description">Shows and toggles tasks from a pinned note without opening the app.</string>
+    <string name="widget_pinned_tasks_empty_no_pinned">Pin a note with tasks in Sloth Note.</string>
+    <string name="widget_pinned_tasks_empty_no_tasks">No tasks in the pinned note.</string>
+</resources>

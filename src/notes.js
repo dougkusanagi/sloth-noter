@@ -36,6 +36,8 @@ export function uniqueName(notes, proposed) {
   return name
 }
 
+const SYNC_CONFLICT_HEADING = /^(?:conflito de sincroniza[çc][ãa]o|sync conflict)\s*[—–-]/i
+
 export function headingFileName(body) {
   const heading = body.slice(frontmatterEnd(body)).match(/^# [ \t]*(.+?)[ \t]*$/m)
   if (!heading) return null
@@ -49,7 +51,7 @@ export function headingFileName(body) {
     .replace(/[<>:"/\\|?*\x00-\x1f]/g, '-')
     .replace(/[. ]+$/, '')
     .trim()
-  if (!title) return null
+  if (!title || SYNC_CONFLICT_HEADING.test(title)) return null
   if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(title)) return boundedFileName(`_${title}`)
   return title.toLocaleLowerCase().endsWith('.md')
     ? boundedFileName(title.slice(0, -3), '', title.slice(-3))
