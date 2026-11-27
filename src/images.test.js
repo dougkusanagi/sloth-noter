@@ -5,6 +5,7 @@ import {
   bytesDataUrl,
   markdownImage,
   formatImageInsertion,
+  isChangelogImage,
   libraryImages,
   resolveImage,
   removeDocumentImage,
@@ -112,4 +113,12 @@ test('formatImageInsertion inserts inline on a line with text and as a block on 
   // Empty line -> block with trailing newline
   const empty = '# Nota\n\n'
   assert.equal(formatImageInsertion(empty, empty.length, empty.length, md), `${md}\n`)
+})
+
+test('isChangelogImage accepts versioned filenames and rejects traversal', () => {
+  assert.equal(isChangelogImage('/changelog/0.67.0-sync-depois-desktop.png'), true)
+  assert.equal(isChangelogImage('/changelog/0.69.0-thumbs-inline.png'), true)
+  assert.equal(isChangelogImage('/changelog/atalhos-formatacao.svg'), true)
+  assert.equal(isChangelogImage('/changelog/../secret.png'), false)
+  assert.equal(isChangelogImage('assets/foto.png'), false)
 })
