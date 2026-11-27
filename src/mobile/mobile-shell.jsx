@@ -1212,7 +1212,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     )
   return (
     <main
-      className="mobile-shell"
+      className="mobile-shell mobile-shell-nav"
       data-platform="mobile"
       onKeyDownCapture={(event) => {
         if (transferPending.current) {

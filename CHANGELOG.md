@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.69.4] — 2026-11-27
+
+Corrigido o layout da barra lateral de navegação no celular em modo paisagem e em tablets (`>= 600px`), que sobrepunha a lista de notas e empilhava os ícones na horizontal. Veja os [detalhes da versão](changelog/0.69.4.md).
+
 ## [0.69.3] — 2026-11-27
 
 Unificados lado a lado os comparativos de antes e depois nas novidades das versões `0.66.0` e `0.67.0` e adicionadas capturas faltantes nas entradas visuais (`0.65.2` e `0.61.1`). Veja os [detalhes da versão](changelog/0.69.3.md).
