@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '../sync/client.js'
+import { createSpacesClient } from '../sync/spaces.js'
 import { runSync, previewFirstSync } from '../sync/engine.js'
 import { recoverAccount, signIn, signOut, signUp } from '../sync/account.js'
 import { applySync, localNotes, syncState } from '../sync/document.js'
@@ -173,14 +174,41 @@ export function useSync({ current, commit, invoke, blocked, onImagesChanged }) {
       return previewFirstSync({ client, key, local: localNotes(current.current) })
     },
     /** Saves the session in the vault (replacing an old key, if any) and syncs. */
-    async connect({ server, token, key, email, name }) {
+    async connect({ server, token, key, email, name, publicKey, privateKey }) {
       const previous = secrets.current
-      const value = { server, token, key: toBase64(key), email, name }
+      const value = {
+        server,
+        token,
+        key: toBase64(key),
+        email,
+        name,
+        ...(publicKey && privateKey
+          ? {
+              publicKey,
+              privateKey: typeof privateKey === 'string' ? privateKey : toBase64(privateKey),
+            }
+          : {}),
+      }
       await writeSyncSecrets(vault.current, value)
       secrets.current = value
       retryUntil.current = 0
       if (previous?.email) void signOut({ server: previous.server, token: previous.token })
       await run()
+    },
+    /** Returns a shared-spaces API client when signed in with an account, or null. */
+    spacesClient() {
+      const saved = secrets.current
+      if (!saved?.server || !saved?.token || !saved?.email) return null
+      return createSpacesClient({ server: saved.server, token: saved.token })
+    },
+    /** Returns the account's ECDH P-256 key pair when available, or null. */
+    accountKeys() {
+      const saved = secrets.current
+      if (!saved?.publicKey || !saved?.privateKey) return null
+      return {
+        publicKey: saved.publicKey,
+        privateKey: fromBase64(saved.privateKey),
+      }
     },
     /** Returns current vault credentials for short-lived QR device pairing. */
     exportPairingCredentials() {

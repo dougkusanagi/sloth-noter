@@ -21,7 +21,8 @@ export const FREE_LIMITS = { bytes: 9e9, writes: 900_000, reads: 9_000_000 }
 export const STORED_BYTES = `SELECT
   (SELECT COALESCE(SUM(size), 0) FROM blob_sizes) +
   (SELECT COALESCE(SUM(size), 0) FROM profile_blob_sizes) +
-  (SELECT COALESCE(SUM(size), 0) FROM account_blob_sizes) AS total`
+  (SELECT COALESCE(SUM(size), 0) FROM account_blob_sizes) +
+  (SELECT COALESCE(SUM(size), 0) FROM shared_space_blob_sizes) AS total`
 
 export function cloudflareStore(db, bucket, { limits = FREE_LIMITS, now = () => new Date() } = {}) {
   const month = () => now().toISOString().slice(0, 7)

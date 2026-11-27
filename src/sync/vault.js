@@ -72,10 +72,16 @@ export async function readSyncSecrets(vault) {
   return null
 }
 
-export function writeSyncSecrets(vault, { server, token, key, email, name }) {
-  return vault.set(
-    JSON.stringify(email ? { server, token, key, email, name } : { server, token, key }),
-  )
+export function writeSyncSecrets(
+  vault,
+  { server, token, key, email, name, publicKey, privateKey },
+) {
+  const payload = email ? { server, token, key, email, name } : { server, token, key }
+  if (publicKey && privateKey) {
+    payload.publicKey = publicKey
+    payload.privateKey = privateKey
+  }
+  return vault.set(JSON.stringify(payload))
 }
 
 /**

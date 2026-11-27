@@ -2325,3 +2325,35 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
   min-height: 44px;
   margin-top: 4px;
 }
+
+/* Shared spaces panel on mobile (ADR 0054) */
+[data-platform='mobile'] .settings-spaces {
+  padding: 14px 16px;
+}
+
+[data-platform='mobile'] .settings-spaces .spaces-panel {
+  gap: 12px;
+}
+
+[data-platform='mobile'] .settings-spaces .spaces-create-form,
+[data-platform='mobile'] .settings-spaces .space-invite-form,
+[data-platform='mobile'] .settings-spaces .space-invite-card,
+[data-platform='mobile'] .settings-spaces .space-member-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+[data-platform='mobile'] .settings-spaces .spaces-input,
+[data-platform='mobile'] .settings-spaces .button {
+  min-height: 44px;
+}
+
+[data-platform='mobile'] .settings-spaces .space-card-actions,
+[data-platform='mobile'] .settings-spaces .space-member-controls {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+[data-platform='mobile'] .settings-spaces .space-card-body {
+  border-top: 1px solid var(--line);
+}

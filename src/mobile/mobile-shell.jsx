@@ -115,6 +115,7 @@ import { Switch } from '../components/controls.jsx'
 import { QrNoteDialog } from '../components/qr-note-dialog.jsx'
 import { decodeQrNotePayload } from '../qr-bridge.js'
 import { SyncPanel } from '../components/sync-panel.jsx'
+import { SpacesPanel } from '../components/spaces-panel.jsx'
 import { useSync } from '../hooks/use-sync.js'
 import { ImageThumbnail } from '../components/image-library.jsx'
 import { TasksLibrary } from '../components/tasks-library.jsx'
@@ -2215,6 +2216,9 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
           <section className="mobile-settings" aria-label={t('settings.sync')}>
             <div className="settings-card settings-sync">
               <SyncPanel sync={sync} />
+            </div>
+            <div className="settings-card settings-spaces">
+              <SpacesPanel sync={sync} />
             </div>
           </section>
         )}

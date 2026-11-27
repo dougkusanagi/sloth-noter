@@ -184,3 +184,78 @@ export async function unwrapNoteKey(wrapKey, wrapped, email) {
 export async function recoveryProof(noteKey) {
   return toBase64Url(await hkdf(noteKey, 'sloth-note recovery'))
 }
+
+// Shared spaces asymmetric keys (ADR 0054): ECDH P-256 via Web Crypto.
+export async function generateAccountKeyPair() {
+  const pair = await crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    ['deriveBits'],
+  )
+  const publicKeyJwk = JSON.stringify(await crypto.subtle.exportKey('jwk', pair.publicKey))
+  const privateKeyPkcs8 = new Uint8Array(await crypto.subtle.exportKey('pkcs8', pair.privateKey))
+  return { publicKeyJwk, privateKeyPkcs8 }
+}
+
+export async function wrapPrivateKey(wrapKey, privateKeyPkcs8, email) {
+  return toBase64Url(await seal(wrapKey, privateKeyPkcs8, `account-private-key:${email}`))
+}
+
+export async function unwrapPrivateKey(wrapKey, wrapped, email) {
+  return open(wrapKey, fromBase64Url(wrapped), `account-private-key:${email}`)
+}
+
+const SPACE_KEY_CONTEXT = 'sloth-note space-key'
+
+/** Wraps a 32-byte space AES key for a recipient's ECDH P-256 public key (JWK string). */
+export async function wrapSpaceKey(spaceKeyBytes, recipientPublicKeyJwk) {
+  const recipientPub = await crypto.subtle.importKey(
+    'jwk',
+    JSON.parse(recipientPublicKeyJwk),
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    [],
+  )
+  const ephemeral = await crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    ['deriveBits'],
+  )
+  const shared = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      { name: 'ECDH', public: recipientPub },
+      ephemeral.privateKey,
+      256,
+    ),
+  )
+  const transportKey = await hkdf(shared, SPACE_KEY_CONTEXT)
+  const sealed = await seal(transportKey, spaceKeyBytes, SPACE_KEY_CONTEXT)
+  const epk = await crypto.subtle.exportKey('jwk', ephemeral.publicKey)
+  return JSON.stringify({ v: 1, epk, ct: toBase64Url(sealed) })
+}
+
+/** Unwraps a space AES key using the member's ECDH P-256 PKCS#8 private key bytes. */
+export async function unwrapSpaceKey(wrappedSpaceKey, privateKeyPkcs8) {
+  const parsed = JSON.parse(wrappedSpaceKey)
+  if (parsed?.v !== 1 || !parsed.epk || typeof parsed.ct !== 'string')
+    throw new Error('invalid wrapped space key')
+  const privKey = await crypto.subtle.importKey(
+    'pkcs8',
+    privateKeyPkcs8,
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    ['deriveBits'],
+  )
+  const epk = await crypto.subtle.importKey(
+    'jwk',
+    parsed.epk,
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    [],
+  )
+  const shared = new Uint8Array(
+    await crypto.subtle.deriveBits({ name: 'ECDH', public: epk }, privKey, 256),
+  )
+  const transportKey = await hkdf(shared, SPACE_KEY_CONTEXT)
+  return open(transportKey, fromBase64Url(parsed.ct), SPACE_KEY_CONTEXT)
+}
