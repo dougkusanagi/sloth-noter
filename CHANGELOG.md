@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.69.2] — 2026-11-27
+
+Corrigida a exibição de imagens com número de versão no nome na página **Novidades** (como nas versões `0.66.0` e `0.67.0`) e adicionadas capturas lado a lado de antes e depois nos detalhes das versões `0.68.0` e `0.69.0`. Veja os [detalhes da versão](changelog/0.69.2.md).
+
 ## [0.69.1] — 2026-11-27
 
 O aplicativo desktop agora verifica novas versões automaticamente a cada 30 minutos (e ao retornar à janela após esse intervalo), sem precisar reiniciar o app. Veja os [detalhes da versão](changelog/0.69.1.md).

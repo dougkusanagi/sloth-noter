@@ -41,7 +41,8 @@ export function dataUrlBytes(src) {
   if (binary.length > 20 * 1024 * 1024) throw new Error(t('images.invalid'))
   return Array.from(binary, (character) => character.charCodeAt(0))
 }
-export const isChangelogImage = (src) => /^\/changelog\/[a-z0-9-]+\.png$/.test(src)
+export const isChangelogImage = (src) =>
+  /^\/changelog\/[a-z0-9][a-z0-9._-]*\.(?:png|jpe?g|webp|svg)$/i.test(src) && !src.includes('..')
 
 export async function resolveImage(src) {
   src = normalizeImageSource(src)
