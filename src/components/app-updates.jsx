@@ -6,6 +6,7 @@ import { downloadUpdate } from '../app-updates.js'
 import { t } from '../i18n.js'
 
 const toastOptions = { id: 'app-update', position: 'bottom-right' }
+const CHECK_INTERVAL_MS = 30 * 60 * 1000
 
 export function useAppUpdates(invoke, { beforeInstall, resume }) {
   const [update, setUpdate] = useState(null)
@@ -17,6 +18,7 @@ export function useAppUpdates(invoke, { beforeInstall, resume }) {
   const pending = useRef(null)
   const busy = useRef(false)
   const mounted = useRef(false)
+  const lastCheckedAt = useRef(0)
   const callbacks = useRef({ beforeInstall, resume })
   callbacks.current = { beforeInstall, resume }
   const check = useCallback(
@@ -40,6 +42,7 @@ export function useAppUpdates(invoke, { beforeInstall, resume }) {
           return
         }
         const result = await checkUpdate({ timeout: 12000 })
+        lastCheckedAt.current = Date.now()
         if (!mounted.current || request.cancelled) {
           await result?.close()
           return
@@ -81,8 +84,18 @@ export function useAppUpdates(invoke, { beforeInstall, resume }) {
   useEffect(() => {
     mounted.current = true
     check(false)
+    const maybeCheck = () => {
+      if (document.visibilityState === 'hidden') return
+      if (phaseRef.current === 'ready' || phaseRef.current === 'downloading') return
+      if (Date.now() - lastCheckedAt.current < CHECK_INTERVAL_MS) return
+      check(false)
+    }
+    const timer = setInterval(maybeCheck, CHECK_INTERVAL_MS)
+    document.addEventListener('visibilitychange', maybeCheck)
     return () => {
       mounted.current = false
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', maybeCheck)
       if (pending.current) pending.current.cancelled = true
       pending.current = null
       // A download may still be finishing. Its finally block closes the resource.
