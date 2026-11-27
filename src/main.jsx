@@ -115,6 +115,7 @@ import {
   allNotes,
   clearImageCache,
   markdownImage,
+  formatImageInsertion,
   replaceDocumentImage,
   removeDocumentImage,
   dataUrlBytes,
@@ -1090,7 +1091,7 @@ function Workspace({ persistence, loaded }) {
     const titleEnd = noteTitleEnd(note.body)
     const from = Math.max(titleEnd, Math.min(point.from, note.body.length)),
       to = Math.max(from, Math.min(point.to, note.body.length))
-    const insert = `${from && note.body[from - 1] !== '\n' ? '\n' : ''}${text}\n`
+    const insert = formatImageInsertion(note.body, from, to, text)
     if (mode === 'visual' && current.current.activeId === noteId && visualRef.current) {
       visualRef.current.dispatch({
         changes: { from, to, insert },

@@ -173,3 +173,17 @@ test('wiki links, tags and escapes stay literal inside code and links', () => {
   ])
     assert.deepEqual(inlineSyntax(unsafe), [], unsafe)
 })
+
+test('inlineSyntax recognizes inline images and ignores unsafe image URLs', () => {
+  const line = '- [ ] Configurar email ![print](assets/smtp.png "Config SMTP")'
+  const tokens = inlineSyntax(line)
+  const img = tokens.find((token) => token.kind === 'image')
+  assert.ok(img)
+  assert.equal(img.src, 'assets/smtp.png')
+  assert.equal(img.alt, 'print')
+  assert.equal(img.title, 'Config SMTP')
+  assert.equal(line.slice(img.start, img.end), '![print](assets/smtp.png "Config SMTP")')
+
+  // Unsafe URL is ignored
+  assert.deepEqual(inlineSyntax('Texto ![x](javascript:alert(1))'), [])
+})

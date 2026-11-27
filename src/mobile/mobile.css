@@ -2357,3 +2357,22 @@ html[data-keyboard='opening'] [data-platform='mobile'] .mobile-bottom {
 [data-platform='mobile'] .settings-spaces .space-card-body {
   border-top: 1px solid var(--line);
 }
+
+/* Inline image thumbnails on mobile */
+[data-platform='mobile'] .cm-inline-image-thumb,
+[data-platform='mobile'] .inline-image-thumb {
+  padding: 3px;
+  border-radius: 7px;
+}
+
+[data-platform='mobile'] .cm-inline-image-thumb-img,
+[data-platform='mobile'] .inline-image-thumb-img,
+[data-platform='mobile'] .markdown .inline-image-thumb .inline-image-thumb-img {
+  height: 1.7em;
+  min-width: 2em;
+  max-width: 3.8em;
+  max-height: 1.7em;
+  width: auto;
+  margin: 0;
+  border-radius: 4px;
+}

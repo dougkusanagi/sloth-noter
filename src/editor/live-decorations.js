@@ -16,6 +16,7 @@ import {
 import { parseTableLine } from '../markdown-table.js'
 import { addInlineDecorations } from './inline-decorations.js'
 import { resolveImage } from '../images.js'
+import { openImageLightbox } from '../image-lightbox.js'
 import { currentLanguage, t } from '../i18n.js'
 import { Decoration, EditorView, ViewPlugin, WidgetType } from '@codemirror/view'
 import { classifyLine, inlineSyntax } from '../live-markdown.js'
@@ -389,11 +390,21 @@ class ImageWidget extends WidgetType {
       }, missing)
       return frame
     }
+    let resolvedSrc = null
     resolve
       .then((src) => {
-        if (src) image.src = src
+        if (src) {
+          resolvedSrc = src
+          image.src = src
+        }
       })
       .catch(() => {})
+    image.addEventListener('click', (event) => {
+      if (!resolvedSrc) return
+      event.preventDefault()
+      event.stopPropagation()
+      openImageLightbox({ src: resolvedSrc, alt: this.alt, title: this.title })
+    })
     if (!this.title) return image
     // The Markdown title is the caption: the same text appears under the image in Leitura.
     const figure = document.createElement('span')
@@ -741,7 +752,7 @@ export function decorationsFor(view) {
               side: -2,
             }).range(line.from),
           )
-          addInlineDecorations(ranges, line, { prefix: 0 }, active)
+          addInlineDecorations(ranges, line, { prefix: 0 }, active, view.state.selection.main)
         } else if (!active) {
           ranges.push(
             Decoration.line({ attributes: { class: 'cm-md-accordion-meta' } }).range(line.from),
@@ -818,7 +829,7 @@ export function decorationsFor(view) {
               side: 1,
             }).range(line.to),
           )
-        addInlineDecorations(ranges, line, { prefix: task[0].length }, active)
+        addInlineDecorations(ranges, line, { prefix: task[0].length }, active, view.state.selection.main)
         continue
       }
       // The note pane shows the cover above the note: its line takes no space and no caret.
@@ -924,14 +935,14 @@ export function decorationsFor(view) {
           ranges.push(Decoration.replace({}).range(line.from, line.from + 2))
         ranges.push(Decoration.line({ attributes: attrs }).range(line.from))
         if (shape.kind !== 'fence' && shape.kind !== 'table')
-          addInlineDecorations(ranges, line, shape, true)
+          addInlineDecorations(ranges, line, shape, true, view.state.selection.main)
         continue
       }
       ranges.push(Decoration.line({ attributes: attrs }).range(line.from))
       if (shape.prefix)
         ranges.push(Decoration.replace({}).range(line.from, line.from + shape.prefix))
       if (shape.kind === 'fence') continue
-      addInlineDecorations(ranges, line, shape, false)
+      addInlineDecorations(ranges, line, shape, false, view.state.selection.main)
       if (number !== titleLine && line.text.includes('{{')) {
         for (const variable of lineVariables(line.text)) {
           const raw = line.text.slice(variable.from, variable.to)

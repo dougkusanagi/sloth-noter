@@ -106,6 +106,7 @@ import {
   importImage,
   libraryImages,
   markdownImage,
+  formatImageInsertion,
   removeDocumentImage,
 } from '../images.js'
 import { createFullBackup, readBackupBundle, restoreBackupImages } from '../backup.js'
@@ -815,7 +816,7 @@ function MobileWorkspace({ persistence, loaded, onReload }) {
     if (!note) return point
     const from = Math.min(Math.max(2, point.from), note.body.length)
     const to = Math.min(Math.max(from, point.to), note.body.length)
-    const insert = `${from && note.body[from - 1] !== '\n' ? '\n' : ''}${text}\n`
+    const insert = formatImageInsertion(note.body, from, to, text)
     const view = editor.current
     if (view?.dom.isConnected && current.current.activeId === noteId) {
       view.dispatch({

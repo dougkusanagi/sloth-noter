@@ -13,6 +13,7 @@ import { ChevronDown, Copy, WrapText } from 'lucide-react'
 import { remarkTags, remarkWikiLinks, findNote } from './markdown-model.js'
 import { remarkSections, remarkSourceLayout } from './sections.js'
 import { resolveImage } from './images.js'
+import { openImageLightbox } from './image-lightbox.js'
 import {
   sectionProgress,
   resolvedTasks,
@@ -46,8 +47,28 @@ export function safeHref(value) {
   if (/^(https?:|mailto:)/i.test(href) || /^(#|\/|\.\/|\.\.\/)/.test(href)) return href
   return null
 }
+const InlineImageContext = createContext(false)
+
+function Paragraph({ children }) {
+  const meaningful = React.Children.toArray(children).filter(
+    (child) => !(typeof child === 'string' && !child.trim()),
+  )
+  const isStandaloneImage =
+    meaningful.length === 1 &&
+    React.isValidElement(meaningful[0]) &&
+    (meaningful[0].type === Image || meaningful[0].props?.node?.tagName === 'img')
+  return (
+    <p>
+      <InlineImageContext.Provider value={!isStandaloneImage}>
+        {children}
+      </InlineImageContext.Provider>
+    </p>
+  )
+}
+
 function Image({ src, alt, title, node }) {
   const { coverOffset } = useContext(MarkdownContext)
+  const inline = useContext(InlineImageContext)
   const cover = coverOffset !== undefined && coverOffset === node?.position?.start.offset
   const [failed, setFailed] = useState(false)
   const [resolved, setResolved] = useState(null)
@@ -75,6 +96,11 @@ function Image({ src, alt, title, node }) {
       alt={alt ?? ''}
       title={cover ? undefined : title}
       loading="lazy"
+      onClick={
+        !cover && resolved
+          ? () => openImageLightbox({ src: resolved, alt: alt ?? '', title: title ?? '' })
+          : undefined
+      }
       onError={() => {
         setResolved(null)
         setFailed(true)
@@ -89,6 +115,31 @@ function Image({ src, alt, title, node }) {
           : failed && <span className="image-missing">{t('cover.unavailable')}</span>}
       </span>
     )
+  if (inline) {
+    if (!resolved)
+      return <span className="inline-image-thumb-missing">{alt || t('images.unavailable')}</span>
+    const label = title || alt || t('images.zoom')
+    return (
+      <button
+        type="button"
+        className="inline-image-thumb"
+        title={label}
+        aria-label={`${t('images.zoom')}: ${label}`}
+        onClick={() => openImageLightbox({ src: resolved, alt: alt ?? '', title: title ?? '' })}
+      >
+        <img
+          src={resolved}
+          alt={alt ?? ''}
+          className="inline-image-thumb-img"
+          loading="lazy"
+          onError={() => {
+            setResolved(null)
+            setFailed(true)
+          }}
+        />
+      </button>
+    )
+  }
   return resolved ? (
     title ? (
       <span className="image-figure">
@@ -205,7 +256,9 @@ function ListItem({ children, className, node, style }) {
           }}
         />
       )}
-      {task ? withDateBadge(dropLeadingSpace(children)) : children}
+      <InlineImageContext.Provider value={true}>
+        {task ? withDateBadge(dropLeadingSpace(children)) : children}
+      </InlineImageContext.Provider>
       {task?.progress && <ProgressBadge {...task.progress} />}
     </li>
   )
@@ -553,6 +606,7 @@ function Table({ node, children, ...props }) {
 }
 const components = {
   table: Table,
+  p: Paragraph,
   img: Image,
   a: Link,
   li: ListItem,

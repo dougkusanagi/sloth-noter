@@ -728,6 +728,7 @@ const messages = {
     'images.empty':
       'Adicione imagens ou arraste arquivos para a nota. Selecione uma imagem para gerenciá-la.',
     'images.unavailable': 'Imagem indisponível',
+    'images.zoom': 'Ampliar imagem',
     'task.statusMenu': 'Status da tarefa',
     'task.moveMenu': 'Mover tarefas para a seção',
     'taskSummary.label': 'Resumo da nota de tarefas',
@@ -1990,6 +1991,7 @@ const messages = {
     'images.import': 'Add images',
     'images.empty': 'Add images or drop files into a note. Select an image to manage it.',
     'images.unavailable': 'Image unavailable',
+    'images.zoom': 'View image',
     'task.statusMenu': 'Task status',
     'task.moveMenu': 'Move tasks to section',
     'taskSummary.label': 'Task note summary',

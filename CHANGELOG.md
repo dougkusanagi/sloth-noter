@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.69.0] — 2026-11-27
+
+Imagens citadas no meio ou no final de uma linha de texto ou tarefa agora aparecem como **miniaturas inline (thumbs)** clicáveis com visualização ampliada, sem ocupar um bloco inteiro. Veja os [detalhes da versão](changelog/0.69.0.md).
+
 ## [0.68.0] — 2026-11-27
 
 Adicionados **espaços compartilhados entre contas** com criptografia de ponta a ponta (ECDH P-256), níveis de acesso (Dono, Editor e Leitor), convites por e-mail, remoção de membros com rotação de chave e gerenciamento nas Configurações do desktop e do celular. Veja os [detalhes da versão](changelog/0.68.0.md).
