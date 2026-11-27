@@ -2,6 +2,10 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões seguem [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.69.1] — 2026-11-27
+
+O aplicativo desktop agora verifica novas versões automaticamente a cada 30 minutos (e ao retornar à janela após esse intervalo), sem precisar reiniciar o app. Veja os [detalhes da versão](changelog/0.69.1.md).
+
 ## [0.69.0] — 2026-11-27
 
 Imagens citadas no meio ou no final de uma linha de texto ou tarefa agora aparecem como **miniaturas inline (thumbs)** clicáveis com visualização ampliada, sem ocupar um bloco inteiro. Veja os [detalhes da versão](changelog/0.69.0.md).
